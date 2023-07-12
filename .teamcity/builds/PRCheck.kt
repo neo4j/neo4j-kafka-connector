@@ -1,13 +1,13 @@
 package builds
 
-import jetbrains.buildServer.configs.kotlin.v10.toExtId
-import jetbrains.buildServer.configs.kotlin.v2019_2.BuildType
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.dockerSupport
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildSteps.ScriptBuildStep
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildSteps.script
+import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
+import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.script
+import jetbrains.buildServer.configs.kotlin.toId
 
 class PRCheck(id: String, name: String) : BuildType({
-    this.id(id.toExtId())
+    this.id(id.toId())
     this.name = name
 
     steps {

@@ -1,19 +1,20 @@
 package builds
 
-import jetbrains.buildServer.configs.kotlin.v2019_2.BuildFeatures
-import jetbrains.buildServer.configs.kotlin.v2019_2.BuildType
-import jetbrains.buildServer.configs.kotlin.v2019_2.DslContext
-import jetbrains.buildServer.configs.kotlin.v2019_2.Requirements
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.PullRequests
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.commitStatusPublisher
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.freeDiskSpace
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.pullRequests
+import jetbrains.buildServer.configs.kotlin.BuildFeatures
+import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.DslContext
+import jetbrains.buildServer.configs.kotlin.Requirements
+import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
+import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
+import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
+import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
 
 enum class LinuxSize(val value: String) {
-    SMALL("small"), LARGE("large")
+    SMALL("small"),
+    LARGE("large")
 }
 
 fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {

@@ -1,14 +1,13 @@
 package builds
 
-import jetbrains.buildServer.configs.kotlin.v10.toExtId
-import jetbrains.buildServer.configs.kotlin.v2019_2.BuildType
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.dockerSupport
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildFeatures.freeDiskSpace
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildSteps.MavenBuildStep
-import jetbrains.buildServer.configs.kotlin.v2019_2.buildSteps.maven
+import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
+import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.maven
+import jetbrains.buildServer.configs.kotlin.toId
 
 class Maven(id: String, name: String, goals: String, args: String? = null) : BuildType({
-    this.id(id.toExtId())
+    this.id(id.toId())
     this.name = name
 
     steps {
