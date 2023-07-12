@@ -1,12 +1,12 @@
 package builds
 
-import jetbrains.buildServer.configs.kotlin.v10.toExtId
-import jetbrains.buildServer.configs.kotlin.v2019_2.Project
-import jetbrains.buildServer.configs.kotlin.v2019_2.sequential
-import jetbrains.buildServer.configs.kotlin.v2019_2.triggers.vcs
+import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.sequential
+import jetbrains.buildServer.configs.kotlin.toId
+import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
 class Build(name: String, branchFilter: String, forPullRequests: Boolean) : Project({
-    this.id(name.toExtId())
+    this.id(name.toId())
     this.name = name
 
     var packaging = Maven("${name}-package", "package", "clean package -pl :packaging -am")

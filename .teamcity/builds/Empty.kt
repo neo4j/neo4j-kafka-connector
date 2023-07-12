@@ -1,10 +1,10 @@
 package builds
 
-import jetbrains.buildServer.configs.kotlin.v10.toExtId
-import jetbrains.buildServer.configs.kotlin.v2019_2.BuildType
+import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.toId
 
 class Empty(id: String, name: String) : BuildType({
-    this.id(id.toExtId())
+    this.id(id.toId())
     this.name = name
 
     requirements {
