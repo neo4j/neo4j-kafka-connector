@@ -9,7 +9,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) : Proj
     this.id(name.toId())
     this.name = name
 
-    val packaging = Maven("${name}-package", "package", "clean package")
+    val packaging = Maven("${name}-package", "package", "clean package", "-DskipTests")
 
     val bts = sequential {
         if (forPullRequests) buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
