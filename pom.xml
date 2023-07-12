@@ -8,10 +8,10 @@
     <artifactId>neo4j-streams-parent</artifactId>
     <version>5.0.2</version>
     <packaging>pom</packaging>
-    <name>Neo4j Streams - Parent</name>
-    <description>Neo4j Integration for streaming platforms</description>
+    <name>Neo4j Kafka Connector - Parent</name>
+    <description>Neo4j Kafka Connector</description>
 
-    <url>http://github.com/neo4j-contrib/neo4j-streams</url>
+    <url>http://github.com/neo4j/neo4j-kafka-connector</url>
 
     <licenses>
         <license>
@@ -68,27 +68,23 @@
     </properties>
 
     <organization>
-        <name>Neo4j, Inc.</name>
+        <name>Neo4j, Neo4j Sweden AB</name>
         <url>https://neo4j.com</url>
     </organization>
 
     <developers>
         <developer>
-            <id>jexp</id>
-            <name>Michael Hunger</name>
-            <email>michael@neo4j.com</email>
-        </developer>
-        <developer>
-            <id>conker84</id>
-            <name>Andrea Santurbano</name>
-            <email>santand@gmail.com</email>
+            <id>team-connectors</id>
+            <name>Connectors Team</name>
+            <organization>Neo4j</organization>
+            <organizationUrl>https://neo4j.com</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:neo4j-contrib/neo4j-streams.git</connection>
-        <developerConnection>scm:git:git@github.com:neo4j-contrib/neo4j-streams.git</developerConnection>
-        <url>git@github.com:neo4j-contrib/neo4j-streams.git</url>
+        <connection>scm:git:git@github.com:neo4j/neo4j-kafka-connector.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j-kafka-connector.git</developerConnection>
+        <url>git@github.com:neo4j/neo4j-kafka-connector.git</url>
     </scm>
 
     <dependencyManagement>
@@ -260,12 +256,12 @@
             <scope>test</scope>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.slf4j</groupId>-->
-<!--            <artifactId>slf4j-simple</artifactId>-->
-<!--            <version>1.7.30</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.slf4j</groupId>-->
+        <!--            <artifactId>slf4j-simple</artifactId>-->
+        <!--            <version>1.7.30</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>org.neo4j.community</groupId>
@@ -295,7 +291,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.0</version>
+                <version>3.11.0</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
@@ -350,19 +346,58 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M5</version>
+                <version>3.1.2</version>
                 <configuration>
                     <includes>
                         <include>**/*Test.*</include>
-                        <include>**/*IT.*</include>
                     </includes>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/*IT.*</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
 
     <profiles>
+        <profile>
+            <id>skip-unit-tests</id>
+            <activation>
+                <property>
+                    <name>skipUnitTests</name>
+                </property>
+            </activation>
+            <properties>
+                <surefire.includes>^$</surefire.includes>
+            </properties>
+        </profile>
+        <profile>
+            <id>skip-integration-tests</id>
+            <activation>
+                <property>
+                    <name>skipIntegrationTests</name>
+                </property>
+            </activation>
+            <properties>
+                <failsafe.includes>^$</failsafe.includes>
+            </properties>
+        </profile>
         <profile>
             <id>release-sign-artifacts</id>
             <activation>
