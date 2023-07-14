@@ -4,37 +4,52 @@ import org.neo4j.driver.Result
 import org.neo4j.driver.Transaction
 import org.neo4j.driver.exceptions.NoSuchRecordException
 import org.neo4j.driver.types.Node
-import org.neo4j.graphdb.Label
 
-fun Transaction.findNodes(label: Label): Result = this.run("""
-        MATCH (n:`${label.name()}`)
+fun Transaction.findNodes(label: String): Result =
+  this.run(
+    """
+        MATCH (n:`${label}`)
         RETURN n
-    """.trimIndent())
+    """
+      .trimIndent())
 
-fun Transaction.findNode(label: Label, key: String, value: Any): Node? = try {
-    this.run("""
-        MATCH (n:`${label.name()}`{`$key`: ${'$'}value})
+fun Transaction.findNode(label: String, key: String, value: Any): Node? =
+  try {
+    this.run(
+        """
+        MATCH (n:`${label}`{`$key`: ${'$'}value})
         RETURN n
-    """.trimIndent(), mapOf("value" to value))
-        .single()[0]
-        .asNode()
-} catch (e: NoSuchRecordException) {
+    """
+          .trimIndent(),
+        mapOf("value" to value))
+      .single()[0]
+      .asNode()
+  } catch (e: NoSuchRecordException) {
     null
-}
+  }
 
-fun Transaction.allRelationships(): Result = this.run("""
+fun Transaction.allRelationships(): Result =
+  this.run(
+    """
         MATCH ()-[r]->()
         RETURN r
-    """.trimIndent())
+    """
+      .trimIndent())
 
-fun Transaction.allNodes(): Result = this.run("""
+fun Transaction.allNodes(): Result =
+  this.run(
+    """
         MATCH (n)
         RETURN n
-    """.trimIndent())
+    """
+      .trimIndent())
 
-fun Transaction.allLabels(): List<Label> = this.run("""
+fun Transaction.allLabels(): List<String> =
+  this.run(
+      """
         CALL db.labels() YIELD label
         RETURN label
-    """.trimIndent())
+    """
+        .trimIndent())
     .list()
-    .map { Label.label(it["label"].asString()) }
+    .map { it["label"].asString() }

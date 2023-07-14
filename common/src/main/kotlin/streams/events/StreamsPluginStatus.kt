@@ -1,3 +1,7 @@
 package streams.events
 
-enum class StreamsPluginStatus { RUNNING, STOPPED, UNKNOWN }
+enum class StreamsPluginStatus {
+  RUNNING,
+  STOPPED,
+  UNKNOWN
+}

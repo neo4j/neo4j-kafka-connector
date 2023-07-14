@@ -1,5 +1,6 @@
 package streams.kafka.connect.sink
 
+import kotlin.streams.toList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -19,85 +20,88 @@ import streams.service.StreamsSinkEntity
 import streams.service.StreamsSinkService
 import streams.utils.StreamsUtils
 import streams.utils.retryForException
-import kotlin.streams.toList
 
+class Neo4jSinkService(private val config: Neo4jSinkConnectorConfig) :
+  StreamsSinkService(Neo4jStrategyStorage(config)) {
 
-class Neo4jSinkService(private val config: Neo4jSinkConnectorConfig):
-        StreamsSinkService(Neo4jStrategyStorage(config)) {
+  private val log: Logger = LoggerFactory.getLogger(Neo4jSinkService::class.java)
 
-    private val log: Logger = LoggerFactory.getLogger(Neo4jSinkService::class.java)
+  private val driver: Driver = config.createDriver()
+  private val transactionConfig: TransactionConfig = config.createTransactionConfig()
 
-    private val driver: Driver = config.createDriver()
-    private val transactionConfig: TransactionConfig = config.createTransactionConfig()
+  private val bookmarks = mutableListOf<Bookmark>()
 
-    private val bookmarks = mutableListOf<Bookmark>()
+  fun close() {
+    StreamsUtils.closeSafetely(driver) { log.info("Error while closing Driver instance:", it) }
+  }
 
-    fun close() {
-        StreamsUtils.closeSafetely(driver) {
-            log.info("Error while closing Driver instance:", it)
-        }
-    }
-
-    override fun write(query: String, events: Collection<Any>) {
-        val data = mapOf<String, Any>("events" to events)
-        driver.session(config.createSessionConfig(bookmarks)).use { session ->
-            try {
-                runBlocking {
-                    retryForException(exceptions = arrayOf(ClientException::class.java, TransientException::class.java),
-                            retries = config.retryMaxAttempts, delayTime = 0) {  // we use the delayTime = 0, because we delegate the retryBackoff to the Neo4j Java Driver
-
-                        session.writeTransaction({
-                            val result = it.run(query, data)
-                            if (log.isDebugEnabled) {
-                                val summary = result.consume()
-                                log.debug("Successfully executed query: `$query`. Summary: $summary")
-                            }
-                        }, transactionConfig)
-                    }
-                }
-            } catch (e: Exception) {
-                bookmarks += session.lastBookmark()
-                if (log.isDebugEnabled) {
-                    val subList = events.stream()
-                            .limit(5.coerceAtMost(events.size).toLong())
-                            .toList()
-                    log.debug("Exception `${e.message}` while executing query: `$query`, with data: `$subList` total-records ${events.size}")
-                }
-                throw e
+  override fun write(query: String, events: Collection<Any>) {
+    val data = mapOf<String, Any>("events" to events)
+    driver.session(config.createSessionConfig(bookmarks)).use { session ->
+      try {
+        runBlocking {
+          retryForException(
+            exceptions = arrayOf(ClientException::class.java, TransientException::class.java),
+            retries = config.retryMaxAttempts,
+            delayTime =
+              0) { // we use the delayTime = 0, because we delegate the retryBackoff to the Neo4j
+              // Java Driver
+              session.writeTransaction(
+                {
+                  val result = it.run(query, data)
+                  if (log.isDebugEnabled) {
+                    val summary = result.consume()
+                    log.debug("Successfully executed query: `$query`. Summary: $summary")
+                  }
+                },
+                transactionConfig)
             }
         }
-    }
-
-    fun writeData(data: Map<String, List<List<StreamsSinkEntity>>>) {
-        val errors = if (config.parallelBatches) writeDataAsync(data) else writeDataSync(data);
-        if (errors.isNotEmpty()) {
-            throw ConnectException(errors.map { it.message }.toSet()
-                    .joinToString("\n", "Errors executing ${data.values.map { it.size }.sum()} jobs:\n"))
+      } catch (e: Exception) {
+        bookmarks += session.lastBookmark()
+        if (log.isDebugEnabled) {
+          val subList = events.stream().limit(5.coerceAtMost(events.size).toLong()).toList()
+          log.debug(
+            "Exception `${e.message}` while executing query: `$query`, with data: `$subList` total-records ${events.size}")
         }
+        throw e
+      }
     }
+  }
 
-    @ExperimentalCoroutinesApi
-    @ObsoleteCoroutinesApi
-    private fun writeDataAsync(data: Map<String, List<List<StreamsSinkEntity>>>) = runBlocking {
-        val jobs = data
-                .flatMap { (topic, records) ->
-                    records.map { async (Dispatchers.IO) { writeForTopic(topic, it) } }
-                }
-
-        // timeout starts in writeTransaction()
-        jobs.awaitAll()
-        jobs.mapNotNull { it.errors() }
+  fun writeData(data: Map<String, List<List<StreamsSinkEntity>>>) {
+    val errors = if (config.parallelBatches) writeDataAsync(data) else writeDataSync(data)
+    if (errors.isNotEmpty()) {
+      throw ConnectException(
+        errors
+          .map { it.message }
+          .toSet()
+          .joinToString("\n", "Errors executing ${data.values.map { it.size }.sum()} jobs:\n"))
     }
-    
-    private fun writeDataSync(data: Map<String, List<List<StreamsSinkEntity>>>) =
-            data.flatMap { (topic, records) ->
-                records.mapNotNull {
-                    try {
-                        writeForTopic(topic, it)
-                        null
-                    } catch (e: Exception) {
-                        e
-                    }
-                }
-            }
+  }
+
+  @ExperimentalCoroutinesApi
+  @ObsoleteCoroutinesApi
+  private fun writeDataAsync(data: Map<String, List<List<StreamsSinkEntity>>>) = runBlocking {
+    val jobs =
+      data.flatMap { (topic, records) ->
+        records.map { async(Dispatchers.IO) { writeForTopic(topic, it) } }
+      }
+
+    // timeout starts in writeTransaction()
+    jobs.awaitAll()
+    jobs.mapNotNull { it.errors() }
+  }
+
+  private fun writeDataSync(data: Map<String, List<List<StreamsSinkEntity>>>) =
+    data.flatMap { (topic, records) ->
+      records.mapNotNull {
+        try {
+          writeForTopic(topic, it)
+          null
+        } catch (e: Exception) {
+          e
+        }
+      }
+    }
 }
