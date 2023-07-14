@@ -2,7 +2,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>org.neo4j.connectors.kafka</groupId>
     <artifactId>parent</artifactId>
     <version>5.1.0-SNAPSHOT</version>
@@ -10,12 +9,10 @@
     <name>Neo4j Kafka Connector - Parent</name>
     <description>Neo4j Kafka Connector</description>
     <url>http://github.com/neo4j/neo4j-kafka-connector</url>
-
     <organization>
         <name>Neo4j, Neo4j Sweden AB</name>
         <url>https://neo4j.com</url>
     </organization>
-
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -23,7 +20,6 @@
             <distribution>manual</distribution>
         </license>
     </licenses>
-
     <developers>
         <developer>
             <id>team-connectors</id>
@@ -32,13 +28,11 @@
             <organizationUrl>https://neo4j.com</organizationUrl>
         </developer>
     </developers>
-
     <modules>
         <module>common</module>
         <module>test-support</module>
         <module>kafka-connect-neo4j</module>
     </modules>
-
     <properties>
         <avro.version>1.8.2</avro.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
@@ -52,6 +46,7 @@
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.coroutines.version>1.6.4</kotlin.coroutines.version>
         <kotlin.version>1.7.10</kotlin.version>
+        <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/licensing/notice-asl-prefix.txt</licensing.prepend.text>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-failsafe-plugin.version>3.1.2</maven-failsafe-plugin.version>
@@ -62,7 +57,6 @@
         <slf4j-api.version>1.7.36</slf4j-api.version>
         <testcontainers.version>1.17.6</testcontainers.version>
     </properties>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -152,20 +146,19 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <build>
         <pluginManagement>
             <plugins>
                 <plugin>
                     <groupId>org.neo4j.build.plugins</groupId>
                     <artifactId>licensing-maven-plugin</artifactId>
-                    <version>${version.licensing-maven-plugin}</version>
+                    <version>${licensing-maven-plugin.version}</version>
                     <configuration>
                         <failIfDisliked>true</failIfDisliked>
                         <failIfMissing>true</failIfMissing>
                         <plainTextReport>true</plainTextReport>
                         <prependText>${licensing.prepend.text}</prependText>
-                        <excludedGroups>^((com.neo4j.kafka-connect){1})$</excludedGroups>
+                        <excludedGroups>^((org.neo4j.connectors.kafka){1})$</excludedGroups>
                         <includedScopes>compile</includedScopes>
                     </configuration>
                     <dependencies>
@@ -337,7 +330,6 @@
                             <include>src/main/kotlin/**/*.kt</include>
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
-
                         <ktfmt>
                             <version>0.44</version>
                             <style>DEFAULT</style>
@@ -375,12 +367,10 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
     </build>
-
     <profiles>
         <profile>
             <id>skip-unit-tests</id>
@@ -404,6 +394,27 @@
                 <failsafe.includes>^$</failsafe.includes>
             </properties>
         </profile>
+        <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
+        <profile>
+            <id>has-sources</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <file>
+                    <exists>src</exists>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.neo4j.build.plugins</groupId>
+                        <artifactId>licensing-maven-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.mycila</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
-
 </project>
