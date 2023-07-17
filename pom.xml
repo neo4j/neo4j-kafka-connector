@@ -313,7 +313,7 @@
                 <executions>
                     <execution>
                         <goals>
-                            <goal>sort</goal>
+                            <goal>verify</goal>
                         </goals>
                         <phase>validate</phase>
                     </execution>
