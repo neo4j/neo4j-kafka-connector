@@ -7,7 +7,7 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep.Repository
 import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Maven(id: String, name: String, goals: String, args: String? = null) : BuildType({
+class Maven(id: String, name: String, goals: String, args: String? = null, init: MavenBuildStep.() -> Unit) : BuildType({
     this.id(id.toId())
     this.name = name
 
@@ -21,6 +21,8 @@ class Maven(id: String, name: String, goals: String, args: String? = null) : Bui
             dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
 
             localRepoScope = RepositoryScope.BUILD_CONFIGURATION
+
+            init()
         }
     }
 
