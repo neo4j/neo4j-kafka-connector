@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 http://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>confluent</id>
+
+    <formats>
+        <format>zip</format>
+    </formats>
+
+    <fileSets>
+        <fileSet>
+            <directory>src/main/distributions/text</directory>
+            <outputDirectory/>
+            <lineEnding>keep</lineEnding>
+            <filtered>true</filtered>
+            <excludes>
+                <exclude>**/.keep</exclude>
+                <exclude>**/*.formatted</exclude>
+            </excludes>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
+    </fileSets>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <outputFileNameMapping>${artifact.artifactId}-${artifact.version}.${artifact.extension}
+            </outputFileNameMapping>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+            <unpack>false</unpack>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useStrictFiltering>true</useStrictFiltering>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <useTransitiveFiltering>true</useTransitiveFiltering>
+            <excludes>
+                <exclude>com.google.guava:guava</exclude>
+            </excludes>
+        </dependencySet>
+    </dependencySets>
+</assembly>
