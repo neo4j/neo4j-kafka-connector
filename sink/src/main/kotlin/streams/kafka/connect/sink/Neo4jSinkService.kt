@@ -16,6 +16,7 @@
  */
 package streams.kafka.connect.sink
 
+import kotlin.streams.toList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
