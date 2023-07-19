@@ -9,16 +9,16 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) : Proj
     this.id(name.toId())
     this.name = name
 
-    val packaging = Maven("${name}-package", "package", "clean package", "-DskipTests")
+    val packaging = Maven("${name}-package", "package", "package", "-DskipTests")
 
     val bts = sequential {
         if (forPullRequests) buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
         if (forPullRequests) buildType(PRCheck("${name}-pr-check", "pr check"))
-        buildType(Maven("${name}-prepare-build", "prepare-build", "clean install", "-f build-resources/pom.xml"))
-        buildType(Maven("${name}-build", "build", "clean compile"))
+        buildType(Maven("${name}-prepare-build", "prepare-build", "install", "-f build-resources/pom.xml"))
+        buildType(Maven("${name}-build", "build", "test-compile"))
         parallel {
-            buildType(Maven("${name}-unit-tests", "unit tests", "clean test"))
-            buildType(Maven("${name}-integration-tests", "integration tests", "clean verify", "-DskipUnitTests"))
+            buildType(Maven("${name}-unit-tests", "unit tests", "test"))
+            buildType(Maven("${name}-integration-tests", "integration tests", "verify", "-DskipUnitTests"))
         }
         if (forPullRequests) buildType(packaging)
         else buildType(collectArtifacts(packaging))
