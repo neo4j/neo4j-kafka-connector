@@ -1,63 +1,78 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package streams.utils
 
-import kotlinx.coroutines.runBlocking
-import org.junit.Test
 import java.io.IOException
-import java.lang.ClassCastException
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
+import org.junit.Test
 
 class CoroutineUtilsTest {
 
-    @Test
-    fun `should success after retry for known exception`() = runBlocking {
-        var count = 0
-        var excuted = false
-        retryForException<Unit>(exceptions = arrayOf(RuntimeException::class.java),
-                retries = 4, delayTime = 100) {
-            if (count < 2) {
-                ++count
-                throw RuntimeException()
-            }
-            excuted = true
+  @Test
+  fun `should success after retry for known exception`() = runBlocking {
+    var count = 0
+    var excuted = false
+    retryForException<Unit>(
+      exceptions = arrayOf(RuntimeException::class.java), retries = 4, delayTime = 100) {
+        if (count < 2) {
+          ++count
+          throw RuntimeException()
         }
+        excuted = true
+      }
 
-        assertEquals(2, count)
-        assertTrue { excuted }
-    }
+    assertEquals(2, count)
+    assertTrue { excuted }
+  }
 
-    @Test(expected = RuntimeException::class)
-    fun `should fail after retry for known exception`() {
-        var retries = 3
-        runBlocking {
-            retryForException<Unit>(exceptions = arrayOf(RuntimeException::class.java),
-                    retries = 3, delayTime = 100) {
-                if (retries >= 0) {
-                    --retries
-                    throw RuntimeException()
-                }
-            }
+  @Test(expected = RuntimeException::class)
+  fun `should fail after retry for known exception`() {
+    var retries = 3
+    runBlocking {
+      retryForException<Unit>(
+        exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
+          if (retries >= 0) {
+            --retries
+            throw RuntimeException()
+          }
         }
     }
+  }
 
-    @Test
-    fun `should fail fast unknown exception`() {
-        var iteration = 0
-        var isIOException = false
-        try {
-            runBlocking {
-                retryForException<Unit>(exceptions = arrayOf(RuntimeException::class.java),
-                        retries = 3, delayTime = 100) {
-                    if (iteration >= 0) {
-                        ++iteration
-                        throw IOException()
-                    }
-                }
+  @Test
+  fun `should fail fast unknown exception`() {
+    var iteration = 0
+    var isIOException = false
+    try {
+      runBlocking {
+        retryForException<Unit>(
+          exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
+            if (iteration >= 0) {
+              ++iteration
+              throw IOException()
             }
-        } catch (e: Exception) {
-            isIOException = e is IOException
-        }
-        assertTrue { isIOException }
-        assertEquals(1, iteration)
+          }
+      }
+    } catch (e: Exception) {
+      isIOException = e is IOException
     }
+    assertTrue { isIOException }
+    assertEquals(1, iteration)
+  }
 }
