@@ -14,6 +14,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) : Proj
     val bts = sequential {
         if (forPullRequests) buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
         if (forPullRequests) buildType(PRCheck("${name}-pr-check", "pr check"))
+        buildType(Maven("${name}-prepare-build", "prepare-build", "clean install", "-f build-resources/pom.xml"))
         buildType(Maven("${name}-build", "build", "clean compile"))
         parallel {
             buildType(Maven("${name}-unit-tests", "unit tests", "clean test"))
