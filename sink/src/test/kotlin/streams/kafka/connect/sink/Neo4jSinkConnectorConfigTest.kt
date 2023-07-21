@@ -17,13 +17,14 @@
 package streams.kafka.connect.sink
 
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.neo4j.driver.Config
 import org.neo4j.driver.internal.async.pool.PoolSettings
 import streams.kafka.connect.common.AuthenticationType
@@ -31,39 +32,39 @@ import streams.kafka.connect.common.Neo4jConnectorConfig
 
 class Neo4jSinkConnectorConfigTest {
 
-  @Test(expected = ConfigException::class)
+  @Test
   fun `should throw a ConfigException because of mismatch`() {
-    try {
-      val originals =
-        mapOf(
-          SinkConnector.TOPICS_CONFIG to "foo, bar",
-          "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-            "CREATE (p:Person{name: event.firstName})")
-      Neo4jSinkConnectorConfig(originals)
-    } catch (e: ConfigException) {
-      assertEquals(
-        "There is a mismatch between topics defined into the property `topics` ([bar, foo]) and configured topics ([foo])",
-        e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(ConfigException::class) {
+        val originals =
+          mapOf(
+            SinkConnector.TOPICS_CONFIG to "foo, bar",
+            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+              "CREATE (p:Person{name: event.firstName})")
+        Neo4jSinkConnectorConfig(originals)
+      }
+
+    assertEquals(
+      "There is a mismatch between topics defined into the property `topics` ([bar, foo]) and configured topics ([foo])",
+      exception.message)
   }
 
-  @Test(expected = ConfigException::class)
+  @Test
   fun `should throw a ConfigException because of cross defined topics`() {
-    try {
-      val originals =
-        mapOf(
-          SinkConnector.TOPICS_CONFIG to "foo, bar",
-          "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-            "CREATE (p:Person{name: event.firstName})",
-          "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}bar" to
-            "CREATE (p:Person{name: event.firstName})",
-          Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID to "foo")
-      Neo4jSinkConnectorConfig(originals)
-    } catch (e: ConfigException) {
-      assertEquals("The following topics are cross defined: [foo]", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(ConfigException::class) {
+        val originals =
+          mapOf(
+            SinkConnector.TOPICS_CONFIG to "foo, bar",
+            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+              "CREATE (p:Person{name: event.firstName})",
+            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}bar" to
+              "CREATE (p:Person{name: event.firstName})",
+            Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID to "foo")
+        Neo4jSinkConnectorConfig(originals)
+      }
+
+    assertEquals("The following topics are cross defined: [foo]", exception.message)
   }
 
   @Test

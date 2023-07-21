@@ -18,32 +18,30 @@ package streams.utils
 
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.testcontainers.containers.GenericContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 
-class FakeWebServer : GenericContainer<FakeWebServer>("alpine") {
-  override fun start() {
-    this.withCommand(
+@Testcontainers
+class ValidationUtilsTest {
+
+  @Container
+  val fakeWebServer: GenericContainer<*> =
+    GenericContainer("alpine")
+      .withCommand(
         "/bin/sh",
         "-c",
         "while true; do { echo -e 'HTTP/1.1 200 OK'; echo ; } | nc -l -p 8000; done")
       .withExposedPorts(8000)
-    super.start()
-  }
-
-  fun getUrl() = "http://localhost:${getMappedPort(8000)}"
-}
-
-@Ignore("fails on CI")
-class ValidationUtilsTest {
 
   @Test
   fun `should reach the server`() {
-    val httpServer = FakeWebServer()
-    httpServer.start()
-    assertTrue { ValidationUtils.checkServersUnreachable(httpServer.getUrl()).isEmpty() }
-    httpServer.stop()
+    assertTrue {
+      ValidationUtils.checkServersUnreachable(
+          "http://localhost:${fakeWebServer.getMappedPort(8000)}")
+        .isEmpty()
+    }
   }
 
   @Test

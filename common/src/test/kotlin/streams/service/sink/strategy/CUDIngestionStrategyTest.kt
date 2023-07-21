@@ -18,7 +18,7 @@ package streams.service.sink.strategy
 
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import streams.extensions.quote
 import streams.service.StreamsSinkEntity
 import streams.utils.StreamsUtils

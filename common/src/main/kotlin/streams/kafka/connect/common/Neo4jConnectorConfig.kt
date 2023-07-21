@@ -169,7 +169,7 @@ open class Neo4jConnectorConfig(
     configBuilder.withConnectionLivenessCheckTimeout(
       this.connectionLivenessCheckTimeout, TimeUnit.MINUTES)
     configBuilder.withResolver { address ->
-      this.serverUri.map { ServerAddress.of(it.host, it.port) }.toSet()
+      this.serverUri.map { ServerAddress.of(it.host, if (it.port == -1) 7687 else it.port) }.toSet()
     }
     val neo4jConfig = configBuilder.build()
 

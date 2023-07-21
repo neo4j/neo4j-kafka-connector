@@ -21,7 +21,7 @@ import java.time.ZoneOffset.UTC
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.neo4j.driver.Values
 import streams.events.EntityType
 import streams.events.Meta

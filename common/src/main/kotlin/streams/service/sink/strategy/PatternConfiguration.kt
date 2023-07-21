@@ -106,7 +106,7 @@ data class NodePatternConfiguration(
         val keys =
           allProperties.filter { it.startsWith(ID_PREFIX) }.map { it.trim().substring(1) }.toSet()
         if (keys.isEmpty()) {
-          throw IllegalArgumentException("The Node pattern $pattern must contains at lest one key")
+          throw IllegalArgumentException("The Node pattern $pattern must contain at least one key")
         }
         val properties = allProperties.filter { !it.startsWith(ID_PREFIX) }
         val type = getPatternConfiguredType(properties)

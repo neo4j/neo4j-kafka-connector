@@ -17,21 +17,19 @@
 package streams.kafka.connect.sink
 
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.apache.kafka.connect.sink.SinkTaskContext
-import org.junit.*
-import org.junit.Assume.assumeTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.neo4j.driver.*
-import org.neo4j.driver.exceptions.ClientException
 import streams.events.*
 import streams.kafka.connect.common.AuthenticationType
 import streams.kafka.connect.common.Neo4jConnectorConfig
@@ -52,16 +50,10 @@ class Neo4jSinkTaskAuraTest {
     private var driver: Driver? = null
 
     private const val NAME_TOPIC = "neotopic"
-    private const val SHOW_CURRENT_USER = "SHOW CURRENT USER"
-    private const val DBMS_LIST_CONFIG = "CALL dbms.listConfig"
-    private const val NEO4J = "neo4j"
-    private const val SYSTEM = "system"
-    private const val ERROR_ADMIN_COMMAND =
-      "Executing admin procedure is not allowed for user '$NEO4J' with roles [PUBLIC] overridden by READ restricted to ACCESS."
     private const val LABEL_SINK_AURA = "SinkAuraTest"
     private const val COUNT_NODES_SINK_AURA = "MATCH (s:$LABEL_SINK_AURA) RETURN count(s) as count"
 
-    @BeforeClass
+    @BeforeAll
     @JvmStatic
     fun setUp() {
       assumeTrue(user != null)
@@ -90,13 +82,13 @@ class Neo4jSinkTaskAuraTest {
       }
   }
 
-  @After
+  @AfterEach
   fun clearNodesAura() {
     driver?.session()?.run("MATCH (n:$LABEL_SINK_AURA) DETACH DELETE n")
   }
 
   @Test
-  fun `test with struct in Aura 4`() {
+  fun `test with struct in Aura`() {
     driver?.session().use { countEntitiesSinkAura(it, 0) }
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}$NAME_TOPIC"] =
@@ -117,7 +109,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should insert data into Neo4j from CDC events in Aura 4`() {
+  fun `should insert data into Neo4j from CDC events in Aura`() {
 
     val props = getMapSinkConnectorConfig()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
@@ -194,7 +186,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should update data into Neo4j from CDC events in Aura 4`() {
+  fun `should update data into Neo4j from CDC events in Aura`() {
     driver
       ?.session()
       ?.run(
@@ -267,7 +259,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should delete data into Neo4j from CDC events in Aura 4`() {
+  fun `should delete data into Neo4j from CDC events in Aura`() {
 
     driver?.session().use {
       it?.run(
@@ -311,7 +303,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should work with node pattern topic in Aura 4`() {
+  fun `should work with node pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}$NAME_TOPIC"] =
       "$LABEL_SINK_AURA{!userId,name,surname,address.city}"
@@ -339,7 +331,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should work with relationship pattern topic in Aura 4`() {
+  fun `should work with relationship pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$NAME_TOPIC"] =
       "(:$LABEL_SINK_AURA{!sourceId,sourceName,sourceSurname})-[:HAS_REL]->(:$LABEL_SINK_AURA{!targetId,targetName,targetSurname})"
@@ -368,7 +360,7 @@ class Neo4jSinkTaskAuraTest {
   }
 
   @Test
-  fun `should ingest node data from CUD Events in Aura 4`() {
+  fun `should ingest node data from CUD Events in Aura`() {
     val mergeMarkers = listOf(2, 5, 7)
     val key = "key"
     val topic = UUID.randomUUID().toString()
@@ -399,42 +391,6 @@ class Neo4jSinkTaskAuraTest {
     driver?.session().use {
       countEntitiesSinkAura(it, 5, "MATCH (n:$LABEL_SINK_AURA:Bar:Label) RETURN count(n) AS count")
       countEntitiesSinkAura(it, 10, "MATCH (n:$LABEL_SINK_AURA:Bar) RETURN count(n) AS count")
-    }
-  }
-
-  @Test
-  fun `neo4j user should not have the admin role in Aura 4`() {
-
-    driver?.session(SessionConfig.forDatabase(SYSTEM)).use { session ->
-      session?.run(SHOW_CURRENT_USER).let {
-        assertTrue { it!!.hasNext() }
-        val roles = it!!.next().get("roles").asList()
-        assertFalse { roles.contains("admin") }
-        assertTrue { roles.contains("PUBLIC") }
-        assertFalse { it.hasNext() }
-      }
-    }
-  }
-
-  @Test
-  fun `should fail if I try to run SHOW CURRENT USER commands on neo4j database in Aura 4`() {
-
-    assertFailsWith(
-      ClientException::class,
-      "This is an administration command and it should be executed against the system database: $SHOW_CURRENT_USER") {
-        driver?.session(SessionConfig.forDatabase(NEO4J)).use { it?.run(SHOW_CURRENT_USER) }
-      }
-  }
-
-  @Test
-  fun `should fail if I try to run admin commands with neo4j user in Aura 4`() {
-
-    assertFailsWith(ClientException::class, ERROR_ADMIN_COMMAND) {
-      driver?.session(SessionConfig.forDatabase(SYSTEM)).use { it?.run(DBMS_LIST_CONFIG) }
-    }
-
-    assertFailsWith(ClientException::class, ERROR_ADMIN_COMMAND) {
-      driver?.session(SessionConfig.forDatabase(NEO4J)).use { it?.run(DBMS_LIST_CONFIG) }
     }
   }
 }
