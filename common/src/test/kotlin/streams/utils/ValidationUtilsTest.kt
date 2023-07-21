@@ -26,20 +26,12 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @Testcontainers
 class ValidationUtilsTest {
 
-  @Container
-  val fakeWebServer: GenericContainer<*> =
-    GenericContainer("alpine")
-      .withCommand(
-        "/bin/sh",
-        "-c",
-        "while true; do { echo -e 'HTTP/1.1 200 OK'; echo ; } | nc -l -p 8000; done")
-      .withExposedPorts(8000)
+  @Container val fakeWebServer: GenericContainer<*> = GenericContainer("httpd").withExposedPorts(80)
 
   @Test
   fun `should reach the server`() {
     assertTrue {
-      ValidationUtils.checkServersUnreachable(
-          "http://localhost:${fakeWebServer.getMappedPort(8000)}")
+      ValidationUtils.checkServersUnreachable("http://localhost:${fakeWebServer.getMappedPort(80)}")
         .isEmpty()
     }
   }
