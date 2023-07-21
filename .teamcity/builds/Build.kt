@@ -10,7 +10,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
       this.id(name.toId())
       this.name = name
 
-      val packaging = Maven("${name}-package", "package", "package", "-DskipTests")
+      val packaging = Maven("${name}-package", "package", "package", "-pl :packaging -am -DskipTests")
 
       val bts = sequential {
         if (forPullRequests)
