@@ -17,10 +17,7 @@
 package streams.kafka.connect.sink
 
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.test.*
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
@@ -28,17 +25,20 @@ import org.apache.kafka.connect.data.Timestamp
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.apache.kafka.connect.sink.SinkTaskContext
-import org.junit.After
-import org.junit.AfterClass
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.neo4j.driver.types.Node
-import streams.Neo4jContainerExtension
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 import streams.events.*
 import streams.kafka.connect.common.AuthenticationType
 import streams.kafka.connect.common.Neo4jConnectorConfig
@@ -54,42 +54,44 @@ import streams.service.sink.strategy.CUDNodeRel
 import streams.service.sink.strategy.CUDOperations
 import streams.service.sink.strategy.CUDRelationship
 import streams.utils.JSONUtils
-import streams.utils.StreamsUtils
 
+@Testcontainers
 class Neo4jSinkTaskTest {
 
   companion object {
+    @Container
+    val neo4j: Neo4jContainer<*> =
+      Neo4jContainer("neo4j:5-enterprise")
+        .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+        .withoutAuthentication()
+
     private lateinit var driver: Driver
     private lateinit var session: Session
 
-    @JvmStatic val neo4j = Neo4jContainerExtension()
-
-    @BeforeClass
+    @BeforeAll
     @JvmStatic
     fun setUpContainer() {
-      neo4j.start()
-      driver = neo4j.driver!!
+      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
       session = driver.session()
     }
 
-    @AfterClass
+    @AfterAll
     @JvmStatic
     fun tearDownContainer() {
-      driver.let { StreamsUtils.closeSafetely(it) }
-      session.let { StreamsUtils.closeSafetely(it) }
-      StreamsUtils.closeSafetely(neo4j)
+      session.close()
+      driver.close()
     }
   }
 
   private lateinit var task: SinkTask
 
-  @After
+  @BeforeEach
   fun after() {
     session.run("MATCH (n) DETACH DELETE n")
     task.stop()
   }
 
-  @Before
+  @BeforeEach
   fun before() {
     task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
@@ -624,7 +626,8 @@ class Neo4jSinkTaskTest {
         payload =
           RelationshipPayload(
             id = "2",
-            // leverage on first ids alphabetically, that is name, so we take the 2 previously
+            // leverage on first ids alphabetically, that is name, so we take the 2
+            // previously
             // created nodes
             start =
               RelationshipNodeChange(
@@ -684,7 +687,8 @@ class Neo4jSinkTaskTest {
         payload =
           RelationshipPayload(
             id = "2",
-            // leverage on first ids alphabetically, that is name, so create 2 additional nodes
+            // leverage on first ids alphabetically, that is name, so create 2 additional
+            // nodes
             start =
               RelationshipNodeChange(
                 id = "1",
@@ -813,7 +817,8 @@ class Neo4jSinkTaskTest {
         payload =
           RelationshipPayload(
             id = "2",
-            // leverage on first ids alphabetically, that is name, so we take the 2 previously
+            // leverage on first ids alphabetically, that is name, so we take the 2
+            // previously
             // created nodes
             start =
               RelationshipNodeChange(
@@ -875,7 +880,8 @@ class Neo4jSinkTaskTest {
         payload =
           RelationshipPayload(
             id = "2",
-            // leverage on first ids alphabetically, that is name, so create 2 additional nodes
+            // leverage on first ids alphabetically, that is name, so create 2 additional
+            // nodes
             start =
               RelationshipNodeChange(
                 id = "1",
@@ -1007,7 +1013,8 @@ class Neo4jSinkTaskTest {
         payload =
           RelationshipPayload(
             id = "2",
-            // leverage on first ids alphabetically, that is name, so create 2 additional nodes
+            // leverage on first ids alphabetically, that is name, so create 2 additional
+            // nodes
             start =
               RelationshipNodeChange(
                 id = "1",
@@ -1717,7 +1724,7 @@ class Neo4jSinkTaskTest {
   }
 
   @Test
-  @Ignore("flaky")
+  @Disabled("flaky")
   fun `should stop the query and fails with small timeout and vice versa`() {
     val myTopic = "foo"
     val props = mutableMapOf<String, String>()
@@ -1764,16 +1771,15 @@ class Neo4jSinkTaskTest {
     input: List<SinkRecord>,
     expectedDataErrorSize: Int
   ) {
-    try {
-      val taskInvalid = Neo4jSinkTask()
-      taskInvalid.initialize(mock(SinkTaskContext::class.java))
-      taskInvalid.start(props)
-      taskInvalid.put(input)
-      fail("Should fail because of TimeoutException")
-    } catch (e: ProcessingError) {
-      val errors = e.errorDatas
-      assertEquals(expectedDataErrorSize, errors.size)
-    }
+    val exception =
+      assertFailsWith(ProcessingError::class) {
+        val taskInvalid = Neo4jSinkTask()
+        taskInvalid.initialize(mock(SinkTaskContext::class.java))
+        taskInvalid.start(props)
+        taskInvalid.put(input)
+      }
+
+    assertEquals(expectedDataErrorSize, exception.errorDatas.size)
   }
 
   private fun countFooPersonEntities(expected: Int) {

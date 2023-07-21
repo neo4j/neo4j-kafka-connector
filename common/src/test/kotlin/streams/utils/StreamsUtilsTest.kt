@@ -18,9 +18,10 @@ package streams.utils
 
 import java.io.IOException
 import java.lang.RuntimeException
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class StreamsUtilsTest {
 
@@ -35,12 +36,15 @@ class StreamsUtilsTest {
   @Test
   fun shouldIgnoreTheException() {
     val data =
-      StreamsUtils.ignoreExceptions({ throw RuntimeException() }, RuntimeException::class.java)
+      StreamsUtils.ignoreExceptions<Nothing>(
+        { throw RuntimeException() }, RuntimeException::class.java)
     assertNull(data)
   }
 
-  @Test(expected = IOException::class)
+  @Test
   fun shouldNotIgnoreTheException() {
-    StreamsUtils.ignoreExceptions({ throw IOException() }, RuntimeException::class.java)
+    assertFailsWith(IOException::class) {
+      StreamsUtils.ignoreExceptions<Nothing>({ throw IOException() }, RuntimeException::class.java)
+    }
   }
 }

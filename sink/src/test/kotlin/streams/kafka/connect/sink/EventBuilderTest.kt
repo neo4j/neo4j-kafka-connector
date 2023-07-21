@@ -23,7 +23,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.data.Timestamp
 import org.apache.kafka.connect.sink.SinkRecord
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class EventBuilderTest {
   private val PERSON_SCHEMA =

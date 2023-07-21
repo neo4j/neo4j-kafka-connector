@@ -17,41 +17,43 @@
 package streams.kafka.connect.source
 
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import org.apache.kafka.common.config.ConfigException
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class Neo4jSourceConnectorConfigTest {
 
-  @Test(expected = ConfigException::class)
+  @Test
   fun `should throw a ConfigException because of unsupported streaming type`() {
-    try {
-      val originals =
-        mapOf(
-          Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.LABELS.toString(),
-          Neo4jSourceConnectorConfig.TOPIC to "topic",
-          Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
-          Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
-      Neo4jSourceConnectorConfig(originals)
-    } catch (e: ConfigException) {
-      assertEquals("Supported source query types are: ${SourceType.QUERY}", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(ConfigException::class) {
+        val originals =
+          mapOf(
+            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.LABELS.toString(),
+            Neo4jSourceConnectorConfig.TOPIC to "topic",
+            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
+            Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
+        Neo4jSourceConnectorConfig(originals)
+      }
+
+    assertEquals("Supported source query types are: ${SourceType.QUERY}", exception.message)
   }
 
-  @Test(expected = ConfigException::class)
+  @Test
   fun `should throw a ConfigException because of empty query`() {
-    try {
-      val originals =
-        mapOf(
-          Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
-          Neo4jSourceConnectorConfig.TOPIC to "topic",
-          Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
-          Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
-      Neo4jSourceConnectorConfig(originals)
-    } catch (e: ConfigException) {
-      assertEquals("You need to define: ${Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY}", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(ConfigException::class) {
+        val originals =
+          mapOf(
+            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
+            Neo4jSourceConnectorConfig.TOPIC to "topic",
+            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
+            Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
+        Neo4jSourceConnectorConfig(originals)
+      }
+
+    assertEquals(
+      "You need to define: ${Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY}", exception.message)
   }
 
   @Test

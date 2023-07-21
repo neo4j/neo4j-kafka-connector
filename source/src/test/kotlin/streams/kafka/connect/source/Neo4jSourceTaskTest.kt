@@ -18,62 +18,64 @@ package streams.kafka.connect.source
 
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.test.assertFailsWith
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.errors.ConnectException
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
-import org.hamcrest.Matchers
-import org.junit.After
-import org.junit.AfterClass
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.Test
+import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.*
 import org.mockito.Mockito
+import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import streams.Assert
-import streams.Neo4jContainerExtension
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 import streams.kafka.connect.common.AuthenticationType
 import streams.kafka.connect.common.Neo4jConnectorConfig
 import streams.utils.JSONUtils
-import streams.utils.StreamsUtils
 
+@Testcontainers
 class Neo4jSourceTaskTest {
 
   companion object {
+    @Container
+    val neo4j: Neo4jContainer<*> =
+      Neo4jContainer("neo4j:5-enterprise")
+        .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+        .withoutAuthentication()
+
     private lateinit var driver: Driver
     private lateinit var session: Session
 
-    @JvmStatic val neo4j = Neo4jContainerExtension()
-
-    @BeforeClass
+    @BeforeAll
     @JvmStatic
     fun setUpContainer() {
-      neo4j.start()
-      driver = neo4j.driver!!
+      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
       session = driver.session()
     }
 
-    @AfterClass
+    @AfterAll
     @JvmStatic
     fun tearDownContainer() {
-      driver.let { StreamsUtils.closeSafetely(it) }
-      session.let { StreamsUtils.closeSafetely(it) }
-      StreamsUtils.closeSafetely(neo4j)
+      session.close()
+      driver.close()
     }
   }
 
   private lateinit var task: SourceTask
 
-  @After
+  @AfterEach
   fun after() {
     session.run("MATCH (n) DETACH DELETE n")
     task.stop()
   }
 
-  @Before
+  @BeforeEach
   fun before() {
     task = Neo4jSourceTask()
     val sourceTaskContextMock = Mockito.mock(SourceTaskContext::class.java)
@@ -113,15 +115,11 @@ class Neo4jSourceTaskTest {
     val expected = insertRecords(totalRecords, true)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-        expected.containsAll(actualList)
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
+      expected.containsAll(actualList)
+    }
   }
 
   @Test
@@ -140,15 +138,11 @@ class Neo4jSourceTaskTest {
     val expected = insertRecords(totalRecords)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { (it.value() as Struct).toMap() }
-        expected.containsAll(actualList)
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { (it.value() as Struct).toMap() }
+      expected.containsAll(actualList)
+    }
   }
 
   @Test
@@ -167,15 +161,11 @@ class Neo4jSourceTaskTest {
     val expected = insertRecords(totalRecords, true)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-        expected == actualList
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
+      expected == actualList
+    }
   }
 
   @Test
@@ -195,15 +185,11 @@ class Neo4jSourceTaskTest {
     val expected = insertRecords(totalRecords)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { (it.value() as Struct).toMap() }
-        expected == actualList
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { (it.value() as Struct).toMap() }
+      expected == actualList
+    }
   }
 
   private fun insertRecords(totalRecords: Int, longToInt: Boolean = false) =
@@ -267,15 +253,11 @@ class Neo4jSourceTaskTest {
     insertRecords(totalRecords)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-        actualList.size >= 2
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
+      actualList.size >= 2
+    }
   }
 
   @Test
@@ -293,15 +275,11 @@ class Neo4jSourceTaskTest {
     insertRecords(totalRecords)
 
     val list = mutableListOf<SourceRecord>()
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { (it.value() as Struct).toMap() }
-        actualList.size >= 2
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { (it.value() as Struct).toMap() }
+      actualList.size >= 2
+    }
   }
 
   private fun getSourceQuery() =
@@ -322,20 +300,22 @@ class Neo4jSourceTaskTest {
             """
       .trimMargin()
 
-  @Test(expected = ConnectException::class)
+  @Test
   fun `should throw exception`() {
-    val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = "WRONG QUERY".trimMargin()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    assertFailsWith(ConnectException::class) {
+      val props = mutableMapOf<String, String>()
+      props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
+      props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
+      props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
+      props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = "WRONG QUERY".trimMargin()
+      props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
-    val totalRecords = 10
-    insertRecords(totalRecords)
+      task.start(props)
+      val totalRecords = 10
+      insertRecords(totalRecords)
 
-    task.poll()
+      task.poll()
+    }
   }
 
   @Test
@@ -379,14 +359,10 @@ class Neo4jSourceTaskTest {
                 mapOf("children" to emptyList<Map<String, Any>>()),
                 mapOf("children" to listOf(mapOf("name" to "child"))))))
 
-    Assert.assertEventually(
-      {
-        task.poll()?.let { list.addAll(it) }
-        val actualList = list.map { (it.value() as Struct).toMap() }
-        actualList.first() == expected
-      },
-      Matchers.equalTo(true),
-      30,
-      TimeUnit.SECONDS)
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { (it.value() as Struct).toMap() }
+      actualList.first() == expected
+    }
   }
 }

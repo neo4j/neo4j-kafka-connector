@@ -22,14 +22,14 @@ import java.net.URI
 
 object ValidationUtils {
 
-  fun isServerReachable(url: String, port: Int): Boolean =
+  private fun isServerReachable(url: String, port: Int): Boolean =
     try {
       Socket(url, port).use { true }
     } catch (e: IOException) {
       false
     }
 
-  fun checkServersUnreachable(urls: String, separator: String = ","): List<String> =
+  private fun checkServersUnreachable(urls: String, separator: String = ","): List<String> =
     urls
       .split(separator)
       .map {

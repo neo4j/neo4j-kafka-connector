@@ -17,7 +17,8 @@
 package streams.service.sink.strategy
 
 import kotlin.test.assertEquals
-import org.junit.Test
+import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Test
 
 class NodePatternConfigurationTest {
 
@@ -116,49 +117,42 @@ class NodePatternConfigurationTest {
     assertEquals(expected, result)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because of mixed configuration`() {
     // given
     val pattern = "(:LabelA{!id,-foo,bar})"
 
-    try {
-      // when
-      NodePatternConfiguration.parse(pattern, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Node pattern $pattern is not homogeneous", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        NodePatternConfiguration.parse(pattern, false)
+      }
+
+    assertEquals("The Node pattern $pattern is not homogeneous", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because of invalid pattern`() {
     // given
     val pattern = "(LabelA{!id,-foo,bar})"
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        NodePatternConfiguration.parse(pattern, false)
+      }
 
-    try {
-      // when
-      NodePatternConfiguration.parse(pattern, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Node pattern $pattern is invalid", e.message)
-      throw e
-    }
+    assertEquals("The Node pattern $pattern is invalid", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because the pattern should contains a key`() {
     // given
     val pattern = "(:LabelA{id,-foo,bar})"
 
-    try {
-      // when
-      NodePatternConfiguration.parse(pattern, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Node pattern $pattern must contains at lest one key", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        NodePatternConfiguration.parse(pattern, false)
+      }
+
+    assertEquals("The Node pattern $pattern must contain at least one key", exception.message)
   }
 
   @Test
@@ -256,34 +250,30 @@ class NodePatternConfigurationTest {
     assertEquals(expected, result)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because of mixed configuration - simple`() {
     // given
     val pattern = "LabelA{!id,-foo,bar}"
 
-    try {
-      // when
-      NodePatternConfiguration.parse(pattern, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Node pattern $pattern is not homogeneous", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        NodePatternConfiguration.parse(pattern, false)
+      }
+
+    assertEquals("The Node pattern $pattern is not homogeneous", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because the pattern should contains a key - simple`() {
     // given
     val pattern = "LabelA{id,-foo,bar}"
 
-    try {
-      // when
-      NodePatternConfiguration.parse(pattern, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Node pattern $pattern must contains at lest one key", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        NodePatternConfiguration.parse(pattern, false)
+      }
+
+    assertEquals("The Node pattern $pattern must contain at least one key", exception.message)
   }
 }
 
@@ -419,49 +409,43 @@ class RelationshipPatternConfigurationTest {
     assertEquals(expected, result)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because of mixed configuration`() {
     // given
     val pattern = "(:LabelA{!id})-[:REL_TYPE{foo, -BAR}]->(:LabelB{!idB})"
 
-    try {
-      // when
-      RelationshipPatternConfiguration.parse(pattern, false, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Relationship pattern $pattern is not homogeneous", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        RelationshipPatternConfiguration.parse(pattern, false, false)
+      }
+
+    assertEquals("The Relationship pattern $pattern is not homogeneous", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because the pattern should contains nodes with only ids`() {
     // given
     val pattern = "(:LabelA{id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
-    try {
-      // when
-      RelationshipPatternConfiguration.parse(pattern, false, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Relationship pattern $pattern is invalid", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        RelationshipPatternConfiguration.parse(pattern, false, false)
+      }
+
+    assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because the pattern is invalid`() {
     // given
     val pattern = "(LabelA{!id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
-    try {
-      // when
-      RelationshipPatternConfiguration.parse(pattern, false, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Relationship pattern $pattern is invalid", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        RelationshipPatternConfiguration.parse(pattern, false, false)
+      }
+
+    assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }
 
   @Test
@@ -568,33 +552,29 @@ class RelationshipPatternConfigurationTest {
     assertEquals(expected, result)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because of mixed configuration - simple`() {
     // given
     val pattern = "LabelA{!id} REL_TYPE{foo, -BAR} LabelB{!idB}"
 
-    try {
-      // when
-      RelationshipPatternConfiguration.parse(pattern, false, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Relationship pattern $pattern is not homogeneous", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        RelationshipPatternConfiguration.parse(pattern, false, false)
+      }
+
+    assertEquals("The Relationship pattern $pattern is not homogeneous", exception.message)
   }
 
-  @Test(expected = IllegalArgumentException::class)
+  @Test
   fun `should throw an exception because the pattern should contains nodes with only ids - simple`() {
     // given
     val pattern = "LabelA{id} REL_TYPE{foo,BAR} LabelB{!idB}"
 
-    try {
-      // when
-      RelationshipPatternConfiguration.parse(pattern, false, false)
-    } catch (e: IllegalArgumentException) {
-      // then
-      assertEquals("The Relationship pattern $pattern is invalid", e.message)
-      throw e
-    }
+    val exception =
+      assertFailsWith(IllegalArgumentException::class) {
+        RelationshipPatternConfiguration.parse(pattern, false, false)
+      }
+
+    assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }
 }

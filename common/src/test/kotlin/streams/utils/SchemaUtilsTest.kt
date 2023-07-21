@@ -17,7 +17,7 @@
 package streams.utils
 
 import kotlin.test.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import streams.events.Constraint
 import streams.events.RelKeyStrategy
 import streams.events.StreamsConstraintType

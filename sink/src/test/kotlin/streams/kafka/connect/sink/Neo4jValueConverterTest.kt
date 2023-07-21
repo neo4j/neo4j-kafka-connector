@@ -23,7 +23,7 @@ import java.util.Date
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.apache.kafka.connect.data.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.neo4j.driver.internal.value.*
