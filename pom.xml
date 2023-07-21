@@ -161,7 +161,7 @@
                         <plainTextReport>true</plainTextReport>
                         <prependText>${licensing.prepend.text}</prependText>
                         <excludedGroups>^((org.neo4j.connectors.kafka){1})$</excludedGroups>
-                        <includedScopes>compile</includedScopes>
+                        <includedScopes>compile,runtime</includedScopes>
                     </configuration>
                     <dependencies>
                         <dependency>
