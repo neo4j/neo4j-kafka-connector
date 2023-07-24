@@ -12,12 +12,12 @@ Apache Software License, Version 2.0
   Guava InternalFutureFailureAccess and InternalFutures
   Guava ListenableFuture only
   Guava: Google Core Libraries for Java
-  IntelliJ IDEA Annotations
   J2ObjC Annotations
   Jackson-annotations
   Jackson-core
   jackson-databind
   jackson-module-kotlin
+  JetBrains Java Annotations
   Kotlin Reflect
   Kotlin Stdlib
   Kotlin Stdlib Common
