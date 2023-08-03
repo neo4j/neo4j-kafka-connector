@@ -17,7 +17,6 @@
 package org.neo4j.cdc.client.pattern
 
 import kotlin.math.pow
-import kotlin.streams.toList
 import org.antlr.v4.runtime.*
 import org.neo4j.cdc.client.NodeSelector
 import org.neo4j.cdc.client.RelationshipNodeSelector
@@ -322,11 +321,6 @@ interface Pattern {
       } else {
         throw PatternException("unexpected number literal '$number'")
       }
-    }
-
-    fun accOctal(index: Int, value: Int, acc: Long): Long {
-      println("i: $index, value: $value, acc: $acc")
-      return acc + (value * 8.0.pow(index).toInt())
     }
   }
 }
