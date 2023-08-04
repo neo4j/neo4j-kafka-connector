@@ -59,69 +59,69 @@ class Neo4jValueConverterNestedStructTest {
   companion object {
 
     private val PREF_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.email.Preference")
-        .field("preferenceType", SchemaBuilder.string())
-        .field("endEffectiveDate", org.apache.kafka.connect.data.Timestamp.SCHEMA)
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.email.Preference")
+            .field("preferenceType", SchemaBuilder.string())
+            .field("endEffectiveDate", org.apache.kafka.connect.data.Timestamp.SCHEMA)
+            .build()
 
     private val EMAIL_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.email.Email")
-        .field("email", SchemaBuilder.string())
-        .field("preferences", SchemaBuilder.array(PREF_SCHEMA))
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.email.Email")
+            .field("email", SchemaBuilder.string())
+            .field("preferences", SchemaBuilder.array(PREF_SCHEMA))
+            .build()
 
     private val TN_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.email.Transaction")
-        .field("tn", SchemaBuilder.string())
-        .field("preferences", SchemaBuilder.array(PREF_SCHEMA))
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.email.Transaction")
+            .field("tn", SchemaBuilder.string())
+            .field("preferences", SchemaBuilder.array(PREF_SCHEMA))
+            .build()
 
     private val EVENT_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.email.Event")
-        .field("eventId", SchemaBuilder.string())
-        .field("eventTimestamp", org.apache.kafka.connect.data.Timestamp.SCHEMA)
-        .field("emails", SchemaBuilder.array(EMAIL_SCHEMA).optional())
-        .field("tns", SchemaBuilder.array(TN_SCHEMA).optional())
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.email.Event")
+            .field("eventId", SchemaBuilder.string())
+            .field("eventTimestamp", org.apache.kafka.connect.data.Timestamp.SCHEMA)
+            .field("emails", SchemaBuilder.array(EMAIL_SCHEMA).optional())
+            .field("tns", SchemaBuilder.array(TN_SCHEMA).optional())
+            .build()
 
     fun getTreeStruct(): Struct? {
       val source = JSONUtils.readValue<Map<String, Any?>>(data).mapValues(::convertDate)
 
       val emails = source["emails"] as List<Map<String, Any>>
       val email =
-        Struct(EMAIL_SCHEMA)
-          .put("email", emails[0]["email"])
-          .put(
-            "preferences",
-            (emails[0]["preferences"] as List<Map<String, Any>>).map {
-              Struct(PREF_SCHEMA)
-                .put("preferenceType", it["preferenceType"])
-                .put("endEffectiveDate", it["endEffectiveDate"])
-            })
+          Struct(EMAIL_SCHEMA)
+              .put("email", emails[0]["email"])
+              .put(
+                  "preferences",
+                  (emails[0]["preferences"] as List<Map<String, Any>>).map {
+                    Struct(PREF_SCHEMA)
+                        .put("preferenceType", it["preferenceType"])
+                        .put("endEffectiveDate", it["endEffectiveDate"])
+                  })
 
       val emailList = listOf(email)
       val tnsList =
-        (source["tns"] as List<Map<String, Any>>).map {
-          Struct(TN_SCHEMA)
-            .put("tn", it["tn"])
-            .put(
-              "preferences",
-              (it["preferences"] as List<Map<String, Any>>).map {
-                Struct(PREF_SCHEMA)
-                  .put("preferenceType", it["preferenceType"])
-                  .put("endEffectiveDate", it["endEffectiveDate"])
-              })
-        }
+          (source["tns"] as List<Map<String, Any>>).map {
+            Struct(TN_SCHEMA)
+                .put("tn", it["tn"])
+                .put(
+                    "preferences",
+                    (it["preferences"] as List<Map<String, Any>>).map {
+                      Struct(PREF_SCHEMA)
+                          .put("preferenceType", it["preferenceType"])
+                          .put("endEffectiveDate", it["endEffectiveDate"])
+                    })
+          }
 
       return Struct(EVENT_SCHEMA)
-        .put("eventId", source["eventId"])
-        .put("eventTimestamp", source["eventTimestamp"])
-        .put("emails", emailList)
-        .put("tns", tnsList)
+          .put("eventId", source["eventId"])
+          .put("eventTimestamp", source["eventTimestamp"])
+          .put("emails", emailList)
+          .put("tns", tnsList)
     }
 
     fun getExpectedMap(): Map<String, Value> {
@@ -131,31 +131,31 @@ class Neo4jValueConverterNestedStructTest {
     }
 
     fun convertDate(it: Map.Entry<String, Any?>): Any? =
-      when {
-        it.value is Map<*, *> -> (it.value as Map<String, Any?>).mapValues(::convertDate)
-        it.value is Collection<*> ->
-          (it.value as Collection<Any?>).map { x ->
-            convertDate(AbstractMap.SimpleEntry(it.key, x))
-          }
-        it.key.endsWith("Date") -> Date.from(Instant.parse(it.value.toString()))
-        it.key.endsWith("Timestamp") -> Date.from(Instant.parse(it.value.toString()))
-        else -> it.value
-      }
+        when {
+          it.value is Map<*, *> -> (it.value as Map<String, Any?>).mapValues(::convertDate)
+          it.value is Collection<*> ->
+              (it.value as Collection<Any?>).map { x ->
+                convertDate(AbstractMap.SimpleEntry(it.key, x))
+              }
+          it.key.endsWith("Date") -> Date.from(Instant.parse(it.value.toString()))
+          it.key.endsWith("Timestamp") -> Date.from(Instant.parse(it.value.toString()))
+          else -> it.value
+        }
 
     fun convertDateNew(it: Map.Entry<String, Any?>): Any? =
-      when {
-        it.value is Map<*, *> -> (it.value as Map<String, Any?>).mapValues(::convertDateNew)
-        it.value is Collection<*> ->
-          (it.value as Collection<Any?>).map { x ->
-            convertDateNew(AbstractMap.SimpleEntry(it.key, x))
-          }
-        it.key.endsWith("Date") -> ZonedDateTime.parse(it.value.toString()).toLocalDateTime()
-        it.key.endsWith("Timestamp") -> ZonedDateTime.parse(it.value.toString()).toLocalDateTime()
-        else -> it.value
-      }
+        when {
+          it.value is Map<*, *> -> (it.value as Map<String, Any?>).mapValues(::convertDateNew)
+          it.value is Collection<*> ->
+              (it.value as Collection<Any?>).map { x ->
+                convertDateNew(AbstractMap.SimpleEntry(it.key, x))
+              }
+          it.key.endsWith("Date") -> ZonedDateTime.parse(it.value.toString()).toLocalDateTime()
+          it.key.endsWith("Timestamp") -> ZonedDateTime.parse(it.value.toString()).toLocalDateTime()
+          else -> it.value
+        }
 
     val data: String =
-      """
+        """
 {
   "eventId": "d70f306a-71d2-48d9-aea3-87b3808b764b",
   "eventTimestamp": "2019-08-21T22:29:22.151Z",
@@ -208,6 +208,6 @@ class Neo4jValueConverterNestedStructTest {
   ]
 }
     """
-        .trimIndent()
+            .trimIndent()
   }
 }

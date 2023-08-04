@@ -27,11 +27,11 @@ class CypherTemplateStrategy(query: String) : IngestionStrategy {
   }
 
   override fun deleteNodeEvents(events: Collection<StreamsSinkEntity>): List<QueryEvents> =
-    emptyList()
+      emptyList()
 
   override fun mergeRelationshipEvents(events: Collection<StreamsSinkEntity>): List<QueryEvents> =
-    emptyList()
+      emptyList()
 
   override fun deleteRelationshipEvents(events: Collection<StreamsSinkEntity>): List<QueryEvents> =
-    emptyList()
+      emptyList()
 }

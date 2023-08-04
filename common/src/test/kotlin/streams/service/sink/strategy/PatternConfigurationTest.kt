@@ -32,12 +32,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.ALL,
-        labels = listOf("LabelA", "LabelB"),
-        properties = emptyList(),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.ALL,
+            labels = listOf("LabelA", "LabelB"),
+            properties = emptyList(),
+            false)
     assertEquals(expected, result)
   }
 
@@ -51,12 +51,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -70,12 +70,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo.bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo.bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -89,12 +89,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("idA", "idB"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("idA", "idB"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -108,12 +108,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.EXCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.EXCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -123,9 +123,9 @@ class NodePatternConfigurationTest {
     val pattern = "(:LabelA{!id,-foo,bar})"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        NodePatternConfiguration.parse(pattern, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          NodePatternConfiguration.parse(pattern, false)
+        }
 
     assertEquals("The Node pattern $pattern is not homogeneous", exception.message)
   }
@@ -135,9 +135,9 @@ class NodePatternConfigurationTest {
     // given
     val pattern = "(LabelA{!id,-foo,bar})"
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        NodePatternConfiguration.parse(pattern, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          NodePatternConfiguration.parse(pattern, false)
+        }
 
     assertEquals("The Node pattern $pattern is invalid", exception.message)
   }
@@ -148,9 +148,9 @@ class NodePatternConfigurationTest {
     val pattern = "(:LabelA{id,-foo,bar})"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        NodePatternConfiguration.parse(pattern, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          NodePatternConfiguration.parse(pattern, false)
+        }
 
     assertEquals("The Node pattern $pattern must contain at least one key", exception.message)
   }
@@ -165,12 +165,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.ALL,
-        labels = listOf("LabelA", "LabelB"),
-        properties = emptyList(),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.ALL,
+            labels = listOf("LabelA", "LabelB"),
+            properties = emptyList(),
+            false)
     assertEquals(expected, result)
   }
 
@@ -184,12 +184,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -203,12 +203,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo.bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo.bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -222,12 +222,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("idA", "idB"),
-        type = PatternConfigurationType.INCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("idA", "idB"),
+            type = PatternConfigurationType.INCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -241,12 +241,12 @@ class NodePatternConfigurationTest {
 
     // then
     val expected =
-      NodePatternConfiguration(
-        keys = setOf("id"),
-        type = PatternConfigurationType.EXCLUDE,
-        labels = listOf("LabelA"),
-        properties = listOf("foo", "bar"),
-        false)
+        NodePatternConfiguration(
+            keys = setOf("id"),
+            type = PatternConfigurationType.EXCLUDE,
+            labels = listOf("LabelA"),
+            properties = listOf("foo", "bar"),
+            false)
     assertEquals(expected, result)
   }
 
@@ -256,9 +256,9 @@ class NodePatternConfigurationTest {
     val pattern = "LabelA{!id,-foo,bar}"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        NodePatternConfiguration.parse(pattern, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          NodePatternConfiguration.parse(pattern, false)
+        }
 
     assertEquals("The Node pattern $pattern is not homogeneous", exception.message)
   }
@@ -269,9 +269,9 @@ class NodePatternConfigurationTest {
     val pattern = "LabelA{id,-foo,bar}"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        NodePatternConfiguration.parse(pattern, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          NodePatternConfiguration.parse(pattern, false)
+        }
 
     assertEquals("The Node pattern $pattern must contain at least one key", exception.message)
   }
@@ -295,13 +295,13 @@ class RelationshipPatternConfigurationTest {
     val properties = emptyList<String>()
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.ALL,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.ALL,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -321,13 +321,13 @@ class RelationshipPatternConfigurationTest {
     val properties = emptyList<String>()
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = end,
-        end = start,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.ALL,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = end,
+            end = start,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.ALL,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -347,13 +347,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo", "BAR")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.INCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.INCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -373,13 +373,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo.BAR", "BAR.foo")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.INCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.INCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -399,13 +399,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo", "BAR")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.EXCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.EXCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -415,9 +415,9 @@ class RelationshipPatternConfigurationTest {
     val pattern = "(:LabelA{!id})-[:REL_TYPE{foo, -BAR}]->(:LabelB{!idB})"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        RelationshipPatternConfiguration.parse(pattern, false, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          RelationshipPatternConfiguration.parse(pattern, false, false)
+        }
 
     assertEquals("The Relationship pattern $pattern is not homogeneous", exception.message)
   }
@@ -428,9 +428,9 @@ class RelationshipPatternConfigurationTest {
     val pattern = "(:LabelA{id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        RelationshipPatternConfiguration.parse(pattern, false, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          RelationshipPatternConfiguration.parse(pattern, false, false)
+        }
 
     assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }
@@ -441,9 +441,9 @@ class RelationshipPatternConfigurationTest {
     val pattern = "(LabelA{!id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        RelationshipPatternConfiguration.parse(pattern, false, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          RelationshipPatternConfiguration.parse(pattern, false, false)
+        }
 
     assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }
@@ -464,13 +464,13 @@ class RelationshipPatternConfigurationTest {
     val properties = emptyList<String>()
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.ALL,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.ALL,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -490,13 +490,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo", "BAR")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.INCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.INCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -516,13 +516,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo.BAR", "BAR.foo")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.INCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.INCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -542,13 +542,13 @@ class RelationshipPatternConfigurationTest {
     val properties = listOf("foo", "BAR")
     val relType = "REL_TYPE"
     val expected =
-      RelationshipPatternConfiguration(
-        start = start,
-        end = end,
-        relType = relType,
-        properties = properties,
-        type = PatternConfigurationType.EXCLUDE,
-        mergeProperties = false)
+        RelationshipPatternConfiguration(
+            start = start,
+            end = end,
+            relType = relType,
+            properties = properties,
+            type = PatternConfigurationType.EXCLUDE,
+            mergeProperties = false)
     assertEquals(expected, result)
   }
 
@@ -558,9 +558,9 @@ class RelationshipPatternConfigurationTest {
     val pattern = "LabelA{!id} REL_TYPE{foo, -BAR} LabelB{!idB}"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        RelationshipPatternConfiguration.parse(pattern, false, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          RelationshipPatternConfiguration.parse(pattern, false, false)
+        }
 
     assertEquals("The Relationship pattern $pattern is not homogeneous", exception.message)
   }
@@ -571,9 +571,9 @@ class RelationshipPatternConfigurationTest {
     val pattern = "LabelA{id} REL_TYPE{foo,BAR} LabelB{!idB}"
 
     val exception =
-      assertFailsWith(IllegalArgumentException::class) {
-        RelationshipPatternConfiguration.parse(pattern, false, false)
-      }
+        assertFailsWith(IllegalArgumentException::class) {
+          RelationshipPatternConfiguration.parse(pattern, false, false)
+        }
 
     assertEquals("The Relationship pattern $pattern is invalid", exception.message)
   }

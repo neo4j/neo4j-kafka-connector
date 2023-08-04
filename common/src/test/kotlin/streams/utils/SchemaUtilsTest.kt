@@ -28,14 +28,14 @@ class SchemaUtilsTest {
   @Test
   fun `getNodeKeys should select the constraint with lowest properties`() {
     val props =
-      mapOf(
-        "LabelA" to setOf("foo", "bar"),
-        "LabelB" to setOf("foo", "bar", "fooBar"),
-        "LabelC" to setOf("foo"))
+        mapOf(
+            "LabelA" to setOf("foo", "bar"),
+            "LabelB" to setOf("foo", "bar", "fooBar"),
+            "LabelC" to setOf("foo"))
     val constraints =
-      props.map {
-        Constraint(label = it.key, properties = it.value, type = StreamsConstraintType.UNIQUE)
-      }
+        props.map {
+          Constraint(label = it.key, properties = it.value, type = StreamsConstraintType.UNIQUE)
+        }
     val keys = getNodeKeys(props.keys.toList(), setOf("prop", "foo", "bar"), constraints)
     assertEquals(setOf("foo"), keys)
   }
@@ -59,14 +59,15 @@ class SchemaUtilsTest {
 
     // we shuffle the constraints to ensure that the result doesn't depend from the ordering
     val constraints =
-      props
-        .map {
-          Constraint(label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
-        }
-        .shuffled()
+        props
+            .map {
+              Constraint(
+                  label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
+            }
+            .shuffled()
 
     val propertyKeys =
-      setOf("prop", "prop2", "foo", "bar", "baz", "bez", "aaa", "aab", "baa", "aac", "xcz", "xcv")
+        setOf("prop", "prop2", "foo", "bar", "baz", "bez", "aaa", "aab", "baa", "aac", "xcz", "xcv")
     val actualKeys = getNodeKeys(props.map { it.first }, propertyKeys, constraints)
     val expectedKeys = setOf("aab", "foo")
 
@@ -88,16 +89,17 @@ class SchemaUtilsTest {
 
     // we shuffle the constraints to ensure that the result doesn't depend from the ordering
     val constraints =
-      props
-        .map {
-          Constraint(label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
-        }
-        .shuffled()
+        props
+            .map {
+              Constraint(
+                  label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
+            }
+            .shuffled()
 
     val propertyKeys =
-      setOf("prop", "prop2", "foo", "bar", "baz", "bez", "aaa", "aab", "baa", "aac", "xcz", "xcv")
+        setOf("prop", "prop2", "foo", "bar", "baz", "bez", "aaa", "aab", "baa", "aac", "xcz", "xcv")
     val actualKeys =
-      getNodeKeys(props.map { it.first }, propertyKeys, constraints, RelKeyStrategy.ALL)
+        getNodeKeys(props.map { it.first }, propertyKeys, constraints, RelKeyStrategy.ALL)
     val expectedKeys = setOf("aaa", "aab", "aac", "baa", "bar", "baz", "bez", "foo", "xcv", "xcz")
 
     assertEquals(expectedKeys, actualKeys)
@@ -116,11 +118,12 @@ class SchemaUtilsTest {
 
     // we shuffle the constraints to ensure that the result doesn't depend from the ordering
     val constraints =
-      props
-        .map {
-          Constraint(label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
-        }
-        .shuffled()
+        props
+            .map {
+              Constraint(
+                  label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
+            }
+            .shuffled()
 
     val propertyKeys = setOf("prop", "foo", "bar", "baz", "bez")
     val actualKeys = getNodeKeys(listOf("LabelA"), propertyKeys, constraints)
@@ -140,11 +143,12 @@ class SchemaUtilsTest {
 
     // we shuffle the constraints to ensure that the result doesn't depend from the ordering
     val constraints =
-      props
-        .map {
-          Constraint(label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
-        }
-        .shuffled()
+        props
+            .map {
+              Constraint(
+                  label = it.first, properties = it.second, type = StreamsConstraintType.UNIQUE)
+            }
+            .shuffled()
 
     val propertyKeys = setOf("prop", "foo", "bar", "baz", "bez")
     val actualKeys = getNodeKeys(listOf("LabelA"), propertyKeys, constraints, RelKeyStrategy.ALL)
@@ -156,14 +160,14 @@ class SchemaUtilsTest {
   @Test
   fun `getNodeKeys should return empty in case it didn't match anything`() {
     val props =
-      mapOf(
-        "LabelA" to setOf("foo", "bar"),
-        "LabelB" to setOf("foo", "bar", "fooBar"),
-        "LabelC" to setOf("foo"))
+        mapOf(
+            "LabelA" to setOf("foo", "bar"),
+            "LabelB" to setOf("foo", "bar", "fooBar"),
+            "LabelC" to setOf("foo"))
     val constraints =
-      props.map {
-        Constraint(label = it.key, properties = it.value, type = StreamsConstraintType.UNIQUE)
-      }
+        props.map {
+          Constraint(label = it.key, properties = it.value, type = StreamsConstraintType.UNIQUE)
+        }
     val keys = getNodeKeys(props.keys.toList(), setOf("prop", "key"), constraints)
     assertEquals(emptySet(), keys)
   }

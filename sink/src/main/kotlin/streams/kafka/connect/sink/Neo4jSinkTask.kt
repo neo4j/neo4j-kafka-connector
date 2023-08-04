@@ -41,10 +41,10 @@ class Neo4jSinkTask : SinkTask() {
     this.config = Neo4jSinkConnectorConfig(map)
     this.neo4jSinkService = Neo4jSinkService(this.config)
     this.errorService =
-      KafkaErrorService(
-        this.config.kafkaBrokerProperties.asProperties(),
-        ErrorService.ErrorConfig.from(map.asProperties()),
-        log::error)
+        KafkaErrorService(
+            this.config.kafkaBrokerProperties.asProperties(),
+            ErrorService.ErrorConfig.from(map.asProperties()),
+            log::error)
   }
 
   override fun put(collection: Collection<SinkRecord>) {
@@ -57,24 +57,24 @@ class Neo4jSinkTask : SinkTask() {
       neo4jSinkService.writeData(data)
     } catch (e: Exception) {
       errorService.report(
-        collection.map {
-          ErrorData(
-            it.topic(),
-            it.timestamp(),
-            it.key(),
-            it.value(),
-            it.kafkaPartition(),
-            it.kafkaOffset(),
-            this::class.java,
-            this.config.database,
-            e)
-        })
+          collection.map {
+            ErrorData(
+                it.topic(),
+                it.timestamp(),
+                it.key(),
+                it.value(),
+                it.kafkaPartition(),
+                it.kafkaOffset(),
+                this::class.java,
+                this.config.database,
+                e)
+          })
     }
   }
 
   override fun stop() {
     log.info("Stop() - Neo4j Sink Service")
     StreamsUtils.ignoreExceptions(
-      { neo4jSinkService.close() }, UninitializedPropertyAccessException::class.java)
+        { neo4jSinkService.close() }, UninitializedPropertyAccessException::class.java)
   }
 }

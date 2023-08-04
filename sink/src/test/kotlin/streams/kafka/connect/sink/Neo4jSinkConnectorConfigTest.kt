@@ -35,34 +35,34 @@ class Neo4jSinkConnectorConfigTest {
   @Test
   fun `should throw a ConfigException because of mismatch`() {
     val exception =
-      assertFailsWith(ConfigException::class) {
-        val originals =
-          mapOf(
-            SinkConnector.TOPICS_CONFIG to "foo, bar",
-            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-              "CREATE (p:Person{name: event.firstName})")
-        Neo4jSinkConnectorConfig(originals)
-      }
+        assertFailsWith(ConfigException::class) {
+          val originals =
+              mapOf(
+                  SinkConnector.TOPICS_CONFIG to "foo, bar",
+                  "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+                      "CREATE (p:Person{name: event.firstName})")
+          Neo4jSinkConnectorConfig(originals)
+        }
 
     assertEquals(
-      "There is a mismatch between topics defined into the property `topics` ([bar, foo]) and configured topics ([foo])",
-      exception.message)
+        "There is a mismatch between topics defined into the property `topics` ([bar, foo]) and configured topics ([foo])",
+        exception.message)
   }
 
   @Test
   fun `should throw a ConfigException because of cross defined topics`() {
     val exception =
-      assertFailsWith(ConfigException::class) {
-        val originals =
-          mapOf(
-            SinkConnector.TOPICS_CONFIG to "foo, bar",
-            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-              "CREATE (p:Person{name: event.firstName})",
-            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}bar" to
-              "CREATE (p:Person{name: event.firstName})",
-            Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID to "foo")
-        Neo4jSinkConnectorConfig(originals)
-      }
+        assertFailsWith(ConfigException::class) {
+          val originals =
+              mapOf(
+                  SinkConnector.TOPICS_CONFIG to "foo, bar",
+                  "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+                      "CREATE (p:Person{name: event.firstName})",
+                  "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}bar" to
+                      "CREATE (p:Person{name: event.firstName})",
+                  Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID to "foo")
+          Neo4jSinkConnectorConfig(originals)
+        }
 
     assertEquals("The following topics are cross defined: [foo]", exception.message)
   }
@@ -73,52 +73,54 @@ class Neo4jSinkConnectorConfigTest {
     val b = "bolt://neo4j2:7687"
 
     val originals =
-      mapOf(
-        SinkConnector.TOPICS_CONFIG to "foo",
-        "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-          "CREATE (p:Person{name: event.firstName})",
-        Neo4jConnectorConfig.SERVER_URI to "$a,$b", // Check for string trimming
-        Neo4jConnectorConfig.BATCH_SIZE to 10,
-        "kafka.${CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG}" to "broker:9093",
-        "kafka.${ProducerConfig.ACKS_CONFIG}" to 1,
-        Neo4jConnectorConfig.DATABASE to "customers",
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to "FOO",
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to "BAR")
+        mapOf(
+            SinkConnector.TOPICS_CONFIG to "foo",
+            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+                "CREATE (p:Person{name: event.firstName})",
+            Neo4jConnectorConfig.SERVER_URI to "$a,$b", // Check for string trimming
+            Neo4jConnectorConfig.BATCH_SIZE to 10,
+            "kafka.${CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG}" to "broker:9093",
+            "kafka.${ProducerConfig.ACKS_CONFIG}" to 1,
+            Neo4jConnectorConfig.DATABASE to "customers",
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to "FOO",
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to "BAR")
     val config = Neo4jSinkConnectorConfig(originals)
 
     assertEquals(
-      mapOf(
-        CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to "broker:9093",
-        ProducerConfig.ACKS_CONFIG to 1),
-      config.kafkaBrokerProperties)
+        mapOf(
+            CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG to "broker:9093",
+            ProducerConfig.ACKS_CONFIG to 1),
+        config.kafkaBrokerProperties)
     assertEquals(
-      originals["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo"],
-      config.topics.cypherTopics["foo"])
+        originals["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo"],
+        config.topics.cypherTopics["foo"])
     assertFalse { config.encryptionEnabled }
     assertEquals(a, config.serverUri.get(0).toString())
     assertEquals(b, config.serverUri.get(1).toString())
     assertEquals(originals[Neo4jConnectorConfig.BATCH_SIZE], config.batchSize)
     assertEquals(
-      Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES, config.encryptionTrustStrategy)
+        Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES, config.encryptionTrustStrategy)
     assertEquals(AuthenticationType.BASIC, config.authenticationType)
     assertEquals(
-      originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME], config.authenticationUsername)
+        originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME],
+        config.authenticationUsername)
     assertEquals(
-      originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD], config.authenticationPassword)
+        originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD],
+        config.authenticationPassword)
     assertEquals(originals[Neo4jConnectorConfig.DATABASE], config.database)
     assertEquals("", config.authenticationKerberosTicket)
     assertNull(config.encryptionCACertificateFile, "encryptionCACertificateFile should be null")
 
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT,
-      config.connectionMaxConnectionLifetime)
+        Neo4jConnectorConfig.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT,
+        config.connectionMaxConnectionLifetime)
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT,
-      config.connectionLivenessCheckTimeout)
+        Neo4jConnectorConfig.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT,
+        config.connectionLivenessCheckTimeout)
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_POOL_MAX_SIZE_DEFAULT, config.connectionPoolMaxSize)
+        Neo4jConnectorConfig.CONNECTION_POOL_MAX_SIZE_DEFAULT, config.connectionPoolMaxSize)
     assertEquals(
-      PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, config.connectionAcquisitionTimeout)
+        PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, config.connectionAcquisitionTimeout)
     assertEquals(Neo4jConnectorConfig.BATCH_TIMEOUT_DEFAULT, config.batchTimeout)
     assertEquals(Neo4jConnectorConfig.BATCH_TIMEOUT_DEFAULT, config.batchTimeout)
   }
@@ -130,11 +132,11 @@ class Neo4jSinkConnectorConfigTest {
     val c = "bolt://neo4j3:7777"
 
     val originals =
-      mapOf(
-        SinkConnector.TOPICS_CONFIG to "foo",
-        "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
-          "CREATE (p:Person{name: event.firstName})",
-        Neo4jConnectorConfig.SERVER_URI to "$a,$b,$c")
+        mapOf(
+            SinkConnector.TOPICS_CONFIG to "foo",
+            "${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo" to
+                "CREATE (p:Person{name: event.firstName})",
+            Neo4jConnectorConfig.SERVER_URI to "$a,$b,$c")
     val config = Neo4jSinkConnectorConfig(originals)
 
     assertEquals(a, config.serverUri[0].toString())
@@ -145,44 +147,47 @@ class Neo4jSinkConnectorConfigTest {
   @Test
   fun `should return the configuration with shuffled topic order`() {
     val originals =
-      mapOf(
-        SinkConnector.TOPICS_CONFIG to "bar,foo",
-        "${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}foo" to "(:Foo{!fooId,fooName})",
-        "${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}bar" to "(:Bar{!barId,barName})",
-        Neo4jConnectorConfig.SERVER_URI to "bolt://neo4j:7687",
-        Neo4jConnectorConfig.BATCH_SIZE to 10,
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to "FOO",
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to "BAR")
+        mapOf(
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            "${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}foo" to "(:Foo{!fooId,fooName})",
+            "${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}bar" to "(:Bar{!barId,barName})",
+            Neo4jConnectorConfig.SERVER_URI to "bolt://neo4j:7687",
+            Neo4jConnectorConfig.BATCH_SIZE to 10,
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to "FOO",
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to "BAR")
     val config = Neo4jSinkConnectorConfig(originals)
 
     assertEquals(
-      originals["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo"],
-      config.topics.cypherTopics["foo"])
+        originals["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}foo"],
+        config.topics.cypherTopics["foo"])
     assertFalse { config.encryptionEnabled }
     assertEquals(originals[Neo4jConnectorConfig.SERVER_URI], config.serverUri.get(0).toString())
     assertEquals(originals[Neo4jConnectorConfig.BATCH_SIZE], config.batchSize)
     assertEquals(
-      Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES, config.encryptionTrustStrategy)
+        Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES, config.encryptionTrustStrategy)
     assertEquals(AuthenticationType.BASIC, config.authenticationType)
     assertEquals(
-      originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME], config.authenticationUsername)
+        originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME],
+        config.authenticationUsername)
     assertEquals(
-      originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD], config.authenticationPassword)
+        originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD],
+        config.authenticationPassword)
     assertEquals(
-      originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD], config.authenticationPassword)
+        originals[Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD],
+        config.authenticationPassword)
     assertEquals("", config.authenticationKerberosTicket)
     assertNull(config.encryptionCACertificateFile, "encryptionCACertificateFile should be null")
 
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT,
-      config.connectionMaxConnectionLifetime)
+        Neo4jConnectorConfig.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT,
+        config.connectionMaxConnectionLifetime)
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT,
-      config.connectionLivenessCheckTimeout)
+        Neo4jConnectorConfig.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT,
+        config.connectionLivenessCheckTimeout)
     assertEquals(
-      Neo4jConnectorConfig.CONNECTION_POOL_MAX_SIZE_DEFAULT, config.connectionPoolMaxSize)
+        Neo4jConnectorConfig.CONNECTION_POOL_MAX_SIZE_DEFAULT, config.connectionPoolMaxSize)
     assertEquals(
-      PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, config.connectionAcquisitionTimeout)
+        PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT, config.connectionAcquisitionTimeout)
     assertEquals(Neo4jConnectorConfig.BATCH_TIMEOUT_DEFAULT, config.batchTimeout)
   }
 }

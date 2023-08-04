@@ -53,9 +53,9 @@ suspend fun <T> List<Deferred<T>>.awaitAll(timeoutMs: Long): List<T> {
 
 @ExperimentalCoroutinesApi
 fun <T> Deferred<T>.errors() =
-  when {
-    isCompleted -> getCompletionExceptionOrNull()
-    isCancelled -> getCompletionExceptionOrNull() // was getCancellationException()
-    isActive -> RuntimeException("Job $this still active")
-    else -> null
-  }
+    when {
+      isCompleted -> getCompletionExceptionOrNull()
+      isCancelled -> getCompletionExceptionOrNull() // was getCancellationException()
+      isActive -> RuntimeException("Job $this still active")
+      else -> null
+    }

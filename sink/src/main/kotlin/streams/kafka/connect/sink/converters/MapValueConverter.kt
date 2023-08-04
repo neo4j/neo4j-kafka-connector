@@ -35,9 +35,9 @@ open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
   }
 
   override fun setBytesField(
-    result: MutableMap<String, T?>?,
-    fieldName: String,
-    value: ByteArray?
+      result: MutableMap<String, T?>?,
+      fieldName: String,
+      value: ByteArray?
   ) {
     setValue(result, fieldName, value)
   }
@@ -55,10 +55,10 @@ open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
   }
 
   override fun setArray(
-    result: MutableMap<String, T?>?,
-    fieldName: String,
-    schema: Schema?,
-    array: MutableList<Any?>?
+      result: MutableMap<String, T?>?,
+      fieldName: String,
+      schema: Schema?,
+      array: MutableList<Any?>?
   ) {
     val convertedArray = array?.map { convertInner(it) }
     setValue(result, fieldName, convertedArray)
@@ -82,10 +82,10 @@ open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
   }
 
   override fun setMap(
-    result: MutableMap<String, T?>?,
-    fieldName: String,
-    schema: Schema?,
-    value: MutableMap<Any?, Any?>?
+      result: MutableMap<String, T?>?,
+      fieldName: String,
+      schema: Schema?,
+      value: MutableMap<Any?, Any?>?
   ) {
     if (value != null) {
       val converted = convert(value) as MutableMap<Any?, Any?>
@@ -116,9 +116,9 @@ open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
   }
 
   override fun setDecimalField(
-    result: MutableMap<String, T?>?,
-    fieldName: String,
-    value: BigDecimal
+      result: MutableMap<String, T?>?,
+      fieldName: String,
+      value: BigDecimal
   ) {
     setValue(result, fieldName, value)
   }
@@ -133,7 +133,7 @@ open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
       is Map<*, *> -> convert(value)
       is Collection<*> -> value.map(::convertInner)
       is Array<*> ->
-        if (value.javaClass.componentType.isPrimitive) value else value.map(::convertInner)
+          if (value.javaClass.componentType.isPrimitive) value else value.map(::convertInner)
       else -> value
     }
   }

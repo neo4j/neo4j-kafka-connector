@@ -42,7 +42,10 @@ class Neo4jSinkTaskAuraTest {
   companion object {
 
     private val SIMPLE_SCHEMA =
-      SchemaBuilder.struct().name("com.example.Person").field("name", Schema.STRING_SCHEMA).build()
+        SchemaBuilder.struct()
+            .name("com.example.Person")
+            .field("name", Schema.STRING_SCHEMA)
+            .build()
 
     private val user: String? = System.getenv("AURA_USER")
     private val password: String? = System.getenv("AURA_PASSWORD")
@@ -62,24 +65,24 @@ class Neo4jSinkTaskAuraTest {
     }
 
     fun getMapSinkConnectorConfig() =
-      mutableMapOf(
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to user!!,
-        Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to password!!,
-        Neo4jConnectorConfig.SERVER_URI to uri!!,
-        Neo4jConnectorConfig.AUTHENTICATION_TYPE to AuthenticationType.BASIC.toString(),
-        Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID_LABEL_NAME to LABEL_SINK_AURA,
-      )
+        mutableMapOf(
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to user!!,
+            Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to password!!,
+            Neo4jConnectorConfig.SERVER_URI to uri!!,
+            Neo4jConnectorConfig.AUTHENTICATION_TYPE to AuthenticationType.BASIC.toString(),
+            Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID_LABEL_NAME to LABEL_SINK_AURA,
+        )
 
     fun countEntitiesSinkAura(
-      session: Session?,
-      number: Int,
-      query: String = COUNT_NODES_SINK_AURA
+        session: Session?,
+        number: Int,
+        query: String = COUNT_NODES_SINK_AURA
     ) =
-      session!!.run(query).let {
-        assertTrue { it!!.hasNext() }
-        assertEquals(number, it!!.next()["count"].asInt())
-        assertFalse { it.hasNext() }
-      }
+        session!!.run(query).let {
+          assertTrue { it!!.hasNext() }
+          assertEquals(number, it!!.next()["count"].asInt())
+          assertFalse { it.hasNext() }
+        }
   }
 
   @AfterEach
@@ -92,7 +95,7 @@ class Neo4jSinkTaskAuraTest {
     driver?.session().use { countEntitiesSinkAura(it, 0) }
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}$NAME_TOPIC"] =
-      " CREATE (b:$LABEL_SINK_AURA)"
+        " CREATE (b:$LABEL_SINK_AURA)"
     props[Neo4jConnectorConfig.BATCH_SIZE] = 2.toString()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
@@ -100,9 +103,15 @@ class Neo4jSinkTaskAuraTest {
     task.initialize(mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
-      listOf(
-        SinkRecord(
-          NAME_TOPIC, 1, null, null, SIMPLE_SCHEMA, Struct(SIMPLE_SCHEMA).put("name", "Baz"), 42))
+        listOf(
+            SinkRecord(
+                NAME_TOPIC,
+                1,
+                null,
+                null,
+                SIMPLE_SCHEMA,
+                Struct(SIMPLE_SCHEMA).put("name", "Baz"),
+                42))
     task.put(input)
 
     driver?.session().use { countEntitiesSinkAura(it, 1) }
@@ -116,145 +125,156 @@ class Neo4jSinkTaskAuraTest {
     props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
 
     val cdcDataStart =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 0,
-            txEventsCount = 3,
-            operation = OperationType.created),
-        payload =
-          NodePayload(
-            id = "0",
-            before = null,
-            after = NodeChange(properties = mapOf("name" to "Pippo"), labels = listOf("User"))),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 0,
+                    txEventsCount = 3,
+                    operation = OperationType.created),
+            payload =
+                NodePayload(
+                    id = "0",
+                    before = null,
+                    after =
+                        NodeChange(properties = mapOf("name" to "Pippo"), labels = listOf("User"))),
+            schema = Schema())
     val cdcDataEnd =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 1,
-            txEventsCount = 3,
-            operation = OperationType.created),
-        payload =
-          NodePayload(
-            id = "1",
-            before = null,
-            after = NodeChange(properties = mapOf("name" to "Pluto"), labels = listOf("User Ext"))),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 1,
+                    txEventsCount = 3,
+                    operation = OperationType.created),
+            payload =
+                NodePayload(
+                    id = "1",
+                    before = null,
+                    after =
+                        NodeChange(
+                            properties = mapOf("name" to "Pluto"), labels = listOf("User Ext"))),
+            schema = Schema())
     val cdcDataRelationship =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 2,
-            txEventsCount = 3,
-            operation = OperationType.created),
-        payload =
-          RelationshipPayload(
-            id = "2",
-            start = RelationshipNodeChange(id = "0", labels = listOf("User"), ids = emptyMap()),
-            end = RelationshipNodeChange(id = "1", labels = listOf("User Ext"), ids = emptyMap()),
-            after = RelationshipChange(properties = mapOf("since" to 2014)),
-            before = null,
-            label = "HAS_REL"),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 2,
+                    txEventsCount = 3,
+                    operation = OperationType.created),
+            payload =
+                RelationshipPayload(
+                    id = "2",
+                    start =
+                        RelationshipNodeChange(id = "0", labels = listOf("User"), ids = emptyMap()),
+                    end =
+                        RelationshipNodeChange(
+                            id = "1", labels = listOf("User Ext"), ids = emptyMap()),
+                    after = RelationshipChange(properties = mapOf("since" to 2014)),
+                    before = null,
+                    label = "HAS_REL"),
+            schema = Schema())
 
     val task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
-      listOf(
-        SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42),
-        SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataEnd, 43),
-        SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataRelationship, 44))
+        listOf(
+            SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42),
+            SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataEnd, 43),
+            SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataRelationship, 44))
     task.put(input)
 
     driver?.session().use {
       countEntitiesSinkAura(
-        it,
-        1,
-        "MATCH (:$LABEL_SINK_AURA)-[r:HAS_REL]->(:$LABEL_SINK_AURA) RETURN COUNT(r) as count")
+          it,
+          1,
+          "MATCH (:$LABEL_SINK_AURA)-[r:HAS_REL]->(:$LABEL_SINK_AURA) RETURN COUNT(r) as count")
     }
   }
 
   @Test
   fun `should update data into Neo4j from CDC events in Aura`() {
     driver
-      ?.session()
-      ?.run(
-        """
+        ?.session()
+        ?.run(
+            """
                 CREATE (s:User:OldLabel:$LABEL_SINK_AURA{name:'Pippo', sourceId:'0'})
                     -[r:`KNOWS WHO`{since:2014, sourceId:'2'}]->
                     (e:`User Ext`:$LABEL_SINK_AURA{name:'Pluto', sourceId:'1'})
             """
-          .trimIndent())
+                .trimIndent())
 
     val props = getMapSinkConnectorConfig()
     props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val cdcDataStart =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 0,
-            txEventsCount = 3,
-            operation = OperationType.updated),
-        payload =
-          NodePayload(
-            id = "0",
-            before =
-              NodeChange(
-                properties = mapOf("name" to "Pippo"), labels = listOf("User", "OldLabel")),
-            after =
-              NodeChange(
-                properties = mapOf("name" to "Pippo", "age" to 99), labels = listOf("User"))),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 0,
+                    txEventsCount = 3,
+                    operation = OperationType.updated),
+            payload =
+                NodePayload(
+                    id = "0",
+                    before =
+                        NodeChange(
+                            properties = mapOf("name" to "Pippo"),
+                            labels = listOf("User", "OldLabel")),
+                    after =
+                        NodeChange(
+                            properties = mapOf("name" to "Pippo", "age" to 99),
+                            labels = listOf("User"))),
+            schema = Schema())
     val cdcDataRelationship =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 2,
-            txEventsCount = 3,
-            operation = OperationType.updated),
-        payload =
-          RelationshipPayload(
-            id = "2",
-            start = RelationshipNodeChange(id = "0", labels = listOf("User"), ids = emptyMap()),
-            end = RelationshipNodeChange(id = "1", labels = listOf("User Ext"), ids = emptyMap()),
-            after = RelationshipChange(properties = mapOf("since" to 1999, "foo" to "bar")),
-            before = RelationshipChange(properties = mapOf("since" to 2014)),
-            label = "KNOWS WHO"),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 2,
+                    txEventsCount = 3,
+                    operation = OperationType.updated),
+            payload =
+                RelationshipPayload(
+                    id = "2",
+                    start =
+                        RelationshipNodeChange(id = "0", labels = listOf("User"), ids = emptyMap()),
+                    end =
+                        RelationshipNodeChange(
+                            id = "1", labels = listOf("User Ext"), ids = emptyMap()),
+                    after = RelationshipChange(properties = mapOf("since" to 1999, "foo" to "bar")),
+                    before = RelationshipChange(properties = mapOf("since" to 2014)),
+                    label = "KNOWS WHO"),
+            schema = Schema())
 
     val task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
-      listOf(
-        SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42),
-        SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataRelationship, 43))
+        listOf(
+            SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42),
+            SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataRelationship, 43))
     task.put(input)
 
     driver?.session().use {
       countEntitiesSinkAura(
-        it,
-        1,
-        "MATCH (:User {age:99})-[r:`KNOWS WHO`{since:1999, sourceId:'2', foo:'bar'}]->(:`User Ext`) RETURN COUNT(r) as count")
+          it,
+          1,
+          "MATCH (:User {age:99})-[r:`KNOWS WHO`{since:1999, sourceId:'2', foo:'bar'}]->(:`User Ext`) RETURN COUNT(r) as count")
     }
   }
 
@@ -263,9 +283,9 @@ class Neo4jSinkTaskAuraTest {
 
     driver?.session().use {
       it?.run(
-        "CREATE (s:User:OldLabel:$LABEL_SINK_AURA{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'0'})")
+          "CREATE (s:User:OldLabel:$LABEL_SINK_AURA{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'0'})")
       it?.run(
-        "CREATE (s:User:OldLabel:$LABEL_SINK_AURA{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'1'})")
+          "CREATE (s:User:OldLabel:$LABEL_SINK_AURA{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'1'})")
     }
 
     driver?.session().use { countEntitiesSinkAura(it, 2) }
@@ -275,24 +295,24 @@ class Neo4jSinkTaskAuraTest {
     props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
 
     val cdcDataStart =
-      StreamsTransactionEvent(
-        meta =
-          Meta(
-            timestamp = System.currentTimeMillis(),
-            username = "user",
-            txId = 1,
-            txEventId = 0,
-            txEventsCount = 3,
-            operation = OperationType.deleted),
-        payload =
-          NodePayload(
-            id = "0",
-            before =
-              NodeChange(
-                properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
-                labels = listOf("User", "OldLabel")),
-            after = null),
-        schema = Schema())
+        StreamsTransactionEvent(
+            meta =
+                Meta(
+                    timestamp = System.currentTimeMillis(),
+                    username = "user",
+                    txId = 1,
+                    txEventId = 0,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted),
+            payload =
+                NodePayload(
+                    id = "0",
+                    before =
+                        NodeChange(
+                            properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
+                            labels = listOf("User", "OldLabel")),
+                    after = null),
+            schema = Schema())
     val task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
     task.start(props)
@@ -306,15 +326,15 @@ class Neo4jSinkTaskAuraTest {
   fun `should work with node pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}$NAME_TOPIC"] =
-      "$LABEL_SINK_AURA{!userId,name,surname,address.city}"
+        "$LABEL_SINK_AURA{!userId,name,surname,address.city}"
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val data =
-      mapOf(
-        "userId" to 1,
-        "name" to "Pippo",
-        "surname" to "Pluto",
-        "address" to mapOf("city" to "Cerignola", "CAP" to "12345"))
+        mapOf(
+            "userId" to 1,
+            "name" to "Pippo",
+            "surname" to "Pluto",
+            "address" to mapOf("city" to "Cerignola", "CAP" to "12345"))
 
     val task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
@@ -324,9 +344,9 @@ class Neo4jSinkTaskAuraTest {
 
     driver?.session().use {
       countEntitiesSinkAura(
-        it,
-        1,
-        "MATCH (n:$LABEL_SINK_AURA{name: 'Pippo', surname: 'Pluto', userId: 1, `address.city`: 'Cerignola'}) RETURN count(n) AS count")
+          it,
+          1,
+          "MATCH (n:$LABEL_SINK_AURA{name: 'Pippo', surname: 'Pluto', userId: 1, `address.city`: 'Cerignola'}) RETURN count(n) AS count")
     }
   }
 
@@ -334,17 +354,17 @@ class Neo4jSinkTaskAuraTest {
   fun `should work with relationship pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
     props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$NAME_TOPIC"] =
-      "(:$LABEL_SINK_AURA{!sourceId,sourceName,sourceSurname})-[:HAS_REL]->(:$LABEL_SINK_AURA{!targetId,targetName,targetSurname})"
+        "(:$LABEL_SINK_AURA{!sourceId,sourceName,sourceSurname})-[:HAS_REL]->(:$LABEL_SINK_AURA{!targetId,targetName,targetSurname})"
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val data =
-      mapOf(
-        "sourceId" to 1,
-        "sourceName" to "Pippo",
-        "sourceSurname" to "Pluto",
-        "targetId" to 1,
-        "targetName" to "Foo",
-        "targetSurname" to "Bar")
+        mapOf(
+            "sourceId" to 1,
+            "sourceName" to "Pippo",
+            "sourceSurname" to "Pluto",
+            "targetId" to 1,
+            "targetName" to "Foo",
+            "targetSurname" to "Bar")
 
     val task = Neo4jSinkTask()
     task.initialize(mock(SinkTaskContext::class.java))
@@ -353,9 +373,9 @@ class Neo4jSinkTaskAuraTest {
     task.put(input)
     driver?.session().use {
       countEntitiesSinkAura(
-        it,
-        1,
-        "MATCH (:$LABEL_SINK_AURA{sourceId: 1})-[r:HAS_REL]->(:$LABEL_SINK_AURA{targetId: 1}) RETURN COUNT(r) as count")
+          it,
+          1,
+          "MATCH (:$LABEL_SINK_AURA{sourceId: 1})-[r:HAS_REL]->(:$LABEL_SINK_AURA{targetId: 1}) RETURN COUNT(r) as count")
     }
   }
 
@@ -365,19 +385,19 @@ class Neo4jSinkTaskAuraTest {
     val key = "key"
     val topic = UUID.randomUUID().toString()
     val data =
-      (1..10).map {
-        val labels =
-          if (it % 2 == 0) listOf(LABEL_SINK_AURA, "Bar")
-          else listOf(LABEL_SINK_AURA, "Bar", "Label")
-        val properties = mapOf("foo" to "foo-value-$it", "id" to it)
-        val (op, ids) =
-          when (it) {
-            in mergeMarkers -> CUDOperations.merge to mapOf(key to it)
-            else -> CUDOperations.create to emptyMap()
-          }
-        val cudNode = CUDNode(op = op, labels = labels, ids = ids, properties = properties)
-        SinkRecord(topic, 1, null, null, null, JSONUtils.asMap(cudNode), it.toLong())
-      }
+        (1..10).map {
+          val labels =
+              if (it % 2 == 0) listOf(LABEL_SINK_AURA, "Bar")
+              else listOf(LABEL_SINK_AURA, "Bar", "Label")
+          val properties = mapOf("foo" to "foo-value-$it", "id" to it)
+          val (op, ids) =
+              when (it) {
+                in mergeMarkers -> CUDOperations.merge to mapOf(key to it)
+                else -> CUDOperations.create to emptyMap()
+              }
+          val cudNode = CUDNode(op = op, labels = labels, ids = ids, properties = properties)
+          SinkRecord(topic, 1, null, null, null, JSONUtils.asMap(cudNode), it.toLong())
+        }
 
     val props = getMapSinkConnectorConfig()
     props[Neo4jSinkConnectorConfig.TOPIC_CUD] = topic

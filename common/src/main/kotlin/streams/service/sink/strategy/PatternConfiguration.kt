@@ -41,25 +41,25 @@ private fun getPatternConfiguredType(properties: List<String>): PatternConfigura
 }
 
 private fun isHomogeneousPattern(
-  type: PatternConfigurationType,
-  properties: List<String>,
-  pattern: String,
-  entityType: String
+    type: PatternConfigurationType,
+    properties: List<String>,
+    pattern: String,
+    entityType: String
 ) {
   val isHomogeneous =
-    when (type) {
-      PatternConfigurationType.INCLUDE -> properties.all { it.trim()[0].isJavaIdentifierStart() }
-      PatternConfigurationType.EXCLUDE -> properties.all { it.trim().startsWith(MINUS_PREFIX) }
-      PatternConfigurationType.ALL -> properties.isEmpty() || properties == listOf("*")
-    }
+      when (type) {
+        PatternConfigurationType.INCLUDE -> properties.all { it.trim()[0].isJavaIdentifierStart() }
+        PatternConfigurationType.EXCLUDE -> properties.all { it.trim().startsWith(MINUS_PREFIX) }
+        PatternConfigurationType.ALL -> properties.isEmpty() || properties == listOf("*")
+      }
   if (!isHomogeneous) {
     throw IllegalArgumentException("The $entityType pattern $pattern is not homogeneous")
   }
 }
 
 private fun cleanProperties(
-  type: PatternConfigurationType,
-  properties: List<String>
+    type: PatternConfigurationType,
+    properties: List<String>
 ): List<String> {
   return when (type) {
     PatternConfigurationType.INCLUDE -> properties.map { it.trim() }
@@ -71,24 +71,24 @@ private fun cleanProperties(
 interface PatternConfiguration
 
 data class NodePatternConfiguration(
-  val keys: Set<String>,
-  val type: PatternConfigurationType,
-  val labels: List<String>,
-  val properties: List<String>,
-  val mergeProperties: Boolean
+    val keys: Set<String>,
+    val type: PatternConfigurationType,
+    val labels: List<String>,
+    val properties: List<String>,
+    val mergeProperties: Boolean
 ) : PatternConfiguration {
   companion object {
 
     // (:LabelA{!id,foo,bar})
     @JvmStatic
     private val cypherNodePatternConfigured =
-      """\((:\w+\s*(?::\s*(?:\w+)\s*)*)\s*(?:\{\s*(-?[\w!\.]+\s*(?:,\s*-?[!\w\*\.]+\s*)*)\})?\)$"""
-        .toRegex()
+        """\((:\w+\s*(?::\s*(?:\w+)\s*)*)\s*(?:\{\s*(-?[\w!\.]+\s*(?:,\s*-?[!\w\*\.]+\s*)*)\})?\)$"""
+            .toRegex()
     // LabelA{!id,foo,bar}
     @JvmStatic
     private val simpleNodePatternConfigured =
-      """^(\w+\s*(?::\s*(?:\w+)\s*)*)\s*(?:\{\s*(-?[\w!\.]+\s*(?:,\s*-?[!\w\*\.]+\s*)*)\})?$"""
-        .toRegex()
+        """^(\w+\s*(?::\s*(?:\w+)\s*)*)\s*(?:\{\s*(-?[\w!\.]+\s*(?:,\s*-?[!\w\*\.]+\s*)*)\})?$"""
+            .toRegex()
 
     fun parse(pattern: String, mergeProperties: Boolean): NodePatternConfiguration {
       val isCypherPattern = pattern.startsWith("(")
@@ -98,13 +98,13 @@ data class NodePatternConfiguration(
         throw IllegalArgumentException("The Node pattern $pattern is invalid")
       } else {
         val labels =
-          matcher.groupValues[1]
-            .split(LABEL_SEPARATOR)
-            .let { if (isCypherPattern) it.drop(1) else it }
-            .map { it.quote() }
+            matcher.groupValues[1]
+                .split(LABEL_SEPARATOR)
+                .let { if (isCypherPattern) it.drop(1) else it }
+                .map { it.quote() }
         val allProperties = matcher.groupValues[2].split(PROPERTIES_SEPARATOR)
         val keys =
-          allProperties.filter { it.startsWith(ID_PREFIX) }.map { it.trim().substring(1) }.toSet()
+            allProperties.filter { it.startsWith(ID_PREFIX) }.map { it.trim().substring(1) }.toSet()
         if (keys.isEmpty()) {
           throw IllegalArgumentException("The Node pattern $pattern must contain at least one key")
         }
@@ -114,23 +114,23 @@ data class NodePatternConfiguration(
         val cleanedProperties = cleanProperties(type, properties)
 
         return NodePatternConfiguration(
-          keys = keys,
-          type = type,
-          labels = labels,
-          properties = cleanedProperties,
-          mergeProperties)
+            keys = keys,
+            type = type,
+            labels = labels,
+            properties = cleanedProperties,
+            mergeProperties)
       }
     }
   }
 }
 
 data class RelationshipPatternConfiguration(
-  val start: NodePatternConfiguration,
-  val end: NodePatternConfiguration,
-  val relType: String,
-  val type: PatternConfigurationType,
-  val properties: List<String>,
-  val mergeProperties: Boolean
+    val start: NodePatternConfiguration,
+    val end: NodePatternConfiguration,
+    val relType: String,
+    val type: PatternConfigurationType,
+    val properties: List<String>,
+    val mergeProperties: Boolean
 ) : PatternConfiguration {
   companion object {
 
@@ -140,11 +140,11 @@ data class RelationshipPatternConfiguration(
       val start = NodePatternConfiguration.parse(pattern, mergeProperties)
       return if (start.type == PatternConfigurationType.ALL) {
         NodePatternConfiguration(
-          keys = start.keys,
-          type = PatternConfigurationType.INCLUDE,
-          labels = start.labels,
-          properties = start.properties,
-          mergeProperties)
+            keys = start.keys,
+            type = PatternConfigurationType.INCLUDE,
+            labels = start.labels,
+            properties = start.properties,
+            mergeProperties)
       } else {
         start
       }
@@ -152,32 +152,32 @@ data class RelationshipPatternConfiguration(
 
     // (:Source{!id})-[:REL_TYPE{foo, -bar}]->(:Target{!targetId})
     private val cypherRelationshipPatternConfigured =
-      """^\(:(.*?)\)(<)?-\[(?::)([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})?\]-(>)?\(:(.*?)\)$"""
-        .toRegex()
+        """^\(:(.*?)\)(<)?-\[(?::)([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})?\]-(>)?\(:(.*?)\)$"""
+            .toRegex()
     // LabelA{!id} REL_TYPE{foo, -bar} LabelB{!targetId}
     private val simpleRelationshipPatternConfigured =
-      """^(.*?) ([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})? (.*?)$"""
-        .toRegex() // """^\((.*?)\)-\[(?::)([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})?\]->\((.*?)\)$""".toRegex()
+        """^(.*?) ([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})? (.*?)$"""
+            .toRegex() // """^\((.*?)\)-\[(?::)([\w\_]+)(\{\s*(-?[\w\*\.]+\s*(?:,\s*-?[\w\*\.]+\s*)*)\})?\]->\((.*?)\)$""".toRegex()
 
     data class RelationshipPatternMetaData(
-      val startPattern: String,
-      val endPattern: String,
-      val relType: String,
-      val properties: List<String>
+        val startPattern: String,
+        val endPattern: String,
+        val relType: String,
+        val properties: List<String>
     ) {
       companion object {
 
         private fun toProperties(propGroup: String): List<String> =
-          if (propGroup.isNullOrBlank()) {
-            emptyList()
-          } else {
-            propGroup.split(PROPERTIES_SEPARATOR)
-          }
+            if (propGroup.isNullOrBlank()) {
+              emptyList()
+            } else {
+              propGroup.split(PROPERTIES_SEPARATOR)
+            }
 
         fun create(
-          isCypherPattern: Boolean,
-          isLeftToRight: Boolean,
-          groupValues: List<String>
+            isCypherPattern: Boolean,
+            isLeftToRight: Boolean,
+            groupValues: List<String>
         ): RelationshipPatternMetaData {
           lateinit var start: String
           lateinit var end: String
@@ -207,71 +207,71 @@ data class RelationshipPatternConfiguration(
           }
 
           return RelationshipPatternMetaData(
-            startPattern = start, endPattern = end, relType = relType, properties = props)
+              startPattern = start, endPattern = end, relType = relType, properties = props)
         }
       }
     }
 
     fun parse(
-      pattern: String,
-      mergeNodeProps: Boolean,
-      mergeRelProps: Boolean
+        pattern: String,
+        mergeNodeProps: Boolean,
+        mergeRelProps: Boolean
     ): RelationshipPatternConfiguration {
       val isCypherPattern = pattern.startsWith("(")
       val regex =
-        if (isCypherPattern) {
-          cypherRelationshipPatternConfigured
-        } else {
-          simpleRelationshipPatternConfigured
-        }
+          if (isCypherPattern) {
+            cypherRelationshipPatternConfigured
+          } else {
+            simpleRelationshipPatternConfigured
+          }
       val matcher = regex.matchEntire(pattern)
       if (matcher == null) {
         throw IllegalArgumentException("The Relationship pattern $pattern is invalid")
       } else {
         val isLeftToRight =
-          (!isCypherPattern || isUndirected(matcher) || isDirectedToRight(matcher))
+            (!isCypherPattern || isUndirected(matcher) || isDirectedToRight(matcher))
         val isRightToLeft = if (isCypherPattern) isDirectedToLeft(matcher) else false
 
         if (!isLeftToRight && !isRightToLeft) {
           throw IllegalArgumentException(
-            "The Relationship pattern $pattern has an invalid direction")
+              "The Relationship pattern $pattern has an invalid direction")
         }
 
         val metadata =
-          RelationshipPatternMetaData.create(isCypherPattern, isLeftToRight, matcher.groupValues)
+            RelationshipPatternMetaData.create(isCypherPattern, isLeftToRight, matcher.groupValues)
 
         val start =
-          try {
-            getNodeConf(metadata.startPattern, mergeNodeProps)
-          } catch (e: Exception) {
-            throw IllegalArgumentException("The Relationship pattern $pattern is invalid")
-          }
+            try {
+              getNodeConf(metadata.startPattern, mergeNodeProps)
+            } catch (e: Exception) {
+              throw IllegalArgumentException("The Relationship pattern $pattern is invalid")
+            }
         val end =
-          try {
-            getNodeConf(metadata.endPattern, mergeNodeProps)
-          } catch (e: Exception) {
-            throw IllegalArgumentException("The Relationship pattern $pattern is invalid")
-          }
+            try {
+              getNodeConf(metadata.endPattern, mergeNodeProps)
+            } catch (e: Exception) {
+              throw IllegalArgumentException("The Relationship pattern $pattern is invalid")
+            }
         val type = getPatternConfiguredType(metadata.properties)
         isHomogeneousPattern(type, metadata.properties, pattern, "Relationship")
         val cleanedProperties = cleanProperties(type, metadata.properties)
         return RelationshipPatternConfiguration(
-          start = start,
-          end = end,
-          relType = metadata.relType,
-          properties = cleanedProperties,
-          type = type,
-          mergeProperties = mergeRelProps)
+            start = start,
+            end = end,
+            relType = metadata.relType,
+            properties = cleanedProperties,
+            type = type,
+            mergeProperties = mergeRelProps)
       }
     }
 
     private fun isDirectedToLeft(matcher: MatchResult) =
-      (matcher.groupValues[2] == "<" && matcher.groupValues[6] == "")
+        (matcher.groupValues[2] == "<" && matcher.groupValues[6] == "")
 
     private fun isDirectedToRight(matcher: MatchResult) =
-      (matcher.groupValues[2] == "" && matcher.groupValues[6] == ">")
+        (matcher.groupValues[2] == "" && matcher.groupValues[6] == ">")
 
     private fun isUndirected(matcher: MatchResult) =
-      (matcher.groupValues[2] == "" && matcher.groupValues[6] == "")
+        (matcher.groupValues[2] == "" && matcher.groupValues[6] == "")
   }
 }

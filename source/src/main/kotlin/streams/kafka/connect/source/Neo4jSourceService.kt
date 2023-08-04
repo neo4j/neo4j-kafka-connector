@@ -41,8 +41,8 @@ import org.slf4j.LoggerFactory
 import streams.utils.StreamsUtils
 
 class Neo4jSourceService(
-  private val config: Neo4jSourceConnectorConfig,
-  offsetStorageReader: OffsetStorageReader
+    private val config: Neo4jSourceConnectorConfig,
+    offsetStorageReader: OffsetStorageReader
 ) : AutoCloseable {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceService::class.java)
@@ -60,22 +60,22 @@ class Neo4jSourceService(
     val offset = offsetStorageReader.offset(sourcePartition) ?: emptyMap()
     // if the user wants to recover from LAST_COMMITTED
     val startValue =
-      if (config.streamingFrom == StreamingFrom.LAST_COMMITTED &&
-        offset["value"] != null &&
-        offset["property"] == config.streamingProperty) {
-        log.info(
-          "Resuming offset $offset, the ${Neo4jSourceConnectorConfig.STREAMING_FROM} value is ignored")
-        offset["value"] as Long
-      } else {
-        if (config.streamingFrom == StreamingFrom.LAST_COMMITTED) {
+        if (config.streamingFrom == StreamingFrom.LAST_COMMITTED &&
+            offset["value"] != null &&
+            offset["property"] == config.streamingProperty) {
           log.info(
-            "You provided ${Neo4jSourceConnectorConfig.STREAMING_FROM}: ${config.streamingFrom} but no offset has been found, we'll start to consume from NOW")
+              "Resuming offset $offset, the ${Neo4jSourceConnectorConfig.STREAMING_FROM} value is ignored")
+          offset["value"] as Long
         } else {
-          log.info(
-            "No offset to resume, we'll the provided value of ${Neo4jSourceConnectorConfig.STREAMING_FROM}: ${config.streamingFrom}")
+          if (config.streamingFrom == StreamingFrom.LAST_COMMITTED) {
+            log.info(
+                "You provided ${Neo4jSourceConnectorConfig.STREAMING_FROM}: ${config.streamingFrom} but no offset has been found, we'll start to consume from NOW")
+          } else {
+            log.info(
+                "No offset to resume, we'll the provided value of ${Neo4jSourceConnectorConfig.STREAMING_FROM}: ${config.streamingFrom}")
+          }
+          config.streamingFrom.value()
         }
-        config.streamingFrom.value()
-      }
     AtomicLong(startValue)
   }
 
@@ -87,72 +87,72 @@ class Neo4jSourceService(
   private val streamingProperty = config.streamingProperty.ifBlank { "undefined" }
 
   private val job: Job =
-    GlobalScope.launch(Dispatchers.IO) {
-      var lastCheckHadResult = false
-      while (isActive) {
-        try {
-          // if the user doesn't set the streaming property we fallback to an
-          // internal mechanism
-          if (!isStreamingPropertyDefined) {
-            // we update the lastCheck property only if the last loop round
-            // returned results otherwise we stick to the old value
-            if (lastCheckHadResult) {
-              lastCheck.set(System.currentTimeMillis() - pollInterval)
+      GlobalScope.launch(Dispatchers.IO) {
+        var lastCheckHadResult = false
+        while (isActive) {
+          try {
+            // if the user doesn't set the streaming property we fallback to an
+            // internal mechanism
+            if (!isStreamingPropertyDefined) {
+              // we update the lastCheck property only if the last loop round
+              // returned results otherwise we stick to the old value
+              if (lastCheckHadResult) {
+                lastCheck.set(System.currentTimeMillis() - pollInterval)
+              }
             }
+            driver
+                .session(sessionConfig)
+                .readTransaction(
+                    { tx ->
+                      val result = tx.run(config.query, mapOf("lastCheck" to lastCheck.get()))
+                      lastCheckHadResult = result.hasNext()
+                      result.forEach { record ->
+                        try {
+                          val sourceRecord = toSourceRecord(record)
+                          queue.put(sourceRecord)
+                        } catch (e: Exception) {
+                          setError(e)
+                        }
+                      }
+                    },
+                    transactionConfig)
+            delay(pollInterval)
+          } catch (e: Exception) {
+            setError(e)
           }
-          driver
-            .session(sessionConfig)
-            .readTransaction(
-              { tx ->
-                val result = tx.run(config.query, mapOf("lastCheck" to lastCheck.get()))
-                lastCheckHadResult = result.hasNext()
-                result.forEach { record ->
-                  try {
-                    val sourceRecord = toSourceRecord(record)
-                    queue.put(sourceRecord)
-                  } catch (e: Exception) {
-                    setError(e)
-                  }
-                }
-              },
-              transactionConfig)
-          delay(pollInterval)
-        } catch (e: Exception) {
-          setError(e)
         }
       }
-    }
 
   private fun toSourceRecord(record: Record): SourceRecord {
     val thisValue = computeLastTimestamp(record)
     return SourceRecordBuilder()
-      .withRecord(record)
-      .withTopic(config.topic)
-      .withSourcePartition(sourcePartition)
-      .withStreamingProperty(streamingProperty)
-      .withEnforceSchema(config.enforceSchema)
-      .withTimestamp(thisValue)
-      .build()
+        .withRecord(record)
+        .withTopic(config.topic)
+        .withSourcePartition(sourcePartition)
+        .withStreamingProperty(streamingProperty)
+        .withEnforceSchema(config.enforceSchema)
+        .withTimestamp(thisValue)
+        .build()
   }
 
   private fun computeLastTimestamp(record: Record) =
-    try {
-      if (isStreamingPropertyDefined) {
-        val value = record.get(config.streamingProperty, Values.value(-1L)).asLong()
-        lastCheck.getAndUpdate { oldValue ->
-          if (oldValue >= value) {
-            oldValue
-          } else {
-            value
+      try {
+        if (isStreamingPropertyDefined) {
+          val value = record.get(config.streamingProperty, Values.value(-1L)).asLong()
+          lastCheck.getAndUpdate { oldValue ->
+            if (oldValue >= value) {
+              oldValue
+            } else {
+              value
+            }
           }
+          value
+        } else {
+          lastCheck.get()
         }
-        value
-      } else {
+      } catch (e: Throwable) {
         lastCheck.get()
       }
-    } catch (e: Throwable) {
-      lastCheck.get()
-    }
 
   private fun checkError() {
     val fatalError = error.getAndSet(null)

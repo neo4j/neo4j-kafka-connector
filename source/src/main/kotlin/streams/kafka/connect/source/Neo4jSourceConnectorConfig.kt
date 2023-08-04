@@ -36,14 +36,14 @@ enum class StreamingFrom {
   LAST_COMMITTED;
 
   fun value() =
-    when (this) {
-      ALL -> -1
-      else -> System.currentTimeMillis()
-    }
+      when (this) {
+        ALL -> -1
+        else -> System.currentTimeMillis()
+      }
 }
 
 class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
-  Neo4jConnectorConfig(config(), originals, ConnectorType.SOURCE) {
+    Neo4jConnectorConfig(config(), originals, ConnectorType.SOURCE) {
 
   val topic: String = getString(TOPIC)
 
@@ -79,12 +79,14 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
   }
 
   fun sourcePartition() =
-    when (sourceType) {
-      SourceType.QUERY ->
-        mapOf("database" to this.database, "type" to "query", "query" to query, "partition" to 1)
-      else ->
-        throw UnsupportedOperationException("Supported source query types are: ${SourceType.QUERY}")
-    }
+      when (sourceType) {
+        SourceType.QUERY ->
+            mapOf(
+                "database" to this.database, "type" to "query", "query" to query, "partition" to 1)
+        else ->
+            throw UnsupportedOperationException(
+                "Supported source query types are: ${SourceType.QUERY}")
+      }
 
   companion object {
     const val PARTITIONS = "partitions"
@@ -99,60 +101,60 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
     const val SOURCE_TYPE_RELATIONSHIP = "neo4j.source.relationship"
 
     fun config(): ConfigDef =
-      Neo4jConnectorConfig.config()
-        .define(
-          ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN)
-            .documentation(PropertiesUtil.getProperty(ENFORCE_SCHEMA))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(false)
-            .validator(ConfigDef.NonNullValidator())
-            .build())
-        .define(
-          ConfigKeyBuilder.of(STREAMING_POLL_INTERVAL, ConfigDef.Type.INT)
-            .documentation(PropertiesUtil.getProperty(STREAMING_POLL_INTERVAL))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(10000)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(STREAMING_PROPERTY, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(STREAMING_PROPERTY))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            //                        .validator(ConfigDef.NonEmptyString())
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC))
-            .importance(ConfigDef.Importance.HIGH)
-            .validator(ConfigDef.NonEmptyString())
-            .build())
-        .define(
-          ConfigKeyBuilder.of(PARTITIONS, ConfigDef.Type.INT)
-            .documentation(PropertiesUtil.getProperty(PARTITIONS))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(1)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(STREAMING_FROM, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(STREAMING_FROM))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(StreamingFrom.NOW.toString())
-            .validator(ValidEnum.of(StreamingFrom::class.java))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(SOURCE_TYPE, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(SOURCE_TYPE))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(SourceType.QUERY.toString())
-            .validator(ValidEnum.of(SourceType::class.java))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(SOURCE_TYPE_QUERY))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .build())
+        Neo4jConnectorConfig.config()
+            .define(
+                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN)
+                    .documentation(PropertiesUtil.getProperty(ENFORCE_SCHEMA))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(false)
+                    .validator(ConfigDef.NonNullValidator())
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(STREAMING_POLL_INTERVAL, ConfigDef.Type.INT)
+                    .documentation(PropertiesUtil.getProperty(STREAMING_POLL_INTERVAL))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(10000)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(STREAMING_PROPERTY, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(STREAMING_PROPERTY))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    //                        .validator(ConfigDef.NonEmptyString())
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .validator(ConfigDef.NonEmptyString())
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(PARTITIONS, ConfigDef.Type.INT)
+                    .documentation(PropertiesUtil.getProperty(PARTITIONS))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(1)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(STREAMING_FROM, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(STREAMING_FROM))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(StreamingFrom.NOW.toString())
+                    .validator(ValidEnum.of(StreamingFrom::class.java))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(SOURCE_TYPE, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(SOURCE_TYPE))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(SourceType.QUERY.toString())
+                    .validator(ValidEnum.of(SourceType::class.java))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(SOURCE_TYPE_QUERY))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .build())
   }
 }

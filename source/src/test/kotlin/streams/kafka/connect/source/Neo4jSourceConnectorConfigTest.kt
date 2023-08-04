@@ -26,15 +26,15 @@ class Neo4jSourceConnectorConfigTest {
   @Test
   fun `should throw a ConfigException because of unsupported streaming type`() {
     val exception =
-      assertFailsWith(ConfigException::class) {
-        val originals =
-          mapOf(
-            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.LABELS.toString(),
-            Neo4jSourceConnectorConfig.TOPIC to "topic",
-            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
-            Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
-        Neo4jSourceConnectorConfig(originals)
-      }
+        assertFailsWith(ConfigException::class) {
+          val originals =
+              mapOf(
+                  Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.LABELS.toString(),
+                  Neo4jSourceConnectorConfig.TOPIC to "topic",
+                  Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
+                  Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
+          Neo4jSourceConnectorConfig(originals)
+        }
 
     assertEquals("Supported source query types are: ${SourceType.QUERY}", exception.message)
   }
@@ -42,49 +42,49 @@ class Neo4jSourceConnectorConfigTest {
   @Test
   fun `should throw a ConfigException because of empty query`() {
     val exception =
-      assertFailsWith(ConfigException::class) {
-        val originals =
-          mapOf(
-            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
-            Neo4jSourceConnectorConfig.TOPIC to "topic",
-            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
-            Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
-        Neo4jSourceConnectorConfig(originals)
-      }
+        assertFailsWith(ConfigException::class) {
+          val originals =
+              mapOf(
+                  Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
+                  Neo4jSourceConnectorConfig.TOPIC to "topic",
+                  Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
+                  Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
+          Neo4jSourceConnectorConfig(originals)
+        }
 
     assertEquals(
-      "You need to define: ${Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY}", exception.message)
+        "You need to define: ${Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY}", exception.message)
   }
 
   @Test
   fun `should return config`() {
     val originals =
-      mapOf(
-        Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
-        Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY to "MATCH (n) RETURN n",
-        Neo4jSourceConnectorConfig.TOPIC to "topic",
-        Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL to "10",
-        Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
-        Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
+        mapOf(
+            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
+            Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY to "MATCH (n) RETURN n",
+            Neo4jSourceConnectorConfig.TOPIC to "topic",
+            Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL to "10",
+            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
+            Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")
     val config = Neo4jSourceConnectorConfig(originals)
     assertEquals(originals[Neo4jSourceConnectorConfig.TOPIC], config.topic)
     assertEquals(originals[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY], config.query)
     assertEquals(originals[Neo4jSourceConnectorConfig.STREAMING_PROPERTY], config.streamingProperty)
     assertEquals(
-      originals[Neo4jSourceConnectorConfig.STREAMING_FROM], config.streamingFrom.toString())
+        originals[Neo4jSourceConnectorConfig.STREAMING_FROM], config.streamingFrom.toString())
     assertEquals(
-      originals[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL]?.toInt(), config.pollInterval)
+        originals[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL]?.toInt(), config.pollInterval)
   }
 
   @Test
   fun `should return config null streaming property`() {
     val originals =
-      mapOf(
-        Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
-        Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY to "MATCH (n) RETURN n",
-        Neo4jSourceConnectorConfig.TOPIC to "topic",
-        Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL to "10",
-        Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString())
+        mapOf(
+            Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.QUERY.toString(),
+            Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY to "MATCH (n) RETURN n",
+            Neo4jSourceConnectorConfig.TOPIC to "topic",
+            Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL to "10",
+            Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString())
     val config = Neo4jSourceConnectorConfig(originals)
     assertEquals("", config.streamingProperty)
   }

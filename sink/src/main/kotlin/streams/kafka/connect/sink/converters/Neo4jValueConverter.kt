@@ -42,15 +42,15 @@ class Neo4jValueConverter : MapValueConverter<Value>() {
   }
 
   override fun setDecimalField(
-    result: MutableMap<String, Value?>?,
-    fieldName: String,
-    value: BigDecimal
+      result: MutableMap<String, Value?>?,
+      fieldName: String,
+      value: BigDecimal
   ) {
     val doubleValue = value.toDouble()
     val fitsScale =
-      doubleValue != Double.POSITIVE_INFINITY &&
-        doubleValue != Double.NEGATIVE_INFINITY &&
-        value.compareTo(doubleValue.let { BigDecimal.valueOf(it) }) == 0
+        doubleValue != Double.POSITIVE_INFINITY &&
+            doubleValue != Double.NEGATIVE_INFINITY &&
+            value.compareTo(doubleValue.let { BigDecimal.valueOf(it) }) == 0
     if (fitsScale) {
       setValue(result, fieldName, doubleValue)
     } else {
@@ -59,9 +59,9 @@ class Neo4jValueConverter : MapValueConverter<Value>() {
   }
 
   override fun setTimestampField(
-    result: MutableMap<String, Value?>?,
-    fieldName: String,
-    value: Date
+      result: MutableMap<String, Value?>?,
+      fieldName: String,
+      value: Date
   ) {
     val localDate = value.toInstant().atZone(UTC).toLocalDateTime()
     setValue(result, fieldName, localDate)
@@ -78,12 +78,12 @@ class Neo4jValueConverter : MapValueConverter<Value>() {
   }
 
   override fun setStructField(
-    result: MutableMap<String, Value?>?,
-    fieldName: String,
-    value: Struct
+      result: MutableMap<String, Value?>?,
+      fieldName: String,
+      value: Struct
   ) {
     val converted =
-      convert(value).mapValues { it.value?.asObject() }.toMutableMap() as MutableMap<Any?, Any?>
+        convert(value).mapValues { it.value?.asObject() }.toMutableMap() as MutableMap<Any?, Any?>
     setMap(result, fieldName, null, converted)
   }
 }
