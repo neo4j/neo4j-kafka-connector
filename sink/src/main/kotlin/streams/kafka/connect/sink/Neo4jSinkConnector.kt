@@ -24,11 +24,11 @@ import streams.kafka.connect.utils.PropertiesUtil
 
 @Title("Neo4j Sink Connector")
 @Description(
-  "The Neo4j Sink connector reads data from Kafka and and writes the data to Neo4j using a Cypher Template")
+    "The Neo4j Sink connector reads data from Kafka and and writes the data to Neo4j using a Cypher Template")
 @DocumentationTip(
-  "If you need to control the size of transaction that is submitted to Neo4j you try adjusting the ``consumer.max.poll.records`` setting in the worker.properties for Kafka Connect.")
+    "If you need to control the size of transaction that is submitted to Neo4j you try adjusting the ``consumer.max.poll.records`` setting in the worker.properties for Kafka Connect.")
 @DocumentationNote(
-  "For each topic you can provide a Cypher Template by using the following syntax ``neo4j.topic.cypher.<topic_name>=<cypher_query>``")
+    "For each topic you can provide a Cypher Template by using the following syntax ``neo4j.topic.cypher.<topic_name>=<cypher_query>``")
 class Neo4jSinkConnector : SinkConnector() {
   private lateinit var settings: Map<String, String>
   private lateinit var config: Neo4jSinkConnectorConfig

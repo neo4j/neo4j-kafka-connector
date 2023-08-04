@@ -31,13 +31,13 @@ class CoroutineUtilsTest {
     var executed = false
 
     retryForException(
-      exceptions = arrayOf(RuntimeException::class.java), retries = 4, delayTime = 100) {
-        if (count < 2) {
-          ++count
-          throw RuntimeException()
+        exceptions = arrayOf(RuntimeException::class.java), retries = 4, delayTime = 100) {
+          if (count < 2) {
+            ++count
+            throw RuntimeException()
+          }
+          executed = true
         }
-        executed = true
-      }
 
     assertEquals(2, count)
     assertTrue { executed }
@@ -50,12 +50,12 @@ class CoroutineUtilsTest {
     assertFailsWith(RuntimeException::class) {
       runBlocking {
         retryForException(
-          exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
-            if (retries >= 0) {
-              --retries
-              throw RuntimeException()
+            exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
+              if (retries >= 0) {
+                --retries
+                throw RuntimeException()
+              }
             }
-          }
       }
     }
   }
@@ -67,12 +67,12 @@ class CoroutineUtilsTest {
     assertFailsWith(IOException::class) {
       runBlocking {
         retryForException(
-          exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
-            if (iteration >= 0) {
-              ++iteration
-              throw IOException()
+            exceptions = arrayOf(RuntimeException::class.java), retries = 3, delayTime = 100) {
+              if (iteration >= 0) {
+                ++iteration
+                throw IOException()
+              }
             }
-          }
       }
     }
     assertEquals(1, iteration)

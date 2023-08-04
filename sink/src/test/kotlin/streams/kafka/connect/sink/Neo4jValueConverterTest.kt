@@ -82,7 +82,7 @@ class Neo4jValueConverterTest {
     val largeDecimal = result["largeDecimal"]
     assertTrue { largeDecimal is StringValue }
     assertEquals(
-      BigDecimal.valueOf(Double.MAX_VALUE).pow(2).toPlainString(), largeDecimal?.asString())
+        BigDecimal.valueOf(Double.MAX_VALUE).pow(2).toPlainString(), largeDecimal?.asString())
 
     val byteArray = result["byteArray"]
     assertTrue { byteArray is BytesValue }
@@ -95,8 +95,8 @@ class Neo4jValueConverterTest {
     val int64Timestamp = result["int64Timestamp"]
     assertTrue { int64Timestamp is LocalDateTimeValue }
     assertEquals(
-      Date.from(Instant.ofEpochMilli(789)).toInstant().atZone(utc).toLocalDateTime(),
-      int64Timestamp?.asLocalDateTime())
+        Date.from(Instant.ofEpochMilli(789)).toInstant().atZone(utc).toLocalDateTime(),
+        int64Timestamp?.asLocalDateTime())
 
     val int32 = result["int32"]
     assertTrue { int32 is IntegerValue }
@@ -105,14 +105,14 @@ class Neo4jValueConverterTest {
     val int32Date = result["int32Date"]
     assertTrue { int32Date is DateValue }
     assertEquals(
-      Date.from(Instant.ofEpochMilli(456)).toInstant().atZone(utc).toLocalDate(),
-      int32Date?.asLocalDate())
+        Date.from(Instant.ofEpochMilli(456)).toInstant().atZone(utc).toLocalDate(),
+        int32Date?.asLocalDate())
 
     val int32Time = result["int32Time"]
     assertTrue { int32Time is LocalTimeValue }
     assertEquals(
-      Date.from(Instant.ofEpochMilli(123)).toInstant().atZone(utc).toLocalTime(),
-      int32Time?.asLocalTime())
+        Date.from(Instant.ofEpochMilli(123)).toInstant().atZone(utc).toLocalTime(),
+        int32Time?.asLocalTime())
 
     val nullField = result["nullField"]
     assertTrue { nullField is NullValue }
@@ -190,39 +190,39 @@ class Neo4jValueConverterTest {
     val string = "FooBar"
     val date = Date()
     val result =
-      Neo4jValueConverter()
-        .convert(
-          mapOf(
-            "double" to double,
-            "long" to long,
-            "bigDouble" to bigDouble,
-            "string" to string,
-            "date" to date))
+        Neo4jValueConverter()
+            .convert(
+                mapOf(
+                    "double" to double,
+                    "long" to long,
+                    "bigDouble" to bigDouble,
+                    "string" to string,
+                    "date" to date))
 
     assertEquals(double, result["double"]?.asDouble())
     assertEquals(long, result["long"]?.asLong())
     assertEquals(bigDouble.toPlainString(), result["bigDouble"]?.asString())
     assertEquals(string, result["string"]?.asString())
     assertEquals(
-      date.toInstant().atZone(ZoneId.of("UTC")).toLocalDateTime(),
-      result["date"]?.asLocalDateTime())
+        date.toInstant().atZone(ZoneId.of("UTC")).toLocalDateTime(),
+        result["date"]?.asLocalDateTime())
   }
 
   @Test
   fun `should be able to process a nested AVRO structure`() {
     val trainSchema =
-      SchemaBuilder.struct()
-        .field("internationalTrainNumber", Schema.STRING_SCHEMA)
-        .field("trainDate", Schema.STRING_SCHEMA)
-        .build()
+        SchemaBuilder.struct()
+            .field("internationalTrainNumber", Schema.STRING_SCHEMA)
+            .field("trainDate", Schema.STRING_SCHEMA)
+            .build()
     val mySchema =
-      SchemaBuilder.struct()
-        .field("trainId", trainSchema)
-        .field("coreId", Schema.STRING_SCHEMA)
-        .build()
+        SchemaBuilder.struct()
+            .field("trainId", trainSchema)
+            .field("coreId", Schema.STRING_SCHEMA)
+            .build()
 
     val trainIdStruct =
-      Struct(trainSchema).put("internationalTrainNumber", "46261").put("trainDate", "2021-05-20")
+        Struct(trainSchema).put("internationalTrainNumber", "46261").put("trainDate", "2021-05-20")
     val rootStruct = Struct(mySchema).put("trainId", trainIdStruct).put("coreId", "000000046261")
 
     val result = Neo4jValueConverter().convert(rootStruct) as Map<*, *>
@@ -230,154 +230,168 @@ class Neo4jValueConverterTest {
 
   companion object {
     private val LI_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.html.LI")
-        .field("value", Schema.OPTIONAL_STRING_SCHEMA)
-        .field("class", SchemaBuilder.array(Schema.STRING_SCHEMA).optional())
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.html.LI")
+            .field("value", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("class", SchemaBuilder.array(Schema.STRING_SCHEMA).optional())
+            .build()
 
     private val UL_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.html.UL")
-        .field("value", SchemaBuilder.array(LI_SCHEMA))
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.html.UL")
+            .field("value", SchemaBuilder.array(LI_SCHEMA))
+            .build()
 
     private val P_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.html.P")
-        .field("value", Schema.OPTIONAL_STRING_SCHEMA)
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.html.P")
+            .field("value", Schema.OPTIONAL_STRING_SCHEMA)
+            .build()
 
     private val BODY_SCHEMA =
-      SchemaBuilder.struct()
-        .name("org.neo4j.example.html.BODY")
-        .field("ul", SchemaBuilder.array(UL_SCHEMA).optional())
-        .field("p", SchemaBuilder.array(P_SCHEMA).optional())
-        .build()
+        SchemaBuilder.struct()
+            .name("org.neo4j.example.html.BODY")
+            .field("ul", SchemaBuilder.array(UL_SCHEMA).optional())
+            .field("p", SchemaBuilder.array(P_SCHEMA).optional())
+            .build()
 
     private val TEST_SCHEMA =
-      SchemaBuilder.struct()
-        .name("test.schema")
-        .field(
-          "target",
-          ConnectSchema(
-            Schema.Type.BYTES, false, BigDecimal.valueOf(123.4), Decimal.LOGICAL_NAME, null, null))
-        .field(
-          "largeDecimal",
-          ConnectSchema(
-            Schema.Type.BYTES,
-            false,
-            BigDecimal.valueOf(Double.MAX_VALUE).pow(2),
-            Decimal.LOGICAL_NAME,
-            null,
-            null))
-        .field(
-          "byteArray",
-          ConnectSchema(
-            Schema.Type.BYTES, false, "Foo".toByteArray(), "name.byteArray", null, null))
-        .field(
-          "int64",
-          ConnectSchema(Schema.Type.INT64, false, Long.MAX_VALUE, "name.int64", null, null))
-        .field(
-          "int64Timestamp",
-          ConnectSchema(
-            Schema.Type.INT64,
-            false,
-            Date.from(Instant.ofEpochMilli(789)),
-            Timestamp.LOGICAL_NAME,
-            null,
-            null))
-        .field("int32", ConnectSchema(Schema.Type.INT32, false, 123, "name.int32", null, null))
-        .field(
-          "int32Date",
-          ConnectSchema(
-            Schema.Type.INT32,
-            false,
-            Date.from(Instant.ofEpochMilli(456)),
-            org.apache.kafka.connect.data.Date.LOGICAL_NAME,
-            null,
-            null))
-        .field(
-          "int32Time",
-          ConnectSchema(
-            Schema.Type.INT32,
-            false,
-            Date.from(Instant.ofEpochMilli(123)),
-            Time.LOGICAL_NAME,
-            null,
-            null))
-        .field(
-          "nullField", ConnectSchema(Schema.Type.INT64, false, null, Time.LOGICAL_NAME, null, null))
-        .field(
-          "nullFieldBytes",
-          ConnectSchema(Schema.Type.BYTES, false, null, Time.LOGICAL_NAME, null, null))
-        .build()
+        SchemaBuilder.struct()
+            .name("test.schema")
+            .field(
+                "target",
+                ConnectSchema(
+                    Schema.Type.BYTES,
+                    false,
+                    BigDecimal.valueOf(123.4),
+                    Decimal.LOGICAL_NAME,
+                    null,
+                    null))
+            .field(
+                "largeDecimal",
+                ConnectSchema(
+                    Schema.Type.BYTES,
+                    false,
+                    BigDecimal.valueOf(Double.MAX_VALUE).pow(2),
+                    Decimal.LOGICAL_NAME,
+                    null,
+                    null))
+            .field(
+                "byteArray",
+                ConnectSchema(
+                    Schema.Type.BYTES, false, "Foo".toByteArray(), "name.byteArray", null, null))
+            .field(
+                "int64",
+                ConnectSchema(Schema.Type.INT64, false, Long.MAX_VALUE, "name.int64", null, null))
+            .field(
+                "int64Timestamp",
+                ConnectSchema(
+                    Schema.Type.INT64,
+                    false,
+                    Date.from(Instant.ofEpochMilli(789)),
+                    Timestamp.LOGICAL_NAME,
+                    null,
+                    null))
+            .field("int32", ConnectSchema(Schema.Type.INT32, false, 123, "name.int32", null, null))
+            .field(
+                "int32Date",
+                ConnectSchema(
+                    Schema.Type.INT32,
+                    false,
+                    Date.from(Instant.ofEpochMilli(456)),
+                    org.apache.kafka.connect.data.Date.LOGICAL_NAME,
+                    null,
+                    null))
+            .field(
+                "int32Time",
+                ConnectSchema(
+                    Schema.Type.INT32,
+                    false,
+                    Date.from(Instant.ofEpochMilli(123)),
+                    Time.LOGICAL_NAME,
+                    null,
+                    null))
+            .field(
+                "nullField",
+                ConnectSchema(Schema.Type.INT64, false, null, Time.LOGICAL_NAME, null, null))
+            .field(
+                "nullFieldBytes",
+                ConnectSchema(Schema.Type.BYTES, false, null, Time.LOGICAL_NAME, null, null))
+            .build()
 
     fun getTreeStruct(): Struct? {
       val firstUL =
-        Struct(UL_SCHEMA)
-          .put(
-            "value",
-            listOf(
-              Struct(LI_SCHEMA).put("value", "First UL - First Element"),
-              Struct(LI_SCHEMA)
-                .put("value", "First UL - Second Element")
-                .put("class", listOf("ClassA", "ClassB"))))
+          Struct(UL_SCHEMA)
+              .put(
+                  "value",
+                  listOf(
+                      Struct(LI_SCHEMA).put("value", "First UL - First Element"),
+                      Struct(LI_SCHEMA)
+                          .put("value", "First UL - Second Element")
+                          .put("class", listOf("ClassA", "ClassB"))))
       val secondUL =
-        Struct(UL_SCHEMA)
-          .put(
-            "value",
-            listOf(
-              Struct(LI_SCHEMA).put("value", "Second UL - First Element"),
-              Struct(LI_SCHEMA).put("value", "Second UL - Second Element")))
+          Struct(UL_SCHEMA)
+              .put(
+                  "value",
+                  listOf(
+                      Struct(LI_SCHEMA).put("value", "Second UL - First Element"),
+                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element")))
       val ulList = listOf(firstUL, secondUL)
       val pList =
-        listOf(
-          Struct(P_SCHEMA).put("value", "First Paragraph"),
-          Struct(P_SCHEMA).put("value", "Second Paragraph"))
+          listOf(
+              Struct(P_SCHEMA).put("value", "First Paragraph"),
+              Struct(P_SCHEMA).put("value", "Second Paragraph"))
       return Struct(BODY_SCHEMA).put("ul", ulList).put("p", pList)
     }
 
     fun getExpectedMap(): Map<String, Value> {
       val firstULMap =
-        mapOf(
-          "value" to
-            listOf(
-              mapOf("value" to Values.value("First UL - First Element"), "class" to Values.NULL),
-              mapOf(
-                "value" to Values.value("First UL - Second Element"),
-                "class" to Values.value(listOf("ClassA", "ClassB")))))
+          mapOf(
+              "value" to
+                  listOf(
+                      mapOf(
+                          "value" to Values.value("First UL - First Element"),
+                          "class" to Values.NULL),
+                      mapOf(
+                          "value" to Values.value("First UL - Second Element"),
+                          "class" to Values.value(listOf("ClassA", "ClassB")))))
       val secondULMap =
-        mapOf(
-          "value" to
-            listOf(
-              mapOf("value" to Values.value("Second UL - First Element"), "class" to Values.NULL),
-              mapOf("value" to Values.value("Second UL - Second Element"), "class" to Values.NULL)))
+          mapOf(
+              "value" to
+                  listOf(
+                      mapOf(
+                          "value" to Values.value("Second UL - First Element"),
+                          "class" to Values.NULL),
+                      mapOf(
+                          "value" to Values.value("Second UL - Second Element"),
+                          "class" to Values.NULL)))
       val ulListMap = Values.value(listOf(firstULMap, secondULMap))
       val pListMap =
-        Values.value(
-          listOf(
-            mapOf("value" to Values.value("First Paragraph")),
-            mapOf("value" to Values.value("Second Paragraph"))))
+          Values.value(
+              listOf(
+                  mapOf("value" to Values.value("First Paragraph")),
+                  mapOf("value" to Values.value("Second Paragraph"))))
       return mapOf("ul" to ulListMap, "p" to pListMap)
     }
 
     fun getTreeMap(): Map<String, Any?> {
       val firstULMap =
-        mapOf(
-          "value" to
-            listOf(
-              mapOf("value" to "First UL - First Element", "class" to null),
-              mapOf("value" to "First UL - Second Element", "class" to listOf("ClassA", "ClassB"))))
+          mapOf(
+              "value" to
+                  listOf(
+                      mapOf("value" to "First UL - First Element", "class" to null),
+                      mapOf(
+                          "value" to "First UL - Second Element",
+                          "class" to listOf("ClassA", "ClassB"))))
       val secondULMap =
-        mapOf(
-          "value" to
-            listOf(
-              mapOf("value" to "Second UL - First Element", "class" to null),
-              mapOf("value" to "Second UL - Second Element", "class" to null)))
+          mapOf(
+              "value" to
+                  listOf(
+                      mapOf("value" to "Second UL - First Element", "class" to null),
+                      mapOf("value" to "Second UL - Second Element", "class" to null)))
       val ulListMap = listOf(firstULMap, secondULMap)
       val pListMap =
-        listOf(mapOf("value" to "First Paragraph"), mapOf("value" to "Second Paragraph"))
+          listOf(mapOf("value" to "First Paragraph"), mapOf("value" to "Second Paragraph"))
       return mapOf("ul" to ulListMap, "p" to pListMap)
     }
 

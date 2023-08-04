@@ -36,8 +36,8 @@ class StreamsUtilsTest {
   @Test
   fun shouldIgnoreTheException() {
     val data =
-      StreamsUtils.ignoreExceptions<Nothing>(
-        { throw RuntimeException() }, RuntimeException::class.java)
+        StreamsUtils.ignoreExceptions<Nothing>(
+            { throw RuntimeException() }, RuntimeException::class.java)
     assertNull(data)
   }
 

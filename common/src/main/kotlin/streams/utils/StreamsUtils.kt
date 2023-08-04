@@ -46,9 +46,9 @@ object StreamsUtils {
   }
 
   fun closeSafetely(closeable: AutoCloseable, onError: (Throwable) -> Unit = {}) =
-    try {
-      closeable.close()
-    } catch (e: Throwable) {
-      onError(e)
-    }
+      try {
+        closeable.close()
+      } catch (e: Throwable) {
+        onError(e)
+      }
 }

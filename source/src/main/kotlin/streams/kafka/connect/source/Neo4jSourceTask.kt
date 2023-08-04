@@ -41,7 +41,7 @@ class Neo4jSourceTask : SourceTask() {
   override fun stop() {
     log.info("Stop() - Closing Neo4j Source Service.")
     StreamsUtils.ignoreExceptions(
-      { neo4jSourceService.close() }, UninitializedPropertyAccessException::class.java)
+        { neo4jSourceService.close() }, UninitializedPropertyAccessException::class.java)
   }
 
   override fun poll(): List<SourceRecord>? = neo4jSourceService.poll()

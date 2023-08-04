@@ -69,16 +69,16 @@ class SourceRecordBuilder {
 
   fun build(): SourceRecord {
     val sourceOffset =
-      mapOf("property" to streamingProperty.ifBlank { "undefined" }, "value" to timestamp)
+        mapOf("property" to streamingProperty.ifBlank { "undefined" }, "value" to timestamp)
     val (struct, schema) =
-      when (enforceSchema) {
-        true -> {
-          val st = record.asStruct()
-          val sc = st.schema()
-          st to sc
+        when (enforceSchema) {
+          true -> {
+            val st = record.asStruct()
+            val sc = st.schema()
+            st to sc
+          }
+          else -> record.asJsonString() to Schema.STRING_SCHEMA
         }
-        else -> record.asJsonString() to Schema.STRING_SCHEMA
-      }
     return SourceRecord(sourcePartition, sourceOffset, topic, schema, struct, schema, struct)
   }
 }

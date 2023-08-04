@@ -19,10 +19,10 @@ package streams.utils
 import kotlinx.coroutines.delay
 
 suspend fun <T> retryForException(
-  exceptions: Array<Class<out Throwable>>,
-  retries: Int,
-  delayTime: Long,
-  action: () -> T
+    exceptions: Array<Class<out Throwable>>,
+    retries: Int,
+    delayTime: Long,
+    action: () -> T
 ): T {
   return try {
     action()
@@ -31,7 +31,7 @@ suspend fun <T> retryForException(
     if (isInstance && retries > 0) {
       delay(delayTime)
       retryForException(
-        exceptions = exceptions, retries = retries - 1, delayTime = delayTime, action = action)
+          exceptions = exceptions, retries = retries - 1, delayTime = delayTime, action = action)
     } else {
       throw e
     }

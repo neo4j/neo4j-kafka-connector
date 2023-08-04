@@ -46,17 +46,17 @@ abstract class StreamsPoint {
 }
 
 data class StreamsPointCartesian(
-  override val crs: String,
-  val x: Double,
-  val y: Double,
-  val z: Double? = null
+    override val crs: String,
+    val x: Double,
+    val y: Double,
+    val z: Double? = null
 ) : StreamsPoint()
 
 data class StreamsPointWgs(
-  override val crs: String,
-  val latitude: Double,
-  val longitude: Double,
-  val height: Double? = null
+    override val crs: String,
+    val latitude: Double,
+    val longitude: Double,
+    val height: Double? = null
 ) : StreamsPoint()
 
 fun PointValue.toStreamsPoint(): StreamsPoint {
@@ -99,9 +99,9 @@ class PointValueSerializer : JsonSerializer<PointValue>() {
 class TemporalAccessorSerializer : JsonSerializer<TemporalAccessor>() {
   @Throws(IOException::class, JsonProcessingException::class)
   override fun serialize(
-    value: TemporalAccessor?,
-    jgen: JsonGenerator,
-    provider: SerializerProvider
+      value: TemporalAccessor?,
+      jgen: JsonGenerator,
+      provider: SerializerProvider
   ) {
     value?.let { jgen.writeString(it.toString()) }
   }
@@ -158,9 +158,9 @@ object JSONUtils {
   }
 
   inline fun <reified T> readValue(
-    value: Any,
-    stringWhenFailure: Boolean = false,
-    objectMapper: ObjectMapper = getObjectMapper()
+      value: Any,
+      stringWhenFailure: Boolean = false,
+      objectMapper: ObjectMapper = getObjectMapper()
   ): T {
     return try {
       when (value) {
@@ -171,19 +171,19 @@ object JSONUtils {
     } catch (e: JsonParseException) {
       if (stringWhenFailure && String::class.isSubclassOf(T::class)) {
         val strValue =
-          when (value) {
-            is ByteArray -> String(value)
-            null -> ""
-            else -> value.toString()
-          }
+            when (value) {
+              is ByteArray -> String(value)
+              null -> ""
+              else -> value.toString()
+            }
         strValue.trimStart().let { if (it[0] == '{' || it[0] == '[') throw e else it as T }
       } else throw e
     }
   }
 
   inline fun <reified T> convertValue(
-    value: Any,
-    objectMapper: ObjectMapper = getObjectMapper()
+      value: Any,
+      objectMapper: ObjectMapper = getObjectMapper()
   ): T {
     return objectMapper.convertValue(value)
   }
@@ -191,26 +191,27 @@ object JSONUtils {
   fun asStreamsTransactionEvent(obj: Any): StreamsTransactionEvent {
     return try {
       val evt =
-        when (obj) {
-          is String,
-          is ByteArray ->
-            readValue<StreamsTransactionNodeEvent>(value = obj, objectMapper = STRICT_OBJECT_MAPPER)
-          else ->
-            convertValue<StreamsTransactionNodeEvent>(
-              value = obj, objectMapper = STRICT_OBJECT_MAPPER)
-        }
+          when (obj) {
+            is String,
+            is ByteArray ->
+                readValue<StreamsTransactionNodeEvent>(
+                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+            else ->
+                convertValue<StreamsTransactionNodeEvent>(
+                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+          }
       evt.toStreamsTransactionEvent()
     } catch (e: Exception) {
       val evt =
-        when (obj) {
-          is String,
-          is ByteArray ->
-            readValue<StreamsTransactionRelationshipEvent>(
-              value = obj, objectMapper = STRICT_OBJECT_MAPPER)
-          else ->
-            convertValue<StreamsTransactionRelationshipEvent>(
-              value = obj, objectMapper = STRICT_OBJECT_MAPPER)
-        }
+          when (obj) {
+            is String,
+            is ByteArray ->
+                readValue<StreamsTransactionRelationshipEvent>(
+                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+            else ->
+                convertValue<StreamsTransactionRelationshipEvent>(
+                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+          }
       evt.toStreamsTransactionEvent()
     }
   }

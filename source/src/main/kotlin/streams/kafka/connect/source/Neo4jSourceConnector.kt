@@ -24,7 +24,7 @@ import streams.kafka.connect.utils.PropertiesUtil
 
 @Title("Neo4j Source Connector")
 @Description(
-  "The Neo4j Source connector reads data from Neo4j and and writes the data to a Kafka Topic")
+    "The Neo4j Source connector reads data from Neo4j and and writes the data to a Kafka Topic")
 class Neo4jSourceConnector : SourceConnector() {
   private lateinit var settings: Map<String, String>
   private lateinit var config: Neo4jSourceConnectorConfig

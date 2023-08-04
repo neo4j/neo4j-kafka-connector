@@ -37,10 +37,10 @@ class EventBuilder {
   fun build(): Map<String, List<List<StreamsSinkEntity>>> { // <Topic, List<List<SinkRecord>>
     val batchSize = this.batchSize!!
     return this.sinkRecords
-      .groupBy { it.topic() }
-      .mapValues { entry ->
-        val value = entry.value.map { it.toStreamsSinkEntity() }
-        if (batchSize > value.size) listOf(value) else value.chunked(batchSize)
-      }
+        .groupBy { it.topic() }
+        .mapValues { entry ->
+          val value = entry.value.map { it.toStreamsSinkEntity() }
+          if (batchSize > value.size) listOf(value) else value.chunked(batchSize)
+        }
   }
 }

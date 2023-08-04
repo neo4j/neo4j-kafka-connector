@@ -30,7 +30,7 @@ import streams.service.TopicType
 import streams.service.sink.strategy.SourceIdIngestionStrategyConfig
 
 class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
-  Neo4jConnectorConfig(config(), originals, ConnectorType.SINK) {
+    Neo4jConnectorConfig(config(), originals, ConnectorType.SINK) {
 
   val parallelBatches: Boolean
 
@@ -47,24 +47,24 @@ class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
     parallelBatches = getBoolean(BATCH_PARALLELIZE)
     val kafkaPrefix = "kafka."
     kafkaBrokerProperties =
-      originals
-        .filterKeys { it.startsWith(kafkaPrefix) }
-        .mapKeys { it.key.substring(kafkaPrefix.length) }
+        originals
+            .filterKeys { it.startsWith(kafkaPrefix) }
+            .mapKeys { it.key.substring(kafkaPrefix.length) }
     validateAllTopics(originals)
   }
 
   private fun validateAllTopics(originals: Map<*, *>) {
     TopicUtils.validate<ConfigException>(this.topics)
     val topics =
-      if (originals.containsKey(SinkTask.TOPICS_CONFIG)) {
-        originals[SinkTask.TOPICS_CONFIG].toString().split(",").map { it.trim() }.sorted()
-      } else { // TODO manage regexp
-        emptyList()
-      }
+        if (originals.containsKey(SinkTask.TOPICS_CONFIG)) {
+          originals[SinkTask.TOPICS_CONFIG].toString().split(",").map { it.trim() }.sorted()
+        } else { // TODO manage regexp
+          emptyList()
+        }
     val allTopics = this.topics.allTopics().sorted()
     if (topics != allTopics) {
       throw ConfigException(
-        "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($topics) and configured topics ($allTopics)")
+          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($topics) and configured topics ($allTopics)")
     }
   }
 
@@ -79,9 +79,9 @@ class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
     const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."
     const val TOPIC_PATTERN_RELATIONSHIP_PREFIX = "neo4j.topic.pattern.relationship."
     const val TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED =
-      "neo4j.topic.pattern.merge.node.properties.enabled"
+        "neo4j.topic.pattern.merge.node.properties.enabled"
     const val TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED =
-      "neo4j.topic.pattern.merge.relationship.properties.enabled"
+        "neo4j.topic.pattern.merge.relationship.properties.enabled"
     const val TOPIC_CDC_SCHEMA = "neo4j.topic.cdc.schema"
     const val TOPIC_CUD = "neo4j.topic.cud"
 
@@ -92,64 +92,67 @@ class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
     private val sourceIdIngestionStrategyConfig = SourceIdIngestionStrategyConfig()
 
     fun config(): ConfigDef =
-      Neo4jConnectorConfig.config()
-        .define(
-          ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(sourceIdIngestionStrategyConfig.labelName)
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(sourceIdIngestionStrategyConfig.idName)
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SCHEMA))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN)
-            .documentation(PropertiesUtil.getProperty(BATCH_PARALLELIZE))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(DEFAULT_BATCH_PARALLELIZE)
-            .group(ConfigGroup.BATCH)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(TOPIC_CUD))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
-            .documentation(PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED)
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(
-              TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
-            .documentation(
-              PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED)
-            .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-            .build())
+        Neo4jConnectorConfig.config()
+            .define(
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(sourceIdIngestionStrategyConfig.labelName)
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(sourceIdIngestionStrategyConfig.idName)
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SCHEMA))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN)
+                    .documentation(PropertiesUtil.getProperty(BATCH_PARALLELIZE))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(DEFAULT_BATCH_PARALLELIZE)
+                    .group(ConfigGroup.BATCH)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(TOPIC_CUD))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(
+                        TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
+                    .documentation(
+                        PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED)
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(
+                        TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
+                    .documentation(
+                        PropertiesUtil.getProperty(
+                            TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED)
+                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
+                    .build())
   }
 }

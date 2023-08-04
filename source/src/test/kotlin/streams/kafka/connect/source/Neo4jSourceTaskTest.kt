@@ -45,9 +45,9 @@ class Neo4jSourceTaskTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-      Neo4jContainer("neo4j:5-enterprise")
-        .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-        .withoutAuthentication()
+        Neo4jContainer("neo4j:5-enterprise")
+            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withoutAuthentication()
 
     private lateinit var driver: Driver
     private lateinit var session: Session
@@ -86,17 +86,17 @@ class Neo4jSourceTaskTest {
   }
 
   private fun structToMap(struct: Struct): Map<String, Any?> =
-    struct
-      .schema()
-      .fields()
-      .map {
-        it.name() to
-          when (val value = struct[it.name()]) {
-            is Struct -> structToMap(value)
-            else -> value
+      struct
+          .schema()
+          .fields()
+          .map {
+            it.name() to
+                when (val value = struct[it.name()]) {
+                  is Struct -> structToMap(value)
+                  else -> value
+                }
           }
-      }
-      .toMap()
+          .toMap()
 
   fun Struct.toMap() = structToMap(this)
 
@@ -193,12 +193,12 @@ class Neo4jSourceTaskTest {
   }
 
   private fun insertRecords(totalRecords: Int, longToInt: Boolean = false) =
-    session.beginTransaction().use { tx ->
-      val elements =
-        (1..totalRecords).map {
-          val result =
-            tx.run(
-              """
+      session.beginTransaction().use { tx ->
+        val elements =
+            (1..totalRecords).map {
+              val result =
+                  tx.run(
+                      """
                                 |CREATE (n:Test{
                                 |   name: 'Name ' + $it,
                                 |   timestamp: timestamp(),
@@ -218,26 +218,27 @@ class Neo4jSourceTaskTest {
                                 |   } AS map,
                                 |   n AS node
                             """
-                .trimMargin())
-          val next = result.next()
-          val map = next.asMap().toMutableMap()
-          map["array"] = next["array"].asList().map { if (longToInt) (it as Long).toInt() else it }
-          map["point"] = JSONUtils.readValue<Map<String, Any>>(map["point"]!!)
-          map["datetime"] = next["datetime"].asLocalDateTime().toString()
-          val node = next["node"].asNode()
-          val nodeMap = node.asMap().toMutableMap()
-          nodeMap["<id>"] = if (longToInt) node.id().toInt() else node.id()
-          nodeMap["<labels>"] = node.labels()
-          // are the same value as above
-          nodeMap["array"] = map["array"]
-          nodeMap["point"] = map["point"]
-          nodeMap["datetime"] = map["datetime"]
-          map["node"] = nodeMap
-          map
-        }
-      tx.commit()
-      elements
-    }
+                          .trimMargin())
+              val next = result.next()
+              val map = next.asMap().toMutableMap()
+              map["array"] =
+                  next["array"].asList().map { if (longToInt) (it as Long).toInt() else it }
+              map["point"] = JSONUtils.readValue<Map<String, Any>>(map["point"]!!)
+              map["datetime"] = next["datetime"].asLocalDateTime().toString()
+              val node = next["node"].asNode()
+              val nodeMap = node.asMap().toMutableMap()
+              nodeMap["<id>"] = if (longToInt) node.id().toInt() else node.id()
+              nodeMap["<labels>"] = node.labels()
+              // are the same value as above
+              nodeMap["array"] = map["array"]
+              nodeMap["point"] = map["point"]
+              nodeMap["datetime"] = map["datetime"]
+              map["node"] = nodeMap
+              map
+            }
+        tx.commit()
+        elements
+      }
 
   @Test
   fun `should source data from Neo4j with custom QUERY without streaming property`() {
@@ -283,7 +284,7 @@ class Neo4jSourceTaskTest {
   }
 
   private fun getSourceQuery() =
-    """
+      """
                 |MATCH (n:Test)
                 |WHERE n.timestamp > ${'$'}lastCheck
                 |RETURN n.name AS name,
@@ -298,7 +299,7 @@ class Neo4jSourceTaskTest {
                 |   } AS map,
                 |   n AS node
             """
-      .trimMargin()
+          .trimMargin()
 
   @Test
   fun `should throw exception`() {
@@ -326,7 +327,7 @@ class Neo4jSourceTaskTest {
     props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
     props[Neo4jSourceConnectorConfig.ENFORCE_SCHEMA] = "true"
     props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] =
-      """
+        """
                 |WITH
                 |{
                 |   id: 'ROOT_ID',
@@ -338,7 +339,7 @@ class Neo4jSourceTaskTest {
                 |} AS data
                 |RETURN data, data.id AS id
             """
-        .trimMargin()
+            .trimMargin()
     props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
     task.start(props)
@@ -348,16 +349,16 @@ class Neo4jSourceTaskTest {
     val list = mutableListOf<SourceRecord>()
 
     val expected =
-      mapOf(
-        "id" to "ROOT_ID",
-        "data" to
-          mapOf(
+        mapOf(
             "id" to "ROOT_ID",
-            "arr" to listOf(null, mapOf("foo" to "bar")),
-            "root" to
-              listOf(
-                mapOf("children" to emptyList<Map<String, Any>>()),
-                mapOf("children" to listOf(mapOf("name" to "child"))))))
+            "data" to
+                mapOf(
+                    "id" to "ROOT_ID",
+                    "arr" to listOf(null, mapOf("foo" to "bar")),
+                    "root" to
+                        listOf(
+                            mapOf("children" to emptyList<Map<String, Any>>()),
+                            mapOf("children" to listOf(mapOf("name" to "child"))))))
 
     await().atMost(30, TimeUnit.SECONDS).until {
       task.poll()?.let { list.addAll(it) }
