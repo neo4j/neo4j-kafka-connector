@@ -24,49 +24,49 @@ import org.neo4j.cdc.client.RelationshipSelector
 import org.neo4j.cdc.client.Selector
 
 data class NodePattern(
-  val labels: Set<String>,
-  val keyFilters: Map<String, Any>,
-  val includeProperties: Set<String>,
-  val excludeProperties: Set<String>
+    val labels: Set<String>,
+    val keyFilters: Map<String, Any>,
+    val includeProperties: Set<String>,
+    val excludeProperties: Set<String>
 ) : Pattern {
   override fun toSelector(): Set<Selector> {
     return setOf(
-      NodeSelector().also {
-        it.labels = labels
-        it.key = keyFilters
-        it.includeProperties = includeProperties
-        it.excludeProperties = excludeProperties
-      })
+        NodeSelector().also {
+          it.labels = labels
+          it.key = keyFilters
+          it.includeProperties = includeProperties
+          it.excludeProperties = excludeProperties
+        })
   }
 }
 
 data class RelationshipPattern(
-  val type: String,
-  val start: NodePattern,
-  val end: NodePattern,
-  val bidirectional: Boolean,
-  val keyFilters: Map<String, Any>,
-  val includeProperties: Set<String>,
-  val excludeProperties: Set<String>
+    val type: String,
+    val start: NodePattern,
+    val end: NodePattern,
+    val bidirectional: Boolean,
+    val keyFilters: Map<String, Any>,
+    val includeProperties: Set<String>,
+    val excludeProperties: Set<String>
 ) : Pattern {
   override fun toSelector(): Set<Selector> {
     fun toSelector(reverse: Boolean): Selector {
       return RelationshipSelector().also {
         it.type = type
         it.start =
-          RelationshipNodeSelector().also { n ->
-            val source = if (reverse) end else start
+            RelationshipNodeSelector().also { n ->
+              val source = if (reverse) end else start
 
-            n.labels = source.labels
-            n.key = source.keyFilters
-          }
+              n.labels = source.labels
+              n.key = source.keyFilters
+            }
         it.end =
-          RelationshipNodeSelector().also { n ->
-            val source = if (reverse) start else end
+            RelationshipNodeSelector().also { n ->
+              val source = if (reverse) start else end
 
-            n.labels = source.labels
-            n.key = source.keyFilters
-          }
+              n.labels = source.labels
+              n.key = source.keyFilters
+            }
         it.key = keyFilters
         it.includeProperties = includeProperties
         it.excludeProperties = excludeProperties
@@ -94,18 +94,18 @@ interface Pattern {
 
       val errors = mutableListOf<String>()
       parser.addErrorListener(
-        object : BaseErrorListener() {
-          override fun syntaxError(
-            recognizer: Recognizer<*, *>?,
-            offendingSymbol: Any?,
-            line: Int,
-            charPositionInLine: Int,
-            msg: String?,
-            e: RecognitionException?
-          ) {
-            errors.add("line $line:$charPositionInLine, $msg")
-          }
-        })
+          object : BaseErrorListener() {
+            override fun syntaxError(
+                recognizer: Recognizer<*, *>?,
+                offendingSymbol: Any?,
+                line: Int,
+                charPositionInLine: Int,
+                msg: String?,
+                e: RecognitionException?
+            ) {
+              errors.add("line $line:$charPositionInLine, $msg")
+            }
+          })
       val patternList = parser.patternList()
 
       if (errors.any()) {
@@ -113,7 +113,7 @@ interface Pattern {
       }
 
       return patternList.pattern()?.map { ctx -> PatternVisitor.visitPattern(ctx) }?.toList()
-        ?: emptyList()
+          ?: emptyList()
     }
   }
 
@@ -122,42 +122,42 @@ interface Pattern {
       return if (ctx!!.relationshipPattern() != null) {
         val relPattern = ctx.relationshipPattern()
         val bidirectional =
-          (relPattern.leftArrow() != null && relPattern.rightArrow() != null) ||
-            (relPattern.leftArrow() == null && relPattern.rightArrow() == null)
+            (relPattern.leftArrow() != null && relPattern.rightArrow() != null) ||
+                (relPattern.leftArrow() == null && relPattern.rightArrow() == null)
         val keyFilters = mutableMapOf<String, Any>()
         val includeProperties = mutableSetOf<String>()
         val excludeProperties = mutableSetOf<String>()
 
         extractPropertySelectors(
-          ctx.relationshipPattern().properties()?.propertySelector()?.keyFilterOrPropSelector(),
-          keyFilters,
-          includeProperties,
-          excludeProperties)
+            ctx.relationshipPattern().properties()?.propertySelector()?.keyFilterOrPropSelector(),
+            keyFilters,
+            includeProperties,
+            excludeProperties)
 
         val startNode =
-          visitNodePattern(
-            ctx.nodePattern(if (bidirectional || relPattern.rightArrow() != null) 0 else 1))
+            visitNodePattern(
+                ctx.nodePattern(if (bidirectional || relPattern.rightArrow() != null) 0 else 1))
         if (startNode.excludeProperties.any() || startNode.includeProperties.any()) {
           throw PatternException(
-            "property selectors are not allowed in node part of relationship patterns")
+              "property selectors are not allowed in node part of relationship patterns")
         }
 
         val endNode =
-          visitNodePattern(
-            ctx.nodePattern(if (bidirectional || relPattern.rightArrow() != null) 1 else 0))
+            visitNodePattern(
+                ctx.nodePattern(if (bidirectional || relPattern.rightArrow() != null) 1 else 0))
         if (endNode.excludeProperties.any() || endNode.includeProperties.any()) {
           throw PatternException(
-            "property selectors are not allowed in node part of relationship patterns")
+              "property selectors are not allowed in node part of relationship patterns")
         }
 
         RelationshipPattern(
-          LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
-          startNode,
-          endNode,
-          bidirectional,
-          keyFilters.toMap(),
-          includeProperties.toSet(),
-          excludeProperties.toSet())
+            LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
+            startNode,
+            endNode,
+            bidirectional,
+            keyFilters.toMap(),
+            includeProperties.toSet(),
+            excludeProperties.toSet())
       } else {
         visitNodePattern(ctx.nodePattern(0))
       }
@@ -170,25 +170,25 @@ interface Pattern {
       val excludeProperties = mutableSetOf<String>()
 
       extractPropertySelectors(
-        ctx.properties()?.propertySelector()?.keyFilterOrPropSelector(),
-        keyFilters,
-        includeProperties,
-        excludeProperties)
+          ctx.properties()?.propertySelector()?.keyFilterOrPropSelector(),
+          keyFilters,
+          includeProperties,
+          excludeProperties)
 
       return NodePattern(
-        labels, keyFilters.toMap(), includeProperties.toSet(), excludeProperties.toSet())
+          labels, keyFilters.toMap(), includeProperties.toSet(), excludeProperties.toSet())
     }
 
     private fun extractPropertySelectors(
-      selectors: List<PatternParser.KeyFilterOrPropSelectorContext>?,
-      keyFilters: MutableMap<String, Any>,
-      includeProperties: MutableSet<String>,
-      excludeProperties: MutableSet<String>
+        selectors: List<PatternParser.KeyFilterOrPropSelectorContext>?,
+        keyFilters: MutableMap<String, Any>,
+        includeProperties: MutableSet<String>,
+        excludeProperties: MutableSet<String>
     ) {
       selectors?.forEach { child ->
         if (child.keyFilter() != null) {
           val propName =
-            PropertyKeyNameVisitor.visitPropertyKeyName(child.keyFilter().propertyKeyName())
+              PropertyKeyNameVisitor.visitPropertyKeyName(child.keyFilter().propertyKeyName())
           val value = ExpressionVisitor.visitExpression(child.keyFilter().expression())
 
           keyFilters[propName] = value
@@ -197,10 +197,10 @@ interface Pattern {
             includeProperties.add("*")
           } else if (child.propSelector().MINUS() != null) {
             excludeProperties.add(
-              PropertyKeyNameVisitor.visitPropertyKeyName(child.propSelector().propertyKeyName()))
+                PropertyKeyNameVisitor.visitPropertyKeyName(child.propSelector().propertyKeyName()))
           } else {
             includeProperties.add(
-              PropertyKeyNameVisitor.visitPropertyKeyName(child.propSelector().propertyKeyName()))
+                PropertyKeyNameVisitor.visitPropertyKeyName(child.propSelector().propertyKeyName()))
           }
         }
       }
@@ -210,7 +210,7 @@ interface Pattern {
   private object NodeLabelsVisitor : PatternParserBaseVisitor<Set<String>>() {
     override fun visitNodeLabels(ctx: PatternParser.NodeLabelsContext?): Set<String> {
       return ctx?.labelOrRelType()?.map(LabelOrRelTypeVisitor::visitLabelOrRelType)?.toSet()
-        ?: emptySet()
+          ?: emptySet()
     }
   }
 
@@ -232,13 +232,13 @@ interface Pattern {
     }
 
     override fun visitEscapedSymbolicNameString(
-      ctx: PatternParser.EscapedSymbolicNameStringContext?
+        ctx: PatternParser.EscapedSymbolicNameStringContext?
     ): String {
       return ctx!!.text
     }
 
     override fun visitUnescapedSymbolicNameString(
-      ctx: PatternParser.UnescapedSymbolicNameStringContext?
+        ctx: PatternParser.UnescapedSymbolicNameStringContext?
     ): String {
       return ctx!!.text
     }
@@ -273,20 +273,18 @@ interface Pattern {
 
     override fun visitOtherLiteral(ctx: PatternParser.OtherLiteralContext?): Any {
       if (ctx!!.mapLiteral() != null) {
-        return ctx
-          .mapLiteral()
-          .propertyKeyName()
-          .mapIndexed { i, propCtx ->
-            SymbolicNameStringVisitor.visit(propCtx.symbolicNameString()) to
-              ExpressionVisitor.visitExpression(ctx.mapLiteral().expression(i))
-          }
-          .toMap()
+        return ctx.mapLiteral()
+            .propertyKeyName()
+            .mapIndexed { i, propCtx ->
+              SymbolicNameStringVisitor.visit(propCtx.symbolicNameString()) to
+                  ExpressionVisitor.visitExpression(ctx.mapLiteral().expression(i))
+            }
+            .toMap()
       } else if (ctx.listLiteral() != null) {
-        return ctx
-          .listLiteral()
-          .expression()
-          .map { exp -> ExpressionVisitor.visitExpression(exp) }
-          .toList()
+        return ctx.listLiteral()
+            .expression()
+            .map { exp -> ExpressionVisitor.visitExpression(exp) }
+            .toList()
       } else {
         throw PatternException("unsupported literal: '$ctx'")
       }
@@ -311,13 +309,13 @@ interface Pattern {
         number.UNSIGNED_HEX_INTEGER().text.substring(2).hexToLong(HexFormat.Default) * multiplier
       } else if (number.UNSIGNED_OCTAL_INTEGER() != null) {
         number
-          .UNSIGNED_OCTAL_INTEGER()
-          .text
-          .substring(2)
-          .reversed()
-          .map { c -> c.digitToInt().toLong() }
-          .reduceIndexed { index, acc, value -> acc + (value * 8.0.pow(index).toLong()) } *
-          multiplier
+            .UNSIGNED_OCTAL_INTEGER()
+            .text
+            .substring(2)
+            .reversed()
+            .map { c -> c.digitToInt().toLong() }
+            .reduceIndexed { index, acc, value -> acc + (value * 8.0.pow(index).toLong()) } *
+            multiplier
       } else {
         throw PatternException("unexpected number literal '$number'")
       }

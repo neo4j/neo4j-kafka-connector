@@ -59,9 +59,9 @@ enum class AuthenticationType {
 }
 
 open class Neo4jConnectorConfig(
-  configDef: ConfigDef,
-  originals: Map<*, *>,
-  private val type: ConnectorType
+    configDef: ConfigDef,
+    originals: Map<*, *>,
+    private val type: ConnectorType
 ) : AbstractConfig(configDef, originals) {
   val encryptionEnabled: Boolean
   val encryptionTrustStrategy: Config.TrustStrategy.Strategy
@@ -91,15 +91,15 @@ open class Neo4jConnectorConfig(
     database = getString(DATABASE)
     encryptionEnabled = getBoolean(ENCRYPTION_ENABLED)
     encryptionTrustStrategy =
-      ConfigUtils.getEnum(
-        Config.TrustStrategy.Strategy::class.java, this, ENCRYPTION_TRUST_STRATEGY)
+        ConfigUtils.getEnum(
+            Config.TrustStrategy.Strategy::class.java, this, ENCRYPTION_TRUST_STRATEGY)
     val encryptionCACertificatePATH = getString(ENCRYPTION_CA_CERTIFICATE_PATH) ?: ""
     if (encryptionCACertificatePATH != "") {
       encryptionCACertificateFile = File(encryptionCACertificatePATH)
     }
 
     authenticationType =
-      ConfigUtils.getEnum(AuthenticationType::class.java, this, AUTHENTICATION_TYPE)
+        ConfigUtils.getEnum(AuthenticationType::class.java, this, AUTHENTICATION_TYPE)
     authenticationRealm = getString(AUTHENTICATION_BASIC_REALM)
     authenticationUsername = getString(AUTHENTICATION_BASIC_USERNAME)
     authenticationPassword = getPassword(AUTHENTICATION_BASIC_PASSWORD).value()
@@ -119,7 +119,7 @@ open class Neo4jConnectorConfig(
   }
 
   fun hasSecuredURI() =
-    serverUri.any { it.scheme.endsWith("+s", true) || it.scheme.endsWith("+ssc", true) }
+      serverUri.any { it.scheme.endsWith("+s", true) || it.scheme.endsWith("+ssc", true) }
 
   fun createDriver(): Driver {
     val configBuilder = Config.builder()
@@ -129,20 +129,21 @@ open class Neo4jConnectorConfig(
       if (this.encryptionEnabled) {
         configBuilder.withEncryption()
         val trustStrategy: Config.TrustStrategy =
-          when (this.encryptionTrustStrategy) {
-            Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES ->
-              Config.TrustStrategy.trustAllCertificates()
-            Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES ->
-              Config.TrustStrategy.trustSystemCertificates()
-            Config.TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES ->
-              Config.TrustStrategy.trustCustomCertificateSignedBy(this.encryptionCACertificateFile)
-            else -> {
-              throw ConfigException(
-                ENCRYPTION_TRUST_STRATEGY,
-                this.encryptionTrustStrategy.toString(),
-                "Encryption Trust Strategy is not supported.")
+            when (this.encryptionTrustStrategy) {
+              Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES ->
+                  Config.TrustStrategy.trustAllCertificates()
+              Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES ->
+                  Config.TrustStrategy.trustSystemCertificates()
+              Config.TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES ->
+                  Config.TrustStrategy.trustCustomCertificateSignedBy(
+                      this.encryptionCACertificateFile)
+              else -> {
+                throw ConfigException(
+                    ENCRYPTION_TRUST_STRATEGY,
+                    this.encryptionTrustStrategy.toString(),
+                    "Encryption Trust Strategy is not supported.")
+              }
             }
-          }
         configBuilder.withTrustStrategy(trustStrategy)
       } else {
         configBuilder.withoutEncryption()
@@ -150,26 +151,28 @@ open class Neo4jConnectorConfig(
     }
 
     val authToken =
-      when (this.authenticationType) {
-        AuthenticationType.NONE -> AuthTokens.none()
-        AuthenticationType.BASIC -> {
-          if (this.authenticationRealm != "") {
-            AuthTokens.basic(
-              this.authenticationUsername, this.authenticationPassword, this.authenticationRealm)
-          } else {
-            AuthTokens.basic(this.authenticationUsername, this.authenticationPassword)
+        when (this.authenticationType) {
+          AuthenticationType.NONE -> AuthTokens.none()
+          AuthenticationType.BASIC -> {
+            if (this.authenticationRealm != "") {
+              AuthTokens.basic(
+                  this.authenticationUsername,
+                  this.authenticationPassword,
+                  this.authenticationRealm)
+            } else {
+              AuthTokens.basic(this.authenticationUsername, this.authenticationPassword)
+            }
           }
+          AuthenticationType.KERBEROS -> AuthTokens.kerberos(this.authenticationKerberosTicket)
         }
-        AuthenticationType.KERBEROS -> AuthTokens.kerberos(this.authenticationKerberosTicket)
-      }
     configBuilder.withMaxConnectionPoolSize(this.connectionPoolMaxSize)
     configBuilder.withMaxConnectionLifetime(
-      this.connectionMaxConnectionLifetime, TimeUnit.MILLISECONDS)
+        this.connectionMaxConnectionLifetime, TimeUnit.MILLISECONDS)
     configBuilder.withConnectionAcquisitionTimeout(
-      this.connectionAcquisitionTimeout, TimeUnit.MILLISECONDS)
+        this.connectionAcquisitionTimeout, TimeUnit.MILLISECONDS)
     configBuilder.withMaxTransactionRetryTime(this.retryBackoff, TimeUnit.MILLISECONDS)
     configBuilder.withConnectionLivenessCheckTimeout(
-      this.connectionLivenessCheckTimeout, TimeUnit.MINUTES)
+        this.connectionLivenessCheckTimeout, TimeUnit.MINUTES)
     configBuilder.withResolver { address ->
       this.serverUri.map { ServerAddress.of(it.host, if (it.port == -1) 7687 else it.port) }.toSet()
     }
@@ -184,11 +187,11 @@ open class Neo4jConnectorConfig(
       sessionConfigBuilder.withDatabase(this.database)
     }
     val accessMode =
-      if (type == ConnectorType.SOURCE) {
-        AccessMode.READ
-      } else {
-        AccessMode.WRITE
-      }
+        if (type == ConnectorType.SOURCE) {
+          AccessMode.READ
+        } else {
+          AccessMode.WRITE
+        }
     sessionConfigBuilder.withDefaultAccessMode(accessMode)
     sessionConfigBuilder.withBookmarks(bookmarks)
     return sessionConfigBuilder.build()
@@ -231,9 +234,9 @@ open class Neo4jConnectorConfig(
 
     const val CONNECTION_MAX_CONNECTION_LIFETIME_MSECS = "neo4j.connection.max.lifetime.msecs"
     const val CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS =
-      "neo4j.connection.acquisition.timeout.msecs"
+        "neo4j.connection.acquisition.timeout.msecs"
     const val CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS =
-      "neo4j.connection.liveness.check.timeout.msecs"
+        "neo4j.connection.liveness.check.timeout.msecs"
     const val CONNECTION_POOL_MAX_SIZE = "neo4j.connection.max.pool.size"
 
     const val BATCH_SIZE = "neo4j.batch.size"
@@ -254,168 +257,177 @@ open class Neo4jConnectorConfig(
     val CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT = Duration.ofMinutes(2).toMillis()
 
     fun isValidQuery(session: Session, query: String) =
-      try {
-        session.run("EXPLAIN $query")
-        true
-      } catch (e: Exception) {
-        false
-      }
+        try {
+          session.run("EXPLAIN $query")
+          true
+        } catch (e: Exception) {
+          false
+        }
 
     fun config(): ConfigDef =
-      ConfigDef()
-        .define(
-          ConfigKeyBuilder.of(AUTHENTICATION_TYPE, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(AUTHENTICATION_TYPE))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(AuthenticationType.BASIC.toString())
-            .group(ConfigGroup.AUTHENTICATION)
-            .validator(ValidEnum.of(AuthenticationType::class.java))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(AUTHENTICATION_BASIC_USERNAME, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_USERNAME))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.AUTHENTICATION)
-            .recommender(
-              Recommenders.visibleIf(AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, ConfigDef.Type.PASSWORD)
-            .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_PASSWORD))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.AUTHENTICATION)
-            .recommender(
-              Recommenders.visibleIf(AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_REALM))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.AUTHENTICATION)
-            .recommender(
-              Recommenders.visibleIf(AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, ConfigDef.Type.PASSWORD)
-            .documentation(PropertiesUtil.getProperty(AUTHENTICATION_KERBEROS_TICKET))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("")
-            .group(ConfigGroup.AUTHENTICATION)
-            .recommender(
-              Recommenders.visibleIf(AUTHENTICATION_TYPE, AuthenticationType.KERBEROS.toString()))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(SERVER_URI, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(SERVER_URI))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue("bolt://localhost:7687")
-            .group(ConfigGroup.CONNECTION)
-            .validator(
-              Validators.validURI("bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, ConfigDef.Type.INT)
-            .documentation(PropertiesUtil.getProperty(CONNECTION_POOL_MAX_SIZE))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(CONNECTION_POOL_MAX_SIZE_DEFAULT)
-            .group(ConfigGroup.CONNECTION)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS, ConfigDef.Type.LONG)
-            .documentation(PropertiesUtil.getProperty(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT)
-            .group(ConfigGroup.CONNECTION)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS, ConfigDef.Type.LONG)
-            .documentation(PropertiesUtil.getProperty(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT)
-            .group(ConfigGroup.CONNECTION)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(
-              CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS, ConfigDef.Type.LONG)
-            .documentation(
-              PropertiesUtil.getProperty(CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT)
-            .group(ConfigGroup.CONNECTION)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(ENCRYPTION_ENABLED, ConfigDef.Type.BOOLEAN)
-            .documentation(PropertiesUtil.getProperty(ENCRYPTION_ENABLED))
-            .importance(ConfigDef.Importance.HIGH)
-            .defaultValue(false)
-            .group(ConfigGroup.ENCRYPTION)
-            .build())
-        .define(
-          ConfigKeyBuilder.of(ENCRYPTION_TRUST_STRATEGY, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(ENCRYPTION_TRUST_STRATEGY))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString())
-            .group(ConfigGroup.ENCRYPTION)
-            .validator(ValidEnum.of(Config.TrustStrategy.Strategy::class.java))
-            .recommender(Recommenders.visibleIf(ENCRYPTION_ENABLED, true))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(ENCRYPTION_CA_CERTIFICATE_PATH))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue("")
-            .group(ConfigGroup.ENCRYPTION)
-            .validator(Validators.blankOr(ValidFile.of())) // TODO check
-            .recommender(
-              Recommenders.visibleIf(
-                ENCRYPTION_TRUST_STRATEGY,
-                Config.TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString()))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT)
-            .documentation(PropertiesUtil.getProperty(BATCH_SIZE))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(BATCH_SIZE_DEFAULT)
-            .group(ConfigGroup.BATCH)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(BATCH_TIMEOUT_MSECS, ConfigDef.Type.LONG)
-            .documentation(PropertiesUtil.getProperty(BATCH_TIMEOUT_MSECS))
-            .importance(ConfigDef.Importance.LOW)
-            .defaultValue(BATCH_TIMEOUT_DEFAULT)
-            .group(ConfigGroup.BATCH)
-            .validator(ConfigDef.Range.atLeast(0))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(RETRY_BACKOFF_MSECS, ConfigDef.Type.LONG)
-            .documentation(PropertiesUtil.getProperty(RETRY_BACKOFF_MSECS))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(RETRY_BACKOFF_DEFAULT)
-            .group(ConfigGroup.RETRY)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(RETRY_MAX_ATTEMPTS, ConfigDef.Type.INT)
-            .documentation(PropertiesUtil.getProperty(RETRY_MAX_ATTEMPTS))
-            .importance(ConfigDef.Importance.MEDIUM)
-            .defaultValue(RETRY_MAX_ATTEMPTS_DEFAULT)
-            .group(ConfigGroup.RETRY)
-            .validator(ConfigDef.Range.atLeast(1))
-            .build())
-        .define(
-          ConfigKeyBuilder.of(DATABASE, ConfigDef.Type.STRING)
-            .documentation(PropertiesUtil.getProperty(DATABASE))
-            .importance(ConfigDef.Importance.HIGH)
-            .group(ConfigGroup.CONNECTION)
-            .defaultValue("")
-            .build())
+        ConfigDef()
+            .define(
+                ConfigKeyBuilder.of(AUTHENTICATION_TYPE, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_TYPE))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(AuthenticationType.BASIC.toString())
+                    .group(ConfigGroup.AUTHENTICATION)
+                    .validator(ValidEnum.of(AuthenticationType::class.java))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_USERNAME, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_USERNAME))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.AUTHENTICATION)
+                    .recommender(
+                        Recommenders.visibleIf(
+                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, ConfigDef.Type.PASSWORD)
+                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_PASSWORD))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.AUTHENTICATION)
+                    .recommender(
+                        Recommenders.visibleIf(
+                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_REALM))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.AUTHENTICATION)
+                    .recommender(
+                        Recommenders.visibleIf(
+                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, ConfigDef.Type.PASSWORD)
+                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_KERBEROS_TICKET))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("")
+                    .group(ConfigGroup.AUTHENTICATION)
+                    .recommender(
+                        Recommenders.visibleIf(
+                            AUTHENTICATION_TYPE, AuthenticationType.KERBEROS.toString()))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(SERVER_URI, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(SERVER_URI))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("bolt://localhost:7687")
+                    .group(ConfigGroup.CONNECTION)
+                    .validator(
+                        Validators.validURI(
+                            "bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, ConfigDef.Type.INT)
+                    .documentation(PropertiesUtil.getProperty(CONNECTION_POOL_MAX_SIZE))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(CONNECTION_POOL_MAX_SIZE_DEFAULT)
+                    .group(ConfigGroup.CONNECTION)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS, ConfigDef.Type.LONG)
+                    .documentation(
+                        PropertiesUtil.getProperty(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT)
+                    .group(ConfigGroup.CONNECTION)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS, ConfigDef.Type.LONG)
+                    .documentation(
+                        PropertiesUtil.getProperty(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT)
+                    .group(ConfigGroup.CONNECTION)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(
+                        CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS, ConfigDef.Type.LONG)
+                    .documentation(
+                        PropertiesUtil.getProperty(
+                            CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT)
+                    .group(ConfigGroup.CONNECTION)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(ENCRYPTION_ENABLED, ConfigDef.Type.BOOLEAN)
+                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_ENABLED))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue(false)
+                    .group(ConfigGroup.ENCRYPTION)
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(ENCRYPTION_TRUST_STRATEGY, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_TRUST_STRATEGY))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString())
+                    .group(ConfigGroup.ENCRYPTION)
+                    .validator(ValidEnum.of(Config.TrustStrategy.Strategy::class.java))
+                    .recommender(Recommenders.visibleIf(ENCRYPTION_ENABLED, true))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_CA_CERTIFICATE_PATH))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue("")
+                    .group(ConfigGroup.ENCRYPTION)
+                    .validator(Validators.blankOr(ValidFile.of())) // TODO check
+                    .recommender(
+                        Recommenders.visibleIf(
+                            ENCRYPTION_TRUST_STRATEGY,
+                            Config.TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES
+                                .toString()))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT)
+                    .documentation(PropertiesUtil.getProperty(BATCH_SIZE))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(BATCH_SIZE_DEFAULT)
+                    .group(ConfigGroup.BATCH)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(BATCH_TIMEOUT_MSECS, ConfigDef.Type.LONG)
+                    .documentation(PropertiesUtil.getProperty(BATCH_TIMEOUT_MSECS))
+                    .importance(ConfigDef.Importance.LOW)
+                    .defaultValue(BATCH_TIMEOUT_DEFAULT)
+                    .group(ConfigGroup.BATCH)
+                    .validator(ConfigDef.Range.atLeast(0))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(RETRY_BACKOFF_MSECS, ConfigDef.Type.LONG)
+                    .documentation(PropertiesUtil.getProperty(RETRY_BACKOFF_MSECS))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(RETRY_BACKOFF_DEFAULT)
+                    .group(ConfigGroup.RETRY)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(RETRY_MAX_ATTEMPTS, ConfigDef.Type.INT)
+                    .documentation(PropertiesUtil.getProperty(RETRY_MAX_ATTEMPTS))
+                    .importance(ConfigDef.Importance.MEDIUM)
+                    .defaultValue(RETRY_MAX_ATTEMPTS_DEFAULT)
+                    .group(ConfigGroup.RETRY)
+                    .validator(ConfigDef.Range.atLeast(1))
+                    .build())
+            .define(
+                ConfigKeyBuilder.of(DATABASE, ConfigDef.Type.STRING)
+                    .documentation(PropertiesUtil.getProperty(DATABASE))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .group(ConfigGroup.CONNECTION)
+                    .defaultValue("")
+                    .build())
   }
 }
