@@ -16,6 +16,81 @@
  */
 package org.neo4j.cdc.client
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+
 data class ChangeIdentifier(val id: String)
 
-data class ChangeEvent(val id: ChangeIdentifier)
+data class ChangeEvent(
+  val id: ChangeIdentifier,
+  val txId: Long,
+  val seq: Int,
+  val metadata: Metadata,
+  val event: Event
+)
+
+data class Metadata(
+  val executingUser: String,
+  val connectionClient: String,
+  val authenticatedUser: String,
+  val captureMode: CaptureMode,
+  val serverId: String,
+  val connectionType: String, // needs enum type
+  val connectionServer: String,
+  val txStartTime: String, // formatted date
+  val txCommitTime: String // formatted date
+)
+
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    property = "eventType", visible = true,
+)
+@JsonSubTypes(
+    JsonSubTypes.Type(value = NodeEvent::class, name = "n"),
+    JsonSubTypes.Type(value = RelationshipEvent::class, name = "r"),
+)
+abstract class Event(
+  open val elementId: String,
+  open val eventType: String, // needs type
+  open val state: State,
+  open val operation: String, // needs enum type
+)
+
+data class NodeEvent(
+  val keys: Map<String, Any>,
+  val labels: List<String>,
+
+  override val elementId: String,
+  override val eventType: String,
+  override val state: State,
+  override val operation: String
+) : Event(elementId, eventType, state, operation)
+
+data class RelationshipEvent(
+  val start: Node,
+  val end: Node,
+  val type: String,
+  val key: Map<String, Any>,
+
+  override val elementId: String,
+  override val eventType: String,
+  override val state: State,
+  override val operation: String
+) : Event(elementId, eventType, state, operation)
+
+data class Node (
+    val elementId: String,
+    val keys: Map<String, Any>,
+    val labels: List<String>
+)
+data class State(
+  val before: Map<String, Any>?, // needs type
+  val after: Map<String, Any>, // needs type
+)
+
+enum class CaptureMode {
+  OFF,
+  DIFF,
+  FULL
+}
