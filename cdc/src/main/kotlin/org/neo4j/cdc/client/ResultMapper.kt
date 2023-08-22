@@ -16,7 +16,8 @@
  */
 package org.neo4j.cdc.client
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 
 /**
  *
@@ -39,13 +40,13 @@ class ResultMapper {
     fun parseChangeEvent(message: Map<String, Any>): ChangeEvent {
       val changeIdentifier = parseChangeIdentifier(message)
       val txId = message.get(TX_ID_FIELD) as Long
-      val seq = message.get(SEQ_FIELD) as Int
-      val objectMapper = jacksonObjectMapper()
-      val metadata = objectMapper.createParser(message.get(METADATA_FIELD) as String)
-          .readValueAs(Metadata::class.java)
+      val seq = (message.get(SEQ_FIELD) as Long).toInt()
+      val objectMapper = jacksonMapperBuilder()
+          .addModules(JavaTimeModule())
+          .build()
+      val metadata = objectMapper.convertValue(message.get(METADATA_FIELD), Metadata::class.java)
 
-      val event = objectMapper.createParser(message.get(EVENT_FIELD) as String)
-          .readValueAs(Event::class.java)
+      val event = objectMapper.convertValue(message.get(EVENT_FIELD), Event::class.java)
 
       return ChangeEvent(changeIdentifier, txId, seq, metadata, event)
     }
