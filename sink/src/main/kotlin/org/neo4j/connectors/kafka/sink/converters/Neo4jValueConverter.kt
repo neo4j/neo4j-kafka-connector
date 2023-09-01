@@ -22,28 +22,26 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import org.apache.kafka.connect.data.Struct
-import org.neo4j.driver.Value
-import org.neo4j.driver.Values
 
 @Suppress("UNCHECKED_CAST")
-class Neo4jValueConverter : MapValueConverter<Value>() {
+class Neo4jValueConverter : MapValueConverter<Any>() {
 
   companion object {
     @JvmStatic private val UTC = ZoneId.of("UTC")
   }
 
-  override fun setValue(result: MutableMap<String, Value?>?, fieldName: String, value: Any?) {
+  override fun setValue(result: MutableMap<String, Any?>?, fieldName: String, value: Any?) {
     if (result != null) {
-      result[fieldName] = Values.value(value) ?: Values.NULL
+      result[fieldName] = value
     }
   }
 
-  override fun newValue(): MutableMap<String, Value?> {
+  override fun newValue(): MutableMap<String, Any?> {
     return mutableMapOf()
   }
 
   override fun setDecimalField(
-      result: MutableMap<String, Value?>?,
+      result: MutableMap<String, Any?>?,
       fieldName: String,
       value: BigDecimal
   ) {
@@ -60,7 +58,7 @@ class Neo4jValueConverter : MapValueConverter<Value>() {
   }
 
   override fun setTimestampField(
-      result: MutableMap<String, Value?>?,
+      result: MutableMap<String, Any?>?,
       fieldName: String,
       value: Date
   ) {
@@ -68,23 +66,18 @@ class Neo4jValueConverter : MapValueConverter<Value>() {
     setValue(result, fieldName, localDate)
   }
 
-  override fun setTimeField(result: MutableMap<String, Value?>?, fieldName: String, value: Date) {
+  override fun setTimeField(result: MutableMap<String, Any?>?, fieldName: String, value: Date) {
     val time = LocalTime.ofNanoOfDay(TimeUnit.MILLISECONDS.toNanos(value.time))
     setValue(result, fieldName, time)
   }
 
-  override fun setDateField(result: MutableMap<String, Value?>?, fieldName: String, value: Date) {
+  override fun setDateField(result: MutableMap<String, Any?>?, fieldName: String, value: Date) {
     val localDate = value.toInstant().atZone(UTC).toLocalDate()
     setValue(result, fieldName, localDate)
   }
 
-  override fun setStructField(
-      result: MutableMap<String, Value?>?,
-      fieldName: String,
-      value: Struct
-  ) {
-    val converted =
-        convert(value).mapValues { it.value?.asObject() }.toMutableMap() as MutableMap<Any?, Any?>
-    setMap(result, fieldName, null, converted)
+  override fun setStructField(result: MutableMap<String, Any?>?, fieldName: String, value: Struct) {
+    val converted = convert(value).toMutableMap() as MutableMap<Any?, Any?>
+    setValue(result, fieldName, converted)
   }
 }

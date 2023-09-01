@@ -25,8 +25,6 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.driver.Value
-import org.neo4j.driver.Values
 
 @Suppress("UNCHECKED_CAST")
 class Neo4jValueConverterNestedStructTest {
@@ -125,10 +123,8 @@ class Neo4jValueConverterNestedStructTest {
           .put("tns", tnsList)
     }
 
-    fun getExpectedMap(): Map<String, Value> {
-      return JSONUtils.readValue<Map<String, Any?>>(data).mapValues(::convertDateNew).mapValues {
-        Values.value(it.value)
-      }
+    fun getExpectedMap(): Map<String, Any?> {
+      return JSONUtils.readValue<Map<String, Any?>>(data).mapValues(::convertDateNew)
     }
 
     fun convertDate(it: Map.Entry<String, Any?>): Any? =
