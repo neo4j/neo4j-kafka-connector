@@ -1,16 +1,15 @@
 package org.neo4j.cdc.pattern;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.neo4j.cdc.client.pattern.NodePattern;
 import org.neo4j.cdc.client.pattern.Pattern;
 import org.neo4j.cdc.client.pattern.PatternException;
 import org.neo4j.cdc.client.pattern.RelationshipPattern;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.*;
 
 public class PatternTest {
     @Test

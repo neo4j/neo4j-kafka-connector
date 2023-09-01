@@ -1,9 +1,8 @@
 package org.neo4j.cdc.client.selector;
 
-import org.neo4j.cdc.client.model.Change;
-
 import java.util.Map;
 import java.util.Set;
+import org.neo4j.cdc.client.model.Change;
 
 public class RelationshipSelector extends EntitySelector {
     private final String type;
@@ -11,7 +10,15 @@ public class RelationshipSelector extends EntitySelector {
     private final RelationshipNodeSelector end;
     private final Map<String, Object> key;
 
-    public RelationshipSelector(Change change, Set<String> changesTo, String type, RelationshipNodeSelector start, RelationshipNodeSelector end, Map<String, Object> key, Set<String> includeProperties, Set<String> excludeProperties) {
+    public RelationshipSelector(
+            Change change,
+            Set<String> changesTo,
+            String type,
+            RelationshipNodeSelector start,
+            RelationshipNodeSelector end,
+            Map<String, Object> key,
+            Set<String> includeProperties,
+            Set<String> excludeProperties) {
         super(change, changesTo, includeProperties, excludeProperties);
 
         this.type = type;
@@ -35,5 +42,4 @@ public class RelationshipSelector extends EntitySelector {
     public Map<String, Object> getKey() {
         return this.key;
     }
-
 }

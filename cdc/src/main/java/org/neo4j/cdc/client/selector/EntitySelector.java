@@ -1,10 +1,7 @@
 package org.neo4j.cdc.client.selector;
 
-import org.neo4j.cdc.client.model.Change;
-
-import java.util.List;
 import java.util.Set;
-
+import org.neo4j.cdc.client.model.Change;
 
 public class EntitySelector implements Selector {
     private final Change change;
@@ -12,7 +9,8 @@ public class EntitySelector implements Selector {
     private final Set<String> includeProperties;
     private final Set<String> excludeProperties;
 
-    public EntitySelector(Change change, Set<String> changesTo, Set<String> includeProperties, Set<String> excludeProperties) {
+    public EntitySelector(
+            Change change, Set<String> changesTo, Set<String> includeProperties, Set<String> excludeProperties) {
         this.change = change;
         this.changesTo = changesTo;
         this.includeProperties = includeProperties;

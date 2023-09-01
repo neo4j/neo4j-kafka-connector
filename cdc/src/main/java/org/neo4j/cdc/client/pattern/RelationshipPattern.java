@@ -1,14 +1,13 @@
 package org.neo4j.cdc.client.pattern;
 
-import org.jetbrains.annotations.NotNull;
-import org.neo4j.cdc.client.selector.RelationshipNodeSelector;
-import org.neo4j.cdc.client.selector.RelationshipSelector;
-import org.neo4j.cdc.client.selector.Selector;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jetbrains.annotations.NotNull;
+import org.neo4j.cdc.client.selector.RelationshipNodeSelector;
+import org.neo4j.cdc.client.selector.RelationshipSelector;
+import org.neo4j.cdc.client.selector.Selector;
 
 public class RelationshipPattern implements Pattern {
     private final String type;

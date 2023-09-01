@@ -1,9 +1,8 @@
 package org.neo4j.cdc.client.pattern;
 
-import org.neo4j.cdc.client.selector.Selector;
-
 import java.util.List;
 import java.util.Set;
+import org.neo4j.cdc.client.selector.Selector;
 
 public interface Pattern {
 

@@ -370,6 +370,13 @@
                             <maxWidth>100</maxWidth>
                         </ktfmt>
                     </kotlin>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                        <palantirJavaFormat/>
+                    </java>
                 </configuration>
                 <executions>
                     <execution>

@@ -7,11 +7,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
         property = "eventType",
-        visible = true
-)
+        visible = true)
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = NodeEvent.class, name = "n"),
-        @JsonSubTypes.Type(value = RelationshipEvent.class, name = "r"),
+    @JsonSubTypes.Type(value = NodeEvent.class, name = "n"),
+    @JsonSubTypes.Type(value = RelationshipEvent.class, name = "r"),
 })
 public abstract class Event {
 

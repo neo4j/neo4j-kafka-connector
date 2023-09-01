@@ -1,9 +1,8 @@
 package org.neo4j.cdc.client.pattern;
 
-import org.antlr.v4.runtime.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import org.antlr.v4.runtime.*;
 
 class Visitors {
 

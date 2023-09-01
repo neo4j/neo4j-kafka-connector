@@ -1,12 +1,11 @@
 package org.neo4j.cdc.client.pattern;
 
-import org.jetbrains.annotations.NotNull;
-import org.neo4j.cdc.client.selector.NodeSelector;
-import org.neo4j.cdc.client.selector.Selector;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jetbrains.annotations.NotNull;
+import org.neo4j.cdc.client.selector.NodeSelector;
+import org.neo4j.cdc.client.selector.Selector;
 
 public class NodePattern implements Pattern {
     private final Set<String> labels;

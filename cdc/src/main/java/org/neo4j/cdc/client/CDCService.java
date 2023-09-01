@@ -10,9 +10,9 @@ import reactor.core.publisher.Mono;
  */
 public interface CDCService {
 
-	Mono<ChangeIdentifier> earliest();
+    Mono<ChangeIdentifier> earliest();
 
-	Mono<ChangeIdentifier> current();
+    Mono<ChangeIdentifier> current();
 
-	Flux<ChangeEvent> query(ChangeIdentifier from);
+    Flux<ChangeEvent> query(ChangeIdentifier from);
 }
