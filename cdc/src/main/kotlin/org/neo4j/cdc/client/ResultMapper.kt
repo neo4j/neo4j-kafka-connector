@@ -18,6 +18,10 @@ package org.neo4j.cdc.client
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.model.Event
+import org.neo4j.cdc.client.model.Metadata
 
 /** @author Gerrit Meier */
 class ResultMapper {

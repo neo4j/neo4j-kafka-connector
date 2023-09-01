@@ -18,34 +18,59 @@
 
 package org.neo4j.cdc.client
 
-@SelectorMarker interface Selector
+@SelectorMarker
+interface SelectorX {
+  fun asMap(): Map<String, Any>
+}
 
 @DslMarker annotation class SelectorMarker
 
-enum class Change {
-  CREATE,
-  UPDATE,
-  DELETE
+enum class Change(val shorthand: String) {
+  CREATE("c"),
+  UPDATE("u"),
+  DELETE("d")
 }
 
 @SelectorMarker
-open class EntitySelector : Selector {
+open class EntitySelector : SelectorX {
   var change: Change? = null
   var changesTo: Set<String>? = null
   var includeProperties: Set<String>? = null
   var excludeProperties: Set<String>? = null
+
+  override fun asMap(): Map<String, Any> {
+    return buildMap {
+      put("select", "e")
+      if (change != null) put("operation", change!!.shorthand)
+      if (changesTo != null) put("changesTo", changesTo!!.toList())
+    }
+  }
 }
 
 @SelectorMarker
 class NodeSelector : EntitySelector() {
   var labels: Set<String>? = null
   var key: Map<String, Any>? = null
+
+  override fun asMap(): Map<String, Any> {
+    return buildMap {
+      putAll(super.asMap())
+
+      put("select", "n")
+      if (labels != null) put("labels", labels!!.toList())
+      if (key != null) put("key", key!!)
+    }
+  }
 }
 
 @SelectorMarker
-class RelationshipNodeSelector : Selector {
+class RelationshipNodeSelector : SelectorX {
   var labels: Set<String>? = null
   var key: Map<String, Any>? = null
+
+  override fun asMap(): Map<String, Any> {
+    TODO("Not yet implemented")
+  }
 }
 
 @SelectorMarker

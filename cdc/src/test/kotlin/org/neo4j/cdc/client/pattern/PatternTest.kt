@@ -343,7 +343,7 @@ class PatternTest {
 
           assertEquals(
               "property selectors are not allowed in node part of relationship patterns",
-              exception.msg)
+              exception.message)
         }
   }
 }

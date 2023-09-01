@@ -20,6 +20,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.neo4j.cdc.client.model.CaptureMode
+import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase

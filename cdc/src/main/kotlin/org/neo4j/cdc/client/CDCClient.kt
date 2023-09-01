@@ -16,6 +16,9 @@
  */
 package org.neo4j.cdc.client
 
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.selector.Selector
 import org.neo4j.driver.Driver
 import org.neo4j.driver.reactive.RxResult
 import org.neo4j.driver.reactive.RxSession

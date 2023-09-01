@@ -21,67 +21,9 @@ import org.antlr.v4.runtime.*
 import org.neo4j.cdc.client.NodeSelector
 import org.neo4j.cdc.client.RelationshipNodeSelector
 import org.neo4j.cdc.client.RelationshipSelector
-import org.neo4j.cdc.client.Selector
+import org.neo4j.cdc.client.selector.Selector
 
-data class NodePattern(
-    val labels: Set<String>,
-    val keyFilters: Map<String, Any>,
-    val includeProperties: Set<String>,
-    val excludeProperties: Set<String>
-) : Pattern {
-  override fun toSelector(): Set<Selector> {
-    return setOf(
-        NodeSelector().also {
-          it.labels = labels
-          it.key = keyFilters
-          it.includeProperties = includeProperties
-          it.excludeProperties = excludeProperties
-        })
-  }
-}
-
-data class RelationshipPattern(
-    val type: String,
-    val start: NodePattern,
-    val end: NodePattern,
-    val bidirectional: Boolean,
-    val keyFilters: Map<String, Any>,
-    val includeProperties: Set<String>,
-    val excludeProperties: Set<String>
-) : Pattern {
-  override fun toSelector(): Set<Selector> {
-    fun toSelector(reverse: Boolean): Selector {
-      return RelationshipSelector().also {
-        it.type = type
-        it.start =
-            RelationshipNodeSelector().also { n ->
-              val source = if (reverse) end else start
-
-              n.labels = source.labels
-              n.key = source.keyFilters
-            }
-        it.end =
-            RelationshipNodeSelector().also { n ->
-              val source = if (reverse) start else end
-
-              n.labels = source.labels
-              n.key = source.keyFilters
-            }
-        it.key = keyFilters
-        it.includeProperties = includeProperties
-        it.excludeProperties = excludeProperties
-      }
-    }
-
-    if (bidirectional) {
-      return setOf(toSelector(false), toSelector(true))
-    }
-
-    return setOf(toSelector(false))
-  }
-}
-
-interface Pattern {
+interface PatternX {
 
   fun toSelector(): Set<Selector>
 

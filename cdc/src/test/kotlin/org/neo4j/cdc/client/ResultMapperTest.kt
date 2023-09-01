@@ -24,6 +24,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
+import org.neo4j.cdc.client.model.CaptureMode
+import org.neo4j.cdc.client.model.Metadata
+import org.neo4j.cdc.client.model.NodeEvent
+import org.neo4j.cdc.client.model.RelationshipEvent
 
 /** @author Gerrit Meier */
 class ResultMapperTest {
