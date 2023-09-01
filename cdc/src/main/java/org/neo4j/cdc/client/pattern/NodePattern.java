@@ -1,9 +1,11 @@
 package org.neo4j.cdc.client.pattern;
 
 import org.jetbrains.annotations.NotNull;
+import org.neo4j.cdc.client.selector.NodeSelector;
 import org.neo4j.cdc.client.selector.Selector;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class NodePattern implements Pattern {
@@ -12,7 +14,11 @@ public class NodePattern implements Pattern {
     private final Set<String> includeProperties;
     private final Set<String> excludeProperties;
 
-    public NodePattern(Set<String> labels, Map<String, Object> keyFilters, Set<String> includeProperties, Set<String> excludeProperties) {
+    public NodePattern(
+            Set<String> labels,
+            Map<String, Object> keyFilters,
+            Set<String> includeProperties,
+            Set<String> excludeProperties) {
         this.labels = labels;
         this.keyFilters = keyFilters;
         this.includeProperties = includeProperties;
@@ -35,9 +41,31 @@ public class NodePattern implements Pattern {
         return excludeProperties;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        NodePattern that = (NodePattern) o;
+
+        if (!Objects.equals(labels, that.labels)) return false;
+        if (!Objects.equals(keyFilters, that.keyFilters)) return false;
+        if (!Objects.equals(includeProperties, that.includeProperties)) return false;
+        return Objects.equals(excludeProperties, that.excludeProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = labels != null ? labels.hashCode() : 0;
+        result = 31 * result + (keyFilters != null ? keyFilters.hashCode() : 0);
+        result = 31 * result + (includeProperties != null ? includeProperties.hashCode() : 0);
+        result = 31 * result + (excludeProperties != null ? excludeProperties.hashCode() : 0);
+        return result;
+    }
+
     @NotNull
     @Override
     public Set<Selector> toSelector() {
-        return null;
+        return Set.of(new NodeSelector(null, null, labels, keyFilters, includeProperties, excludeProperties));
     }
 }

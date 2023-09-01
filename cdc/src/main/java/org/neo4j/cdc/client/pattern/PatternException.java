@@ -1,6 +1,6 @@
 package org.neo4j.cdc.client.pattern;
 
-public class PatternException extends Exception {
+public class PatternException extends RuntimeException {
 
     public PatternException(String message) {
         super(message);

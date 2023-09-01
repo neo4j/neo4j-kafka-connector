@@ -1,10 +1,13 @@
 package org.neo4j.cdc.client.pattern;
 
 import org.jetbrains.annotations.NotNull;
+import org.neo4j.cdc.client.selector.RelationshipNodeSelector;
 import org.neo4j.cdc.client.selector.RelationshipSelector;
 import org.neo4j.cdc.client.selector.Selector;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class RelationshipPattern implements Pattern {
@@ -16,7 +19,14 @@ public class RelationshipPattern implements Pattern {
     private final Set<String> includeProperties;
     private final Set<String> excludeProperties;
 
-    public RelationshipPattern(String type, NodePattern start, NodePattern end, boolean bidirectional, Map<String, Object> keyFilters, Set<String> includeProperties, Set<String> excludeProperties) {
+    public RelationshipPattern(
+            String type,
+            NodePattern start,
+            NodePattern end,
+            boolean bidirectional,
+            Map<String, Object> keyFilters,
+            Set<String> includeProperties,
+            Set<String> excludeProperties) {
         this.type = type;
         this.start = start;
         this.end = end;
@@ -54,9 +64,61 @@ public class RelationshipPattern implements Pattern {
         return excludeProperties;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RelationshipPattern that = (RelationshipPattern) o;
+
+        if (bidirectional != that.bidirectional) return false;
+        if (!Objects.equals(type, that.type)) return false;
+        if (!Objects.equals(start, that.start)) return false;
+        if (!Objects.equals(end, that.end)) return false;
+        if (!Objects.equals(keyFilters, that.keyFilters)) return false;
+        if (!Objects.equals(includeProperties, that.includeProperties)) return false;
+        return Objects.equals(excludeProperties, that.excludeProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type != null ? type.hashCode() : 0;
+        result = 31 * result + (start != null ? start.hashCode() : 0);
+        result = 31 * result + (end != null ? end.hashCode() : 0);
+        result = 31 * result + (bidirectional ? 1 : 0);
+        result = 31 * result + (keyFilters != null ? keyFilters.hashCode() : 0);
+        result = 31 * result + (includeProperties != null ? includeProperties.hashCode() : 0);
+        result = 31 * result + (excludeProperties != null ? excludeProperties.hashCode() : 0);
+        return result;
+    }
+
     @NotNull
     @Override
     public Set<Selector> toSelector() {
-        return null;
+        var result = new HashSet<Selector>();
+
+        result.add(new RelationshipSelector(
+                null,
+                null,
+                type,
+                start != null ? new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()) : null,
+                end != null ? new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()) : null,
+                keyFilters,
+                includeProperties,
+                excludeProperties));
+
+        if (bidirectional) {
+            result.add(new RelationshipSelector(
+                    null,
+                    null,
+                    type,
+                    end != null ? new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()) : null,
+                    start != null ? new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()) : null,
+                    keyFilters,
+                    includeProperties,
+                    excludeProperties));
+        }
+
+        return result;
     }
 }

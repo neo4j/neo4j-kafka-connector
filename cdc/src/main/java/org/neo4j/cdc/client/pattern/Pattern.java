@@ -10,7 +10,6 @@ public interface Pattern {
     Set<Selector> toSelector();
 
     static List<Pattern> parse(String expression) {
-        return List.of();
+        return Visitors.parse(expression);
     }
-
 }
