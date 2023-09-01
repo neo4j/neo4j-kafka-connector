@@ -16,13 +16,8 @@
  */
 package org.neo4j.cdc.client
 
-import org.neo4j.driver.Driver
-import org.neo4j.driver.reactive.RxResult
-import org.neo4j.driver.reactive.RxSession
-import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-
 
 interface CDCService {
 
@@ -31,61 +26,4 @@ interface CDCService {
   fun current(): Mono<ChangeIdentifier>
 
   fun query(from: ChangeIdentifier): Flux<ChangeEvent>
-
-}
-
-class CDCClient(val driver: Driver, vararg selectors: Selector) : CDCService {
-  override fun earliest(): Mono<ChangeIdentifier> {
-    val query = "call cdc.earliest();"
-    return queryForChangeIdentifier(query)
-  }
-
-  override fun current(): Mono<ChangeIdentifier> {
-    val query = "call cdc.current();"
-    return queryForChangeIdentifier(query)
-  }
-
-  override fun query(from: ChangeIdentifier): Flux<ChangeEvent> {
-    val query = "call cdc.query('${from.id}');"
-    val value: (RxSession) -> Publisher<RxSession> = { session: RxSession -> session.close() }
-    return Flux.usingWhen(
-        Mono.fromSupplier {
-          driver.rxSession()
-        },
-        { s: RxSession ->
-          Flux.from(
-                  s.readTransaction { tx ->
-                      val result: RxResult = tx.run(query)
-                      Flux.from(result.records())
-                              .map { records -> records.asMap() }
-                              .map { map -> ResultMapper.parseChangeEvent(map) }
-                  },
-          )
-
-        },
-        value,
-    )
-
-  }
-
-  private fun queryForChangeIdentifier(query: String): Mono<ChangeIdentifier> {
-    val value: (RxSession) -> Publisher<RxSession> = { session: RxSession -> session.close() }
-    return Mono.usingWhen(
-        Mono.fromSupplier {
-          driver.rxSession()
-        },
-        { s: RxSession ->
-          Mono.from(
-              s.readTransaction { tx ->
-                val result: RxResult = tx.run(query)
-                Mono.from(result.records())
-                    .map { records -> records.asMap() }
-                    .map { map -> ResultMapper.parseChangeIdentifier(map) }
-              },
-          )
-
-        },
-        value,
-    )
-  }
 }

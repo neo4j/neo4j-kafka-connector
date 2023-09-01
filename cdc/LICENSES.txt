@@ -4,11 +4,18 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 
 ------------------------------------------------------------------------------
 Apache Software License, Version 2.0
+  Jackson datatype: JSR310
+  Jackson-annotations
+  Jackson-core
+  jackson-databind
+  jackson-module-kotlin
   JetBrains Java Annotations
+  Kotlin Reflect
   Kotlin Stdlib
   Kotlin Stdlib Common
   Neo4j Java Driver
   Non-Blocking Reactive Foundation for the JVM
+  Reactor Test support
 ------------------------------------------------------------------------------
 
                                  Apache License

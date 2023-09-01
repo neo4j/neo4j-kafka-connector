@@ -19,10 +19,7 @@ package org.neo4j.cdc.client
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 
-/**
- *
- * @author Gerrit Meier
- */
+/** @author Gerrit Meier */
 class ResultMapper {
 
   companion object {
@@ -41,9 +38,7 @@ class ResultMapper {
       val changeIdentifier = parseChangeIdentifier(message)
       val txId = message.get(TX_ID_FIELD) as Long
       val seq = (message.get(SEQ_FIELD) as Long).toInt()
-      val objectMapper = jacksonMapperBuilder()
-          .addModules(JavaTimeModule())
-          .build()
+      val objectMapper = jacksonMapperBuilder().addModules(JavaTimeModule()).build()
       val metadata = objectMapper.convertValue(message.get(METADATA_FIELD), Metadata::class.java)
 
       val event = objectMapper.convertValue(message.get(EVENT_FIELD), Event::class.java)
