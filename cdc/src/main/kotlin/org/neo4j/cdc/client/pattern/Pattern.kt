@@ -18,9 +18,6 @@ package org.neo4j.cdc.client.pattern
 
 import kotlin.math.pow
 import org.antlr.v4.runtime.*
-import org.neo4j.cdc.client.NodeSelector
-import org.neo4j.cdc.client.RelationshipNodeSelector
-import org.neo4j.cdc.client.RelationshipSelector
 import org.neo4j.cdc.client.selector.Selector
 
 interface PatternX {

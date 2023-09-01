@@ -15,10 +15,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public abstract class Event {
 
-    private String elementId;
-    private String eventType;
-    private State state;
-    private String operation;
+    private final String elementId;
+    private final String eventType;
+    private final State state;
+    private final String operation;
+
+    protected Event(String elementId, String eventType, State state, String operation) {
+        this.elementId = elementId;
+        this.eventType = eventType;
+        this.state = state;
+        this.operation = operation;
+    }
 
     public String getElementId() {
         return this.elementId;
