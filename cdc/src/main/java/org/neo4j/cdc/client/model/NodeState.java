@@ -21,51 +21,44 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.collections4.MapUtils;
 
-public class NodeEvent extends EntityEvent<NodeState> {
-
-    private final Map<String, Map<String, Object>> keys;
+public class NodeState {
     private final List<String> labels;
+    private final Map<String, Object> properties;
 
     @SuppressWarnings("unchecked")
-    NodeEvent(Map<String, Object> map) {
-        super(map, NodeState::new);
-
-        this.keys = (Map<String, Map<String, Object>>) MapUtils.getObject(map, "keys");
+    public NodeState(Map<String, Object> map) {
         this.labels = (List<String>) MapUtils.getObject(map, "labels");
+        this.properties = (Map<String, Object>) MapUtils.getMap(map, "properties");
     }
 
-    public Map<String, Map<String, Object>> getKeys() {
-        return this.keys;
+    public List<String> getLabels() {
+        return labels;
+    }
+
+    public Map<String, Object> getProperties() {
+        return properties;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
 
-        NodeEvent nodeEvent = (NodeEvent) o;
+        NodeState nodeState = (NodeState) o;
 
-        if (!Objects.equals(keys, nodeEvent.keys)) return false;
-        return Objects.equals(labels, nodeEvent.labels);
+        if (!Objects.equals(labels, nodeState.labels)) return false;
+        return Objects.equals(properties, nodeState.properties);
     }
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (keys != null ? keys.hashCode() : 0);
-        result = 31 * result + (labels != null ? labels.hashCode() : 0);
+        int result = labels != null ? labels.hashCode() : 0;
+        result = 31 * result + (properties != null ? properties.hashCode() : 0);
         return result;
-    }
-
-    public List<String> getLabels() {
-        return this.labels;
     }
 
     @Override
     public String toString() {
-        return String.format(
-                "NodeEvent{elementId=%s, labels=%s, keys=%s, operation=%s, before=%s, after=%s}",
-                getElementId(), labels, keys, getOperation(), getBefore(), getAfter());
+        return String.format("NodeState{labels=%s, properties=%s}", labels, properties);
     }
 }

@@ -16,18 +16,20 @@
  */
 package org.neo4j.cdc.client.model;
 
+import java.util.Map;
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
+import org.apache.commons.collections4.MapUtils;
 
-public class ChangeIdentifier {
-    private final String id;
+public class RelationshipState {
+    private final Map<String, Object> properties;
 
-    public ChangeIdentifier(@NotNull String id) {
-        this.id = Objects.requireNonNull(id);
+    @SuppressWarnings("unchecked")
+    public RelationshipState(Map<String, Object> map) {
+        this.properties = (Map<String, Object>) MapUtils.getMap(map, "properties");
     }
 
-    public String getId() {
-        return this.id;
+    public Map<String, Object> getProperties() {
+        return properties;
     }
 
     @Override
@@ -35,18 +37,18 @@ public class ChangeIdentifier {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        ChangeIdentifier that = (ChangeIdentifier) o;
+        RelationshipState that = (RelationshipState) o;
 
-        return id.equals(that.id);
+        return Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return properties != null ? properties.hashCode() : 0;
     }
 
     @Override
     public String toString() {
-        return String.format("ChangeIdentifier{id=%s}", id);
+        return String.format("RelationshipState{properties=%s}", properties);
     }
 }
