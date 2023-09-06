@@ -1,27 +1,33 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [http://neo4j.com]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.neo4j.cdc.client;
 
 import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.neo4j.cdc.client.model.CaptureMode;
-import org.neo4j.cdc.client.model.ChangeEvent;
-import org.neo4j.cdc.client.model.ChangeIdentifier;
-import org.neo4j.cdc.client.model.Event;
-import org.neo4j.cdc.client.model.Metadata;
-import org.neo4j.cdc.client.model.Node;
-import org.neo4j.cdc.client.model.NodeEvent;
-import org.neo4j.cdc.client.model.RelationshipEvent;
-import org.neo4j.cdc.client.model.State;
+import org.neo4j.cdc.client.model.*;
 
 /**
  * @author Gerrit Meier
@@ -89,14 +95,10 @@ public class ResultMapperTest {
         assertEquals(nodeEvent.getEventType(), "n");
         assertEquals(nodeEvent.getLabels().get(0), "User");
         assertEquals(nodeEvent.getOperation(), "c");
-        State changeEventState = nodeEvent.getState();
-        assertNotNull(changeEventState);
-        assertNull(changeEventState.getBefore());
-        assertEquals(((Map<String, Object>) changeEventState.getAfter().get("properties")).get("name"), "someone");
-        assertEquals(
-                ((Map<String, Object>) changeEventState.getAfter().get("properties")).get("real_name"),
-                "Some real name");
-        assertEquals(((List<String>) changeEventState.getAfter().get("labels")).get(0), "User");
+        assertNull(nodeEvent.getBefore());
+        assertEquals(nodeEvent.getAfter().getProperties().get("name"), "someone");
+        assertEquals(nodeEvent.getAfter().getProperties().get("real_name"), "Some real name");
+        assertEquals(nodeEvent.getAfter().getLabels().get(0), "User");
     }
 
     @Test
@@ -116,7 +118,6 @@ public class ResultMapperTest {
         properties.put("roles", "Jack Swigert");
         Map<String, Object> afterState = new HashMap<>();
         afterState.put("properties", properties);
-        afterState.put("labels", Collections.singletonList("User"));
         Map<String, Object> state = new HashMap<>();
         state.put("before", null);
         state.put("after", afterState);
@@ -160,9 +161,8 @@ public class ResultMapperTest {
         assertEquals(relationshipEvent.getType(), "ACTED_IN");
         assertEquals(relationshipEvent.getOperation(), "c");
         assertEquals(relationshipEvent.getEventType(), "r");
-        assertNull(relationshipEvent.getState().getBefore());
-        Map<String, Object> stateAfter = relationshipEvent.getState().getAfter();
-        assertEquals(((Map<String, Object>) stateAfter.get("properties")).get("roles"), "Jack Swigert");
+        assertNull(relationshipEvent.getBefore());
+        assertEquals(relationshipEvent.getAfter().getProperties().get("roles"), "Jack Swigert");
 
         Node startElement = relationshipEvent.getStart();
         assertEquals(startElement.getElementId(), "4:6a4af4ff-da3a-49e7-ae71-2c0ac3c1fc1a:0");
