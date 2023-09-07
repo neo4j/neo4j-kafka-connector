@@ -23,9 +23,8 @@ import org.apache.commons.collections4.MapUtils;
 public class RelationshipState {
     private final Map<String, Object> properties;
 
-    @SuppressWarnings("unchecked")
-    public RelationshipState(Map<String, Object> map) {
-        this.properties = (Map<String, Object>) MapUtils.getMap(map, "properties");
+    public RelationshipState(Map<String, Object> properties) {
+        this.properties = properties;
     }
 
     public Map<String, Object> getProperties() {
@@ -50,5 +49,15 @@ public class RelationshipState {
     @Override
     public String toString() {
         return String.format("RelationshipState{properties=%s}", properties);
+    }
+
+    public static RelationshipState fromMap(Map<?, ?> map) {
+        if (map == null) {
+            return null;
+        }
+
+        var cypherMap = ModelUtils.checkedMap(map, String.class, Object.class);
+        var properties = ModelUtils.checkedMap(MapUtils.getMap(cypherMap, "properties"), String.class, Object.class);
+        return new RelationshipState(properties);
     }
 }

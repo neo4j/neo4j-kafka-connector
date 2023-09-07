@@ -16,38 +16,34 @@
  */
 package org.neo4j.cdc.client.model;
 
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
-import org.apache.commons.collections4.MapUtils;
 
 public abstract class EntityEvent<T> implements Event {
 
     private final String elementId;
-    private final String eventType;
+    private final EventType eventType;
     private final T before;
     private final T after;
-    private final String operation;
+    private final EntityOperation operation;
 
-    @SuppressWarnings("unchecked")
-    protected EntityEvent(Map<String, Object> map, Function<Map<String, Object>, T> stateFactory) {
-        this.elementId = Objects.requireNonNull(MapUtils.getString(map, "elementId"));
-        this.eventType = Objects.requireNonNull(MapUtils.getString(map, "eventType"));
-        this.operation = Objects.requireNonNull(MapUtils.getString(map, "operation"));
-
-        var state = (Map<String, Object>) MapUtils.getMap(map, "state");
-        var beforeMap = (Map<String, Object>) MapUtils.getMap(state, "before");
-        this.before = beforeMap == null ? null : stateFactory.apply(beforeMap);
-        var afterMap = (Map<String, Object>) MapUtils.getMap(state, "after");
-        this.after = afterMap == null ? null : stateFactory.apply(afterMap);
+    protected EntityEvent(String elementId, EventType eventType, EntityOperation operation, T before, T after) {
+        this.elementId = Objects.requireNonNull(elementId);
+        this.eventType = Objects.requireNonNull(eventType);
+        this.operation = Objects.requireNonNull(operation);
+        this.before = before;
+        this.after = after;
     }
 
     public String getElementId() {
         return this.elementId;
     }
 
-    public String getEventType() {
+    public EventType getEventType() {
         return this.eventType;
+    }
+
+    public EntityOperation getOperation() {
+        return this.operation;
     }
 
     public T getBefore() {
@@ -58,10 +54,6 @@ public abstract class EntityEvent<T> implements Event {
         return this.after;
     }
 
-    public String getOperation() {
-        return this.operation;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -70,10 +62,10 @@ public abstract class EntityEvent<T> implements Event {
         EntityEvent<?> that = (EntityEvent<?>) o;
 
         if (!elementId.equals(that.elementId)) return false;
-        if (!eventType.equals(that.eventType)) return false;
+        if (eventType != that.eventType) return false;
         if (!Objects.equals(before, that.before)) return false;
         if (!Objects.equals(after, that.after)) return false;
-        return operation.equals(that.operation);
+        return operation == that.operation;
     }
 
     @Override

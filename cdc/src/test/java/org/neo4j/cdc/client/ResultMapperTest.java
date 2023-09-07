@@ -92,9 +92,9 @@ public class ResultMapperTest {
         NodeEvent nodeEvent = (NodeEvent) changeEventEvent;
         assertEquals(nodeEvent.getElementId(), "4:5bd54b2f-b8b3-4c9a-89ad-f54979871f3f:0");
         assertEquals(nodeEvent.getKeys(), emptyMap());
-        assertEquals(nodeEvent.getEventType(), "n");
+        assertEquals(nodeEvent.getEventType(), EventType.NODE);
         assertEquals(nodeEvent.getLabels().get(0), "User");
-        assertEquals(nodeEvent.getOperation(), "c");
+        assertEquals(nodeEvent.getOperation(), EntityOperation.CREATE);
         assertNull(nodeEvent.getBefore());
         assertEquals(nodeEvent.getAfter().getProperties().get("name"), "someone");
         assertEquals(nodeEvent.getAfter().getProperties().get("real_name"), "Some real name");
@@ -159,8 +159,8 @@ public class ResultMapperTest {
         RelationshipEvent relationshipEvent = (RelationshipEvent) changeEventEvent;
         assertEquals(relationshipEvent.getElementId(), "5:6a4af4ff-da3a-49e7-ae71-2c0ac3c1fc1a:0");
         assertEquals(relationshipEvent.getType(), "ACTED_IN");
-        assertEquals(relationshipEvent.getOperation(), "c");
-        assertEquals(relationshipEvent.getEventType(), "r");
+        assertEquals(relationshipEvent.getOperation(), EntityOperation.CREATE);
+        assertEquals(relationshipEvent.getEventType(), EventType.RELATIONSHIP);
         assertNull(relationshipEvent.getBefore());
         assertEquals(relationshipEvent.getAfter().getProperties().get("roles"), "Jack Swigert");
 

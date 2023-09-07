@@ -27,14 +27,21 @@ public class RelationshipEvent extends EntityEvent<RelationshipState> {
     private final String type;
     private final Map<String, Object> key;
 
-    @SuppressWarnings("unchecked")
-    RelationshipEvent(Map<String, Object> map) {
-        super(map, RelationshipState::new);
+    public RelationshipEvent(
+            String elementId,
+            String type,
+            Node start,
+            Node end,
+            Map<String, Object> key,
+            EntityOperation operation,
+            RelationshipState before,
+            RelationshipState after) {
+        super(elementId, EventType.RELATIONSHIP, operation, before, after);
 
-        this.start = new Node(Objects.requireNonNull((Map<String, Object>) MapUtils.getMap(map, "start")));
-        this.end = new Node(Objects.requireNonNull((Map<String, Object>) MapUtils.getMap(map, "end")));
-        this.type = Objects.requireNonNull(MapUtils.getString(map, "type"));
-        this.key = (Map<String, Object>) MapUtils.getMap(map, "key");
+        this.start = Objects.requireNonNull(start);
+        this.end = Objects.requireNonNull(end);
+        this.type = Objects.requireNonNull(type);
+        this.key = key;
     }
 
     public Node getStart() {
@@ -54,9 +61,51 @@ public class RelationshipEvent extends EntityEvent<RelationshipState> {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+
+        RelationshipEvent that = (RelationshipEvent) o;
+
+        if (!start.equals(that.start)) return false;
+        if (!end.equals(that.end)) return false;
+        if (!type.equals(that.type)) return false;
+        return Objects.equals(key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + start.hashCode();
+        result = 31 * result + end.hashCode();
+        result = 31 * result + type.hashCode();
+        result = 31 * result + (key != null ? key.hashCode() : 0);
+        return result;
+    }
+
+    @Override
     public String toString() {
         return String.format(
                 "RelationshipEvent{elementId=%s, start=%s, end=%s, type='%s', key=%s, operation=%s, before=%s, after=%s}",
                 getElementId(), start, end, type, key, getOperation(), getBefore(), getAfter());
+    }
+
+    public static RelationshipEvent fromMap(Map<?, ?> map) {
+        var cypherMap = ModelUtils.checkedMap(Objects.requireNonNull(map), String.class, Object.class);
+
+        var elementId = MapUtils.getString(cypherMap, "elementId");
+        var operation = EntityOperation.fromShorthand(MapUtils.getString(cypherMap, "operation"));
+        var type = MapUtils.getString(cypherMap, "type");
+        var start = Node.fromMap(ModelUtils.getMap(cypherMap, "start", String.class, Object.class));
+        var end = Node.fromMap(ModelUtils.getMap(cypherMap, "end", String.class, Object.class));
+        var key = ModelUtils.getMap(cypherMap, "key", String.class, Object.class);
+
+        var state = ModelUtils.checkedMap(
+                Objects.requireNonNull(MapUtils.getMap(cypherMap, "state")), String.class, Object.class);
+        var before = RelationshipState.fromMap(MapUtils.getMap(state, "before"));
+        var after = RelationshipState.fromMap(MapUtils.getMap(state, "after"));
+
+        return new RelationshipEvent(elementId, type, start, end, key, operation, before, after);
     }
 }

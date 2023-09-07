@@ -17,7 +17,6 @@
 package org.neo4j.cdc.client.model;
 
 import java.util.Objects;
-import org.jetbrains.annotations.NotNull;
 
 public class ChangeEvent {
 
@@ -27,12 +26,7 @@ public class ChangeEvent {
     private final Metadata metadata;
     private final Event event;
 
-    public ChangeEvent(
-            @NotNull ChangeIdentifier id,
-            @NotNull Long txId,
-            @NotNull Integer seq,
-            @NotNull Metadata metadata,
-            @NotNull Event event) {
+    public ChangeEvent(ChangeIdentifier id, Long txId, Integer seq, Metadata metadata, Event event) {
         this.id = Objects.requireNonNull(id);
         this.txId = Objects.requireNonNull(txId);
         this.seq = Objects.requireNonNull(seq);

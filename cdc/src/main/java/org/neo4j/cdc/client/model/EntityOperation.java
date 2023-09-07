@@ -16,24 +16,28 @@
  */
 package org.neo4j.cdc.client.model;
 
-import java.util.Map;
 import java.util.Objects;
-import org.apache.commons.collections4.MapUtils;
 
-public interface Event {
+public enum EntityOperation {
+    CREATE("c"),
+    UPDATE("u"),
+    DELETE("d");
 
-    EventType getEventType();
+    public final String shorthand;
 
-    static Event create(Map<?, ?> event) {
-        var cypherMap = ModelUtils.checkedMap(Objects.requireNonNull(event), String.class, Object.class);
-        var type = MapUtils.getString(cypherMap, "eventType");
+    EntityOperation(String shorthand) {
+        this.shorthand = Objects.requireNonNull(shorthand);
+    }
 
-        if (EventType.NODE.shorthand.equalsIgnoreCase(type)) {
-            return NodeEvent.fromMap(event);
-        } else if (EventType.RELATIONSHIP.shorthand.equalsIgnoreCase(type)) {
-            return RelationshipEvent.fromMap(event);
+    public static EntityOperation fromShorthand(String shorthand) {
+        if (CREATE.shorthand.equalsIgnoreCase(shorthand)) {
+            return CREATE;
+        } else if (UPDATE.shorthand.equalsIgnoreCase(shorthand)) {
+            return UPDATE;
+        } else if (DELETE.shorthand.equalsIgnoreCase(shorthand)) {
+            return DELETE;
+        } else {
+            throw new IllegalArgumentException(String.format("unknown event type: %s", shorthand));
         }
-
-        throw new IllegalArgumentException(String.format("unknown event type: %s", type));
     }
 }

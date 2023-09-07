@@ -39,13 +39,12 @@ public final class ResultMapper {
         return new ChangeIdentifier((String) message.get(ID_FIELD));
     }
 
-    @SuppressWarnings("unchecked")
     public static ChangeEvent parseChangeEvent(Map<String, Object> message) {
         ChangeIdentifier changeIdentifier = new ChangeIdentifier(MapUtils.getString(message, ID_FIELD));
         Long txId = MapUtils.getLong(message, TX_ID_FIELD);
         int seq = MapUtils.getIntValue(message, SEQ_FIELD);
-        Metadata metadata = new Metadata((Map<String, Object>) MapUtils.getMap(message, "metadata"));
-        Event event = Event.create((Map<String, Object>) MapUtils.getMap(message, "event"));
+        Metadata metadata = Metadata.fromMap(MapUtils.getMap(message, METADATA_FIELD));
+        Event event = Event.create(MapUtils.getMap(message, EVENT_FIELD));
 
         return new ChangeEvent(changeIdentifier, txId, seq, metadata, event);
     }

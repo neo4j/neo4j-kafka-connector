@@ -27,11 +27,10 @@ public class Node {
     private final Map<String, Object> keys;
     private final List<String> labels;
 
-    @SuppressWarnings("unchecked")
-    Node(Map<String, Object> map) {
-        this.elementId = Objects.requireNonNull(MapUtils.getString(map, "elementId"));
-        this.keys = (Map<String, Object>) MapUtils.getMap(map, "keys");
-        this.labels = (List<String>) MapUtils.getObject(map, "labels");
+    public Node(String elementId, List<String> labels, Map<String, Object> keys) {
+        this.elementId = Objects.requireNonNull(elementId);
+        this.labels = labels;
+        this.keys = keys;
     }
 
     public String getElementId() {
@@ -69,5 +68,15 @@ public class Node {
     @Override
     public String toString() {
         return String.format("Node{elementId=%s, labels=%s, keys=%s}", elementId, labels, keys);
+    }
+
+    public static Node fromMap(Map<?, ?> map) {
+        var cypherMap = ModelUtils.checkedMap(Objects.requireNonNull(map), String.class, Object.class);
+
+        var elementId = MapUtils.getString(cypherMap, "elementId");
+        var labels = ModelUtils.getList(cypherMap, "labels", String.class);
+        var keys = ModelUtils.getMap(cypherMap, "keys", String.class, Object.class);
+
+        return new Node(elementId, labels, keys);
     }
 }

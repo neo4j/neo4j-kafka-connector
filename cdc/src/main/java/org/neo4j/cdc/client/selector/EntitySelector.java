@@ -19,23 +19,26 @@ package org.neo4j.cdc.client.selector;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import org.neo4j.cdc.client.model.Change;
+import org.neo4j.cdc.client.model.EntityOperation;
 
 public class EntitySelector implements Selector {
-    private final Change change;
+    private final EntityOperation change;
     private final Set<String> changesTo;
     private final Set<String> includeProperties;
     private final Set<String> excludeProperties;
 
     public EntitySelector(
-            Change change, Set<String> changesTo, Set<String> includeProperties, Set<String> excludeProperties) {
+            EntityOperation change,
+            Set<String> changesTo,
+            Set<String> includeProperties,
+            Set<String> excludeProperties) {
         this.change = change;
         this.changesTo = changesTo;
         this.includeProperties = includeProperties;
         this.excludeProperties = excludeProperties;
     }
 
-    public Change getChange() {
+    public EntityOperation getChange() {
         return change;
     }
 

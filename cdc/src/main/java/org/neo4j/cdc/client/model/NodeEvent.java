@@ -19,6 +19,7 @@ package org.neo4j.cdc.client.model;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.apache.commons.collections4.MapUtils;
 
 public class NodeEvent extends EntityEvent<NodeState> {
@@ -26,12 +27,21 @@ public class NodeEvent extends EntityEvent<NodeState> {
     private final Map<String, Map<String, Object>> keys;
     private final List<String> labels;
 
-    @SuppressWarnings("unchecked")
-    NodeEvent(Map<String, Object> map) {
-        super(map, NodeState::new);
+    public NodeEvent(
+            String elementId,
+            EntityOperation operation,
+            List<String> labels,
+            Map<String, Map<String, Object>> keys,
+            NodeState before,
+            NodeState after) {
+        super(elementId, EventType.NODE, operation, before, after);
 
-        this.keys = (Map<String, Map<String, Object>>) MapUtils.getObject(map, "keys");
-        this.labels = (List<String>) MapUtils.getObject(map, "labels");
+        this.keys = keys;
+        this.labels = labels;
+    }
+
+    public List<String> getLabels() {
+        return this.labels;
     }
 
     public Map<String, Map<String, Object>> getKeys() {
@@ -58,14 +68,32 @@ public class NodeEvent extends EntityEvent<NodeState> {
         return result;
     }
 
-    public List<String> getLabels() {
-        return this.labels;
-    }
-
     @Override
     public String toString() {
         return String.format(
                 "NodeEvent{elementId=%s, labels=%s, keys=%s, operation=%s, before=%s, after=%s}",
                 getElementId(), labels, keys, getOperation(), getBefore(), getAfter());
+    }
+
+    public static NodeEvent fromMap(Map<?, ?> map) {
+        var cypherMap = ModelUtils.checkedMap(Objects.requireNonNull(map), String.class, Object.class);
+
+        var elementId = MapUtils.getString(cypherMap, "elementId");
+        var operation = EntityOperation.fromShorthand(MapUtils.getString(cypherMap, "operation"));
+        var labels = ModelUtils.getList(cypherMap, "labels", String.class);
+        var keysMap = ModelUtils.getMap(cypherMap, "keys", String.class, Map.class);
+        var keys = keysMap != null
+                ? keysMap.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                e -> ModelUtils.checkedMap(e.getValue(), String.class, Object.class)))
+                : null;
+
+        var state = ModelUtils.checkedMap(
+                Objects.requireNonNull(MapUtils.getMap(cypherMap, "state")), String.class, Object.class);
+        var before = NodeState.fromMap(MapUtils.getMap(state, "before"));
+        var after = NodeState.fromMap(MapUtils.getMap(state, "after"));
+
+        return new NodeEvent(elementId, operation, labels, keys, before, after);
     }
 }

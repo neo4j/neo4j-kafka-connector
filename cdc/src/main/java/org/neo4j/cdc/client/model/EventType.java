@@ -18,14 +18,13 @@ package org.neo4j.cdc.client.model;
 
 import java.util.Objects;
 
-public enum Change {
-    CREATE("c"),
-    UPDATE("u"),
-    DELETE("d");
+public enum EventType {
+    NODE("n"),
+    RELATIONSHIP("r");
 
     public final String shorthand;
 
-    Change(String shorthand) {
+    EventType(String shorthand) {
         this.shorthand = Objects.requireNonNull(shorthand);
     }
 }

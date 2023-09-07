@@ -19,7 +19,7 @@ package org.neo4j.cdc.client.selector;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import org.neo4j.cdc.client.model.Change;
+import org.neo4j.cdc.client.model.EntityOperation;
 
 public class RelationshipSelector extends EntitySelector {
     private final String type;
@@ -28,7 +28,7 @@ public class RelationshipSelector extends EntitySelector {
     private final Map<String, Object> key;
 
     public RelationshipSelector(
-            Change change,
+            EntityOperation change,
             Set<String> changesTo,
             String type,
             RelationshipNodeSelector start,

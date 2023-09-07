@@ -16,17 +16,10 @@
  */
 package org.neo4j.cdc.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.neo4j.cdc.client.model.Metadata.*;
-
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.neo4j.cdc.client.model.*;
 import org.neo4j.driver.AuthTokens;
@@ -37,6 +30,14 @@ import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.test.StepVerifier;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author Gerrit Meier
@@ -66,15 +67,20 @@ public class CDCClientTest {
             parameters.put("mode", CaptureMode.FULL.name());
             session.run("ALTER DATABASE $db SET OPTION txLogEnrichment $mode", parameters)
                     .consume();
-
-            current = new ChangeIdentifier(
-                    session.run("CALL cdc.current()").single().get(0).asString());
         }
     }
 
     @AfterAll
     static void cleanup() {
         driver.close();
+    }
+
+    @BeforeEach
+    void collectCurrent() {
+        try (var session = driver.session()) {
+            current = new ChangeIdentifier(
+                    session.run("CALL cdc.current()").single().get(0).asString());
+        }
     }
 
     @Test
@@ -136,26 +142,30 @@ public class CDCClientTest {
                                 assertThat(c.getSeq()).isNotNull();
                             })
                             .satisfies(e -> assertThat(e.getMetadata())
-                                    .hasSize(KNOWN_KEYS.length)
-                                    .hasFieldOrPropertyWithValue(AUTHENTICATED_USER, "neo4j")
-                                    .hasFieldOrPropertyWithValue(EXECUTING_USER, "neo4j")
-                                    .hasFieldOrPropertyWithValue(CAPTURE_MODE, CaptureMode.FULL)
-                                    .hasFieldOrPropertyWithValue(CONNECTION_TYPE, "bolt")
-                                    .hasEntrySatisfying(CONNECTION_CLIENT, c -> assertThat(c)
-                                            .isNotNull())
-                                    .hasEntrySatisfying(CONNECTION_SERVER, c -> assertThat(c)
-                                            .isNotNull())
-                                    .hasEntrySatisfying(
-                                            SERVER_ID, c -> assertThat(c).isNotNull())
-                                    .hasEntrySatisfying(
-                                            TX_START_TIME, c -> assertThat(c).isNotNull())
-                                    .hasEntrySatisfying(
-                                            TX_COMMIT_TIME, c -> assertThat(c).isNotNull()))
+                                    .satisfies(m ->
+                                            assertThat(m.getAdditionalEntries()).isEmpty())
+                                    .satisfies(m ->
+                                            assertThat(m.getAuthenticatedUser()).isEqualTo("neo4j"))
+                                    .satisfies(m ->
+                                            assertThat(m.getExecutingUser()).isEqualTo("neo4j"))
+                                    .satisfies(
+                                            m -> assertThat(m.getCaptureMode()).isEqualTo(CaptureMode.FULL))
+                                    .satisfies(m ->
+                                            assertThat(m.getConnectionType()).isEqualTo("bolt"))
+                                    .satisfies(m ->
+                                            assertThat(m.getConnectionClient()).isNotNull())
+                                    .satisfies(m ->
+                                            assertThat(m.getConnectionServer()).isNotNull())
+                                    .satisfies(m -> assertThat(m.getServerId()).isNotNull())
+                                    .satisfies(
+                                            m -> assertThat(m.getTxStartTime()).isNotNull())
+                                    .satisfies(
+                                            m -> assertThat(m.getTxCommitTime()).isNotNull()))
                             .satisfies(e -> assertThat(e.getEvent())
                                     .isNotNull()
                                     .asInstanceOf(InstanceOfAssertFactories.type(NodeEvent.class))
-                                    .hasFieldOrPropertyWithValue("eventType", "n")
-                                    .hasFieldOrPropertyWithValue("operation", "c")
+                                    .hasFieldOrPropertyWithValue("eventType", EventType.NODE)
+                                    .hasFieldOrPropertyWithValue("operation", EntityOperation.CREATE)
                                     .hasFieldOrPropertyWithValue("elementId", elementId)
                                     .hasFieldOrPropertyWithValue("labels", List.of("Person", "Employee"))
                                     .hasFieldOrPropertyWithValue(
@@ -163,17 +173,15 @@ public class CDCClientTest {
                                     .hasFieldOrPropertyWithValue("before", null)
                                     .hasFieldOrPropertyWithValue(
                                             "after",
-                                            new NodeState(Map.of(
-                                                    "labels",
+                                            new NodeState(
                                                     List.of("Person", "Employee"),
-                                                    "properties",
                                                     Map.of(
                                                             "first_name",
                                                             "john",
                                                             "last_name",
                                                             "doe",
                                                             "date_of_birth",
-                                                            LocalDate.of(1990, 5, 1)))))))
+                                                            LocalDate.of(1990, 5, 1))))))
                     .verifyComplete();
         }
     }

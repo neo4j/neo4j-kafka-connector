@@ -25,10 +25,9 @@ public class NodeState {
     private final List<String> labels;
     private final Map<String, Object> properties;
 
-    @SuppressWarnings("unchecked")
-    public NodeState(Map<String, Object> map) {
-        this.labels = (List<String>) MapUtils.getObject(map, "labels");
-        this.properties = (Map<String, Object>) MapUtils.getMap(map, "properties");
+    public NodeState(List<String> labels, Map<String, Object> properties) {
+        this.labels = labels;
+        this.properties = properties;
     }
 
     public List<String> getLabels() {
@@ -60,5 +59,16 @@ public class NodeState {
     @Override
     public String toString() {
         return String.format("NodeState{labels=%s, properties=%s}", labels, properties);
+    }
+
+    public static NodeState fromMap(Map<?, ?> map) {
+        if (map == null) {
+            return null;
+        }
+
+        var cypherMap = ModelUtils.checkedMap(map, String.class, Object.class);
+        var labels = ModelUtils.getList(cypherMap, "labels", String.class);
+        var properties = ModelUtils.checkedMap(MapUtils.getMap(cypherMap, "properties"), String.class, Object.class);
+        return new NodeState(labels, properties);
     }
 }
