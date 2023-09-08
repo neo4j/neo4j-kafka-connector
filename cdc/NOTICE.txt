@@ -19,14 +19,10 @@ Third-party licenses
 --------------------
 
 Apache Software License, Version 2.0
-  Jackson datatype: JSR310
-  Jackson-annotations
-  Jackson-core
-  jackson-databind
+  Apache Commons Collections
   JetBrains Java Annotations
   Neo4j Java Driver
   Non-Blocking Reactive Foundation for the JVM
-  Reactor Test support
 
 BSD License
   ANTLR 4 Runtime
