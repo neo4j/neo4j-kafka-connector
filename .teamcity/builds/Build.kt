@@ -10,20 +10,22 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
       this.id(name.toId())
       this.name = name
 
-      val packaging = Maven("${name}-package", "package", "package", "-pl :packaging -am -DskipTests")
+      val packaging =
+          Maven("${name}-package", "package", "package", "-pl :packaging -am -DskipTests")
 
       val bts = sequential {
         if (forPullRequests)
             buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
-        if (forPullRequests) buildType(PRCheck("${name}-pr-check", "pr check"))
-        buildType(Maven("${name}-build", "build", "test-compile"))
+        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
+        dependentBuildType(Maven("${name}-build", "build", "test-compile"))
         parallel {
-          buildType(Maven("${name}-unit-tests", "unit tests", "test"))
-          buildType(
+          dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
+          dependentBuildType(
               Maven("${name}-integration-tests", "integration tests", "verify", "-DskipUnitTests"))
         }
-        if (forPullRequests) buildType(packaging) else buildType(collectArtifacts(packaging))
-        buildType(Empty("${name}-complete", "complete"))
+        if (forPullRequests) dependentBuildType(packaging)
+        else dependentBuildType(collectArtifacts(packaging))
+        dependentBuildType(Empty("${name}-complete", "complete"))
       }
 
       bts.buildTypes().forEach {
