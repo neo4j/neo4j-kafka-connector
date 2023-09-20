@@ -53,9 +53,7 @@ enum class ConnectorType {
 enum class AuthenticationType {
   NONE,
   BASIC,
-  KERBEROS,
-  //  BEARER,
-  //  CUSTOM
+  KERBEROS
 }
 
 open class Neo4jConnectorConfig(
@@ -207,29 +205,17 @@ open class Neo4jConnectorConfig(
   }
 
   companion object {
-    // Connection URI
-    @Deprecated("deprecated in favour of neo4j.uri") const val SERVER_URI = "neo4j.server.uri"
-    const val URI = "neo4j.uri"
-
-    // Database to connect to
+    const val SERVER_URI = "neo4j.server.uri"
     const val DATABASE = "neo4j.database"
 
-    // Authentication Settings
     const val AUTHENTICATION_TYPE = "neo4j.authentication.type"
     const val AUTHENTICATION_BASIC_USERNAME = "neo4j.authentication.basic.username"
     const val AUTHENTICATION_BASIC_PASSWORD = "neo4j.authentication.basic.password"
     const val AUTHENTICATION_BASIC_REALM = "neo4j.authentication.basic.realm"
     const val AUTHENTICATION_KERBEROS_TICKET = "neo4j.authentication.kerberos.ticket"
-    const val AUTHENTICATION_BEARER_TOKEN = "neo4j.authentication.bearer.token"
-    const val AUTHENTICATION_CUSTOM_PRINCIPAL = "neo4j.authentication.custom.principal"
-    const val AUTHENTICATION_CUSTOM_CREDENTIALS = "neo4j.authentication.custom.credentials"
-    const val AUTHENTICATION_CUSTOM_REALM = "neo4j.authentication.custom.realm"
-    const val AUTHENTICATION_CUSTOM_SCHEME = "neo4j.authentication.custom.scheme"
 
-    // Encryption Settings
-    @Deprecated("TODO") const val ENCRYPTION_ENABLED = "neo4j.encryption.enabled"
-    @Deprecated("TODO") const val ENCRYPTION_TRUST_STRATEGY = "neo4j.encryption.trust.strategy"
-    @Deprecated("TODO: USE A BETTER NAME")
+    const val ENCRYPTION_ENABLED = "neo4j.encryption.enabled"
+    const val ENCRYPTION_TRUST_STRATEGY = "neo4j.encryption.trust.strategy"
     const val ENCRYPTION_CA_CERTIFICATE_PATH = "neo4j.encryption.ca.certificate.path"
 
     const val CONNECTION_MAX_CONNECTION_LIFETIME_MSECS = "neo4j.connection.max.lifetime.msecs"
@@ -322,7 +308,13 @@ open class Neo4jConnectorConfig(
                     .group(ConfigGroup.CONNECTION)
                     .validator(
                         Validators.validURI(
-                            "bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"))
+                            "bolt",
+                            "bolt+routing",
+                            "bolt+s",
+                            "bolt+ssc",
+                            "neo4j",
+                            "neo4j+s",
+                            "neo4j+ssc"))
                     .build())
             .define(
                 ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, ConfigDef.Type.INT)
