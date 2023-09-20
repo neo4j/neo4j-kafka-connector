@@ -20,15 +20,10 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.collections4.MapUtils;
 
-public class RelationshipState {
-    private final Map<String, Object> properties;
+public class RelationshipState extends State {
 
     public RelationshipState(Map<String, Object> properties) {
-        this.properties = properties;
-    }
-
-    public Map<String, Object> getProperties() {
-        return properties;
+        super(properties);
     }
 
     @Override
@@ -38,17 +33,17 @@ public class RelationshipState {
 
         RelationshipState that = (RelationshipState) o;
 
-        return Objects.equals(properties, that.properties);
+        return Objects.equals(getProperties(), that.getProperties());
     }
 
     @Override
     public int hashCode() {
-        return properties != null ? properties.hashCode() : 0;
+        return getProperties() != null ? getProperties().hashCode() : 0;
     }
 
     @Override
     public String toString() {
-        return String.format("RelationshipState{properties=%s}", properties);
+        return String.format("RelationshipState{properties=%s}", getProperties());
     }
 
     public static RelationshipState fromMap(Map<?, ?> map) {

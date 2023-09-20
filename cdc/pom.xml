@@ -37,6 +37,10 @@
             <artifactId>neo4j-java-driver</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
@@ -77,6 +81,22 @@
                         <goals>
                             <goal>antlr4</goal>
                         </goals>
+                        <phase>generate-sources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>test-compile</id>
+                        <phase>none</phase>
                     </execution>
                 </executions>
             </plugin>
@@ -99,21 +119,8 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-maven-plugin</artifactId>
-                <version>${kotlin.version}</version>
-                <executions>
-                    <execution>
-                        <id>compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>test-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
+        <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
     </build>
 </project>

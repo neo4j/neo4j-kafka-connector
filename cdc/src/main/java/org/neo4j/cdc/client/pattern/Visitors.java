@@ -167,6 +167,10 @@ class Visitors {
         public static final LabelOrRelTypeVisitor INSTANCE = new LabelOrRelTypeVisitor();
 
         public String visitLabelOrRelType(PatternParser.LabelOrRelTypeContext ctx) {
+            if (ctx == null) {
+                return null;
+            }
+
             return SymbolicNameStringVisitor.INSTANCE.visitSymbolicNameString(ctx.symbolicNameString());
         }
     }

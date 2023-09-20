@@ -16,24 +16,34 @@
  */
 package org.neo4j.cdc.client.selector;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+
+import java.util.*;
+import org.jetbrains.annotations.NotNull;
+import org.neo4j.cdc.client.model.ChangeEvent;
 
 public class RelationshipNodeSelector implements Selector {
+    @NotNull
     private final Set<String> labels;
+
+    @NotNull
     private final Map<String, Object> key;
 
-    public RelationshipNodeSelector(Set<String> labels, Map<String, Object> key) {
-        this.labels = labels;
-        this.key = key;
+    public RelationshipNodeSelector() {
+        this(emptySet(), emptyMap());
     }
 
-    public Set<String> getLabels() {
+    public RelationshipNodeSelector(@NotNull Set<String> labels, @NotNull Map<String, Object> key) {
+        this.labels = Objects.requireNonNull(labels);
+        this.key = Objects.requireNonNull(key);
+    }
+
+    public @NotNull Set<String> getLabels() {
         return labels;
     }
 
-    public Map<String, Object> getKey() {
+    public @NotNull Map<String, Object> getKey() {
         return key;
     }
 
@@ -41,13 +51,45 @@ public class RelationshipNodeSelector implements Selector {
     public Map<String, Object> asMap() {
         var result = new HashMap<String, Object>();
 
-        if (labels != null && !labels.isEmpty()) {
+        if (!labels.isEmpty()) {
             result.put("labels", labels);
         }
-        if (key != null && !key.isEmpty()) {
+        if (!key.isEmpty()) {
             result.put("key", key);
         }
 
+        return result;
+    }
+
+    public boolean isEmpty() {
+        return labels.isEmpty() && key.isEmpty();
+    }
+
+    @Override
+    public boolean matches(ChangeEvent e) {
+        throw new UnsupportedOperationException("not supported on relationship node selectors");
+    }
+
+    @Override
+    public ChangeEvent applyProperties(ChangeEvent e) {
+        throw new UnsupportedOperationException("not supported on relationship node selectors");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RelationshipNodeSelector that = (RelationshipNodeSelector) o;
+
+        if (!labels.equals(that.labels)) return false;
+        return key.equals(that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = labels.hashCode();
+        result = 31 * result + key.hashCode();
         return result;
     }
 }

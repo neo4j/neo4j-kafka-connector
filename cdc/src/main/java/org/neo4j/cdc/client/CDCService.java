@@ -31,4 +31,6 @@ public interface CDCService {
     Mono<ChangeIdentifier> current();
 
     Flux<ChangeEvent> query(ChangeIdentifier from);
+
+    Flux<ChangeEvent> stream(ChangeIdentifier from);
 }

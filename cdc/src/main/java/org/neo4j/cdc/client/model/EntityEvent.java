@@ -18,7 +18,7 @@ package org.neo4j.cdc.client.model;
 
 import java.util.Objects;
 
-public abstract class EntityEvent<T> implements Event {
+public abstract class EntityEvent<T extends State> implements Event {
 
     private final String elementId;
     private final EventType eventType;

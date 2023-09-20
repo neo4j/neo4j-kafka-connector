@@ -14,16 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.cdc.client.selector;
+package org.neo4j.cdc.client.model;
 
 import java.util.Map;
-import org.neo4j.cdc.client.model.ChangeEvent;
 
-public interface Selector {
+public abstract class State {
+    private final Map<String, Object> properties;
 
-    Map<String, Object> asMap();
+    protected State(Map<String, Object> properties) {
+        this.properties = properties;
+    }
 
-    boolean matches(ChangeEvent e);
-
-    ChangeEvent applyProperties(ChangeEvent e);
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
 }

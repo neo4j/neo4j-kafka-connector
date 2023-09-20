@@ -82,7 +82,7 @@ public class CDCClientTest {
 
     @Test
     void earliest() {
-        var client = new CDCClient(driver);
+        var client = new CDCClient(driver, Duration.ZERO);
 
         StepVerifier.create(client.earliest())
                 .assertNext(cv -> assertNotNull(cv.getId()))
@@ -91,7 +91,7 @@ public class CDCClientTest {
 
     @Test
     void current() {
-        var client = new CDCClient(driver);
+        var client = new CDCClient(driver, Duration.ZERO);
 
         StepVerifier.create(client.current())
                 .assertNext(cv -> assertNotNull(cv.getId()))
@@ -100,20 +100,20 @@ public class CDCClientTest {
 
     @Test
     void changesCanBeQueried() {
-        var client = new CDCClient(driver);
+        var client = new CDCClient(driver, Duration.ZERO);
 
         try (Session session = driver.session()) {
             session.run("CREATE ()").consume();
         }
 
         StepVerifier.create(client.query(current))
-                .assertNext(System.out::println)
+                .assertNext(e -> assertThat(e).extracting(ChangeEvent::getEvent).isInstanceOf(NodeEvent.class))
                 .verifyComplete();
     }
 
     @Test
     void shouldReturnCypherTypesWithoutConversion() {
-        var client = new CDCClient(driver);
+        var client = new CDCClient(driver, Duration.ZERO);
 
         var props = new HashMap<String, Object>();
         props.put("bool", true);
@@ -149,7 +149,7 @@ public class CDCClientTest {
 
     @Test
     void nodeChangesCanBeQueried() {
-        CDCClient client = new CDCClient(driver);
+        CDCClient client = new CDCClient(driver, Duration.ZERO);
 
         try (var session = driver.session()) {
             session.run("CREATE CONSTRAINT FOR (p:Person) REQUIRE (p.first_name, p.last_name) IS NODE KEY")
@@ -221,7 +221,7 @@ public class CDCClientTest {
 
     @Test
     void relationshipChangesCanBeQueried() {
-        var client = new CDCClient(driver);
+        var client = new CDCClient(driver, Duration.ZERO);
 
         try (var session = driver.session()) {
             session.run("CREATE CONSTRAINT FOR (p:Person) REQUIRE (p.id) IS NODE KEY")

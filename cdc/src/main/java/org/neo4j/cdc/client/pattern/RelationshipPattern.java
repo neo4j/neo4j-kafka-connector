@@ -16,32 +16,42 @@
  */
 package org.neo4j.cdc.client.pattern;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector;
 import org.neo4j.cdc.client.selector.RelationshipSelector;
 import org.neo4j.cdc.client.selector.Selector;
 
 public class RelationshipPattern implements Pattern {
+    @Nullable
     private final String type;
+
+    @NotNull
     private final NodePattern start;
+
+    @NotNull
     private final NodePattern end;
+
     private final boolean bidirectional;
+
+    @NotNull
     private final Map<String, Object> keyFilters;
+
+    @NotNull
     private final Set<String> includeProperties;
+
+    @NotNull
     private final Set<String> excludeProperties;
 
     public RelationshipPattern(
-            String type,
-            NodePattern start,
-            NodePattern end,
+            @Nullable String type,
+            @NotNull NodePattern start,
+            @NotNull NodePattern end,
             boolean bidirectional,
-            Map<String, Object> keyFilters,
-            Set<String> includeProperties,
-            Set<String> excludeProperties) {
+            @NotNull Map<String, Object> keyFilters,
+            @NotNull Set<String> includeProperties,
+            @NotNull Set<String> excludeProperties) {
         this.type = type;
         this.start = start;
         this.end = end;
@@ -51,15 +61,15 @@ public class RelationshipPattern implements Pattern {
         this.excludeProperties = excludeProperties;
     }
 
-    public String getType() {
+    public @Nullable String getType() {
         return type;
     }
 
-    public NodePattern getStart() {
+    public @NotNull NodePattern getStart() {
         return start;
     }
 
-    public NodePattern getEnd() {
+    public @NotNull NodePattern getEnd() {
         return end;
     }
 
@@ -67,15 +77,15 @@ public class RelationshipPattern implements Pattern {
         return bidirectional;
     }
 
-    public Map<String, Object> getKeyFilters() {
+    public @NotNull Map<String, Object> getKeyFilters() {
         return keyFilters;
     }
 
-    public Set<String> getIncludeProperties() {
+    public @NotNull Set<String> getIncludeProperties() {
         return includeProperties;
     }
 
-    public Set<String> getExcludeProperties() {
+    public @NotNull Set<String> getExcludeProperties() {
         return excludeProperties;
     }
 
@@ -98,13 +108,25 @@ public class RelationshipPattern implements Pattern {
     @Override
     public int hashCode() {
         int result = type != null ? type.hashCode() : 0;
-        result = 31 * result + (start != null ? start.hashCode() : 0);
-        result = 31 * result + (end != null ? end.hashCode() : 0);
+        result = 31 * result + start.hashCode();
+        result = 31 * result + end.hashCode();
         result = 31 * result + (bidirectional ? 1 : 0);
-        result = 31 * result + (keyFilters != null ? keyFilters.hashCode() : 0);
-        result = 31 * result + (includeProperties != null ? includeProperties.hashCode() : 0);
-        result = 31 * result + (excludeProperties != null ? excludeProperties.hashCode() : 0);
+        result = 31 * result + keyFilters.hashCode();
+        result = 31 * result + includeProperties.hashCode();
+        result = 31 * result + excludeProperties.hashCode();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RelationshipPattern{" + "type='"
+                + type + '\'' + ", start="
+                + start + ", end="
+                + end + ", bidirectional="
+                + bidirectional + ", keyFilters="
+                + keyFilters + ", includeProperties="
+                + includeProperties + ", excludeProperties="
+                + excludeProperties + '}';
     }
 
     @NotNull
@@ -114,10 +136,10 @@ public class RelationshipPattern implements Pattern {
 
         result.add(new RelationshipSelector(
                 null,
-                null,
+                Collections.emptySet(),
                 type,
-                start != null ? new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()) : null,
-                end != null ? new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()) : null,
+                new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()),
+                new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()),
                 keyFilters,
                 includeProperties,
                 excludeProperties));
@@ -125,10 +147,10 @@ public class RelationshipPattern implements Pattern {
         if (bidirectional) {
             result.add(new RelationshipSelector(
                     null,
-                    null,
+                    Collections.emptySet(),
                     type,
-                    end != null ? new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()) : null,
-                    start != null ? new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()) : null,
+                    new RelationshipNodeSelector(end.getLabels(), end.getKeyFilters()),
+                    new RelationshipNodeSelector(start.getLabels(), start.getKeyFilters()),
                     keyFilters,
                     includeProperties,
                     excludeProperties));

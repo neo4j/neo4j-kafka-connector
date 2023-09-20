@@ -27,6 +27,9 @@ Apache Software License, Version 2.0
 BSD License
   ANTLR 4 Runtime
 
+MIT License
+  SLF4J API Module
+
 MIT No Attribution License
   reactive-streams
 

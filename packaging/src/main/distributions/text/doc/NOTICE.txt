@@ -19,6 +19,7 @@ Third-party licenses
 --------------------
 
 Apache Software License, Version 2.0
+  Apache Commons Collections
   Apache Commons Lang
   Apache FreeMarker
   connect-utils
@@ -39,11 +40,18 @@ Apache Software License, Version 2.0
   Kotlin Stdlib Jdk7
   Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
+  kotlinx-coroutines-reactive
+  kotlinx-coroutines-reactor
   Neo4j Java Driver
+  Non-Blocking Reactive Foundation for the JVM
   org.immutables.value
+
+BSD License
+  ANTLR 4 Runtime
 
 MIT License
   Checker Qual
+  SLF4J API Module
 
 MIT No Attribution License
   reactive-streams

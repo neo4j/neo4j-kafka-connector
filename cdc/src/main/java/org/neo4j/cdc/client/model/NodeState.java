@@ -21,21 +21,17 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.collections4.MapUtils;
 
-public class NodeState {
+public class NodeState extends State {
     private final List<String> labels;
-    private final Map<String, Object> properties;
 
     public NodeState(List<String> labels, Map<String, Object> properties) {
+        super(properties);
+
         this.labels = labels;
-        this.properties = properties;
     }
 
     public List<String> getLabels() {
         return labels;
-    }
-
-    public Map<String, Object> getProperties() {
-        return properties;
     }
 
     @Override
@@ -46,19 +42,19 @@ public class NodeState {
         NodeState nodeState = (NodeState) o;
 
         if (!Objects.equals(labels, nodeState.labels)) return false;
-        return Objects.equals(properties, nodeState.properties);
+        return Objects.equals(getProperties(), nodeState.getProperties());
     }
 
     @Override
     public int hashCode() {
         int result = labels != null ? labels.hashCode() : 0;
-        result = 31 * result + (properties != null ? properties.hashCode() : 0);
+        result = 31 * result + (getProperties() != null ? getProperties().hashCode() : 0);
         return result;
     }
 
     @Override
     public String toString() {
-        return String.format("NodeState{labels=%s, properties=%s}", labels, properties);
+        return String.format("NodeState{labels=%s, properties=%s}", labels, getProperties());
     }
 
     public static NodeState fromMap(Map<?, ?> map) {
