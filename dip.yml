@@ -1,0 +1,49 @@
+version: '7.5'
+
+compose:
+  files:
+    - docker/docker-compose.yml
+  project_name: neo4j-kafka-connector
+
+interaction:
+  build-package:
+    description: build connector packages
+    runner: local
+    command: >
+      sh -c "./mvnw clean package -DskipTests -pl :packaging -am -Pconfluent &&
+        rm -f ./docker/plugins/* && 
+        cp ./packaging/target/*.jar ./docker/plugins"
+
+  stop-connect:
+    description: stops connect container
+    service: connect
+    compose:
+      method: down
+      service: connect
+      run_options: [ volumes, rmi local ]
+
+  start-connect:
+    description: starts connect container
+    service: connect
+    compose:
+      method: up
+      service: connect
+      run_options: [ detach ]
+
+  relaunch:
+    description: builds package and re-starts connect container
+    runner: local
+    command: >
+      sh -c "dip build-package && dip stop-connect && dip start-connect"
+
+  cypher-shell:
+    description: run interactive cypher-shell inside neo4j container
+    service: neo4j
+    command: cypher-shell -a neo4j://neo4j:7687 -u neo4j -p password
+    compose:
+      method: exec
+
+provision:
+  - dip build-package
+  - dip compose down --rmi local
+  - dip compose up -d neo4j zookeeper broker schema-registry control-center
