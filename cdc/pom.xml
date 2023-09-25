@@ -24,22 +24,12 @@
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <reactive-streams.version>1.0.4</reactive-streams.version>
         <reactor.version>3.5.10</reactor.version>
         <slf4j-api.version>2.0.9</slf4j-api.version>
         <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.38.0</spotless-maven-plugin.version>
         <testcontainers.version>1.19.0</testcontainers.version>
     </properties>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.reactivestreams</groupId>
-                <artifactId>reactive-streams</artifactId>
-                <version>${reactive-streams.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>io.projectreactor</groupId>
