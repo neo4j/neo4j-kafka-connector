@@ -113,7 +113,7 @@
                     <failIfMissing>true</failIfMissing>
                     <plainTextReport>true</plainTextReport>
                     <prependText>${licensing.prepend.text}</prependText>
-                    <excludedGroups>^((org.neo4j.connectors.kafka){1})$</excludedGroups>
+                    <excludedGroups>^((org.neo4j.cdc.client){1})$</excludedGroups>
                     <includedScopes>compile,runtime</includedScopes>
                 </configuration>
                 <dependencies>
