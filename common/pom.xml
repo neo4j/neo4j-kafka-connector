@@ -12,7 +12,7 @@
     <name>common</name>
     <description>Neo4j Connector for Kafka - Common</description>
     <properties>
-        <connect-utils.version>0.7.173</connect-utils.version>
+        <connect-utils.version>0.7.177</connect-utils.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
     </properties>
     <dependencies>

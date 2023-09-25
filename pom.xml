@@ -33,38 +33,49 @@
         <module>source</module>
         <module>sink</module>
         <module>packaging</module>
+        <module>cdc</module>
     </modules>
     <properties>
-        <avro.version>1.8.2</avro.version>
+        <annotations.version>24.0.1</annotations.version>
+        <assertj-core.version>3.24.2</assertj-core.version>
+        <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.0</awaitility.version>
-        <commons-lang3.version>3.12.0</commons-lang3.version>
+        <commons-collections4.version>4.4</commons-collections4.version>
+        <commons-lang3.version>3.13.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <jackson.version>2.13.4</jackson.version>
+        <jackson.version>2.15.2</jackson.version>
         <java.version>11</java.version>
-        <junit-jupiter.version>5.9.0</junit-jupiter.version>
-        <junit.version>4.13.2</junit.version>
+        <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <kafka-avro-serializer.version>5.2.2</kafka-avro-serializer.version>
-        <kafka.version>2.4.1</kafka.version>
+        <kafka.version>2.6.3</kafka.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
-        <kotlin.coroutines.version>1.6.4</kotlin.coroutines.version>
-        <kotlin.version>1.7.10</kotlin.version>
-        <license-maven-plugin.version>4.1</license-maven-plugin.version>
+        <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
+        <kotlin.version>1.9.0</kotlin.version>
+        <license-maven-plugin.version>4.2</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/licensing/notice-asl-prefix.txt</licensing.prepend.text>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
+        <maven-enforcer-plugin.version>3.3.0</maven-enforcer-plugin.version>
         <maven-failsafe-plugin.version>3.1.2</maven-failsafe-plugin.version>
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
-        <mockito.version>4.8.0</mockito.version>
+        <mockito.version>5.5.0</mockito.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <slf4j-api.version>1.7.36</slf4j-api.version>
-        <sortpom-maven-plugin.version>3.1.3</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.22.8</spotless-maven-plugin.version>
-        <testcontainers.version>1.18.3</testcontainers.version>
+        <reactor.version>2022.0.11</reactor.version>
+        <slf4j-api.version>2.0.9</slf4j-api.version>
+        <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
+        <spotless-maven-plugin.version>2.38.0</spotless-maven-plugin.version>
+        <testcontainers.version>1.19.0</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-bom</artifactId>
+                <version>${reactor.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-bom</artifactId>
@@ -117,6 +128,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${commons-collections4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons-lang3.version}</version>
             </dependency>
@@ -124,6 +140,11 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj-core.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
@@ -134,6 +155,11 @@
                 <groupId>org.hamcrest</groupId>
                 <artifactId>hamcrest</artifactId>
                 <version>${hamcrest.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>${annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.neo4j.driver</groupId>
@@ -169,7 +195,7 @@
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>org.neo4j.connectors.kafka</groupId>
+                            <groupId>org.neo4j.connectors</groupId>
                             <artifactId>build-resources</artifactId>
                             <version>1.0.0-SNAPSHOT</version>
                         </dependency>
@@ -199,28 +225,10 @@
         </pluginManagement>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
+                <extensions>true</extensions>
                 <configuration>
                     <jvmTarget>${java.version}</jvmTarget>
                 </configuration>
@@ -236,6 +244,25 @@
                         <goals>
                             <goal>test-compile</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
                     </execution>
                 </executions>
             </plugin>
@@ -280,6 +307,7 @@
                             <header>/headers/ASL-2-header.txt</header>
                             <includes>
                                 <include>src/**/*.kt</include>
+                                <include>src/**/*.java</include>
                             </includes>
                         </licenseSet>
                     </licenseSets>
@@ -289,7 +317,7 @@
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>org.neo4j.connectors.kafka</groupId>
+                        <groupId>org.neo4j.connectors</groupId>
                         <artifactId>build-resources</artifactId>
                         <version>1.0.0-SNAPSHOT</version>
                     </dependency>
@@ -350,6 +378,13 @@
                             <maxWidth>100</maxWidth>
                         </ktfmt>
                     </kotlin>
+                    <java>
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                        </includes>
+                        <palantirJavaFormat/>
+                    </java>
                 </configuration>
                 <executions>
                     <execution>
@@ -373,6 +408,9 @@
                         <phase>validate</phase>
                         <configuration>
                             <rules>
+                                <requireMavenVersion>
+                                    <version>3.6</version>
+                                </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>11</version>
                                 </requireJavaVersion>
