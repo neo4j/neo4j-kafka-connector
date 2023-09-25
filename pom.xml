@@ -36,12 +36,12 @@
         <module>cdc</module>
     </modules>
     <properties>
-        <annotations.version>23.0.0</annotations.version>
+        <annotations.version>24.0.1</annotations.version>
         <assertj-core.version>3.24.2</assertj-core.version>
-        <avro.version>1.11.2</avro.version>
+        <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.0</awaitility.version>
         <commons-collections4.version>4.4</commons-collections4.version>
-        <commons-lang3.version>3.12.0</commons-lang3.version>
+        <commons-lang3.version>3.13.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
         <jackson.version>2.15.2</jackson.version>
         <java.version>11</java.version>
@@ -49,23 +49,23 @@
         <kafka-avro-serializer.version>5.2.2</kafka-avro-serializer.version>
         <kafka.version>2.6.3</kafka.version>
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
-        <kotlin.coroutines.version>1.7.2</kotlin.coroutines.version>
+        <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
         <kotlin.version>1.9.0</kotlin.version>
-        <license-maven-plugin.version>4.1</license-maven-plugin.version>
+        <license-maven-plugin.version>4.2</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/licensing/notice-asl-prefix.txt</licensing.prepend.text>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
-        <maven-enforcer-plugin.version>3.1.0</maven-enforcer-plugin.version>
+        <maven-enforcer-plugin.version>3.3.0</maven-enforcer-plugin.version>
         <maven-failsafe-plugin.version>3.1.2</maven-failsafe-plugin.version>
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
-        <mockito.version>5.4.0</mockito.version>
+        <mockito.version>5.5.0</mockito.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <reactor.version>2022.0.9</reactor.version>
-        <slf4j-api.version>2.0.7</slf4j-api.version>
-        <sortpom-maven-plugin.version>3.1.3</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.22.8</spotless-maven-plugin.version>
-        <testcontainers.version>1.18.3</testcontainers.version>
+        <reactor.version>2022.0.11</reactor.version>
+        <slf4j-api.version>2.0.9</slf4j-api.version>
+        <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
+        <spotless-maven-plugin.version>2.38.0</spotless-maven-plugin.version>
+        <testcontainers.version>1.19.0</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -195,7 +195,7 @@
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>org.neo4j.connectors.kafka</groupId>
+                            <groupId>org.neo4j.connectors</groupId>
                             <artifactId>build-resources</artifactId>
                             <version>1.0.0-SNAPSHOT</version>
                         </dependency>
@@ -317,7 +317,7 @@
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>org.neo4j.connectors.kafka</groupId>
+                        <groupId>org.neo4j.connectors</groupId>
                         <artifactId>build-resources</artifactId>
                         <version>1.0.0-SNAPSHOT</version>
                     </dependency>
