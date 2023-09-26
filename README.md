@@ -13,15 +13,25 @@ don't be shy to send a Pull Request.
 
 ## Development & Contributions
 
+### Internal Maven Repository
+
+For the build to succeed, it needs the package [build-resources](https://github.com/neo4j/connectors-build-resources)
+that is being published to Github Packages.
+In order to access it, create a personal access token in Github and give it a permission to read packages.
+Then add the following content into `settings/servers` inside ~/.m2/settings.xml.
+
+```xml
+
+<server>
+    <id>github</id>
+    <username>your-github-user-name</username>
+    <password>your-personal-access-token</password>
+</server>
+```
+
 ### Build locally
 
-First, build and install the `build-resources` module.
-
-```
-mvn clean install -f build-resources/pom.xml
-```
-
-Then, you can build and package the project using;
+You can build and package the project using;
 
 ```
 mvn clean package

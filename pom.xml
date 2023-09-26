@@ -33,13 +33,13 @@
         <module>source</module>
         <module>sink</module>
         <module>packaging</module>
-        <module>cdc</module>
     </modules>
     <properties>
         <annotations.version>24.0.1</annotations.version>
         <assertj-core.version>3.24.2</assertj-core.version>
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.0</awaitility.version>
+        <build-resources.version>1.0.0</build-resources.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.13.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
@@ -178,6 +178,12 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/neo4j/connectors-build-resources</url>
+        </pluginRepository>
+    </pluginRepositories>
     <build>
         <pluginManagement>
             <plugins>
@@ -197,7 +203,7 @@
                         <dependency>
                             <groupId>org.neo4j.connectors</groupId>
                             <artifactId>build-resources</artifactId>
-                            <version>1.0.0-SNAPSHOT</version>
+                            <version>${build-resources.version}</version>
                         </dependency>
                     </dependencies>
                     <executions>
@@ -319,7 +325,7 @@
                     <dependency>
                         <groupId>org.neo4j.connectors</groupId>
                         <artifactId>build-resources</artifactId>
-                        <version>1.0.0-SNAPSHOT</version>
+                        <version>${build-resources.version}</version>
                     </dependency>
                 </dependencies>
                 <executions>
