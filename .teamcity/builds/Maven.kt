@@ -11,7 +11,7 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
       this.id(id.toId())
       this.name = name
 
-      // we uploaded a custom settings.xml file in Teamcity UI, under connectors project
+      // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
       // with the following content, so we set the relevant environment variables here.
 
       /*
@@ -22,8 +22,8 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
           <servers>
             <server>
               <id>github</id>
-              <username>${PACKAGES_USERNAME}</username>
-              <password>${PACKAGES_PASSWORD}</password>
+              <username>${env.PACKAGES_USERNAME}</username>
+              <password>${env.PACKAGES_PASSWORD}</password>
             </server>
           </servers>
       </settings>
@@ -38,6 +38,9 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
         maven {
           this.goals = goals
           this.runnerArgs = args
+
+          // this is the settings name we uploaded to Connectors project
+          userSettingsSelection = "github"
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
           dockerImage = "eclipse-temurin:11-jdk"
