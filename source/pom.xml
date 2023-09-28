@@ -11,15 +11,18 @@
     <packaging>jar</packaging>
     <name>source</name>
     <description>Neo4j Connector for Kafka - Source</description>
+    <properties>
+        <cdc.version>1.0.0</cdc.version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-reactor</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.neo4j.connectors.kafka</groupId>
+            <groupId>org.neo4j.connectors</groupId>
             <artifactId>cdc</artifactId>
-            <version>${project.version}</version>
+            <version>${cdc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.connectors.kafka</groupId>

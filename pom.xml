@@ -178,6 +178,12 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/neo4j/neo4j-cdc-client</url>
+        </repository>
+    </repositories>
     <pluginRepositories>
         <pluginRepository>
             <id>github</id>
