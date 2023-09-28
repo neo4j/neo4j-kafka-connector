@@ -13,6 +13,15 @@
     <description>Neo4j Connector for Kafka - Source</description>
     <dependencies>
         <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-reactor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.connectors.kafka</groupId>
+            <artifactId>cdc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.connectors.kafka</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
@@ -34,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test</artifactId>
+            <artifactId>kotlin-test-junit</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

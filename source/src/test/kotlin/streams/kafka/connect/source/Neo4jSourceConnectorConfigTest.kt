@@ -29,7 +29,7 @@ class Neo4jSourceConnectorConfigTest {
         assertFailsWith(ConfigException::class) {
           val originals =
               mapOf(
-                  Neo4jSourceConnectorConfig.SOURCE_TYPE to SourceType.LABELS.toString(),
+                  Neo4jSourceConnectorConfig.SOURCE_TYPE to "labels",
                   Neo4jSourceConnectorConfig.TOPIC to "topic",
                   Neo4jSourceConnectorConfig.STREAMING_FROM to StreamingFrom.NOW.toString(),
                   Neo4jSourceConnectorConfig.STREAMING_PROPERTY to "timestamp")

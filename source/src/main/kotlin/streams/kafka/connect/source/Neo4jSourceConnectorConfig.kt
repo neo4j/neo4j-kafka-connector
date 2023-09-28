@@ -17,17 +17,17 @@
 package streams.kafka.connect.source
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
-import com.github.jcustenborder.kafka.connect.utils.config.ValidEnum
+import com.github.jcustenborder.kafka.connect.utils.config.validators.Validators
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
+import org.neo4j.cdc.client.pattern.Pattern
 import streams.kafka.connect.common.ConnectorType
 import streams.kafka.connect.common.Neo4jConnectorConfig
 import streams.kafka.connect.utils.PropertiesUtil
 
 enum class SourceType {
   QUERY,
-  LABELS,
-  RELATIONSHIP
+  CDC
 }
 
 enum class StreamingFrom {
@@ -47,14 +47,11 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
 
   val topic: String = getString(TOPIC)
 
-  val labels: Array<String>
-  val relationship: String
   val query: String
-
-  val partitions: List<Int> = (1..getInt(PARTITIONS)).toList()
+  val cdcPatterns: List<String>
 
   val streamingFrom: StreamingFrom = StreamingFrom.valueOf(getString(STREAMING_FROM))
-  val streamingProperty: String = getString(STREAMING_PROPERTY)
+  val streamingProperty: String
 
   val sourceType: SourceType = SourceType.valueOf(getString(SOURCE_TYPE))
 
@@ -65,31 +62,44 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
   init {
     when (sourceType) {
       SourceType.QUERY -> {
+        cdcPatterns = emptyList()
+
         query = getString(SOURCE_TYPE_QUERY)
         if (query.isNullOrBlank()) {
           throw ConfigException("You need to define: $SOURCE_TYPE_QUERY")
         }
-        labels = emptyArray()
-        relationship = ""
+        streamingProperty = getString(STREAMING_PROPERTY)
       }
-      else -> {
-        throw ConfigException("Supported source query types are: ${SourceType.QUERY}")
+      SourceType.CDC -> {
+        query = ""
+
+        cdcPatterns = getList(SOURCE_TYPE_CDC_PATTERNS).toList()
+        val invalid =
+            cdcPatterns.mapNotNull {
+              try {
+                Pattern.parse(it)
+                null
+              } catch (e: Throwable) {
+                "'${it}': ${e.message}"
+              }
+            }
+        if (invalid.isNotEmpty()) {
+          throw ConfigException("Invalid CDC patterns ${invalid.joinToString()}")
+        }
+        streamingProperty = "id" // TODO: maybe remove this
       }
     }
   }
 
-  fun sourcePartition() =
+  fun sourcePartition(): Map<String, Any> =
       when (sourceType) {
         SourceType.QUERY ->
             mapOf(
                 "database" to this.database, "type" to "query", "query" to query, "partition" to 1)
-        else ->
-            throw UnsupportedOperationException(
-                "Supported source query types are: ${SourceType.QUERY}")
+        SourceType.CDC -> mapOf("database" to this.database, "type" to "cdc", "partition" to 1)
       }
 
   companion object {
-    const val PARTITIONS = "partitions"
     const val TOPIC = "topic"
     const val STREAMING_FROM = "neo4j.streaming.from"
     const val ENFORCE_SCHEMA = "neo4j.enforce.schema"
@@ -97,8 +107,7 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
     const val STREAMING_POLL_INTERVAL = "neo4j.streaming.poll.interval.msecs"
     const val SOURCE_TYPE = "neo4j.source.type"
     const val SOURCE_TYPE_QUERY = "neo4j.source.query"
-    const val SOURCE_TYPE_LABELS = "neo4j.source.labels"
-    const val SOURCE_TYPE_RELATIONSHIP = "neo4j.source.relationship"
+    const val SOURCE_TYPE_CDC_PATTERNS = "neo4j.source.cdc.patterns"
 
     fun config(): ConfigDef =
         Neo4jConnectorConfig.config()
@@ -130,25 +139,18 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
                     .validator(ConfigDef.NonEmptyString())
                     .build())
             .define(
-                ConfigKeyBuilder.of(PARTITIONS, ConfigDef.Type.INT)
-                    .documentation(PropertiesUtil.getProperty(PARTITIONS))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(1)
-                    .validator(ConfigDef.Range.atLeast(1))
-                    .build())
-            .define(
                 ConfigKeyBuilder.of(STREAMING_FROM, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(STREAMING_FROM))
                     .importance(ConfigDef.Importance.HIGH)
                     .defaultValue(StreamingFrom.NOW.toString())
-                    .validator(ValidEnum.of(StreamingFrom::class.java))
+                    .validator(Validators.validEnum(StreamingFrom::class.java))
                     .build())
             .define(
                 ConfigKeyBuilder.of(SOURCE_TYPE, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(SOURCE_TYPE))
                     .importance(ConfigDef.Importance.HIGH)
                     .defaultValue(SourceType.QUERY.toString())
-                    .validator(ValidEnum.of(SourceType::class.java))
+                    .validator(Validators.validEnum(SourceType::class.java))
                     .build())
             .define(
                 ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING)
@@ -156,5 +158,11 @@ class Neo4jSourceConnectorConfig(originals: Map<*, *>) :
                     .importance(ConfigDef.Importance.HIGH)
                     .defaultValue("")
                     .build())
+            .define(
+                ConfigKeyBuilder.of(SOURCE_TYPE_CDC_PATTERNS, ConfigDef.Type.LIST)
+                    .documentation(PropertiesUtil.getProperty(SOURCE_TYPE_CDC_PATTERNS))
+                    .importance(ConfigDef.Importance.HIGH)
+                    .defaultValue("(),()-[]->()")
+                    .build()) // TODO: add validator for patterns
   }
 }
