@@ -69,8 +69,7 @@ object KafkaValidationUtils {
             .flatMap { it.entries() }
             .find { it.name() == "auto.create.topics.enable" }
             ?.value()
-            ?.toBoolean()
-            ?: false
+            ?.toBoolean() ?: false
       } catch (e: Exception) {
         false
       }
