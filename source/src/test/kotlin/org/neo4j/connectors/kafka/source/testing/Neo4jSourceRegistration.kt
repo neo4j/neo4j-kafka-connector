@@ -27,16 +27,16 @@ import kotlin.streams.asSequence
 import streams.kafka.connect.source.StreamingFrom
 
 data class Neo4jSourceRegistration(
-  private val topic: String,
-  private val neo4jUri: String,
-  private val neo4jUser: String = "neo4j",
-  private val neo4jPassword: String,
-  private val pollInterval: Duration = Duration.ofMillis(5000),
-  private val enforceSchema: Boolean = true,
-  private val streamingProperty: String,
-  private val streamingFrom: StreamingFrom,
-  private val streamingQuery: String,
-  private val schemaControlRegistry: String
+    private val topic: String,
+    private val neo4jUri: String,
+    private val neo4jUser: String = "neo4j",
+    private val neo4jPassword: String,
+    private val pollInterval: Duration = Duration.ofMillis(5000),
+    private val enforceSchema: Boolean = true,
+    private val streamingProperty: String,
+    private val streamingFrom: StreamingFrom,
+    private val streamingQuery: String,
+    private val schemaControlRegistry: String
 ) {
 
   private val name: String = randomized("Neo4jSourceConnector")

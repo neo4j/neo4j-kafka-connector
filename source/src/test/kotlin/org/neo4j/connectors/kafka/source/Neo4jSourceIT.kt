@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.source
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import java.lang.IllegalArgumentException
 import java.time.Duration
 import java.util.*
 import org.apache.avro.generic.GenericRecord
@@ -28,13 +29,13 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.connectors.kafka.source.testing.ConsumerAssertions.Companion.assertThat
 import org.neo4j.connectors.kafka.source.testing.Neo4jSource
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import streams.kafka.connect.source.StreamingFrom
-import streams.kafka.connect.source.testing.ConsumerAssertions.Companion.assertThat
 
 class Neo4jSourceIT {
 
@@ -74,7 +75,8 @@ class Neo4jSourceIT {
       neo4jPassword = NEO4J_PASSWORD,
       streamingProperty = "timestamp",
       streamingFrom = StreamingFrom.ALL,
-      streamingQuery = "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
+      streamingQuery =
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
   )
   @Test
   fun `reads latest changes from Neo4j source`(testInfo: TestInfo) {
@@ -99,11 +101,19 @@ class Neo4jSourceIT {
 
     assertThat(consumer)
         .awaitingAtMost(Duration.ofSeconds(30))
-        .hasReceivedValues(
-            { value -> value.asMap().filterKeys { k -> k != "timestamp" } },
-            mapOf("name" to "jane", "surname" to "doe", "execId" to executionId),
-            mapOf("name" to "john", "surname" to "doe", "execId" to executionId),
-            mapOf("name" to "mary", "surname" to "doe", "execId" to executionId),
+        .hasReceivedValuesVerifying(
+            { value ->
+              value.asMap().excludingKeys("timestamp") ==
+                  mapOf("name" to "jane", "surname" to "doe", "execId" to executionId)
+            },
+            { value ->
+              value.asMap().excludingKeys("timestamp") ==
+                  mapOf("name" to "john", "surname" to "doe", "execId" to executionId)
+            },
+            { value ->
+              value.asMap().excludingKeys("timestamp") ==
+                  mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
+            },
         )
   }
 
@@ -115,8 +125,7 @@ class Neo4jSourceIT {
     val properties = Properties()
     properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BROKER_HOST_EXTERNAL)
     properties.setProperty(
-        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, SCHEMA_CONTROL_REGISTRY_EXTERNAL
-    )
+        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, SCHEMA_CONTROL_REGISTRY_EXTERNAL)
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
         StringDeserializer::class.java.getName(),
@@ -136,4 +145,18 @@ class Neo4jSourceIT {
 fun GenericRecord.asMap(): Map<String, String> {
   // FIXME: properly convert values
   return this.schema.fields.associate { field -> field.name() to this.get(field.name()).toString() }
+}
+
+/**
+ * Filters out all specified keys from map
+ * @throws IllegalArgumentException if any of the specified keys are not part of this map set of keys
+ */
+fun <K, V> Map<K, V>.excludingKeys(vararg keys: K): Map<K, V> {
+  val missing = keys.filter { !this.keys.contains(it) }
+  if (missing.isNotEmpty()) {
+    throw IllegalArgumentException(
+        "Cannot exclude keys ${missing.joinToString()}: they are missing from map $this")
+  }
+  val exclusions = setOf(*keys)
+  return this.filterKeys { !exclusions.contains(it) }
 }

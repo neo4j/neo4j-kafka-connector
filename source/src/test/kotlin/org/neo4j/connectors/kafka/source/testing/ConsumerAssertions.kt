@@ -14,12 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.source.testing
+package org.neo4j.connectors.kafka.source.testing
 
 import java.time.Duration
+import java.util.function.Predicate
 import kotlin.math.min
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.awaitility.Awaitility.await
+import org.awaitility.core.ConditionTimeoutException
 
 class ConsumerAssertions<K, V>(private val consumer: KafkaConsumer<K, V>) {
 
@@ -30,15 +32,33 @@ class ConsumerAssertions<K, V>(private val consumer: KafkaConsumer<K, V>) {
     return this
   }
 
-  fun <T> hasReceivedValues(mapper: (V) -> T, vararg messages: T): ConsumerAssertions<K, V> {
-    if (messages.isEmpty()) {
-      throw AssertionError("expected at least 1 expected received message but got none")
+  /**
+   * Verifies that the provided predicates pass for each of the corresponding actual messages. This
+   * assertion only keeps the last _n_ received messages, where _n_ corresponds to the number of
+   * predicates. The first predicate applies to the first message, the second predicate to the
+   * second message, etc. The assertion will fail if:
+   * - any of the predicate fails
+   * - the number of predicates exceeds the number of actual messages The verification is retried
+   *   until it succeeds or the provided (or default) timeout is reached.
+   */
+  fun hasReceivedValuesVerifying(vararg messagePredicates: Predicate<V>): ConsumerAssertions<K, V> {
+    if (messagePredicates.isEmpty()) {
+      throw AssertionError("expected at least 1 expected message predicate but got none")
     }
-    val records = RingBuffer<T>(messages.size)
-    await().atMost(timeout).until {
-      // TODO: handle small timeout values
-      consumer.poll(timeout.dividedBy(5)).forEach { records.add(mapper(it.value())) }
-      messages.toList() == records.toList()
+    val receivedMessages = RingBuffer<V>(messagePredicates.size)
+    try {
+      await().atMost(timeout).until {
+        // TODO: handle small timeout values
+        consumer.poll(timeout.dividedBy(5)).forEach { receivedMessages.add(it.value()) }
+        val messages = receivedMessages.toList()
+        messages.size == messagePredicates.size &&
+            messagePredicates.foldIndexed(true) { i, prev, predicate ->
+              prev && predicate.test(messages[i])
+            }
+      }
+    } catch (e: ConditionTimeoutException) {
+      throw AssertionError(
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${messagePredicates.size} predicate(s) on received messages")
     }
     return this
   }
