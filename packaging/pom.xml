@@ -78,8 +78,8 @@
                                 <descriptor>src/main/assemblies/kafka-jar.xml</descriptor>
                                 <descriptor>src/main/assemblies/kafka-zip.xml</descriptor>
                             </descriptors>
-                            <appendAssemblyId>true</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-neo4j-${project.version}</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>neo4j-kafka-connect-neo4j-${project.version}-kc-oss</finalName>
                         </configuration>
                     </execution>
                 </executions>
