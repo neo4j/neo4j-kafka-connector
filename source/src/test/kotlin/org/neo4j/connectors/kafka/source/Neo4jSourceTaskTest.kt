@@ -156,9 +156,10 @@ class Neo4jSourceTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
     val totalRecords = 10
     val expected = insertRecords(totalRecords, true)
+
+    task.start(props)
 
     val list = mutableListOf<SourceRecord>()
     await().atMost(60, TimeUnit.SECONDS).until {
@@ -180,9 +181,10 @@ class Neo4jSourceTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
     val totalRecords = 10
     val expected = insertRecords(totalRecords)
+
+    task.start(props)
 
     val list = mutableListOf<SourceRecord>()
     await().atMost(60, TimeUnit.SECONDS).until {
