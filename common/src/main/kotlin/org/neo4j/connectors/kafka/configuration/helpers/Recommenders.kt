@@ -16,12 +16,23 @@
  */
 package org.neo4j.connectors.kafka.configuration.helpers
 
-import java.util.Objects
 import java.util.function.Predicate
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 
 object Recommenders {
+
+  fun and(vararg recommenders: ConfigDef.Recommender): ConfigDef.Recommender {
+    return object : ConfigDef.Recommender {
+      override fun validValues(name: String?, parsedConfig: Map<String, Any>?): List<Any> =
+          recommenders.flatMap { it.validValues(name, parsedConfig) }
+
+      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
+        return recommenders.all { it.visible(name, parsedConfig) }
+      }
+    }
+  }
+
   fun <T : Enum<T>> enum(cls: Class<T>, vararg exclude: T): ConfigDef.Recommender {
     val values = cls.enumConstants.filterNot { exclude.contains(it) }.map { it.name }
 
@@ -39,7 +50,7 @@ object Recommenders {
     }
   }
 
-  fun visibleIf(dependent: String, value: Any): ConfigDef.Recommender {
+  fun visibleIf(dependent: String, valueMatcher: Predicate<Any?>): ConfigDef.Recommender {
     return object : ConfigDef.Recommender {
       override fun validValues(
           name: String?,
@@ -48,7 +59,7 @@ object Recommenders {
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
         val dependentValue = parsedConfig?.getValue(dependent)
-        return Objects.equals(value, dependentValue)
+        return valueMatcher.test(dependentValue)
       }
     }
   }

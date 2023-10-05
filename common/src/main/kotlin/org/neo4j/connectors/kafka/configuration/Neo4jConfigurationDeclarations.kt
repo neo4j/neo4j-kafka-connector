@@ -18,10 +18,12 @@ package org.neo4j.connectors.kafka.configuration
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import java.net.URI
+import java.util.function.Predicate
 import kotlin.time.Duration.Companion.milliseconds
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
+import org.apache.kafka.common.config.ConfigException
 import org.neo4j.connectors.kafka.configuration.ConfigurationGroup.ADVANCED
 import org.neo4j.connectors.kafka.configuration.ConfigurationGroup.CONNECTION
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
@@ -78,7 +80,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.BASIC.toString()))
+                        Predicate.isEqual(AuthenticationType.BASIC.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -92,7 +94,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.BASIC.toString()))
+                        Predicate.isEqual(AuthenticationType.BASIC.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -106,7 +108,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.BASIC.toString()))
+                        Predicate.isEqual(AuthenticationType.BASIC.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -120,7 +122,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.KERBEROS.toString()))
+                        Predicate.isEqual(AuthenticationType.KERBEROS.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -134,7 +136,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.BEARER.toString()))
+                        Predicate.isEqual(AuthenticationType.BEARER.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -148,7 +150,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.CUSTOM.toString()))
+                        Predicate.isEqual(AuthenticationType.CUSTOM.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -163,7 +165,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.CUSTOM.toString()))
+                        Predicate.isEqual(AuthenticationType.CUSTOM.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -177,7 +179,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.CUSTOM.toString()))
+                        Predicate.isEqual(AuthenticationType.CUSTOM.toString())))
                 .build())
         .define(
             ConfigKeyBuilder.of(
@@ -191,7 +193,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                 .recommender(
                     Recommenders.visibleIf(
                         Neo4jConfiguration.AUTHENTICATION_TYPE,
-                        AuthenticationType.CUSTOM.toString()))
+                        Predicate.isEqual(AuthenticationType.CUSTOM.toString())))
                 .build())
 
 fun ConfigDef.defineEncryptionSettings(): ConfigDef =
@@ -203,23 +205,18 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                 .importance(Importance.LOW)
                 .dependents(Neo4jConfiguration.URI)
                 .recommender(
-                    object : ConfigDef.Recommender {
-                      override fun validValues(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): MutableList<Any> = mutableListOf()
-
-                      override fun visible(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): Boolean =
-                          parsedConfig
-                              ?.get(Neo4jConfiguration.URI)
-                              .toString()
-                              .split(',')
-                              .map { URI(it) }
-                              .any { it.scheme in arrayOf("bolt", "neo4j") }
-                    })
+                    Recommenders.visibleIf(
+                        Neo4jConfiguration.URI,
+                        object : Predicate<Any?> {
+                          override fun test(t: Any?): Boolean {
+                            return when (t) {
+                              null -> false
+                              is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
+                              is List<*> -> t.any { test(it) }
+                              else -> throw ConfigException("Must be a String or a List")
+                            }
+                          }
+                        }))
                 .defaultValue(false)
                 .build())
         .define(
@@ -232,24 +229,22 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                 .dependents(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
                 .validator(Validators.enum(Strategy::class.java))
                 .recommender(
-                    object : ConfigDef.Recommender {
-                      override fun validValues(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): MutableList<Any> = Strategy.entries.toMutableList()
-
-                      override fun visible(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): Boolean =
-                          parsedConfig
-                              ?.get(Neo4jConfiguration.URI)
-                              .toString()
-                              .split(',')
-                              .map { URI(it) }
-                              .any { it.scheme in arrayOf("bolt", "neo4j") } &&
-                              true == parsedConfig?.get(Neo4jConfiguration.SECURITY_ENCRYPTED)
-                    })
+                    Recommenders.and(
+                        Recommenders.enum(Strategy::class.java),
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.URI,
+                            object : Predicate<Any?> {
+                              override fun test(t: Any?): Boolean {
+                                return when (t) {
+                                  null -> false
+                                  is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
+                                  is List<*> -> t.any { test(it) }
+                                  else -> throw ConfigException("Must be a String or a List")
+                                }
+                              }
+                            }),
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true))))
                 .defaultValue(Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES.toString())
                 .build())
         .define(
@@ -264,24 +259,21 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                 .importance(Importance.LOW)
                 .dependents(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
                 .recommender(
-                    object : ConfigDef.Recommender {
-                      override fun validValues(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): MutableList<Any> = mutableListOf(true, false)
-
-                      override fun visible(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): Boolean =
-                          parsedConfig
-                              ?.get(Neo4jConfiguration.URI)
-                              .toString()
-                              .split(',')
-                              .map { URI(it) }
-                              .any { it.scheme in arrayOf("bolt", "neo4j") } &&
-                              true == parsedConfig?.get(Neo4jConfiguration.SECURITY_ENCRYPTED)
-                    })
+                    Recommenders.and(
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.URI,
+                            object : Predicate<Any?> {
+                              override fun test(t: Any?): Boolean {
+                                return when (t) {
+                                  null -> false
+                                  is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
+                                  is List<*> -> t.any { test(it) }
+                                  else -> throw ConfigException("Must be a String or a List")
+                                }
+                              }
+                            }),
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true))))
                 .defaultValue(true)
                 .build())
         .define(
@@ -296,26 +288,25 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                     Neo4jConfiguration.SECURITY_TRUST_STRATEGY)
                 .validator(Validators.or(Validators.blank(), Validators.file()))
                 .recommender(
-                    object : ConfigDef.Recommender {
-                      override fun validValues(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): MutableList<Any> = mutableListOf()
-
-                      override fun visible(
-                          name: String?,
-                          parsedConfig: MutableMap<String, Any>?
-                      ): Boolean =
-                          parsedConfig
-                              ?.get(Neo4jConfiguration.URI)
-                              .toString()
-                              .split(',')
-                              .map { URI(it) }
-                              .any { it.scheme in arrayOf("bolt", "neo4j") } &&
-                              true == parsedConfig?.get(Neo4jConfiguration.SECURITY_ENCRYPTED) &&
-                              Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString() ==
-                                  parsedConfig[Neo4jConfiguration.SECURITY_TRUST_STRATEGY]
-                    })
+                    Recommenders.and(
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.URI,
+                            object : Predicate<Any?> {
+                              override fun test(t: Any?): Boolean {
+                                return when (t) {
+                                  null -> false
+                                  is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
+                                  is List<*> -> t.any { test(it) }
+                                  else -> throw ConfigException("Must be a String or a List")
+                                }
+                              }
+                            }),
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true)),
+                        Recommenders.visibleIf(
+                            Neo4jConfiguration.SECURITY_TRUST_STRATEGY,
+                            Predicate.isEqual(
+                                Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString()))))
                 .defaultValue("")
                 .build())
 

@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.source
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
+import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -161,14 +162,16 @@ class SourceConfiguration(originals: Map<*, *>) :
                     .documentation(PropertiesUtil.getProperty(QUERY))
                     .importance(ConfigDef.Importance.HIGH)
                     .dependents(STRATEGY)
-                    .recommender(Recommenders.visibleIf(STRATEGY, SourceType.QUERY.name))
+                    .recommender(
+                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
                     .build())
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(QUERY_STREAMING_PROPERTY))
                     .importance(ConfigDef.Importance.HIGH)
                     .dependents(STRATEGY)
-                    .recommender(Recommenders.visibleIf(STRATEGY, SourceType.QUERY.name))
+                    .recommender(
+                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
                     .defaultValue("")
                     .build())
             .define(
@@ -176,7 +179,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                     .documentation(PropertiesUtil.getProperty(QUERY_POLL_INTERVAL))
                     .importance(ConfigDef.Importance.HIGH)
                     .dependents(STRATEGY)
-                    .recommender(Recommenders.visibleIf(STRATEGY, SourceType.QUERY.name))
+                    .recommender(
+                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
                     .validator(Validators.pattern(SIMPLE_DURATION_PATTERN))
                     .defaultValue(DEFAULT_POLL_INTERVAL.toSimpleString())
                     .build())
@@ -185,7 +189,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                     .documentation(PropertiesUtil.getProperty(QUERY_BATCH_SIZE))
                     .importance(ConfigDef.Importance.HIGH)
                     .dependents(STRATEGY)
-                    .recommender(Recommenders.visibleIf(STRATEGY, SourceType.QUERY.name))
+                    .recommender(
+                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
                     .validator(Range.atLeast(1))
                     .defaultValue(DEFAULT_QUERY_BATCH_SIZE)
                     .build())
@@ -194,7 +199,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                     .documentation(PropertiesUtil.getProperty(QUERY_TIMEOUT))
                     .importance(ConfigDef.Importance.HIGH)
                     .dependents(STRATEGY)
-                    .recommender(Recommenders.visibleIf(STRATEGY, SourceType.QUERY.name))
+                    .recommender(
+                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
                     .validator(Validators.pattern(SIMPLE_DURATION_PATTERN))
                     .defaultValue(DEFAULT_QUERY_TIMEOUT.toSimpleString())
                     .build())

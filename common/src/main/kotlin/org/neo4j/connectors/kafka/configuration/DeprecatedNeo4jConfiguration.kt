@@ -22,6 +22,7 @@ import java.io.File
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import org.apache.kafka.common.config.AbstractConfig
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
@@ -271,7 +272,8 @@ open class DeprecatedNeo4jConfiguration(
                     .group(ConfigGroup.AUTHENTICATION)
                     .recommender(
                         Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                            AUTHENTICATION_TYPE,
+                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
                     .build())
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, Type.PASSWORD)
@@ -281,7 +283,8 @@ open class DeprecatedNeo4jConfiguration(
                     .group(ConfigGroup.AUTHENTICATION)
                     .recommender(
                         Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                            AUTHENTICATION_TYPE,
+                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
                     .build())
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, Type.STRING)
@@ -291,7 +294,8 @@ open class DeprecatedNeo4jConfiguration(
                     .group(ConfigGroup.AUTHENTICATION)
                     .recommender(
                         Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE, AuthenticationType.BASIC.toString()))
+                            AUTHENTICATION_TYPE,
+                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
                     .build())
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, Type.PASSWORD)
@@ -301,7 +305,8 @@ open class DeprecatedNeo4jConfiguration(
                     .group(ConfigGroup.AUTHENTICATION)
                     .recommender(
                         Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE, AuthenticationType.KERBEROS.toString()))
+                            AUTHENTICATION_TYPE,
+                            Predicate.isEqual(AuthenticationType.KERBEROS.toString())))
                     .build())
             .define(
                 ConfigKeyBuilder.of(SERVER_URI, Type.STRING)
@@ -369,7 +374,8 @@ open class DeprecatedNeo4jConfiguration(
                     .defaultValue(TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString())
                     .group(ConfigGroup.ENCRYPTION)
                     .validator(Validators.enum(TrustStrategy.Strategy::class.java))
-                    .recommender(Recommenders.visibleIf(ENCRYPTION_ENABLED, true))
+                    .recommender(
+                        Recommenders.visibleIf(ENCRYPTION_ENABLED, Predicate.isEqual(true)))
                     .build())
             .define(
                 ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, Type.STRING)
@@ -381,7 +387,9 @@ open class DeprecatedNeo4jConfiguration(
                     .recommender(
                         Recommenders.visibleIf(
                             ENCRYPTION_TRUST_STRATEGY,
-                            TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString()))
+                            Predicate.isEqual(
+                                TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES
+                                    .toString())))
                     .build())
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, Type.INT)
