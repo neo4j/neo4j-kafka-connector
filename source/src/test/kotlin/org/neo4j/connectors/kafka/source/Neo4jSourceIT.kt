@@ -20,12 +20,10 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.TimeUnit
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.awaitility.Awaitility.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -34,6 +32,7 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import streams.kafka.connect.source.testing.ConsumerAssertions.Companion.assertThat
 import streams.kafka.connect.source.testing.Neo4jSourceRegistration
 
 class Neo4jSourceIT {
@@ -92,23 +91,14 @@ class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    val expected =
-        setOf(
+    assertThat(consumer)
+        .awaitingAtMost(Duration.ofSeconds(30))
+        .hasReceivedValues(
+            { value -> value.asMap().filterKeys { k -> k != "timestamp" } },
             mapOf("name" to "jane", "surname" to "doe", "execId" to executionId),
             mapOf("name" to "john", "surname" to "doe", "execId" to executionId),
-            mapOf("name" to "mary", "surname" to "doe", "execId" to executionId))
-    val allRecords: MutableList<Map<String, String>> =
-        mutableListOf() // todo: impl ringbuffer instead?
-    await().atMost(60, TimeUnit.SECONDS).until {
-      consumer.poll(Duration.ofSeconds(10)).forEach { allRecords.add(it.value().asMap()) }
-      val records = allRecords.takeLast(expected.size).reversed()
-      records.isNotEmpty() &&
-          records.fold(true) { prev, map ->
-            prev &&
-                map.containsKey("timestamp") &&
-                expected.contains(map.filterKeys { it != "timestamp" })
-          }
-    }
+            mapOf("name" to "mary", "surname" to "doe", "execId" to executionId),
+        )
   }
 
   private fun subscribeConsumerTo(
@@ -137,8 +127,6 @@ class Neo4jSourceIT {
 }
 
 fun GenericRecord.asMap(): Map<String, String> {
-  return this.schema.fields
-      // FIXME: properly convert values
-      .map { field -> field.name() to this.get(field.name()).toString() }
-      .toMap()
+  // FIXME: properly convert values
+  return this.schema.fields.associate { field -> field.name() to this.get(field.name()).toString() }
 }
