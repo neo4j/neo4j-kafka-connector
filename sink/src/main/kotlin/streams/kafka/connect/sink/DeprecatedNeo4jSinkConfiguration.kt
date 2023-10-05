@@ -20,17 +20,17 @@ import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
-import streams.kafka.connect.common.ConfigGroup
-import streams.kafka.connect.common.ConnectorType
-import streams.kafka.connect.common.Neo4jConnectorConfig
+import org.neo4j.connectors.kafka.configuration.ConfigGroup
+import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import streams.kafka.connect.utils.PropertiesUtil
 import streams.kafka.connect.utils.TopicUtils
 import streams.kafka.connect.utils.Topics
 import streams.service.TopicType
 import streams.service.sink.strategy.SourceIdIngestionStrategyConfig
 
-class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
-    Neo4jConnectorConfig(config(), originals, ConnectorType.SINK) {
+class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
+    DeprecatedNeo4jConfiguration(config(), originals, ConnectorType.SINK) {
 
   val parallelBatches: Boolean
 
@@ -92,7 +92,7 @@ class Neo4jSinkConnectorConfig(originals: Map<*, *>) :
     private val sourceIdIngestionStrategyConfig = SourceIdIngestionStrategyConfig()
 
     fun config(): ConfigDef =
-        Neo4jConnectorConfig.config()
+        DeprecatedNeo4jConfiguration.config()
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID))

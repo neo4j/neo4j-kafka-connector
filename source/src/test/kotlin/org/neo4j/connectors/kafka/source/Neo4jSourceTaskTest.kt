@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.source
+package org.neo4j.connectors.kafka.source
 
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -28,6 +28,8 @@ import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.*
 import org.mockito.Mockito
+import org.neo4j.connectors.kafka.configuration.AuthenticationType
+import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -35,8 +37,7 @@ import org.neo4j.driver.Session
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import streams.kafka.connect.common.AuthenticationType
-import streams.kafka.connect.common.Neo4jConnectorConfig
+import streams.kafka.connect.source.DeprecatedNeo4jSourceConfiguration
 import streams.utils.JSONUtils
 
 @Testcontainers
@@ -103,14 +104,14 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY from NOW`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.STREAMING_PROPERTY] = "timestamp"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY] = "timestamp"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     val expected = insertRecords(totalRecords, true)
 
@@ -125,15 +126,15 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY from NOW with Schema`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.ENFORCE_SCHEMA] = "true"
-    props[Neo4jSourceConnectorConfig.STREAMING_PROPERTY] = "timestamp"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY] = "timestamp"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     val expected = insertRecords(totalRecords)
 
@@ -148,15 +149,15 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY from ALL`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_FROM] = "ALL"
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.STREAMING_PROPERTY] = "timestamp"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_FROM] = "ALL"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY] = "timestamp"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     val expected = insertRecords(totalRecords, true)
 
@@ -171,16 +172,16 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY from ALL with Schema`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_FROM] = "ALL"
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.ENFORCE_SCHEMA] = "true"
-    props[Neo4jSourceConnectorConfig.STREAMING_PROPERTY] = "timestamp"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_FROM] = "ALL"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY] = "timestamp"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     val expected = insertRecords(totalRecords)
 
@@ -243,13 +244,13 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY without streaming property`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     insertRecords(totalRecords)
 
@@ -264,14 +265,14 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from Neo4j with custom QUERY without streaming property with Schema`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.ENFORCE_SCHEMA] = "true"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = getSourceQuery()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = getSourceQuery()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     insertRecords(totalRecords)
 
@@ -305,13 +306,13 @@ class Neo4jSourceTaskTest {
   fun `should throw exception`() {
     assertFailsWith(ConnectException::class) {
       val props = mutableMapOf<String, String>()
-      props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-      props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-      props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-      props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] = "WRONG QUERY".trimMargin()
-      props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+      props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+      props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+      props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+      props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] = "WRONG QUERY".trimMargin()
+      props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-      task.start(props)
+      task.start(SourceConfiguration.migrateSettings(props))
       val totalRecords = 10
       insertRecords(totalRecords)
 
@@ -322,11 +323,11 @@ class Neo4jSourceTaskTest {
   @Test
   fun `should source data from mock with custom QUERY without streaming property with Schema`() {
     val props = mutableMapOf<String, String>()
-    props[Neo4jConnectorConfig.SERVER_URI] = neo4j.boltUrl
-    props[Neo4jSourceConnectorConfig.TOPIC] = UUID.randomUUID().toString()
-    props[Neo4jSourceConnectorConfig.STREAMING_POLL_INTERVAL] = "10"
-    props[Neo4jSourceConnectorConfig.ENFORCE_SCHEMA] = "true"
-    props[Neo4jSourceConnectorConfig.SOURCE_TYPE_QUERY] =
+    props[DeprecatedNeo4jConfiguration.SERVER_URI] = neo4j.boltUrl
+    props[DeprecatedNeo4jSourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL] = "10"
+    props[DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY] =
         """
                 |WITH
                 |{
@@ -340,9 +341,9 @@ class Neo4jSourceTaskTest {
                 |RETURN data, data.id AS id
             """
             .trimMargin()
-    props[Neo4jConnectorConfig.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    task.start(props)
+    task.start(SourceConfiguration.migrateSettings(props))
     val totalRecords = 10
     insertRecords(totalRecords)
 

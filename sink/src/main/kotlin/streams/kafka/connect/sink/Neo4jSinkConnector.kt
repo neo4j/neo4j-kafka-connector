@@ -31,7 +31,7 @@ import streams.kafka.connect.utils.PropertiesUtil
     "For each topic you can provide a Cypher Template by using the following syntax ``neo4j.topic.cypher.<topic_name>=<cypher_query>``")
 class Neo4jSinkConnector : SinkConnector() {
   private lateinit var settings: Map<String, String>
-  private lateinit var config: Neo4jSinkConnectorConfig
+  private lateinit var config: DeprecatedNeo4jSinkConfiguration
 
   override fun taskConfigs(maxTasks: Int): MutableList<MutableMap<String, String>> {
     return TaskConfigs.multiple(settings, maxTasks)
@@ -39,7 +39,7 @@ class Neo4jSinkConnector : SinkConnector() {
 
   override fun start(props: MutableMap<String, String>?) {
     settings = props!!
-    config = Neo4jSinkConnectorConfig(settings)
+    config = DeprecatedNeo4jSinkConfiguration(settings)
   }
 
   override fun stop() {}
@@ -53,6 +53,6 @@ class Neo4jSinkConnector : SinkConnector() {
   }
 
   override fun config(): ConfigDef {
-    return Neo4jSinkConnectorConfig.config()
+    return DeprecatedNeo4jSinkConfiguration.config()
   }
 }

@@ -16,8 +16,9 @@
  */
 package streams.kafka.connect.utils
 
+import java.util.Locale
 import kotlin.reflect.jvm.javaType
-import streams.kafka.connect.sink.Neo4jSinkConnectorConfig
+import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 import streams.service.TopicType
 import streams.service.TopicTypeGroup
 import streams.service.sink.strategy.*
@@ -87,11 +88,11 @@ data class Topics(
       val relPatterKey = TopicType.PATTERN_RELATIONSHIP.replaceKeyBy(replacePrefix)
       val cypherTopics = TopicUtils.filterByPrefix(config, cypherTopicPrefix)
       val mergeNodeProperties =
-          map[Neo4jSinkConnectorConfig.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED]
+          map[DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED]
               .toString()
               .toBoolean()
       val mergeRelProperties =
-          map[Neo4jSinkConnectorConfig.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED]
+          map[DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED]
               .toString()
               .toBoolean()
       val nodePatternTopics =
@@ -109,11 +110,11 @@ data class Topics(
       val sourceIdStrategyConfig =
           SourceIdIngestionStrategyConfig(
               map.getOrDefault(
-                      Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID_LABEL_NAME,
+                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.labelName)
                   .toString(),
               map.getOrDefault(
-                      Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID_ID_NAME,
+                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
       return Topics(

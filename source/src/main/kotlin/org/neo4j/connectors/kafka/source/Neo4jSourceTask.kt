@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.source
+package org.neo4j.connectors.kafka.source
 
 import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import org.apache.kafka.connect.source.SourceRecord
@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory
 import streams.utils.StreamsUtils
 
 class Neo4jSourceTask : SourceTask() {
-  private lateinit var settings: Map<String, String>
-  private lateinit var config: Neo4jSourceConnectorConfig
+  private lateinit var props: Map<String, String>
+  private lateinit var config: SourceConfiguration
   private lateinit var neo4jSourceService: Neo4jSourceService
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceTask::class.java)
@@ -33,8 +33,8 @@ class Neo4jSourceTask : SourceTask() {
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
 
   override fun start(props: MutableMap<String, String>?) {
-    settings = props!!
-    config = Neo4jSourceConnectorConfig(settings)
+    this.props = props!!
+    config = SourceConfiguration(this.props)
     neo4jSourceService = Neo4jSourceService(config, context.offsetStorageReader())
   }
 

@@ -37,7 +37,7 @@ import streams.service.StreamsSinkService
 import streams.utils.StreamsUtils
 import streams.utils.retryForException
 
-class Neo4jSinkService(private val config: Neo4jSinkConnectorConfig) :
+class Neo4jSinkService(private val config: DeprecatedNeo4jSinkConfiguration) :
     StreamsSinkService(Neo4jStrategyStorage(config)) {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkService::class.java)

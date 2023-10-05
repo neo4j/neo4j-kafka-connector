@@ -26,7 +26,8 @@ import streams.service.sink.strategy.RelationshipPatternIngestionStrategy
 import streams.service.sink.strategy.SchemaIngestionStrategy
 import streams.service.sink.strategy.SourceIdIngestionStrategy
 
-class Neo4jStrategyStorage(val config: Neo4jSinkConnectorConfig) : StreamsStrategyStorage() {
+class Neo4jStrategyStorage(val config: DeprecatedNeo4jSinkConfiguration) :
+    StreamsStrategyStorage() {
   private val topicConfigMap = config.topics.asMap()
 
   override fun getTopicType(topic: String): TopicType? =

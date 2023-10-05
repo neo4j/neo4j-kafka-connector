@@ -29,10 +29,10 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.neo4j.connectors.kafka.configuration.AuthenticationType
+import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.driver.*
 import streams.events.*
-import streams.kafka.connect.common.AuthenticationType
-import streams.kafka.connect.common.Neo4jConnectorConfig
 import streams.service.sink.strategy.CUDNode
 import streams.service.sink.strategy.CUDOperations
 import streams.utils.JSONUtils
@@ -66,11 +66,11 @@ class Neo4jSinkTaskAuraTest {
 
     fun getMapSinkConnectorConfig() =
         mutableMapOf(
-            Neo4jConnectorConfig.AUTHENTICATION_BASIC_USERNAME to user!!,
-            Neo4jConnectorConfig.AUTHENTICATION_BASIC_PASSWORD to password!!,
-            Neo4jConnectorConfig.SERVER_URI to uri!!,
-            Neo4jConnectorConfig.AUTHENTICATION_TYPE to AuthenticationType.BASIC.toString(),
-            Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID_LABEL_NAME to LABEL_SINK_AURA,
+            DeprecatedNeo4jConfiguration.AUTHENTICATION_BASIC_USERNAME to user!!,
+            DeprecatedNeo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD to password!!,
+            DeprecatedNeo4jConfiguration.SERVER_URI to uri!!,
+            DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.BASIC.toString(),
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME to LABEL_SINK_AURA,
         )
 
     fun countEntitiesSinkAura(
@@ -94,9 +94,9 @@ class Neo4jSinkTaskAuraTest {
   fun `test with struct in Aura`() {
     driver?.session().use { countEntitiesSinkAura(it, 0) }
     val props = getMapSinkConnectorConfig()
-    props["${Neo4jSinkConnectorConfig.TOPIC_CYPHER_PREFIX}$NAME_TOPIC"] =
+    props["${DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX}$NAME_TOPIC"] =
         " CREATE (b:$LABEL_SINK_AURA)"
-    props[Neo4jConnectorConfig.BATCH_SIZE] = 2.toString()
+    props[DeprecatedNeo4jConfiguration.BATCH_SIZE] = 2.toString()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val task = Neo4jSinkTask()
@@ -122,7 +122,7 @@ class Neo4jSinkTaskAuraTest {
 
     val props = getMapSinkConnectorConfig()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
-    props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
+    props[DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
 
     val cdcDataStart =
         StreamsTransactionEvent(
@@ -213,7 +213,7 @@ class Neo4jSinkTaskAuraTest {
                 .trimIndent())
 
     val props = getMapSinkConnectorConfig()
-    props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
+    props[DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val cdcDataStart =
@@ -292,7 +292,7 @@ class Neo4jSinkTaskAuraTest {
 
     val props = getMapSinkConnectorConfig()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
-    props[Neo4jSinkConnectorConfig.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
+    props[DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID] = NAME_TOPIC
 
     val cdcDataStart =
         StreamsTransactionEvent(
@@ -325,7 +325,7 @@ class Neo4jSinkTaskAuraTest {
   @Test
   fun `should work with node pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
-    props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_NODE_PREFIX}$NAME_TOPIC"] =
+    props["${DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}$NAME_TOPIC"] =
         "$LABEL_SINK_AURA{!userId,name,surname,address.city}"
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
@@ -353,7 +353,7 @@ class Neo4jSinkTaskAuraTest {
   @Test
   fun `should work with relationship pattern topic in Aura`() {
     val props = getMapSinkConnectorConfig()
-    props["${Neo4jSinkConnectorConfig.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$NAME_TOPIC"] =
+    props["${DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$NAME_TOPIC"] =
         "(:$LABEL_SINK_AURA{!sourceId,sourceName,sourceSurname})-[:HAS_REL]->(:$LABEL_SINK_AURA{!targetId,targetName,targetSurname})"
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
@@ -400,7 +400,7 @@ class Neo4jSinkTaskAuraTest {
         }
 
     val props = getMapSinkConnectorConfig()
-    props[Neo4jSinkConnectorConfig.TOPIC_CUD] = topic
+    props[DeprecatedNeo4jSinkConfiguration.TOPIC_CUD] = topic
     props[SinkTask.TOPICS_CONFIG] = topic
 
     val task = Neo4jSinkTask()

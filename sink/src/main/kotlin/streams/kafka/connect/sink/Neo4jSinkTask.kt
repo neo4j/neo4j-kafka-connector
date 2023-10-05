@@ -29,7 +29,7 @@ import streams.utils.StreamsUtils
 
 class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
-  private lateinit var config: Neo4jSinkConnectorConfig
+  private lateinit var config: DeprecatedNeo4jSinkConfiguration
   private lateinit var neo4jSinkService: Neo4jSinkService
   private lateinit var errorService: ErrorService
 
@@ -38,7 +38,7 @@ class Neo4jSinkTask : SinkTask() {
   }
 
   override fun start(map: Map<String, String>) {
-    this.config = Neo4jSinkConnectorConfig(map)
+    this.config = DeprecatedNeo4jSinkConfiguration(map)
     this.neo4jSinkService = Neo4jSinkService(this.config)
     this.errorService =
         KafkaErrorService(
