@@ -24,9 +24,9 @@ import kotlin.test.assertEquals
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
-import streams.utils.JSONUtils
 
 class Neo4jValueConverterNestedStructTest {
 

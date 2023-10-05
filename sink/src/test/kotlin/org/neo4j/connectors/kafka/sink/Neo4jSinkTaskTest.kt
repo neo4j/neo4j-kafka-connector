@@ -38,7 +38,24 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.events.Constraint
+import org.neo4j.connectors.kafka.events.Meta
+import org.neo4j.connectors.kafka.events.NodeChange
+import org.neo4j.connectors.kafka.events.NodePayload
+import org.neo4j.connectors.kafka.events.OperationType
+import org.neo4j.connectors.kafka.events.RelationshipChange
+import org.neo4j.connectors.kafka.events.RelationshipNodeChange
+import org.neo4j.connectors.kafka.events.RelationshipPayload
+import org.neo4j.connectors.kafka.events.StreamsConstraintType
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
+import org.neo4j.connectors.kafka.service.errors.ErrorService
+import org.neo4j.connectors.kafka.service.errors.ProcessingError
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDNodeRel
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDRelationship
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverterTest
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -47,28 +64,11 @@ import org.neo4j.driver.types.Node
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import streams.events.Constraint
-import streams.events.Meta
-import streams.events.NodeChange
-import streams.events.NodePayload
-import streams.events.OperationType
-import streams.events.RelationshipChange
-import streams.events.RelationshipNodeChange
-import streams.events.RelationshipPayload
-import streams.events.StreamsConstraintType
-import streams.events.StreamsTransactionEvent
 import streams.kafka.connect.utils.allLabels
 import streams.kafka.connect.utils.allNodes
 import streams.kafka.connect.utils.allRelationships
 import streams.kafka.connect.utils.findNode
 import streams.kafka.connect.utils.findNodes
-import streams.service.errors.ErrorService
-import streams.service.errors.ProcessingError
-import streams.service.sink.strategy.CUDNode
-import streams.service.sink.strategy.CUDNodeRel
-import streams.service.sink.strategy.CUDOperations
-import streams.service.sink.strategy.CUDRelationship
-import streams.utils.JSONUtils
 
 @Testcontainers
 class Neo4jSinkTaskTest {
@@ -278,7 +278,7 @@ class Neo4jSinkTaskTest {
                         NodeChange(
                             properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
                             labels = listOf("User"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataEnd =
         StreamsTransactionEvent(
             meta =
@@ -297,7 +297,7 @@ class Neo4jSinkTaskTest {
                         NodeChange(
                             properties = mapOf("name" to "Michael", "comp@ny" to "Neo4j"),
                             labels = listOf("User Ext"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -319,7 +319,7 @@ class Neo4jSinkTaskTest {
                     after = RelationshipChange(properties = mapOf("since" to 2014)),
                     before = null,
                     label = "KNOWS WHO"),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
 
     task.start(props)
     val input =
@@ -390,7 +390,7 @@ class Neo4jSinkTaskTest {
                                     "comp@ny" to "LARUS-BA, Venice",
                                     "age" to 34),
                             labels = listOf("User"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -412,7 +412,7 @@ class Neo4jSinkTaskTest {
                     after = RelationshipChange(properties = mapOf("since" to 2014, "foo" to "bar")),
                     before = RelationshipChange(properties = mapOf("since" to 2014)),
                     label = "KNOWS WHO"),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
 
     task.start(props)
     val input =
@@ -454,9 +454,10 @@ class Neo4jSinkTaskTest {
                 type = StreamsConstraintType.UNIQUE,
                 properties = setOf("name", "surname")))
     val relSchema =
-        streams.events.Schema(properties = mapOf("since" to "Long"), constraints = constraints)
+        org.neo4j.connectors.kafka.events.Schema(
+            properties = mapOf("since" to "Long"), constraints = constraints)
     val nodeSchema =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties = mapOf("name" to "String", "surname" to "String", "comp@ny" to "String"),
             constraints = constraints)
     val cdcDataStart =
@@ -595,11 +596,11 @@ class Neo4jSinkTaskTest {
                 properties = setOf("firstName")),
         )
     val relSchema =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties = mapOf("since" to "Long"),
             constraints = constraintsCharacter.plus(constraintsWriter))
     val nodeSchemaCharacter =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties =
                 mapOf(
                     "name" to "String",
@@ -608,7 +609,7 @@ class Neo4jSinkTaskTest {
                     "address" to "String"),
             constraints = constraintsCharacter)
     val nodeSchemaWriter =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties = mapOf("firstName" to "String", "lastName" to "String"),
             constraints = constraintsWriter)
     val cdcDataStart =
@@ -794,9 +795,10 @@ class Neo4jSinkTaskTest {
                 label = "User", type = StreamsConstraintType.UNIQUE, properties = setOf("surname")),
         )
     val relSchema =
-        streams.events.Schema(properties = mapOf("since" to "Long"), constraints = constraints)
+        org.neo4j.connectors.kafka.events.Schema(
+            properties = mapOf("since" to "Long"), constraints = constraints)
     val nodeSchema =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties =
                 mapOf(
                     "name" to "String",
@@ -998,9 +1000,10 @@ class Neo4jSinkTaskTest {
                 properties = setOf("country", "address")),
         )
     val relSchema =
-        streams.events.Schema(properties = mapOf("since" to "Long"), constraints = constraints)
+        org.neo4j.connectors.kafka.events.Schema(
+            properties = mapOf("since" to "Long"), constraints = constraints)
     val nodeSchema =
-        streams.events.Schema(
+        org.neo4j.connectors.kafka.events.Schema(
             properties =
                 mapOf(
                     "name" to "String",
@@ -1156,7 +1159,7 @@ class Neo4jSinkTaskTest {
                             properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
                             labels = listOf("User", "OldLabel")),
                     after = null),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     task.start(props)
     val input = listOf(SinkRecord(firstTopic, 1, null, null, null, cdcDataStart, 42))
     task.put(input)

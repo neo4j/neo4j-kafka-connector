@@ -19,9 +19,15 @@ package streams.service.sink.strategy
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import streams.extensions.quote
-import streams.service.StreamsSinkEntity
-import streams.utils.StreamsUtils
+import org.neo4j.connectors.kafka.extensions.quote
+import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDNodeRel
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDRelationship
+import org.neo4j.connectors.kafka.service.sink.strategy.QueryEvents
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class CUDIngestionStrategyTest {
 

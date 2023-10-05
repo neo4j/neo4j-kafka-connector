@@ -17,8 +17,8 @@
 package org.neo4j.connectors.kafka.sink
 
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.connectors.kafka.service.StreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
-import streams.service.StreamsSinkEntity
 
 class EventBuilder {
   private var batchSize: Int? = null

@@ -32,12 +32,12 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.service.TopicType
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
-import streams.kafka.connect.utils.PropertiesUtil
-import streams.service.TopicType
-import streams.service.sink.strategy.SourceIdIngestionStrategyConfig
 
 class SinkConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SINK) {

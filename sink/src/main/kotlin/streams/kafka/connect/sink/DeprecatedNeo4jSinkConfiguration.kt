@@ -21,9 +21,9 @@ import org.apache.kafka.common.config.ConfigDef
 import org.neo4j.connectors.kafka.configuration.ConfigGroup
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import streams.kafka.connect.utils.PropertiesUtil
-import streams.service.sink.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 @Deprecated("use org.neo4j.connectors.kafka.sink.SinkConfiguration")
 class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
@@ -55,8 +55,6 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED = false
     const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED = false
 
-    private val sourceIdIngestionStrategyConfig = SourceIdIngestionStrategyConfig()
-
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(
@@ -70,14 +68,14 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME))
                     .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(sourceIdIngestionStrategyConfig.labelName)
+                    .defaultValue(SourceIdIngestionStrategyConfig.DEFAULT.labelName)
                     .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
                     .build())
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING)
                     .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME))
                     .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(sourceIdIngestionStrategyConfig.idName)
+                    .defaultValue(SourceIdIngestionStrategyConfig.DEFAULT.idName)
                     .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
                     .build())
             .define(

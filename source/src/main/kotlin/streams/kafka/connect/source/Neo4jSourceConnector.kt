@@ -22,7 +22,7 @@ import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.source.Neo4jSourceTask
 import org.neo4j.connectors.kafka.source.SourceConfiguration
-import streams.kafka.connect.utils.PropertiesUtil
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 @Deprecated("Use org.neo4j.connectors.kafka.source.Neo4jConnector instead")
 class Neo4jSourceConnector : SourceConnector() {

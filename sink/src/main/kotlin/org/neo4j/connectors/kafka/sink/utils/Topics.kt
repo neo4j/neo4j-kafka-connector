@@ -17,11 +17,18 @@
 package org.neo4j.connectors.kafka.sink.utils
 
 import kotlin.reflect.jvm.javaType
+import org.neo4j.connectors.kafka.service.TopicType
+import org.neo4j.connectors.kafka.service.TopicTypeGroup
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
-import streams.service.TopicType
-import streams.service.TopicTypeGroup
-import streams.service.sink.strategy.*
 
 class TopicValidationException(message: String) : RuntimeException(message)
 

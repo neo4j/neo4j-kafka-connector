@@ -29,9 +29,9 @@ import org.apache.kafka.common.utils.SystemTime
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import streams.service.errors.ErrorData
-import streams.service.errors.ErrorService
-import streams.service.errors.KafkaErrorService
+import org.neo4j.connectors.kafka.service.errors.ErrorData
+import org.neo4j.connectors.kafka.service.errors.ErrorService
+import org.neo4j.connectors.kafka.service.errors.KafkaErrorService
 
 class KafkaErrorServiceTest {
   @Test

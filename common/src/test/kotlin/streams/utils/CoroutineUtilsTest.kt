@@ -22,6 +22,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.utils.retryForException
 
 class CoroutineUtilsTest {
 

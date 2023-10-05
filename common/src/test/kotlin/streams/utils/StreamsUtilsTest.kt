@@ -22,6 +22,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class StreamsUtilsTest {
 

@@ -16,15 +16,15 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import streams.service.StreamsStrategyStorage
-import streams.service.TopicType
-import streams.service.sink.strategy.CUDIngestionStrategy
-import streams.service.sink.strategy.CypherTemplateStrategy
-import streams.service.sink.strategy.IngestionStrategy
-import streams.service.sink.strategy.NodePatternIngestionStrategy
-import streams.service.sink.strategy.RelationshipPatternIngestionStrategy
-import streams.service.sink.strategy.SchemaIngestionStrategy
-import streams.service.sink.strategy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.service.StreamsStrategyStorage
+import org.neo4j.connectors.kafka.service.TopicType
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.CypherTemplateStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.IngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
 
 class Neo4jStrategyStorage(val config: SinkConfiguration) : StreamsStrategyStorage() {
   private val topicConfigMap = config.topics.asMap()

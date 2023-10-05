@@ -20,12 +20,12 @@ import java.time.temporal.TemporalAccessor
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.neo4j.connectors.kafka.extensions.asStreamsMap
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Record
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
-import streams.extensions.asStreamsMap
-import streams.utils.JSONUtils
 
 fun Record.asJsonString(): String = JSONUtils.writeValueAsString(this.asMap())
 

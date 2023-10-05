@@ -19,9 +19,9 @@ package org.neo4j.connectors.kafka.source
 import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import streams.utils.StreamsUtils
 
 class Neo4jSourceTask : SourceTask() {
   private lateinit var props: Map<String, String>

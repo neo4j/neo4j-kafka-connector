@@ -23,7 +23,7 @@ import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.source.SourceConfiguration
-import streams.kafka.connect.utils.PropertiesUtil
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 enum class SourceType {
   QUERY,

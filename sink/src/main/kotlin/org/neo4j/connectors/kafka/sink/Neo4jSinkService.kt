@@ -24,16 +24,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.kafka.extensions.errors
+import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.service.StreamsSinkService
+import org.neo4j.connectors.kafka.utils.retryForException
 import org.neo4j.driver.Bookmark
 import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.exceptions.ClientException
 import org.neo4j.driver.exceptions.TransientException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import streams.extensions.errors
-import streams.service.StreamsSinkEntity
-import streams.service.StreamsSinkService
-import streams.utils.retryForException
 
 class Neo4jSinkService(private val config: SinkConfiguration) :
     StreamsSinkService(Neo4jStrategyStorage(config)) {

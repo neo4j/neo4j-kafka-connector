@@ -19,9 +19,20 @@ package streams.service.sink.strategy
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import streams.events.*
-import streams.service.StreamsSinkEntity
-import streams.utils.StreamsUtils
+import org.neo4j.connectors.kafka.events.Constraint
+import org.neo4j.connectors.kafka.events.Meta
+import org.neo4j.connectors.kafka.events.NodeChange
+import org.neo4j.connectors.kafka.events.NodePayload
+import org.neo4j.connectors.kafka.events.OperationType
+import org.neo4j.connectors.kafka.events.RelationshipChange
+import org.neo4j.connectors.kafka.events.RelationshipNodeChange
+import org.neo4j.connectors.kafka.events.RelationshipPayload
+import org.neo4j.connectors.kafka.events.Schema
+import org.neo4j.connectors.kafka.events.StreamsConstraintType
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
+import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class SchemaIngestionStrategyTest {
 

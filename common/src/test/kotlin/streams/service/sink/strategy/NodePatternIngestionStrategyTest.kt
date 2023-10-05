@@ -18,8 +18,10 @@ package streams.service.sink.strategy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import streams.service.StreamsSinkEntity
-import streams.utils.StreamsUtils
+import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class NodePatternIngestionStrategyTest {
 

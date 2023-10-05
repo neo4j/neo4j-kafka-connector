@@ -18,10 +18,10 @@ package streams.utils
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import streams.events.Constraint
-import streams.events.RelKeyStrategy
-import streams.events.StreamsConstraintType
-import streams.utils.SchemaUtils.getNodeKeys
+import org.neo4j.connectors.kafka.events.Constraint
+import org.neo4j.connectors.kafka.events.RelKeyStrategy
+import org.neo4j.connectors.kafka.events.StreamsConstraintType
+import org.neo4j.connectors.kafka.utils.SchemaUtils.getNodeKeys
 
 class SchemaUtilsTest {
 

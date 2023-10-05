@@ -20,7 +20,7 @@ import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
-import streams.kafka.connect.utils.PropertiesUtil
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 class Neo4jConnector : SinkConnector() {
   private lateinit var props: Map<String, String>

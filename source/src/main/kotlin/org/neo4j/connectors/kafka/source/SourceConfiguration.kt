@@ -31,11 +31,11 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.TransactionConfig
 import streams.kafka.connect.source.DeprecatedNeo4jSourceConfiguration
 import streams.kafka.connect.source.SourceType
 import streams.kafka.connect.source.StreamingFrom
-import streams.kafka.connect.utils.PropertiesUtil
 
 class SourceConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SOURCE) {

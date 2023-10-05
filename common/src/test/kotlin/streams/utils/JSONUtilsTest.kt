@@ -22,14 +22,15 @@ import java.time.ZonedDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.events.EntityType
+import org.neo4j.connectors.kafka.events.Meta
+import org.neo4j.connectors.kafka.events.NodeChange
+import org.neo4j.connectors.kafka.events.NodePayload
+import org.neo4j.connectors.kafka.events.OperationType
+import org.neo4j.connectors.kafka.events.Schema
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Values
-import streams.events.EntityType
-import streams.events.Meta
-import streams.events.NodeChange
-import streams.events.NodePayload
-import streams.events.OperationType
-import streams.events.Schema
-import streams.events.StreamsTransactionEvent
 
 class JSONUtilsTest {
   val Cartesian_Code = 7203
