@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test
 class MapValueConverterTest {
 
   @Test
-  fun `should convert tree struct into map of String,Any?`() {
+  fun `should convert tree struct into map of String,Any`() {
     // given
     // this test generates a simple tree structure like this
     //           body
@@ -44,7 +44,7 @@ class MapValueConverterTest {
   }
 
   @Test
-  fun `should convert tree simple map into map of String,Any?`() {
+  fun `should convert tree simple map into map of String,Any`() {
     // given
     // this test generates a simple tree structure like this
     //           body

@@ -133,7 +133,8 @@ abstract class ErrorService(private val config: Map<String, Any> = emptyMap()) {
       const val DLQ_HEADER_PREFIX = "errors.deadletterqueue.context.headers.prefix"
       const val DLQ_REPLICATION = "errors.deadletterqueue.topic.replication.factor"
 
-      fun from(props: Properties) = from(props.toMap() as Map<String, Any>)
+      @Suppress("UNCHECKED_CAST")
+      fun from(props: Properties) = from(props.toMap() as Map<String, Any?>)
 
       fun boolean(v: Any?) =
           when (v) {

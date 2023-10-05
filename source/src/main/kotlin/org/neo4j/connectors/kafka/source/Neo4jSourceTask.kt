@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.source
 
 import com.github.jcustenborder.kafka.connect.utils.VersionUtil
+import kotlinx.coroutines.DelicateCoroutinesApi
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.utils.StreamsUtils
@@ -38,6 +39,7 @@ class Neo4jSourceTask : SourceTask() {
     neo4jSourceService = Neo4jSourceService(config, context.offsetStorageReader())
   }
 
+  @DelicateCoroutinesApi
   override fun stop() {
     log.info("Stop() - Closing Neo4j Source Service.")
     StreamsUtils.ignoreExceptions(

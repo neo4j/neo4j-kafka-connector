@@ -22,6 +22,7 @@ import java.util.*
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Struct
 
+@Suppress("UNCHECKED_CAST")
 open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
 
   open fun setValue(result: MutableMap<String, T?>?, fieldName: String, value: Any?) {

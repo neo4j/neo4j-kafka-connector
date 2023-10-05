@@ -173,7 +173,6 @@ object JSONUtils {
         val strValue =
             when (value) {
               is ByteArray -> String(value)
-              null -> ""
               else -> value.toString()
             }
         strValue.trimStart().let { if (it[0] == '{' || it[0] == '[') throw e else it as T }

@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.service.sink.strategy
 
+import java.util.Locale
 import org.neo4j.connectors.kafka.events.EntityType
 import org.neo4j.connectors.kafka.extensions.quote
 import org.neo4j.connectors.kafka.service.StreamsSinkEntity
@@ -107,7 +108,7 @@ class CUDIngestionStrategy : IngestionStrategy {
           to.op in LIST_VALID_CUD_NODE_REL &&
           op in LIST_VALID_CUD_REL
 
-  private fun NodeRelMetadata.getOperation() = op.toString().toUpperCase()
+  private fun NodeRelMetadata.getOperation() = op.toString().uppercase(Locale.ROOT)
 
   private fun buildNodeLookupByIds(
       keyword: String = "MATCH",
@@ -227,12 +228,9 @@ class CUDIngestionStrategy : IngestionStrategy {
         val entityType = if (type == null) null else EntityType.valueOf(type)
         when {
           entityType == null -> throw RuntimeException("No `type` field found")
-          entityType != null &&
-              EntityType.node == entityType &&
-              T::class.java != CUDNode::class.java -> null
-          entityType != null &&
-              EntityType.relationship == entityType &&
-              T::class.java != CUDRelationship::class.java -> null
+          EntityType.node == entityType && T::class.java != CUDNode::class.java -> null
+          EntityType.relationship == entityType && T::class.java != CUDRelationship::class.java ->
+              null
           else -> JSONUtils.convertValue<T>(it)
         }
       }

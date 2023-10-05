@@ -39,12 +39,11 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     const val TOPIC_CDC_SOURCE_ID_ID_NAME = "neo4j.topic.cdc.sourceId.idName"
     const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."
     const val TOPIC_PATTERN_RELATIONSHIP_PREFIX = "neo4j.topic.pattern.relationship."
-    @Deprecated(
-        "deprecated in favour of ${SinkConfiguration.DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES}")
+    @Deprecated("deprecated in favour of ${SinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.node.properties.enabled"
     @Deprecated(
-        "deprecated in favour of ${SinkConfiguration.DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES}")
+        "deprecated in favour of ${SinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.relationship.properties.enabled"
     const val TOPIC_CDC_SCHEMA = "neo4j.topic.cdc.schema"

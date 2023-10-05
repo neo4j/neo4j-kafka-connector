@@ -1357,8 +1357,8 @@ class Neo4jSinkTaskTest {
     session.beginTransaction().use {
       val result = it.run("MATCH (n) RETURN count(n) AS count")
       assertTrue { result.hasNext() }
-      val count = result.next()[0].asInt()
-      assertEquals(0, count)
+      val c = result.next()[0].asInt()
+      assertEquals(0, c)
       assertFalse { result.hasNext() }
     }
   }

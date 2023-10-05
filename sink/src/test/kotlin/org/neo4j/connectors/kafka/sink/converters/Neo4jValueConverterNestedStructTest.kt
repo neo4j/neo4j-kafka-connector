@@ -28,6 +28,7 @@ import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 
+@Suppress("UNCHECKED_CAST")
 class Neo4jValueConverterNestedStructTest {
 
   @Test

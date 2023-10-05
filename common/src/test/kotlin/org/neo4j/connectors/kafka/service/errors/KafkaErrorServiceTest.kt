@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 
+@Suppress("UNCHECKED_CAST")
 class KafkaErrorServiceTest {
   @Test
   fun `should send the data to the DLQ`() {
@@ -43,7 +44,7 @@ class KafkaErrorServiceTest {
         }
     val dlqService =
         KafkaErrorService(
-            producer, ErrorService.ErrorConfig(fail = false, dlqTopic = "dlqTopic"), { s, e -> })
+            producer, ErrorService.ErrorConfig(fail = false, dlqTopic = "dlqTopic"), { _, _ -> })
     dlqService.report(listOf(dlqData()))
     assertEquals(1, counter.get())
     dlqService.close()
@@ -57,7 +58,7 @@ class KafkaErrorServiceTest {
         KafkaErrorService(
             producer,
             ErrorService.ErrorConfig(fail = false, dlqTopic = "dlqTopic", dlqHeaders = true),
-            { s, e -> })
+            { _, _ -> })
     val dlqData = dlqData()
     val map = dlqService.populateContextHeaders(dlqData)
     assertEquals(String(map["topic"]!!), dlqData.originalTopic)
@@ -93,7 +94,7 @@ class KafkaErrorServiceTest {
 
   @Test
   fun `should log DQL data`() {
-    val log = { s: String, e: Exception? ->
+    val log = { s: String, _: Exception? ->
       assertTrue(
           s.contains(
               "partition=1, offset=0, exception=java.lang.RuntimeException: Test, key=KEY, value=VALUE, executingClass=class org.neo4j.connectors.kafka.service.errors.KafkaErrorServiceTest)"),

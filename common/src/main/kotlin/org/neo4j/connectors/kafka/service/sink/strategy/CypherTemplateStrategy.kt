@@ -22,8 +22,9 @@ import org.neo4j.connectors.kafka.utils.StreamsUtils
 class CypherTemplateStrategy(query: String) : IngestionStrategy {
   private val fullQuery = "${StreamsUtils.UNWIND} $query"
 
+  @Suppress("UNCHECKED_CAST")
   override fun mergeNodeEvents(events: Collection<StreamsSinkEntity>): List<QueryEvents> {
-    return listOf(QueryEvents(fullQuery, events.mapNotNull { it.value as? Map<String, Any> }))
+    return listOf(QueryEvents(fullQuery, events.mapNotNull { it.value as? Map<String, Any?> }))
   }
 
   override fun deleteNodeEvents(events: Collection<StreamsSinkEntity>): List<QueryEvents> =

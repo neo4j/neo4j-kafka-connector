@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.utils
 
+import java.util.Locale
 import kotlin.reflect.jvm.javaType
 import org.neo4j.connectors.kafka.service.TopicType
 import org.neo4j.connectors.kafka.service.TopicTypeGroup
@@ -36,6 +37,7 @@ private fun TopicType.replaceKeyBy(replacePrefix: Pair<String, String>) =
     if (replacePrefix.first.isNullOrBlank()) this.key
     else this.key.replace(replacePrefix.first, replacePrefix.second)
 
+@Suppress("UNCHECKED_CAST")
 data class Topics(
     val cypherTopics: Map<String, String> = emptyMap(),
     val cdcSourceIdTopics: Pair<Set<String>, SourceIdIngestionStrategyConfig> =
@@ -81,7 +83,7 @@ data class Topics(
     ): Topics {
       val config =
           map.filterKeys {
-                if (dbName.isNotBlank()) it.toLowerCase().endsWith(".to.$dbName")
+                if (dbName.isNotBlank()) it.lowercase(Locale.ROOT).endsWith(".to.$dbName")
                 else !it.contains(".to.")
               }
               .mapKeys {
@@ -163,7 +165,7 @@ object TopicUtils {
     val exceptionStringConstructor =
         T::class.constructors.first {
           it.parameters.size == 1 && it.parameters[0].type.javaType == String::class.java
-        }!!
+        }
     val crossDefinedTopics =
         topics.allTopics().groupBy({ it }, { 1 }).filterValues { it.sum() > 1 }.keys
     if (crossDefinedTopics.isNotEmpty()) {
@@ -172,6 +174,7 @@ object TopicUtils {
     }
   }
 
+  @Suppress("UNCHECKED_CAST")
   fun toStrategyMap(topics: Topics): Map<TopicType, Any> {
     return topics
         .asMap()
@@ -179,7 +182,7 @@ object TopicUtils {
         .mapValues { (type, config) ->
           when (type) {
             TopicType.CDC_SOURCE_ID -> {
-              val (topics, sourceIdStrategyConfig) =
+              val (_, sourceIdStrategyConfig) =
                   (config as Pair<Set<String>, SourceIdIngestionStrategyConfig>)
               SourceIdIngestionStrategy(sourceIdStrategyConfig)
             }

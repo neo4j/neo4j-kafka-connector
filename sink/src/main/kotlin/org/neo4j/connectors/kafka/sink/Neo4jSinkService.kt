@@ -83,6 +83,8 @@ class Neo4jSinkService(private val config: SinkConfiguration) :
     }
   }
 
+  @ExperimentalCoroutinesApi
+  @ObsoleteCoroutinesApi
   fun writeData(data: Map<String, List<List<StreamsSinkEntity>>>) {
     val errors = if (config.parallelBatches) writeDataAsync(data) else writeDataSync(data)
     if (errors.isNotEmpty()) {

@@ -29,6 +29,7 @@ import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrateg
 class Neo4jStrategyStorage(val config: SinkConfiguration) : StreamsStrategyStorage() {
   private val topicConfigMap = config.topics.asMap()
 
+  @Suppress("UNCHECKED_CAST")
   override fun getTopicType(topic: String): TopicType? =
       TopicType.values().firstOrNull { topicType ->
         when (val topicConfig = topicConfigMap.getOrDefault(topicType, emptyList<Any>())) {

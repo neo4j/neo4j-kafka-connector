@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -80,6 +81,7 @@ class Neo4jSourceService(
   private val isStreamingPropertyDefined = config.queryStreamingProperty.isNotBlank()
   private val streamingProperty = config.queryStreamingProperty.ifBlank { "undefined" }
 
+  @DelicateCoroutinesApi
   private val job: Job =
       GlobalScope.launch(Dispatchers.IO) {
         var lastCheckHadResult = false
@@ -189,6 +191,7 @@ class Neo4jSourceService(
     }
   }
 
+  @DelicateCoroutinesApi
   override fun close() {
     isClose.set(true)
     runBlocking { job.cancelAndJoin() }

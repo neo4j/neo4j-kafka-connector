@@ -54,11 +54,14 @@ fun Relationship.asStreamsMap(): Map<String, Any?> {
 }
 
 fun String.toPointCase(): String {
-  return this.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(separator = ".").toLowerCase()
+  return this.split("(?<=[a-z])(?=[A-Z])".toRegex())
+      .joinToString(separator = ".")
+      .lowercase(Locale.ROOT)
 }
 
 fun String.quote(): String = if (SourceVersion.isIdentifier(this)) this else "`$this`"
 
+@Suppress("UNCHECKED_CAST")
 fun Map<String, Any?>.flatten(
     map: Map<String, Any?> = this,
     prefix: String = ""
@@ -68,7 +71,7 @@ fun Map<String, Any?>.flatten(
         val value = it.value
         val newKey = if (prefix != "") "$prefix.$key" else key
         if (value is Map<*, *>) {
-          flatten(value as Map<String, Any>, newKey).toList()
+          flatten(value as Map<String, Any?>, newKey).toList()
         } else {
           listOf(newKey to value)
         }

@@ -23,6 +23,7 @@ import org.neo4j.connectors.kafka.extensions.quote
 import org.neo4j.connectors.kafka.service.StreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
+@Suppress("UNCHECKED_CAST")
 class CUDIngestionStrategyTest {
 
   private fun findEventByQuery(query: String, evts: List<QueryEvents>) =
