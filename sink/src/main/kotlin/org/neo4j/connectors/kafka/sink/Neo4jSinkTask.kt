@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
 import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import org.apache.kafka.connect.sink.SinkRecord
@@ -29,7 +29,7 @@ import streams.utils.StreamsUtils
 
 class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
-  private lateinit var config: DeprecatedNeo4jSinkConfiguration
+  private lateinit var config: SinkConfiguration
   private lateinit var neo4jSinkService: Neo4jSinkService
   private lateinit var errorService: ErrorService
 
@@ -38,7 +38,7 @@ class Neo4jSinkTask : SinkTask() {
   }
 
   override fun start(map: Map<String, String>) {
-    this.config = DeprecatedNeo4jSinkConfiguration(map)
+    this.config = SinkConfiguration(map)
     this.neo4jSinkService = Neo4jSinkService(this.config)
     this.errorService =
         KafkaErrorService(

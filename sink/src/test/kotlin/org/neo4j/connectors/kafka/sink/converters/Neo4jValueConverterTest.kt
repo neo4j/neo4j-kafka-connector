@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink.converters
 
 import java.math.BigDecimal
 import java.time.Instant
@@ -22,12 +22,24 @@ import java.time.ZoneId
 import java.util.Date
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.apache.kafka.connect.data.*
+import org.apache.kafka.connect.data.ConnectSchema
+import org.apache.kafka.connect.data.Decimal
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.SchemaBuilder
+import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.data.Time
+import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
-import org.neo4j.driver.internal.value.*
-import streams.kafka.connect.sink.converters.Neo4jValueConverter
+import org.neo4j.driver.internal.value.BytesValue
+import org.neo4j.driver.internal.value.DateValue
+import org.neo4j.driver.internal.value.FloatValue
+import org.neo4j.driver.internal.value.IntegerValue
+import org.neo4j.driver.internal.value.LocalDateTimeValue
+import org.neo4j.driver.internal.value.LocalTimeValue
+import org.neo4j.driver.internal.value.NullValue
+import org.neo4j.driver.internal.value.StringValue
 
 class Neo4jValueConverterTest {
 

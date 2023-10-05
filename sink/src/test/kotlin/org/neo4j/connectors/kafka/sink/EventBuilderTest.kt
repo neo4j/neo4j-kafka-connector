@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
-import java.util.*
+import java.util.Date
 import kotlin.test.assertEquals
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder

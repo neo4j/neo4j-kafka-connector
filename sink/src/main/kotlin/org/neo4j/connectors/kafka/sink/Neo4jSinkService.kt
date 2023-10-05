@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
 import kotlin.streams.toList
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +25,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.driver.Bookmark
-import org.neo4j.driver.Driver
 import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.exceptions.ClientException
 import org.neo4j.driver.exceptions.TransientException
@@ -34,31 +33,29 @@ import org.slf4j.LoggerFactory
 import streams.extensions.errors
 import streams.service.StreamsSinkEntity
 import streams.service.StreamsSinkService
-import streams.utils.StreamsUtils
 import streams.utils.retryForException
 
-class Neo4jSinkService(private val config: DeprecatedNeo4jSinkConfiguration) :
+class Neo4jSinkService(private val config: SinkConfiguration) :
     StreamsSinkService(Neo4jStrategyStorage(config)) {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkService::class.java)
 
-  private val driver: Driver = config.createDriver()
-  private val transactionConfig: TransactionConfig = config.createTransactionConfig()
+  private val transactionConfig: TransactionConfig = config.txConfig()
 
   private val bookmarks = mutableListOf<Bookmark>()
 
   fun close() {
-    StreamsUtils.closeSafetely(driver) { log.info("Error while closing Driver instance:", it) }
+    config.close()
   }
 
   override fun write(query: String, events: Collection<Any>) {
     val data = mapOf<String, Any>("events" to events)
-    driver.session(config.createSessionConfig(bookmarks)).use { session ->
+    config.session(*bookmarks.toTypedArray()).use { session ->
       try {
         runBlocking {
           retryForException(
               exceptions = arrayOf(ClientException::class.java, TransientException::class.java),
-              retries = config.retryMaxAttempts,
+              retries = config.maxRetryAttempts,
               delayTime =
                   0) { // we use the delayTime = 0, because we delegate the retryBackoff to the
                 // Neo4j

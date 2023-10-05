@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.utils
+package org.neo4j.connectors.kafka.sink.utils
 
 import kotlin.reflect.jvm.javaType
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 import streams.service.TopicType
 import streams.service.TopicTypeGroup
@@ -87,13 +88,9 @@ data class Topics(
       val relPatterKey = TopicType.PATTERN_RELATIONSHIP.replaceKeyBy(replacePrefix)
       val cypherTopics = TopicUtils.filterByPrefix(config, cypherTopicPrefix)
       val mergeNodeProperties =
-          map[DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED]
-              .toString()
-              .toBoolean()
+          map[SinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES].toString().toBoolean()
       val mergeRelProperties =
-          map[DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED]
-              .toString()
-              .toBoolean()
+          map[SinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES].toString().toBoolean()
       val nodePatternTopics =
           TopicUtils.filterByPrefix(config, nodePatterKey, invalidTopics).mapValues {
             NodePatternConfiguration.parse(it.value, mergeNodeProperties)

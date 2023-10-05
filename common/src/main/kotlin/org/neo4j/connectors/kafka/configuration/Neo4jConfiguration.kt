@@ -76,7 +76,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     get(): kotlin.time.Duration =
         kotlin.time.Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
 
-  internal val maxRetryAttempts
+  val maxRetryAttempts
     get(): Int = getInt(MAX_TRANSACTION_RETRY_ATTEMPTS)
 
   internal val maxConnectionPoolSize

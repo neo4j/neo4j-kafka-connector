@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink.converters
+package org.neo4j.connectors.kafka.sink.converters
 
 import com.github.jcustenborder.kafka.connect.utils.data.AbstractConverter
 import java.math.BigDecimal

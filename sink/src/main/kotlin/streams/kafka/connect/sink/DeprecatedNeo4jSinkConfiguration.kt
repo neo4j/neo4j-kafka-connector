@@ -18,58 +18,20 @@ package streams.kafka.connect.sink
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import org.apache.kafka.common.config.ConfigDef
-import org.apache.kafka.common.config.ConfigException
-import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.ConfigGroup
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import streams.kafka.connect.utils.PropertiesUtil
-import streams.kafka.connect.utils.TopicUtils
-import streams.kafka.connect.utils.Topics
-import streams.service.TopicType
 import streams.service.sink.strategy.SourceIdIngestionStrategyConfig
 
+@Deprecated("use org.neo4j.connectors.kafka.sink.SinkConfiguration")
 class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     DeprecatedNeo4jConfiguration(config(), originals, ConnectorType.SINK) {
 
-  val parallelBatches: Boolean
-
-  val topics: Topics
-
-  val strategyMap: Map<TopicType, Any>
-
-  val kafkaBrokerProperties: Map<String, Any?>
-
-  init {
-    topics = Topics.from(originals as Map<String, Any?>, "streams.sink." to "neo4j.")
-    strategyMap = TopicUtils.toStrategyMap(topics)
-
-    parallelBatches = getBoolean(BATCH_PARALLELIZE)
-    val kafkaPrefix = "kafka."
-    kafkaBrokerProperties =
-        originals
-            .filterKeys { it.startsWith(kafkaPrefix) }
-            .mapKeys { it.key.substring(kafkaPrefix.length) }
-    validateAllTopics(originals)
-  }
-
-  private fun validateAllTopics(originals: Map<*, *>) {
-    TopicUtils.validate<ConfigException>(this.topics)
-    val topics =
-        if (originals.containsKey(SinkTask.TOPICS_CONFIG)) {
-          originals[SinkTask.TOPICS_CONFIG].toString().split(",").map { it.trim() }.sorted()
-        } else { // TODO manage regexp
-          emptyList()
-        }
-    val allTopics = this.topics.allTopics().sorted()
-    if (topics != allTopics) {
-      throw ConfigException(
-          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($topics) and configured topics ($allTopics)")
-    }
-  }
-
   companion object {
 
+    @Deprecated("deprecated in favour of ${SinkConfiguration.BATCH_PARALLELIZE}")
     const val BATCH_PARALLELIZE = "neo4j.batch.parallelize"
 
     const val TOPIC_CYPHER_PREFIX = "neo4j.topic.cypher."
@@ -78,8 +40,12 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     const val TOPIC_CDC_SOURCE_ID_ID_NAME = "neo4j.topic.cdc.sourceId.idName"
     const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."
     const val TOPIC_PATTERN_RELATIONSHIP_PREFIX = "neo4j.topic.pattern.relationship."
+    @Deprecated(
+        "deprecated in favour of ${SinkConfiguration.DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.node.properties.enabled"
+    @Deprecated(
+        "deprecated in favour of ${SinkConfiguration.DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.relationship.properties.enabled"
     const val TOPIC_CDC_SCHEMA = "neo4j.topic.cdc.schema"

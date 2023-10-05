@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
 import streams.service.StreamsStrategyStorage
 import streams.service.TopicType
@@ -26,8 +26,7 @@ import streams.service.sink.strategy.RelationshipPatternIngestionStrategy
 import streams.service.sink.strategy.SchemaIngestionStrategy
 import streams.service.sink.strategy.SourceIdIngestionStrategy
 
-class Neo4jStrategyStorage(val config: DeprecatedNeo4jSinkConfiguration) :
-    StreamsStrategyStorage() {
+class Neo4jStrategyStorage(val config: SinkConfiguration) : StreamsStrategyStorage() {
   private val topicConfigMap = config.topics.asMap()
 
   override fun getTopicType(topic: String): TopicType? =

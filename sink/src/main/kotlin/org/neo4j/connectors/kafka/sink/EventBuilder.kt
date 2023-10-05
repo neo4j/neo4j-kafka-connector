@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
 import org.apache.kafka.connect.sink.SinkRecord
-import streams.kafka.connect.utils.toStreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
 import streams.service.StreamsSinkEntity
 
 class EventBuilder {

@@ -14,39 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
-import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
-import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import streams.kafka.connect.utils.PropertiesUtil
 
-@Deprecated("Use org.neo4j.connectors.kafka.sink.Neo4jConnector instead")
-class Neo4jSinkConnector : SinkConnector() {
-  private lateinit var settings: Map<String, String>
-  private lateinit var config: SinkConfiguration
+class Neo4jConnector : SinkConnector() {
+  private lateinit var props: Map<String, String>
 
-  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> =
-      List(maxTasks) { config.originalsStrings() }
+  override fun version(): String = PropertiesUtil.getVersion()
 
   override fun start(props: MutableMap<String, String>?) {
-    settings = props!!
-    config = SinkConfiguration(SinkConfiguration.migrateSettings(settings))
+    this.props = props!!.toMap()
   }
+
+  override fun taskClass(): Class<out Task> = Neo4jSinkTask::class.java
+
+  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> = List(maxTasks) { props }
 
   override fun stop() {}
 
-  override fun version(): String {
-    return PropertiesUtil.getVersion()
-  }
+  override fun config(): ConfigDef = SinkConfiguration.config()
 
-  override fun taskClass(): Class<out Task> {
-    return Neo4jSinkTask::class.java
-  }
+  override fun validate(connectorConfigs: MutableMap<String, String>?): Config {
+    val result = super.validate(connectorConfigs)
 
-  override fun config(): ConfigDef {
-    return DeprecatedNeo4jSinkConfiguration.config()
+    SinkConfiguration.validate(result)
+
+    return result
   }
 }

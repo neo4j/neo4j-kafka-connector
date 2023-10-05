@@ -14,18 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink.converters
 
 import java.time.Instant
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.AbstractMap
+import java.util.Date
 import kotlin.test.assertEquals
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
-import streams.kafka.connect.sink.converters.Neo4jValueConverter
 import streams.utils.JSONUtils
 
 class Neo4jValueConverterNestedStructTest {

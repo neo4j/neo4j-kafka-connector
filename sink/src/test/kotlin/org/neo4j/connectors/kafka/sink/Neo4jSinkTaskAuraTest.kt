@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.sink
+package org.neo4j.connectors.kafka.sink
 
-import java.util.*
-import kotlin.test.*
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
@@ -25,14 +27,25 @@ import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
+import org.mockito.Mockito
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
-import org.neo4j.driver.*
-import streams.events.*
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
+import streams.events.Meta
+import streams.events.NodeChange
+import streams.events.NodePayload
+import streams.events.OperationType
+import streams.events.RelationshipChange
+import streams.events.RelationshipNodeChange
+import streams.events.RelationshipPayload
+import streams.events.StreamsTransactionEvent
+import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 import streams.service.sink.strategy.CUDNode
 import streams.service.sink.strategy.CUDOperations
 import streams.utils.JSONUtils
@@ -59,8 +72,8 @@ class Neo4jSinkTaskAuraTest {
     @BeforeAll
     @JvmStatic
     fun setUp() {
-      assumeTrue(user != null)
-      assumeTrue(password != null)
+      Assumptions.assumeTrue(user != null)
+      Assumptions.assumeTrue(password != null)
       driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
     }
 
@@ -100,7 +113,7 @@ class Neo4jSinkTaskAuraTest {
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
         listOf(
@@ -140,7 +153,7 @@ class Neo4jSinkTaskAuraTest {
                     before = null,
                     after =
                         NodeChange(properties = mapOf("name" to "Pippo"), labels = listOf("User"))),
-            schema = Schema())
+            schema = streams.events.Schema())
     val cdcDataEnd =
         StreamsTransactionEvent(
             meta =
@@ -158,7 +171,7 @@ class Neo4jSinkTaskAuraTest {
                     after =
                         NodeChange(
                             properties = mapOf("name" to "Pluto"), labels = listOf("User Ext"))),
-            schema = Schema())
+            schema = streams.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -180,10 +193,10 @@ class Neo4jSinkTaskAuraTest {
                     after = RelationshipChange(properties = mapOf("since" to 2014)),
                     before = null,
                     label = "HAS_REL"),
-            schema = Schema())
+            schema = streams.events.Schema())
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
         listOf(
@@ -237,7 +250,7 @@ class Neo4jSinkTaskAuraTest {
                         NodeChange(
                             properties = mapOf("name" to "Pippo", "age" to 99),
                             labels = listOf("User"))),
-            schema = Schema())
+            schema = streams.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -259,10 +272,10 @@ class Neo4jSinkTaskAuraTest {
                     after = RelationshipChange(properties = mapOf("since" to 1999, "foo" to "bar")),
                     before = RelationshipChange(properties = mapOf("since" to 2014)),
                     label = "KNOWS WHO"),
-            schema = Schema())
+            schema = streams.events.Schema())
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
         listOf(
@@ -312,9 +325,9 @@ class Neo4jSinkTaskAuraTest {
                             properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
                             labels = listOf("User", "OldLabel")),
                     after = null),
-            schema = Schema())
+            schema = streams.events.Schema())
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42))
     task.put(input)
@@ -337,7 +350,7 @@ class Neo4jSinkTaskAuraTest {
             "address" to mapOf("city" to "Cerignola", "CAP" to "12345"))
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, data, 42))
     task.put(input)
@@ -367,7 +380,7 @@ class Neo4jSinkTaskAuraTest {
             "targetSurname" to "Bar")
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, data, 42))
     task.put(input)
@@ -404,7 +417,7 @@ class Neo4jSinkTaskAuraTest {
     props[SinkTask.TOPICS_CONFIG] = topic
 
     val task = Neo4jSinkTask()
-    task.initialize(mock(SinkTaskContext::class.java))
+    task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     task.put(data)
 

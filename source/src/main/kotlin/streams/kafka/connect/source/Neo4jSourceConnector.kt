@@ -21,25 +21,24 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.source.Neo4jSourceTask
+import org.neo4j.connectors.kafka.source.SourceConfiguration
 import streams.kafka.connect.utils.PropertiesUtil
 
-@Title("Neo4j Source Connector")
-@Description(
-    "The Neo4j Source connector reads data from Neo4j and and writes the data to a Kafka Topic")
 @Deprecated("Use org.neo4j.connectors.kafka.source.Neo4jConnector instead")
 class Neo4jSourceConnector : SourceConnector() {
   private lateinit var settings: Map<String, String>
-  private lateinit var config: DeprecatedNeo4jSourceConfiguration
+  private lateinit var config: SourceConfiguration
 
   // TODO Add monitor thread when we want to have schema on LABELS and RELATIONSHIP query type
 
   // TODO: for now we support just one task we need to implement
   //  a SKIP/LIMIT mechanism in case we want parallelize
-  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> = listOf(settings)
+  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> =
+      listOf(config.originalsStrings())
 
   override fun start(props: MutableMap<String, String>?) {
     settings = props!!
-    config = DeprecatedNeo4jSourceConfiguration(settings)
+    config = SourceConfiguration(SourceConfiguration.migrateSettings(settings))
   }
 
   override fun stop() {}

@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.utils
+package org.neo4j.connectors.kafka.sink.utils
 
 import java.time.temporal.TemporalAccessor
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverter
 import org.neo4j.driver.Record
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
 import streams.extensions.asStreamsMap
-import streams.kafka.connect.sink.converters.Neo4jValueConverter
 import streams.service.StreamsSinkEntity
 import streams.utils.JSONUtils
 
