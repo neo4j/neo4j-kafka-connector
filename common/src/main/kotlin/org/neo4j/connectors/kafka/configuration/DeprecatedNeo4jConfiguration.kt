@@ -17,8 +17,6 @@
 package org.neo4j.connectors.kafka.configuration
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigUtils
-import java.io.File
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.TimeUnit
@@ -28,20 +26,10 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
 import org.apache.kafka.common.config.ConfigDef.Type
-import org.apache.kafka.common.config.ConfigException
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
-import org.neo4j.driver.AccessMode
-import org.neo4j.driver.AuthTokens
-import org.neo4j.driver.Bookmark
-import org.neo4j.driver.Config
 import org.neo4j.driver.Config.TrustStrategy
-import org.neo4j.driver.Driver
-import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.SessionConfig
-import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.internal.async.pool.PoolSettings
-import org.neo4j.driver.net.ServerAddress
 import streams.kafka.connect.utils.PropertiesUtil
 
 object ConfigGroup {
@@ -60,149 +48,6 @@ open class DeprecatedNeo4jConfiguration(
     originals: Map<*, *>,
     private val type: ConnectorType
 ) : AbstractConfig(configDef, originals) {
-  val encryptionEnabled: Boolean
-  val encryptionTrustStrategy: TrustStrategy.Strategy
-  var encryptionCACertificateFile: File? = null
-
-  val authenticationType: AuthenticationType
-  val authenticationUsername: String
-  val authenticationPassword: String
-  val authenticationRealm: String
-  val authenticationKerberosTicket: String
-
-  val serverUri: List<URI>
-  val connectionMaxConnectionLifetime: Long
-  val connectionLivenessCheckTimeout: Long
-  val connectionPoolMaxSize: Int
-  val connectionAcquisitionTimeout: Long
-
-  val retryBackoff: Long
-  val retryMaxAttempts: Int
-
-  val batchTimeout: Long
-  val batchSize: Int
-
-  val database: String
-
-  init {
-    database = getString(DATABASE)
-    encryptionEnabled = getBoolean(ENCRYPTION_ENABLED)
-    encryptionTrustStrategy =
-        ConfigUtils.getEnum(TrustStrategy.Strategy::class.java, this, ENCRYPTION_TRUST_STRATEGY)
-    val encryptionCACertificatePATH = getString(ENCRYPTION_CA_CERTIFICATE_PATH) ?: ""
-    if (encryptionCACertificatePATH != "") {
-      encryptionCACertificateFile = File(encryptionCACertificatePATH)
-    }
-
-    authenticationType =
-        ConfigUtils.getEnum(AuthenticationType::class.java, this, AUTHENTICATION_TYPE)
-    authenticationRealm = getString(AUTHENTICATION_BASIC_REALM)
-    authenticationUsername = getString(AUTHENTICATION_BASIC_USERNAME)
-    authenticationPassword = getPassword(AUTHENTICATION_BASIC_PASSWORD).value()
-    authenticationKerberosTicket = getPassword(AUTHENTICATION_KERBEROS_TICKET).value()
-
-    serverUri = getString(SERVER_URI).split(",").map { URI(it) }
-    connectionLivenessCheckTimeout = getLong(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS)
-    connectionMaxConnectionLifetime = getLong(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS)
-    connectionPoolMaxSize = getInt(CONNECTION_POOL_MAX_SIZE)
-    connectionAcquisitionTimeout = getLong(CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS)
-
-    retryBackoff = getLong(RETRY_BACKOFF_MSECS)
-    retryMaxAttempts = getInt(RETRY_MAX_ATTEMPTS)
-
-    batchTimeout = getLong(BATCH_TIMEOUT_MSECS)
-    batchSize = getInt(BATCH_SIZE)
-  }
-
-  fun hasSecuredURI() =
-      serverUri.any { it.scheme.endsWith("+s", true) || it.scheme.endsWith("+ssc", true) }
-
-  fun createDriver(): Driver {
-    val configBuilder = Config.builder()
-    configBuilder.withUserAgent("neo4j-kafka-connect-$type/${PropertiesUtil.getVersion()}")
-
-    if (!this.hasSecuredURI()) {
-      if (this.encryptionEnabled) {
-        configBuilder.withEncryption()
-        val trustStrategy: Config.TrustStrategy =
-            when (this.encryptionTrustStrategy) {
-              Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES ->
-                  Config.TrustStrategy.trustAllCertificates()
-              Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES ->
-                  Config.TrustStrategy.trustSystemCertificates()
-              Config.TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES ->
-                  Config.TrustStrategy.trustCustomCertificateSignedBy(
-                      this.encryptionCACertificateFile)
-              else -> {
-                throw ConfigException(
-                    ENCRYPTION_TRUST_STRATEGY,
-                    this.encryptionTrustStrategy.toString(),
-                    "Encryption Trust Strategy is not supported.")
-              }
-            }
-        configBuilder.withTrustStrategy(trustStrategy)
-      } else {
-        configBuilder.withoutEncryption()
-      }
-    }
-
-    val authToken =
-        when (this.authenticationType) {
-          AuthenticationType.NONE -> AuthTokens.none()
-          AuthenticationType.BASIC -> {
-            if (this.authenticationRealm != "") {
-              AuthTokens.basic(
-                  this.authenticationUsername,
-                  this.authenticationPassword,
-                  this.authenticationRealm)
-            } else {
-              AuthTokens.basic(this.authenticationUsername, this.authenticationPassword)
-            }
-          }
-          AuthenticationType.KERBEROS -> AuthTokens.kerberos(this.authenticationKerberosTicket)
-          else ->
-              throw ConfigException("unsupported authentication type ${this.authenticationType}")
-        }
-    configBuilder.withMaxConnectionPoolSize(this.connectionPoolMaxSize)
-    configBuilder.withMaxConnectionLifetime(
-        this.connectionMaxConnectionLifetime, TimeUnit.MILLISECONDS)
-    configBuilder.withConnectionAcquisitionTimeout(
-        this.connectionAcquisitionTimeout, TimeUnit.MILLISECONDS)
-    configBuilder.withMaxTransactionRetryTime(this.retryBackoff, TimeUnit.MILLISECONDS)
-    configBuilder.withConnectionLivenessCheckTimeout(
-        this.connectionLivenessCheckTimeout, TimeUnit.MINUTES)
-    configBuilder.withResolver { address ->
-      this.serverUri.map { ServerAddress.of(it.host, if (it.port == -1) 7687 else it.port) }.toSet()
-    }
-    val neo4jConfig = configBuilder.build()
-
-    return GraphDatabase.driver(this.serverUri.firstOrNull(), authToken, neo4jConfig)
-  }
-
-  fun createSessionConfig(bookmarks: List<Bookmark> = emptyList()): SessionConfig {
-    val sessionConfigBuilder = SessionConfig.builder()
-    if (this.database.isNotBlank()) {
-      sessionConfigBuilder.withDatabase(this.database)
-    }
-    val accessMode =
-        if (type == ConnectorType.SOURCE) {
-          AccessMode.READ
-        } else {
-          AccessMode.WRITE
-        }
-    sessionConfigBuilder.withDefaultAccessMode(accessMode)
-    sessionConfigBuilder.withBookmarks(bookmarks)
-    return sessionConfigBuilder.build()
-  }
-
-  fun createTransactionConfig(): TransactionConfig {
-    val batchTimeout = this.batchTimeout
-    return if (batchTimeout > 0) {
-      TransactionConfig.builder().withTimeout(Duration.ofMillis(batchTimeout)).build()
-    } else {
-      TransactionConfig.empty()
-    }
-  }
 
   companion object {
     @Deprecated("deprecated in favour of ${Neo4jConfiguration.URI}")
@@ -316,13 +161,7 @@ open class DeprecatedNeo4jConfiguration(
                     .group(ConfigGroup.CONNECTION)
                     .validator(
                         Validators.uri(
-                            "bolt",
-                            "bolt+routing",
-                            "bolt+s",
-                            "bolt+ssc",
-                            "neo4j",
-                            "neo4j+s",
-                            "neo4j+ssc"))
+                            "bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"))
                     .build())
             .define(
                 ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, Type.INT)
