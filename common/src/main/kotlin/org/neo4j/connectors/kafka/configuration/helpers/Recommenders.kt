@@ -86,8 +86,7 @@ object Recommenders {
                   throw ConfigException("Must be a String or a List.")
                 }
               }
-            }
-            ?: false
+            } ?: false
       }
     }
   }
