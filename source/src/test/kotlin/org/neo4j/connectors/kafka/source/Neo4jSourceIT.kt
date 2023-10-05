@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.source
+package org.neo4j.connectors.kafka.source
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
@@ -28,17 +28,25 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.connectors.kafka.source.testing.Neo4jSource
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import streams.kafka.connect.source.StreamingFrom
 import streams.kafka.connect.source.testing.ConsumerAssertions.Companion.assertThat
-import streams.kafka.connect.source.testing.Neo4jSourceRegistration
 
 class Neo4jSourceIT {
 
   companion object {
-    private lateinit var sourceRegistration: Neo4jSourceRegistration
+    const val TOPIC = "test-topic"
+    const val KAFKA_CONNECT_URI = "http://localhost:8083"
+    const val SCHEMA_CONTROL_REGISTRY = "http://schema-registry:8081"
+    const val SCHEMA_CONTROL_REGISTRY_EXTERNAL = "http://localhost:8081"
+    const val NEO4J_URI = "neo4j://neo4j"
+    const val NEO4J_PASSWORD = "password"
+    const val BROKER_HOST_EXTERNAL = "localhost:9092"
+
     private lateinit var driver: Driver
     private lateinit var session: Session
 
@@ -46,19 +54,8 @@ class Neo4jSourceIT {
     @JvmStatic
     fun setUpConnector() {
       driver = GraphDatabase.driver("neo4j://localhost", AuthTokens.basic("neo4j", "password"))
+      driver.verifyConnectivity()
       session = driver.session()
-      sourceRegistration =
-          Neo4jSourceRegistration(
-              topic = "test-topic",
-              neo4jServerUri = "neo4j://neo4j",
-              neo4jBasicPassword = "password",
-              streamingNeo4jProperty = "timestamp",
-              streamingStart = StreamingFrom.ALL,
-              streamingQuery =
-                  "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
-              schemaControlRegistry = "http://schema-registry:8081",
-          )
-      sourceRegistration.register("http://localhost:8083")
     }
 
     @AfterAll
@@ -66,14 +63,23 @@ class Neo4jSourceIT {
     fun tearDownConnector() {
       session.close()
       driver.close()
-      sourceRegistration.unregister()
     }
   }
 
+  @Neo4jSource(
+      topic = TOPIC,
+      kafkaConnectUri = KAFKA_CONNECT_URI,
+      schemaControlRegistryUri = SCHEMA_CONTROL_REGISTRY,
+      neo4jUri = NEO4J_URI,
+      neo4jPassword = NEO4J_PASSWORD,
+      streamingProperty = "timestamp",
+      streamingFrom = StreamingFrom.ALL,
+      streamingQuery = "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
+  )
   @Test
   fun `reads latest changes from Neo4j source`(testInfo: TestInfo) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
-    val consumer = subscribeConsumerTo(testInfo, "test-topic", "latest")
+    val consumer = subscribeConsumerTo(testInfo, TOPIC, "latest")
 
     session
         .run(
@@ -107,9 +113,10 @@ class Neo4jSourceIT {
       offset: String
   ): KafkaConsumer<String, GenericRecord> {
     val properties = Properties()
-    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
+    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BROKER_HOST_EXTERNAL)
     properties.setProperty(
-        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081")
+        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, SCHEMA_CONTROL_REGISTRY_EXTERNAL
+    )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
         StringDeserializer::class.java.getName(),

@@ -27,16 +27,16 @@ import kotlin.streams.asSequence
 import streams.kafka.connect.source.StreamingFrom
 
 data class Neo4jSourceRegistration(
-    private val topic: String,
-    private val neo4jServerUri: String,
-    private val neo4jBasicUsername: String = "neo4j",
-    private val neo4jBasicPassword: String,
-    private val pollInterval: Duration = Duration.ofMillis(5000),
-    private val enforceSchema: Boolean = true,
-    private val streamingNeo4jProperty: String,
-    private val streamingStart: StreamingFrom,
-    private val streamingQuery: String,
-    private val schemaControlRegistry: String
+  private val topic: String,
+  private val neo4jUri: String,
+  private val neo4jUser: String = "neo4j",
+  private val neo4jPassword: String,
+  private val pollInterval: Duration = Duration.ofMillis(5000),
+  private val enforceSchema: Boolean = true,
+  private val streamingProperty: String,
+  private val streamingFrom: StreamingFrom,
+  private val streamingQuery: String,
+  private val schemaControlRegistry: String
 ) {
 
   private val name: String = randomized("Neo4jSourceConnector")
@@ -101,22 +101,22 @@ data class Neo4jSourceRegistration(
         .append(quoted(schemaControlRegistry))
         .append(",")
         .append("\"neo4j.server.uri\": ")
-        .append(quoted(neo4jServerUri))
+        .append(quoted(neo4jUri))
         .append(",")
         .append("\"neo4j.authentication.basic.username\": ")
-        .append(quoted(neo4jBasicUsername))
+        .append(quoted(neo4jUser))
         .append(",")
         .append("\"neo4j.authentication.basic.password\": ")
-        .append(quoted(neo4jBasicPassword))
+        .append(quoted(neo4jPassword))
         .append(",")
         .append("\"neo4j.streaming.poll.interval.msecs\": ")
         .append(pollInterval.toMillis())
         .append(",")
         .append("\"neo4j.streaming.property\": ")
-        .append(quoted(streamingNeo4jProperty))
+        .append(quoted(streamingProperty))
         .append(",")
         .append("\"neo4j.streaming.from\": ")
-        .append(quoted(streamingStart.name))
+        .append(quoted(streamingFrom.name))
         .append(",")
         .append("\"neo4j.enforce.schema\": ")
         .append(enforceSchema)
