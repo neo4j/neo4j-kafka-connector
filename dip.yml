@@ -6,6 +6,11 @@ compose:
   project_name: neo4j-kafka-connector
 
 interaction:
+  format:
+    description: format sources
+    runner: local
+    command: sh -c "./mvnw license:format spotless:apply"
+
   build-package:
     description: build connector packages
     runner: local
