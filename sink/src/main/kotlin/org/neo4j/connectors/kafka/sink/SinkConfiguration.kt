@@ -37,7 +37,6 @@ import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrateg
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
-import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 
 class SinkConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SINK) {

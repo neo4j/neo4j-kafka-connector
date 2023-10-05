@@ -27,8 +27,8 @@ import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternInges
 import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 
 class TopicValidationException(message: String) : RuntimeException(message)
 

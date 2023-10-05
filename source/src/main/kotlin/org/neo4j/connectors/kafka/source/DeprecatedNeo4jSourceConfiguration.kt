@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.source
+package org.neo4j.connectors.kafka.source
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import org.apache.kafka.common.config.ConfigDef
@@ -22,24 +22,7 @@ import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
-import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
-
-enum class SourceType {
-  QUERY,
-}
-
-enum class StreamingFrom {
-  ALL,
-  NOW,
-  LAST_COMMITTED;
-
-  fun value() =
-      when (this) {
-        ALL -> -1
-        else -> System.currentTimeMillis()
-      }
-}
 
 @Deprecated("use org.neo4j.connectors.kafka.source.SourceConfiguration")
 class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :

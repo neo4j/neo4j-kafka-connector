@@ -55,6 +55,11 @@ import org.neo4j.connectors.kafka.service.sink.strategy.CUDNodeRel
 import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
 import org.neo4j.connectors.kafka.service.sink.strategy.CUDRelationship
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverterTest
+import org.neo4j.connectors.kafka.sink.utils.allLabels
+import org.neo4j.connectors.kafka.sink.utils.allNodes
+import org.neo4j.connectors.kafka.sink.utils.allRelationships
+import org.neo4j.connectors.kafka.sink.utils.findNode
+import org.neo4j.connectors.kafka.sink.utils.findNodes
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -64,11 +69,6 @@ import org.neo4j.driver.types.Node
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import streams.kafka.connect.utils.allLabels
-import streams.kafka.connect.utils.allNodes
-import streams.kafka.connect.utils.allRelationships
-import streams.kafka.connect.utils.findNode
-import streams.kafka.connect.utils.findNodes
 
 @Testcontainers
 class Neo4jSinkTaskTest {

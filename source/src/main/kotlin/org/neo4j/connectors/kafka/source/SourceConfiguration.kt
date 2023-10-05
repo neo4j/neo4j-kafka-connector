@@ -33,9 +33,22 @@ import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.TransactionConfig
-import streams.kafka.connect.source.DeprecatedNeo4jSourceConfiguration
-import streams.kafka.connect.source.SourceType
-import streams.kafka.connect.source.StreamingFrom
+
+enum class SourceType {
+  QUERY,
+}
+
+enum class StreamingFrom {
+  ALL,
+  NOW,
+  LAST_COMMITTED;
+
+  fun value() =
+      when (this) {
+        ALL -> -1
+        else -> System.currentTimeMillis()
+      }
+}
 
 class SourceConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SOURCE) {

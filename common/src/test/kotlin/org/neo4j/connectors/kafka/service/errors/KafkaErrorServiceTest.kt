@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.service.sink.errors
+package org.neo4j.connectors.kafka.service.errors
 
-import java.util.*
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -29,9 +29,6 @@ import org.apache.kafka.common.utils.SystemTime
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import org.neo4j.connectors.kafka.service.errors.ErrorData
-import org.neo4j.connectors.kafka.service.errors.ErrorService
-import org.neo4j.connectors.kafka.service.errors.KafkaErrorService
 
 class KafkaErrorServiceTest {
   @Test
@@ -99,7 +96,7 @@ class KafkaErrorServiceTest {
     val log = { s: String, e: Exception? ->
       assertTrue(
           s.contains(
-              "partition=1, offset=0, exception=java.lang.RuntimeException: Test, key=KEY, value=VALUE, executingClass=class streams.service.sink.errors.KafkaErrorServiceTest)"),
+              "partition=1, offset=0, exception=java.lang.RuntimeException: Test, key=KEY, value=VALUE, executingClass=class org.neo4j.connectors.kafka.service.errors.KafkaErrorServiceTest)"),
           "Wrong DLQ log message")
     }
     val logService =

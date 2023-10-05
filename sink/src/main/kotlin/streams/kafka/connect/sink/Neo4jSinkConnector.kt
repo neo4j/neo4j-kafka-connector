@@ -19,6 +19,7 @@ package streams.kafka.connect.sink
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
+import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.utils.PropertiesUtil

@@ -14,13 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.service.sink.strategy
+package org.neo4j.connectors.kafka.service.sink.strategy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternConfiguration
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class RelationshipPatternIngestionStrategyTest {

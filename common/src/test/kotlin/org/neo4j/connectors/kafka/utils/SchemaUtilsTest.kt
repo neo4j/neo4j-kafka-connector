@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.utils
+package org.neo4j.connectors.kafka.utils
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test

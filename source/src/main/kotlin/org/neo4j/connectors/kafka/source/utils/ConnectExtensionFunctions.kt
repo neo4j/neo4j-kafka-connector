@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.kafka.connect.utils
+package org.neo4j.connectors.kafka.source.utils
 
 import java.time.temporal.TemporalAccessor
 import org.apache.kafka.connect.data.Schema

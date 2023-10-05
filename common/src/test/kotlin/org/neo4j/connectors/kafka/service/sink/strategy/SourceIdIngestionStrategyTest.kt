@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.service.sink.strategy
+package org.neo4j.connectors.kafka.service.sink.strategy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
@@ -28,8 +28,6 @@ import org.neo4j.connectors.kafka.events.RelationshipPayload
 import org.neo4j.connectors.kafka.events.Schema
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class SourceIdIngestionStrategyTest {

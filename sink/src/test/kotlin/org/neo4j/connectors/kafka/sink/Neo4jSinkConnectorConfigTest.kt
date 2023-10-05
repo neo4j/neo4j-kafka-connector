@@ -24,7 +24,6 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 
 class Neo4jSinkConnectorConfigTest {
 

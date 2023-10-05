@@ -14,14 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.service.sink.strategy
+package org.neo4j.connectors.kafka.service.sink.strategy
 
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
-import org.neo4j.connectors.kafka.service.sink.strategy.PatternConfigurationType
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternConfiguration
 
 class NodePatternConfigurationTest {
 

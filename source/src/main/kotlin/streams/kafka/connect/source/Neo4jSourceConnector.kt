@@ -16,10 +16,10 @@
  */
 package streams.kafka.connect.source
 
-import com.github.jcustenborder.kafka.connect.utils.config.*
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
+import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration
 import org.neo4j.connectors.kafka.source.Neo4jSourceTask
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.utils.PropertiesUtil

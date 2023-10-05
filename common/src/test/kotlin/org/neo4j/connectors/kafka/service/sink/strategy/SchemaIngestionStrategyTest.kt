@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.service.sink.strategy
+package org.neo4j.connectors.kafka.service.sink.strategy
 
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -31,7 +31,6 @@ import org.neo4j.connectors.kafka.events.Schema
 import org.neo4j.connectors.kafka.events.StreamsConstraintType
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class SchemaIngestionStrategyTest {

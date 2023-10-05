@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package streams.utils
+package org.neo4j.connectors.kafka.utils
 
 import java.io.IOException
 import kotlin.test.assertEquals
@@ -22,7 +22,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.utils.retryForException
 
 class CoroutineUtilsTest {
 

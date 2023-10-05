@@ -38,7 +38,6 @@ import org.neo4j.driver.Record
 import org.neo4j.driver.Values
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import streams.kafka.connect.source.StreamingFrom
 
 class Neo4jSourceService(
     private val config: SourceConfiguration,
