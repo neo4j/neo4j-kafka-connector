@@ -16,7 +16,6 @@
  */
 package streams.kafka.connect.utils
 
-import java.util.Locale
 import kotlin.reflect.jvm.javaType
 import streams.kafka.connect.sink.DeprecatedNeo4jSinkConfiguration
 import streams.service.TopicType
