@@ -58,7 +58,7 @@ object Recommenders {
       ): MutableList<Any> = mutableListOf()
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
-        val dependentValue = parsedConfig?.getValue(dependent)
+        val dependentValue = parsedConfig?.get(dependent)
         return valueMatcher.test(dependentValue)
       }
     }

@@ -68,7 +68,7 @@ object Validators {
     return object : ConfigDef.Validator {
       override fun ensureValid(name: String?, value: Any?) {
         if (value is String) {
-          if (!values.contains(value)) {
+          if (values.isNotEmpty() && !values.contains(value)) {
             throw ConfigException(
                 name, value, "Must be one of: ${values.joinToString { "'$it'" }}.")
           }
@@ -111,25 +111,33 @@ object Validators {
   fun uri(vararg schemes: String): ConfigDef.Validator {
     return object : ConfigDef.Validator {
       override fun ensureValid(name: String?, value: Any?) {
-        if (value is String) {
-          if (value.isBlank()) {
-            throw ConfigException(name, value, "Must be non-empty.")
-          }
-
-          try {
-            val parsed = URI(value)
-
-            if (!schemes.contains(parsed.scheme)) {
-              throw ConfigException(
-                  name, value, "Scheme must be one of: ${schemes.joinToString { "'$it'" }}.")
+        when (value) {
+          is String -> {
+            if (value.isBlank()) {
+              throw ConfigException(name, value, "Must be non-empty.")
             }
-          } catch (t: URISyntaxException) {
-            throw ConfigException(name, value, "Must be a valid URI: ${t.message}")
+
+            try {
+              val parsed = URI(value)
+
+              if (schemes.isNotEmpty() && !schemes.contains(parsed.scheme)) {
+                throw ConfigException(
+                    name, value, "Scheme must be one of: ${schemes.joinToString { "'$it'" }}.")
+              }
+            } catch (t: URISyntaxException) {
+              throw ConfigException(name, value, "Must be a valid URI: ${t.message}")
+            }
           }
-        } else if (value is List<*>) {
-          value.forEach { ensureValid(name, it) }
-        } else {
-          throw ConfigException(name, value, "Must be a String or a List.")
+          is List<*> -> {
+            if (value.isEmpty()) {
+              throw ConfigException(name, value, "Must be non-empty.")
+            }
+
+            value.forEach { ensureValid(name, it) }
+          }
+          else -> {
+            throw ConfigException(name, value, "Must be a String or a List.")
+          }
         }
       }
     }
@@ -157,6 +165,10 @@ object Validators {
             throw ConfigException(name, value, "Must be writable.")
           }
         } else if (value is List<*>) {
+          if (value.isEmpty()) {
+            throw ConfigException(name, value, "Must be non-empty.")
+          }
+
           value.forEach { ensureValid(name, it) }
         } else {
           throw ConfigException(name, value, "Must be a String or a List.")
