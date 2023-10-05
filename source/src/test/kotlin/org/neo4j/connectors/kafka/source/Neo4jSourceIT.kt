@@ -16,15 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializer
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.lang.IllegalArgumentException
 import java.time.Duration
-import java.util.*
 import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -42,11 +37,11 @@ class Neo4jSourceIT {
   companion object {
     const val TOPIC = "test-topic"
     const val KAFKA_CONNECT_URI = "http://localhost:8083"
-    const val SCHEMA_CONTROL_REGISTRY = "http://schema-registry:8081"
-    const val SCHEMA_CONTROL_REGISTRY_EXTERNAL = "http://localhost:8081"
+    const val SCHEMA_CONTROL_REGISTRY_URI = "http://schema-registry:8081"
+    const val SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI = "http://localhost:8081"
     const val NEO4J_URI = "neo4j://neo4j"
     const val NEO4J_PASSWORD = "password"
-    const val BROKER_HOST_EXTERNAL = "localhost:9092"
+    const val BROKER_HOST_EXTERNAL_URI = "localhost:9092"
 
     private lateinit var driver: Driver
     private lateinit var session: Session
@@ -68,20 +63,27 @@ class Neo4jSourceIT {
   }
 
   @Neo4jSource(
-      topic = TOPIC,
-      kafkaConnectUri = KAFKA_CONNECT_URI,
-      schemaControlRegistryUri = SCHEMA_CONTROL_REGISTRY,
-      neo4jUri = NEO4J_URI,
+      // TODO: read this from environment
+      brokerExternalHost = BROKER_HOST_EXTERNAL_URI,
       neo4jPassword = NEO4J_PASSWORD,
+      neo4jUri = NEO4J_URI,
+      kafkaConnectUri = KAFKA_CONNECT_URI,
+      schemaControlRegistryUri = SCHEMA_CONTROL_REGISTRY_URI,
+      schemaControlRegistryExternalUri = SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI,
+      // keep these
+      topic = TOPIC,
       streamingProperty = "timestamp",
       streamingFrom = StreamingFrom.ALL,
       streamingQuery =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
+      consumerOffset = "latest",
   )
   @Test
-  fun `reads latest changes from Neo4j source`(testInfo: TestInfo) {
+  fun `reads latest changes from Neo4j source`(
+      testInfo: TestInfo,
+      consumer: KafkaConsumer<String, GenericRecord>
+  ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
-    val consumer = subscribeConsumerTo(testInfo, TOPIC, "latest")
 
     session
         .run(
@@ -116,30 +118,6 @@ class Neo4jSourceIT {
             },
         )
   }
-
-  private fun subscribeConsumerTo(
-      testInfo: TestInfo,
-      topic: String,
-      offset: String
-  ): KafkaConsumer<String, GenericRecord> {
-    val properties = Properties()
-    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BROKER_HOST_EXTERNAL)
-    properties.setProperty(
-        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, SCHEMA_CONTROL_REGISTRY_EXTERNAL)
-    properties.setProperty(
-        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        StringDeserializer::class.java.getName(),
-    )
-    properties.setProperty(
-        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-        KafkaAvroDeserializer::class.java.getName(),
-    )
-    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, testInfo.displayName)
-    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, offset)
-    val consumer = KafkaConsumer<String, GenericRecord>(properties)
-    consumer.subscribe(listOf(topic))
-    return consumer
-  }
 }
 
 fun GenericRecord.asMap(): Map<String, String> {
@@ -149,7 +127,9 @@ fun GenericRecord.asMap(): Map<String, String> {
 
 /**
  * Filters out all specified keys from map
- * @throws IllegalArgumentException if any of the specified keys are not part of this map set of keys
+ *
+ * @throws IllegalArgumentException if any of the specified keys are not part of this map set of
+ *   keys
  */
 fun <K, V> Map<K, V>.excludingKeys(vararg keys: K): Map<K, V> {
   val missing = keys.filter { !this.keys.contains(it) }

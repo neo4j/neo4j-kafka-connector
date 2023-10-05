@@ -16,17 +16,30 @@
  */
 package org.neo4j.connectors.kafka.source.testing
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import java.util.*
 import kotlin.jvm.optionals.getOrNull
+import org.apache.avro.generic.GenericRecord
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExecutionCondition
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.api.extension.support.TypeBasedParameterResolver
 import org.junit.platform.commons.support.AnnotationSupport
 import streams.kafka.connect.source.testing.Neo4jSourceRegistration
 
-class Neo4jSourceExtension : ExecutionCondition, BeforeEachCallback, AfterEachCallback {
+class Neo4jSourceExtension :
+    ExecutionCondition,
+    BeforeEachCallback,
+    AfterEachCallback,
+    TypeBasedParameterResolver<KafkaConsumer<String, GenericRecord>>() {
 
   private lateinit var metadata: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
@@ -72,5 +85,29 @@ class Neo4jSourceExtension : ExecutionCondition, BeforeEachCallback, AfterEachCa
       current = current.parent.getOrNull()
     }
     return null
+  }
+
+  override fun resolveParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): KafkaConsumer<String, GenericRecord> {
+    val properties = Properties()
+    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, metadata.brokerExternalHost)
+    properties.setProperty(
+        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+        metadata.schemaControlRegistryExternalUri)
+    properties.setProperty(
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+        StringDeserializer::class.java.getName(),
+    )
+    properties.setProperty(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        KafkaAvroDeserializer::class.java.getName(),
+    )
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
+    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, metadata.consumerOffset)
+    val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    consumer.subscribe(listOf(metadata.topic))
+    return consumer
   }
 }

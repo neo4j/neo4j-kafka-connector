@@ -32,4 +32,7 @@ annotation class Neo4jSource(
     val streamingProperty: String,
     val streamingFrom: StreamingFrom,
     val streamingQuery: String,
+    val brokerExternalHost: String,
+    val schemaControlRegistryExternalUri: String,
+    val consumerOffset: String = "latest"
 )
