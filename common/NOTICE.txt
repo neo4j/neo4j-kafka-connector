@@ -44,6 +44,7 @@ Apache Software License, Version 2.0
 
 MIT License
   Checker Qual
+  SLF4J API Module
 
 MIT No Attribution License
   reactive-streams

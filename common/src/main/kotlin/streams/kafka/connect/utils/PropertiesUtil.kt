@@ -30,6 +30,12 @@ class PropertiesUtil {
     init {
       properties = Properties()
       properties!!.load(
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-configuration.properties"))
+      properties!!.load(
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-source-configuration.properties"))
+      properties!!.load(
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-sink-configuration.properties"))
+      properties!!.load(
           PropertiesUtil::class.java.getResourceAsStream("/kafka-connect-version.properties"))
       properties!!.load(
           PropertiesUtil::class.java.getResourceAsStream("/kafka-connect-neo4j.properties"))
