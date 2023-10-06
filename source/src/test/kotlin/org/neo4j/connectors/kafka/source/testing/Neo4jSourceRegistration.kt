@@ -40,11 +40,11 @@ data class Neo4jSourceRegistration(
 ) {
 
   private val name: String = randomized("Neo4jSourceConnector")
-  private lateinit var controlCenterBaseUri: String
+  private lateinit var connectBaseUri: String
 
-  fun register(controlCenterUri: String) {
-    controlCenterBaseUri = controlCenterUri
-    val uri = URI("$controlCenterBaseUri/connectors")
+  fun register(connectBaseUri: String) {
+    this.connectBaseUri = connectBaseUri
+    val uri = URI("${this.connectBaseUri}/connectors")
     val requestBody = registrationJson()
     val registration =
         HttpRequest.newBuilder(uri)
@@ -65,7 +65,7 @@ data class Neo4jSourceRegistration(
   }
 
   fun unregister() {
-    val uri = URI("$controlCenterBaseUri/connectors/$name/")
+    val uri = URI("$connectBaseUri/connectors/$name/")
     val deregistration =
         HttpRequest.newBuilder(uri).header("Accept", "application/json").DELETE().build()
     val response = HttpClient.newHttpClient().send(deregistration, BodyHandlers.ofString())
