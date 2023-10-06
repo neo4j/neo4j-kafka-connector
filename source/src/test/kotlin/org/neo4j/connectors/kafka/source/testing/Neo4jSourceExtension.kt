@@ -167,12 +167,12 @@ class EnvBackedSetting(
 ) {
 
   fun isValid(annotation: Neo4jSource): Boolean {
-    return getter(annotation) != UNSET_VALUE || System.getenv(envVarName) != null
+    return getter(annotation) != DEFAULT_TO_ENV || System.getenv(envVarName) != null
   }
 
   fun readAnnotationOrEnv(annotation: Neo4jSource): String {
     val field = getter(annotation)
-    if (field != UNSET_VALUE) {
+    if (field != DEFAULT_TO_ENV) {
       return field
     }
     return System.getenv(envVarName)

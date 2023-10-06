@@ -19,23 +19,22 @@ package org.neo4j.connectors.kafka.source.testing
 import org.junit.jupiter.api.extension.ExtendWith
 import org.neo4j.connectors.kafka.source.StreamingFrom
 
-const val UNSET_VALUE = "___UNSET___"
+const val DEFAULT_TO_ENV = "___UNSET___"
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @ExtendWith(Neo4jSourceExtension::class)
 annotation class Neo4jSource(
-    // the following settings can be specified via environment variables
-    val brokerExternalHost: String = UNSET_VALUE,
-    val schemaControlRegistryUri: String = UNSET_VALUE,
-    val schemaControlRegistryExternalUri: String = UNSET_VALUE,
-    val kafkaConnectExternalUri: String = UNSET_VALUE,
-    val neo4jUri: String = UNSET_VALUE,
-    val neo4jUser: String = UNSET_VALUE,
-    val neo4jPassword: String = UNSET_VALUE,
-    val topic: String,
-    val streamingProperty: String,
-    val streamingFrom: StreamingFrom,
-    val streamingQuery: String,
-    val consumerOffset: String = "latest"
+  val brokerExternalHost: String = DEFAULT_TO_ENV,
+  val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
+  val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
+  val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
+  val neo4jUri: String = DEFAULT_TO_ENV,
+  val neo4jUser: String = DEFAULT_TO_ENV,
+  val neo4jPassword: String = DEFAULT_TO_ENV,
+  val topic: String,
+  val streamingProperty: String,
+  val streamingFrom: StreamingFrom,
+  val streamingQuery: String,
+  val consumerOffset: String = "latest"
 )
