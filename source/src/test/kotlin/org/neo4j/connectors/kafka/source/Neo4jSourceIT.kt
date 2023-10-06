@@ -16,21 +16,20 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import java.lang.IllegalArgumentException
-import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.source.testing.ConsumerAssertions.Companion.assertThat
 import org.neo4j.connectors.kafka.source.testing.Neo4jSource
+import org.neo4j.connectors.kafka.source.testing.TopicVerifier
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import streams.kafka.connect.source.StreamingFrom
+import java.time.Duration
 
 class Neo4jSourceIT {
 
@@ -101,22 +100,20 @@ class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    assertThat(consumer)
-        .awaitingAtMost(Duration.ofSeconds(30))
-        .hasReceivedValuesVerifying(
-            { value ->
-              value.asMap().excludingKeys("timestamp") ==
-                  mapOf("name" to "jane", "surname" to "doe", "execId" to executionId)
-            },
-            { value ->
-              value.asMap().excludingKeys("timestamp") ==
-                  mapOf("name" to "john", "surname" to "doe", "execId" to executionId)
-            },
-            { value ->
-              value.asMap().excludingKeys("timestamp") ==
-                  mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
-            },
-        )
+    TopicVerifier.create(consumer)
+        .expectMessageValueMatching { value ->
+          value.asMap().excludingKeys("timestamp") ==
+              mapOf("name" to "jane", "surname" to "doe", "execId" to executionId)
+        }
+        .expectMessageValueMatching { value ->
+          value.asMap().excludingKeys("timestamp") ==
+              mapOf("name" to "john", "surname" to "doe", "execId" to executionId)
+        }
+        .expectMessageValueMatching { value ->
+          value.asMap().excludingKeys("timestamp") ==
+              mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
+        }
+        .verifyWithin(Duration.ofSeconds(30))
   }
 }
 

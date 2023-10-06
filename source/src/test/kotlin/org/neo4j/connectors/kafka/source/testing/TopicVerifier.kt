@@ -23,12 +23,12 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.awaitility.Awaitility.await
 import org.awaitility.core.ConditionTimeoutException
 
-class ConsumerAssertions<K, V>(private val consumer: KafkaConsumer<K, V>) {
+class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
 
-  private var timeout = Duration.ofSeconds(60)
+  private var messageValuePredicates = mutableListOf<Predicate<V>>()
 
-  fun awaitingAtMost(duration: Duration): ConsumerAssertions<K, V> {
-    this.timeout = duration
+  fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
+    messageValuePredicates.add(predicate)
     return this
   }
 
@@ -41,31 +41,30 @@ class ConsumerAssertions<K, V>(private val consumer: KafkaConsumer<K, V>) {
    * - the number of predicates exceeds the number of actual messages The verification is retried
    *   until it succeeds or the provided (or default) timeout is reached.
    */
-  fun hasReceivedValuesVerifying(vararg messagePredicates: Predicate<V>): ConsumerAssertions<K, V> {
-    if (messagePredicates.isEmpty()) {
+  fun verifyWithin(timeout: Duration): Unit {
+    val predicates = messageValuePredicates.toList()
+    if (predicates.isEmpty()) {
       throw AssertionError("expected at least 1 expected message predicate but got none")
     }
-    val receivedMessages = RingBuffer<V>(messagePredicates.size)
+    val receivedMessages = RingBuffer<V>(predicates.size)
     try {
       await().atMost(timeout).until {
-        // TODO: handle small timeout values
-        consumer.poll(timeout.dividedBy(5)).forEach { receivedMessages.add(it.value()) }
+        consumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it.value()) }
         val messages = receivedMessages.toList()
-        messages.size == messagePredicates.size &&
-            messagePredicates.foldIndexed(true) { i, prev, predicate ->
+        messages.size == predicates.size &&
+            predicates.foldIndexed(true) { i, prev, predicate ->
               prev && predicate.test(messages[i])
             }
       }
     } catch (e: ConditionTimeoutException) {
       throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${messagePredicates.size} predicate(s) on received messages")
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
     }
-    return this
   }
 
   companion object {
-    fun <K, V> assertThat(consumer: KafkaConsumer<K, V>): ConsumerAssertions<K, V> {
-      return ConsumerAssertions(consumer)
+    fun <K, V> create(consumer: KafkaConsumer<K, V>): TopicVerifier<K, V> {
+      return TopicVerifier(consumer)
     }
   }
 }
