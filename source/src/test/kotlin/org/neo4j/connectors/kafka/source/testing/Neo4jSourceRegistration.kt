@@ -24,7 +24,7 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
-import streams.kafka.connect.source.StreamingFrom
+import org.neo4j.connectors.kafka.source.StreamingFrom
 
 data class Neo4jSourceRegistration(
     private val topic: String,

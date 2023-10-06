@@ -17,7 +17,7 @@
 package org.neo4j.connectors.kafka.source.testing
 
 import org.junit.jupiter.api.extension.ExtendWith
-import streams.kafka.connect.source.StreamingFrom
+import org.neo4j.connectors.kafka.source.StreamingFrom
 
 const val UNSET_VALUE = "___UNSET___"
 
