@@ -36,7 +36,7 @@ data class Neo4jSourceRegistration(
     private val streamingProperty: String,
     private val streamingFrom: StreamingFrom,
     private val streamingQuery: String,
-    private val schemaControlRegistry: String
+    private val schemaControlRegistryUri: String
 ) {
 
   private val name: String = randomized("Neo4jSourceConnector")
@@ -94,11 +94,11 @@ data class Neo4jSourceRegistration(
         .append("\"connector.class\": \"streams.kafka.connect.source.Neo4jSourceConnector\",")
         .append("\"key.converter\": \"io.confluent.connect.avro.AvroConverter\",")
         .append("\"key.converter.schema.registry.url\": ")
-        .append(quoted(schemaControlRegistry))
+        .append(quoted(schemaControlRegistryUri))
         .append(",")
         .append("\"value.converter\": \"io.confluent.connect.avro.AvroConverter\",")
         .append("\"value.converter.schema.registry.url\": ")
-        .append(quoted(schemaControlRegistry))
+        .append(quoted(schemaControlRegistryUri))
         .append(",")
         .append("\"neo4j.server.uri\": ")
         .append(quoted(neo4jUri))

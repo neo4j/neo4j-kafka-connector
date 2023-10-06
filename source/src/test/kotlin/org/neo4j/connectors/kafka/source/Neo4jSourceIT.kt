@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.AfterAll
@@ -29,18 +30,11 @@ import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import streams.kafka.connect.source.StreamingFrom
-import java.time.Duration
 
 class Neo4jSourceIT {
 
   companion object {
-    const val TOPIC = "test-topic"
-    const val KAFKA_CONNECT_URI = "http://localhost:8083"
-    const val SCHEMA_CONTROL_REGISTRY_URI = "http://schema-registry:8081"
-    const val SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI = "http://localhost:8081"
-    const val NEO4J_URI = "neo4j://neo4j"
-    const val NEO4J_PASSWORD = "password"
-    const val BROKER_HOST_EXTERNAL_URI = "localhost:9092"
+    const val TOPIC = "neo4j-source-topic"
 
     private lateinit var driver: Driver
     private lateinit var session: Session
@@ -62,14 +56,6 @@ class Neo4jSourceIT {
   }
 
   @Neo4jSource(
-      // TODO: read this from environment
-      brokerExternalHost = BROKER_HOST_EXTERNAL_URI,
-      neo4jPassword = NEO4J_PASSWORD,
-      neo4jUri = NEO4J_URI,
-      kafkaConnectUri = KAFKA_CONNECT_URI,
-      schemaControlRegistryUri = SCHEMA_CONTROL_REGISTRY_URI,
-      schemaControlRegistryExternalUri = SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI,
-      // keep these
       topic = TOPIC,
       streamingProperty = "timestamp",
       streamingFrom = StreamingFrom.ALL,

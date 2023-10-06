@@ -44,27 +44,74 @@ class Neo4jSourceExtension :
   private lateinit var metadata: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
 
+  private val brokerExternalHost =
+      EnvBackedSetting("brokerExternalHost", "BROKER_EXTERNAL_HOST") { it.brokerExternalHost }
+  private val schemaRegistryUri =
+      EnvBackedSetting(
+          "schemaControlRegistryUri",
+          "SCHEMA_CONTROL_REGISTRY_URI",
+      ) {
+        it.schemaControlRegistryUri
+      }
+  private val schemaRegistryExternalUri =
+      EnvBackedSetting(
+          "schemaControlRegistryExternalUri",
+          "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI",
+      ) {
+        it.schemaControlRegistryExternalUri
+      }
+  private val kafkaConnectExternalUri =
+      EnvBackedSetting("kafkaConnectExternalUri", "KAFKA_CONNECT_EXTERNAL_URI") {
+        it.kafkaConnectExternalUri
+      }
+  private val neo4jUri = EnvBackedSetting("neo4jUri", "NEO4J_URI") { it.neo4jUri }
+  private val neo4jUser = EnvBackedSetting("neo4jUser", "NEO4J_USER") { it.neo4jUser }
+  private val neo4jPassword =
+      EnvBackedSetting("neo4jPassword", "NEO4J_PASSWORD") { it.neo4jPassword }
+
+  private val envSettings =
+      listOf(
+          brokerExternalHost,
+          schemaRegistryUri,
+          schemaRegistryExternalUri,
+          kafkaConnectExternalUri,
+          neo4jUri,
+          neo4jUser,
+          neo4jPassword,
+      )
+
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
         findAnnotation(context) ?: throw ExtensionConfigurationException("@Neo4jSource not found")
+
+    val errors = mutableListOf<String>()
+    envSettings.forEach {
+      if (!it.isValid(metadata)) {
+        errors.add(it.errorMessage())
+      }
+    }
+    if (errors.isNotEmpty()) {
+      throw ExtensionConfigurationException(
+          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}")
+    }
+
     this.metadata = metadata
-    // TODO: check Kafka Connect is up?
-    return ConditionEvaluationResult.enabled("@Neo4jSource found")
+    return ConditionEvaluationResult.enabled("@Neo4jSource and environment properly configured")
   }
 
   override fun beforeEach(context: ExtensionContext?) {
     source =
         Neo4jSourceRegistration(
+            schemaControlRegistryUri = schemaRegistryUri.readAnnotationOrEnv(metadata),
+            neo4jUri = neo4jUri.readAnnotationOrEnv(metadata),
+            neo4jUser = neo4jUser.readAnnotationOrEnv(metadata),
+            neo4jPassword = neo4jPassword.readAnnotationOrEnv(metadata),
             topic = metadata.topic,
-            neo4jUri = metadata.neo4jUri,
-            neo4jUser = metadata.neo4jUser,
-            neo4jPassword = metadata.neo4jPassword,
             streamingProperty = metadata.streamingProperty,
             streamingFrom = metadata.streamingFrom,
             streamingQuery = metadata.streamingQuery,
-            schemaControlRegistry = metadata.schemaControlRegistryUri,
         )
-    source.register(metadata.kafkaConnectUri)
+    source.register(kafkaConnectExternalUri.readAnnotationOrEnv(metadata))
   }
 
   override fun afterEach(context: ExtensionContext?) {
@@ -92,10 +139,12 @@ class Neo4jSourceExtension :
       extensionContext: ExtensionContext?
   ): KafkaConsumer<String, GenericRecord> {
     val properties = Properties()
-    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, metadata.brokerExternalHost)
+    properties.setProperty(
+        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerExternalHost.readAnnotationOrEnv(metadata))
     properties.setProperty(
         KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        metadata.schemaControlRegistryExternalUri)
+        schemaRegistryExternalUri.readAnnotationOrEnv(metadata),
+    )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
         StringDeserializer::class.java.getName(),
@@ -109,5 +158,28 @@ class Neo4jSourceExtension :
     val consumer = KafkaConsumer<String, GenericRecord>(properties)
     consumer.subscribe(listOf(metadata.topic))
     return consumer
+  }
+}
+
+class EnvBackedSetting(
+    private val name: String,
+    private val envVarName: String,
+    private val getter: (Neo4jSource) -> String
+) {
+
+  fun isValid(annotation: Neo4jSource): Boolean {
+    return getter(annotation) != UNSET_VALUE || System.getenv(envVarName) != null
+  }
+
+  fun readAnnotationOrEnv(annotation: Neo4jSource): String {
+    val field = getter(annotation)
+    if (field != UNSET_VALUE) {
+      return field
+    }
+    return System.getenv(envVarName)
+  }
+
+  fun errorMessage(): String {
+    return "Both @Neo4jSource.$name and environment variable $envVarName are unset. Please specify one"
   }
 }
