@@ -30,6 +30,7 @@ import org.junit.jupiter.api.*
 import org.mockito.Mockito
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -37,7 +38,6 @@ import org.neo4j.driver.Session
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import streams.utils.JSONUtils
 
 @Testcontainers
 class Neo4jSourceTaskTest {

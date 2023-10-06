@@ -30,9 +30,9 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.Config
 import org.neo4j.driver.Config.TrustStrategy.Strategy
-import streams.kafka.connect.utils.PropertiesUtil
 
 enum class ConfigurationGroup(val title: String) {
   CONNECTION("Neo4j Connection"),

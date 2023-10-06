@@ -19,9 +19,9 @@ package org.neo4j.connectors.kafka.source
 import kotlin.properties.Delegates
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.source.SourceRecord
+import org.neo4j.connectors.kafka.source.utils.asJsonString
+import org.neo4j.connectors.kafka.source.utils.asStruct
 import org.neo4j.driver.Record
-import streams.kafka.connect.utils.asJsonString
-import streams.kafka.connect.utils.asStruct
 
 class SourceRecordBuilder {
 

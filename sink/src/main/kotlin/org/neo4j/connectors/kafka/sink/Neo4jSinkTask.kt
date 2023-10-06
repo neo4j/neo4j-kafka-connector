@@ -19,13 +19,13 @@ package org.neo4j.connectors.kafka.sink
 import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
+import org.neo4j.connectors.kafka.extensions.asProperties
+import org.neo4j.connectors.kafka.service.errors.ErrorData
+import org.neo4j.connectors.kafka.service.errors.ErrorService
+import org.neo4j.connectors.kafka.service.errors.KafkaErrorService
+import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import streams.extensions.asProperties
-import streams.service.errors.ErrorData
-import streams.service.errors.ErrorService
-import streams.service.errors.KafkaErrorService
-import streams.utils.StreamsUtils
 
 class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)

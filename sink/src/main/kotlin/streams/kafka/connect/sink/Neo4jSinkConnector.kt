@@ -19,9 +19,10 @@ package streams.kafka.connect.sink
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
+import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import streams.kafka.connect.utils.PropertiesUtil
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 @Deprecated("Use org.neo4j.connectors.kafka.sink.Neo4jConnector instead")
 class Neo4jSinkConnector : SinkConnector() {

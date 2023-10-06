@@ -25,6 +25,7 @@ import org.apache.kafka.connect.data.Struct
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 
+@Suppress("UNCHECKED_CAST")
 class Neo4jValueConverter : MapValueConverter<Value>() {
 
   companion object {

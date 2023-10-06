@@ -237,7 +237,7 @@ class Neo4jValueConverterTest {
         Struct(trainSchema).put("internationalTrainNumber", "46261").put("trainDate", "2021-05-20")
     val rootStruct = Struct(mySchema).put("trainId", trainIdStruct).put("coreId", "000000046261")
 
-    val result = Neo4jValueConverter().convert(rootStruct) as Map<*, *>
+    Neo4jValueConverter().convert(rootStruct)
   }
 
   companion object {

@@ -24,8 +24,6 @@ import org.apache.kafka.common.config.ConfigException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import streams.kafka.connect.source.SourceType
-import streams.kafka.connect.source.StreamingFrom
 
 class SourceConfigurationTest {
 

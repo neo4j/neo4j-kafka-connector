@@ -17,7 +17,6 @@
 package org.neo4j.connectors.kafka.configuration
 
 import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
-import java.net.URI
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
@@ -28,9 +27,9 @@ import org.apache.kafka.common.config.ConfigDef.Range
 import org.apache.kafka.common.config.ConfigDef.Type
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.Config.TrustStrategy
 import org.neo4j.driver.internal.async.pool.PoolSettings
-import streams.kafka.connect.utils.PropertiesUtil
 
 object ConfigGroup {
   const val ENCRYPTION = "Encryption"

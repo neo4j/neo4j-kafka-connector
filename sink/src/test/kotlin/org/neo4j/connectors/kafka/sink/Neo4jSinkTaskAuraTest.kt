@@ -20,7 +20,7 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.Schema as Schema1
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
@@ -33,21 +33,21 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.events.Meta
+import org.neo4j.connectors.kafka.events.NodeChange
+import org.neo4j.connectors.kafka.events.NodePayload
+import org.neo4j.connectors.kafka.events.OperationType
+import org.neo4j.connectors.kafka.events.RelationshipChange
+import org.neo4j.connectors.kafka.events.RelationshipNodeChange
+import org.neo4j.connectors.kafka.events.RelationshipPayload
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import streams.events.Meta
-import streams.events.NodeChange
-import streams.events.NodePayload
-import streams.events.OperationType
-import streams.events.RelationshipChange
-import streams.events.RelationshipNodeChange
-import streams.events.RelationshipPayload
-import streams.events.StreamsTransactionEvent
-import streams.service.sink.strategy.CUDNode
-import streams.service.sink.strategy.CUDOperations
-import streams.utils.JSONUtils
 
 class Neo4jSinkTaskAuraTest {
 
@@ -56,7 +56,7 @@ class Neo4jSinkTaskAuraTest {
     private val SIMPLE_SCHEMA =
         SchemaBuilder.struct()
             .name("com.example.Person")
-            .field("name", Schema.STRING_SCHEMA)
+            .field("name", Schema1.STRING_SCHEMA)
             .build()
 
     private val user: String? = System.getenv("AURA_USER")
@@ -151,7 +151,7 @@ class Neo4jSinkTaskAuraTest {
                     before = null,
                     after =
                         NodeChange(properties = mapOf("name" to "Pippo"), labels = listOf("User"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataEnd =
         StreamsTransactionEvent(
             meta =
@@ -169,7 +169,7 @@ class Neo4jSinkTaskAuraTest {
                     after =
                         NodeChange(
                             properties = mapOf("name" to "Pluto"), labels = listOf("User Ext"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -191,7 +191,7 @@ class Neo4jSinkTaskAuraTest {
                     after = RelationshipChange(properties = mapOf("since" to 2014)),
                     before = null,
                     label = "HAS_REL"),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
 
     val task = Neo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
@@ -248,7 +248,7 @@ class Neo4jSinkTaskAuraTest {
                         NodeChange(
                             properties = mapOf("name" to "Pippo", "age" to 99),
                             labels = listOf("User"))),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val cdcDataRelationship =
         StreamsTransactionEvent(
             meta =
@@ -270,7 +270,7 @@ class Neo4jSinkTaskAuraTest {
                     after = RelationshipChange(properties = mapOf("since" to 1999, "foo" to "bar")),
                     before = RelationshipChange(properties = mapOf("since" to 2014)),
                     label = "KNOWS WHO"),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
 
     val task = Neo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
@@ -323,7 +323,7 @@ class Neo4jSinkTaskAuraTest {
                             properties = mapOf("name" to "Andrea", "comp@ny" to "LARUS-BA"),
                             labels = listOf("User", "OldLabel")),
                     after = null),
-            schema = streams.events.Schema())
+            schema = org.neo4j.connectors.kafka.events.Schema())
     val task = Neo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)

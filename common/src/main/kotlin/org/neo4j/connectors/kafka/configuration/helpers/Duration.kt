@@ -45,7 +45,7 @@ fun Duration.Companion.parseSimpleString(value: String): Duration {
 
   val unitIndex = value.indexOfFirst { !it.isDigit() }
   if (unitIndex == -1) {
-    return throw IllegalArgumentException(
+    throw IllegalArgumentException(
         "Invalid duration string '$value'. No unit provided. $VALID_UNITS_DESCRIPTION")
   }
   require(unitIndex != 0) { "Missing numeric value: $value" }
