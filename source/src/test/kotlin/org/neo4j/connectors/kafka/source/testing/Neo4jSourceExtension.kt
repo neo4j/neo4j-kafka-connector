@@ -33,7 +33,6 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.support.TypeBasedParameterResolver
 import org.junit.platform.commons.support.AnnotationSupport
-import streams.kafka.connect.source.testing.Neo4jSourceRegistration
 
 class Neo4jSourceExtension :
     ExecutionCondition,
