@@ -25,16 +25,16 @@ const val DEFAULT_TO_ENV = "___UNSET___"
 @Retention(AnnotationRetention.RUNTIME)
 @ExtendWith(Neo4jSourceExtension::class)
 annotation class Neo4jSource(
-  val brokerExternalHost: String = DEFAULT_TO_ENV,
-  val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
-  val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
-  val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
-  val neo4jUri: String = DEFAULT_TO_ENV,
-  val neo4jUser: String = DEFAULT_TO_ENV,
-  val neo4jPassword: String = DEFAULT_TO_ENV,
-  val topic: String,
-  val streamingProperty: String,
-  val streamingFrom: StreamingFrom,
-  val streamingQuery: String,
-  val consumerOffset: String = "latest"
+    val brokerExternalHost: String = DEFAULT_TO_ENV,
+    val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
+    val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
+    val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
+    val neo4jUri: String = DEFAULT_TO_ENV,
+    val neo4jUser: String = DEFAULT_TO_ENV,
+    val neo4jPassword: String = DEFAULT_TO_ENV,
+    val topic: String,
+    val streamingProperty: String,
+    val streamingFrom: StreamingFrom,
+    val streamingQuery: String,
+    val consumerOffset: String = "latest"
 )
