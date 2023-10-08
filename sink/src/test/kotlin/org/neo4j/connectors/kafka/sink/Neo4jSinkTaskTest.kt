@@ -455,10 +455,21 @@ class Neo4jSinkTaskTest {
                 properties = setOf("name", "surname")))
     val relSchema =
         org.neo4j.connectors.kafka.events.Schema(
-            properties = mapOf("since" to "Long"), constraints = constraints)
+            properties = mapOf("since" to "Long", "where" to "PointValue"),
+            constraints = constraints)
     val nodeSchema =
         org.neo4j.connectors.kafka.events.Schema(
-            properties = mapOf("name" to "String", "surname" to "String", "comp@ny" to "String"),
+            properties =
+                mapOf(
+                    "name" to "String",
+                    "surname" to "String",
+                    "comp@ny" to "String",
+                    "bornIn2d" to "PointValue",
+                    "bornIn3d" to "PointValue",
+                    "livesIn2d" to "PointValue",
+                    "livesIn3d" to "PointValue",
+                    "worksIn2d" to "PointValue",
+                    "worksIn3d" to "PointValue"),
             constraints = constraints)
     val cdcDataStart =
         StreamsTransactionEvent(
@@ -480,7 +491,39 @@ class Neo4jSinkTaskTest {
                                 mapOf(
                                     "name" to "Andrea",
                                     "surname" to "Santurbano",
-                                    "comp@ny" to "LARUS-BA"),
+                                    "comp@ny" to "LARUS-BA",
+                                    "bornIn3d" to
+                                        mapOf(
+                                            "crs" to "wgs-84-3d",
+                                            "latitude" to 12.78,
+                                            "longitude" to 56.7,
+                                            "height" to 100.0,
+                                        ),
+                                    "bornIn2d" to
+                                        mapOf(
+                                            "crs" to "wgs-84",
+                                            "latitude" to 12.78,
+                                            "longitude" to 56.7),
+                                    "livesIn3d" to
+                                        mapOf(
+                                            "crs" to "wgs-84-3d",
+                                            "latitude" to 12.79,
+                                            "longitude" to 56.71,
+                                            "height" to 100.0,
+                                        ),
+                                    "livesIn2d" to
+                                        mapOf(
+                                            "crs" to "wgs-84",
+                                            "latitude" to 12.79,
+                                            "longitude" to 56.71),
+                                    "worksIn2d" to
+                                        mapOf("crs" to "cartesian", "x" to 1.2, "y" to 10.1),
+                                    "worksIn3d" to
+                                        mapOf(
+                                            "crs" to "cartesian-3d",
+                                            "x" to 1.2,
+                                            "y" to 10.1,
+                                            "z" to 7.1)),
                             labels = listOf("User"))),
             schema = nodeSchema)
     val cdcDataEnd =
@@ -529,9 +572,20 @@ class Neo4jSinkTaskTest {
                             id = "1",
                             labels = listOf("User"),
                             ids = mapOf("name" to "Michael", "surname" to "Hunger")),
-                    after = RelationshipChange(properties = mapOf("since" to 2014)),
+                    after =
+                        RelationshipChange(
+                            properties =
+                                mapOf(
+                                    "since" to 2014,
+                                    "where" to
+                                        mapOf(
+                                            "crs" to "wgs-84-3d",
+                                            "latitude" to 12.78,
+                                            "longitude" to 56.7,
+                                            "height" to 80.0,
+                                        ))),
                     before = null,
-                    label = "KNOWS WHO"),
+                    label = "MEET"),
             schema = relSchema)
 
     task.start(props)
@@ -544,7 +598,19 @@ class Neo4jSinkTaskTest {
     session.beginTransaction().use {
       val query =
           """
-                |MATCH p = (s:User{name:'Andrea', surname:'Santurbano', `comp@ny`:'LARUS-BA'})-[r:`KNOWS WHO`{since:2014}]->(e:User{name:'Michael', surname:'Hunger', `comp@ny`:'Neo4j'})
+                |MATCH (s:User{
+                |   name:'Andrea',
+                |   surname:'Santurbano',
+                |   `comp@ny`:'LARUS-BA',
+                |   bornIn3d: point({x: 56.7, y: 12.78, z: 100.0, crs: 'wgs-84-3d'}),
+                |   bornIn2d: point({x: 56.7, y: 12.78, crs: 'wgs-84'}),
+                |   livesIn3d: point({longitude: 56.71, latitude: 12.79, height: 100}),
+                |   livesIn2d: point({longitude: 56.71, latitude: 12.79}),
+                |   worksIn2d: point({x: 1.2, y: 10.1, crs: 'cartesian'}),
+                |   worksIn3d: point({x: 1.2, y: 10.1, z: 7.1, crs: 'cartesian-3d'})
+                |})
+                |MATCH (t:User{name:'Michael', surname:'Hunger', `comp@ny`:'Neo4j'})
+                |MATCH p = (s)-[r:MEET{since: 2014, where: point({x: 56.7, y: 12.78, z: 80.0, crs: 'wgs-84-3d'})}]->(t)
                 |RETURN count(p) AS count
                 |"""
               .trimMargin()
