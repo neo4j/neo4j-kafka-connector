@@ -15,8 +15,8 @@ interaction:
     description: build connector packages
     runner: local
     command: >
-      sh -c "./mvnw clean package -DskipTests -pl :packaging -am -Pconfluent &&
-        rm -f ./docker/plugins/* && 
+      sh -c "./mvnw clean package -DskipTests -pl :packaging -am &&
+        find ./docker/plugins ! -name '.keep' -type f -exec rm -f {} + && 
         cp ./packaging/target/*.jar ./docker/plugins"
 
   run-e2e:

@@ -30,4 +30,5 @@ out
 Thumbs.db
 bin
 node_modules
-docker/plugins
+docker/plugins/*
+!docker/plugins/.keep
