@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source.testing
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -25,21 +26,48 @@ import java.time.Duration
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
 import org.neo4j.connectors.kafka.source.StreamingFrom
+import streams.kafka.connect.source.Neo4jSourceConnector
 
-data class Neo4jSourceRegistration(
-    private val topic: String,
-    private val neo4jUri: String,
-    private val neo4jUser: String = "neo4j",
-    private val neo4jPassword: String,
-    private val pollInterval: Duration = Duration.ofMillis(5000),
-    private val enforceSchema: Boolean = true,
-    private val streamingProperty: String,
-    private val streamingFrom: StreamingFrom,
-    private val streamingQuery: String,
-    private val schemaControlRegistryUri: String
+class Neo4jSourceRegistration(
+    topic: String,
+    neo4jUri: String,
+    neo4jUser: String = "neo4j",
+    neo4jPassword: String,
+    pollInterval: Duration = Duration.ofMillis(5000),
+    enforceSchema: Boolean = true,
+    streamingProperty: String,
+    streamingFrom: StreamingFrom,
+    streamingQuery: String,
+    schemaControlRegistryUri: String
 ) {
 
   private val name: String = randomized("Neo4jSourceConnector")
+  private val payload: Map<String, Any>
+
+  init {
+    payload =
+        mapOf(
+            "name" to name,
+            "config" to
+                mapOf(
+                    "topic" to topic,
+                    "connector.class" to Neo4jSourceConnector::class.java.name,
+                    "key.converter" to "io.confluent.connect.avro.AvroConverter",
+                    "key.converter.schema.registry.url" to "http://schema-registry:8081",
+                    "value.converter" to "io.confluent.connect.avro.AvroConverter",
+                    "value.converter.schema.registry.url" to schemaControlRegistryUri,
+                    "neo4j.server.uri" to neo4jUri,
+                    "neo4j.authentication.basic.username" to neo4jUser,
+                    "neo4j.authentication.basic.password" to neo4jPassword,
+                    "neo4j.streaming.poll.interval.msecs" to pollInterval.toMillis(),
+                    "neo4j.streaming.property" to streamingProperty,
+                    "neo4j.streaming.from" to streamingFrom.name,
+                    "neo4j.enforce.schema" to enforceSchema,
+                    "neo4j.source.query" to streamingQuery,
+                ),
+        )
+  }
+
   private lateinit var connectBaseUri: String
 
   fun register(connectBaseUri: String) {
@@ -81,58 +109,10 @@ data class Neo4jSourceRegistration(
   }
 
   private fun registrationJson(): String {
-    return java.lang
-        .StringBuilder()
-        .append("{")
-        .append("\"name\": ")
-        .append(quoted(name))
-        .append(",")
-        .append("\"config\": {")
-        .append("\"topic\": ")
-        .append(quoted(topic))
-        .append(",")
-        .append("\"connector.class\": \"streams.kafka.connect.source.Neo4jSourceConnector\",")
-        .append("\"key.converter\": \"io.confluent.connect.avro.AvroConverter\",")
-        .append("\"key.converter.schema.registry.url\": ")
-        .append(quoted(schemaControlRegistryUri))
-        .append(",")
-        .append("\"value.converter\": \"io.confluent.connect.avro.AvroConverter\",")
-        .append("\"value.converter.schema.registry.url\": ")
-        .append(quoted(schemaControlRegistryUri))
-        .append(",")
-        .append("\"neo4j.server.uri\": ")
-        .append(quoted(neo4jUri))
-        .append(",")
-        .append("\"neo4j.authentication.basic.username\": ")
-        .append(quoted(neo4jUser))
-        .append(",")
-        .append("\"neo4j.authentication.basic.password\": ")
-        .append(quoted(neo4jPassword))
-        .append(",")
-        .append("\"neo4j.streaming.poll.interval.msecs\": ")
-        .append(pollInterval.toMillis())
-        .append(",")
-        .append("\"neo4j.streaming.property\": ")
-        .append(quoted(streamingProperty))
-        .append(",")
-        .append("\"neo4j.streaming.from\": ")
-        .append(quoted(streamingFrom.name))
-        .append(",")
-        .append("\"neo4j.enforce.schema\": ")
-        .append(enforceSchema)
-        .append(",")
-        .append("\"neo4j.source.query\": ")
-        .append(quoted(streamingQuery))
-        .append("}")
-        .append("}")
-        .toString()
+    return ObjectMapper().writeValueAsString(payload)
   }
 
   companion object {
-    private fun quoted(string: String): String {
-      return String.format("\"%s\"", string)
-    }
-
     private fun randomized(baseName: String): String {
       val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
       val suffix =
