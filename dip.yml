@@ -30,6 +30,7 @@ interaction:
       SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI: "http://localhost:8081"
       KAFKA_CONNECT_EXTERNAL_URI: "http://localhost:8083"
       NEO4J_URI: "neo4j://neo4j"
+      NEO4J_EXTERNAL_URI: "neo4j://localhost"
       NEO4J_USER: "neo4j"
       NEO4J_PASSWORD: "password"
 

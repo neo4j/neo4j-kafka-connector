@@ -30,6 +30,7 @@ annotation class Neo4jSource(
     val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
     val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUri: String = DEFAULT_TO_ENV,
+    val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val topic: String,

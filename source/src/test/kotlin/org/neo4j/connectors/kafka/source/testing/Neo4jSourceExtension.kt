@@ -31,17 +31,30 @@ import org.junit.jupiter.api.extension.ExecutionCondition
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
-import org.junit.jupiter.api.extension.support.TypeBasedParameterResolver
+import org.junit.jupiter.api.extension.ParameterResolutionException
+import org.junit.jupiter.api.extension.ParameterResolver
 import org.junit.platform.commons.support.AnnotationSupport
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
 
 class Neo4jSourceExtension :
-    ExecutionCondition,
-    BeforeEachCallback,
-    AfterEachCallback,
-    TypeBasedParameterResolver<KafkaConsumer<String, GenericRecord>>() {
+    ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+
+  companion object {
+    val PARAMETER_RESOLVERS:
+        Map<Class<*>, (Neo4jSourceExtension, ParameterContext?, ExtensionContext?) -> Any> =
+        mapOf(
+            KafkaConsumer::class.java to Neo4jSourceExtension::resolveConsumer,
+            Session::class.java to Neo4jSourceExtension::resolveSession)
+  }
 
   private lateinit var metadata: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
+
+  private lateinit var driver: Driver
+  private lateinit var session: Session
 
   private val brokerExternalHost =
       EnvBackedSetting("brokerExternalHost", "BROKER_EXTERNAL_HOST") { it.brokerExternalHost }
@@ -64,6 +77,8 @@ class Neo4jSourceExtension :
         it.kafkaConnectExternalUri
       }
   private val neo4jUri = EnvBackedSetting("neo4jUri", "NEO4J_URI") { it.neo4jUri }
+  private val neo4jExternalUri =
+      EnvBackedSetting("neo4jExternalUri", "NEO4J_EXTERNAL_URI") { it.neo4jExternalUri }
   private val neo4jUser = EnvBackedSetting("neo4jUser", "NEO4J_USER") { it.neo4jUser }
   private val neo4jPassword =
       EnvBackedSetting("neo4jPassword", "NEO4J_PASSWORD") { it.neo4jPassword }
@@ -75,6 +90,7 @@ class Neo4jSourceExtension :
           schemaRegistryExternalUri,
           kafkaConnectExternalUri,
           neo4jUri,
+          neo4jExternalUri,
           neo4jUser,
           neo4jPassword,
       )
@@ -91,7 +107,8 @@ class Neo4jSourceExtension :
     }
     if (errors.isNotEmpty()) {
       throw ExtensionConfigurationException(
-          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}")
+          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}",
+      )
     }
 
     this.metadata = metadata
@@ -99,22 +116,89 @@ class Neo4jSourceExtension :
   }
 
   override fun beforeEach(context: ExtensionContext?) {
+    if (this::driver.isInitialized) {
+      driver.verifyConnectivity()
+    }
     source =
         Neo4jSourceRegistration(
-            schemaControlRegistryUri = schemaRegistryUri.readAnnotationOrEnv(metadata),
-            neo4jUri = neo4jUri.readAnnotationOrEnv(metadata),
-            neo4jUser = neo4jUser.readAnnotationOrEnv(metadata),
-            neo4jPassword = neo4jPassword.readAnnotationOrEnv(metadata),
+            schemaControlRegistryUri = schemaRegistryUri.read(metadata),
+            neo4jUri = neo4jUri.read(metadata),
+            neo4jUser = neo4jUser.read(metadata),
+            neo4jPassword = neo4jPassword.read(metadata),
             topic = metadata.topic,
             streamingProperty = metadata.streamingProperty,
             streamingFrom = metadata.streamingFrom,
             streamingQuery = metadata.streamingQuery,
         )
-    source.register(kafkaConnectExternalUri.readAnnotationOrEnv(metadata))
+    source.register(kafkaConnectExternalUri.read(metadata))
   }
 
   override fun afterEach(context: ExtensionContext?) {
     source.unregister()
+    if (this::driver.isInitialized) {
+      session.close()
+      driver.close()
+    }
+  }
+
+  override fun supportsParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Boolean {
+    return PARAMETER_RESOLVERS.contains(parameterContext?.parameter?.type)
+  }
+
+  override fun resolveParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    val parameterType = parameterContext?.parameter?.type
+    val resolver =
+        PARAMETER_RESOLVERS[parameterType]
+            ?: throw ParameterResolutionException(
+                "@Neo4jSource does not support injection of parameters typed $parameterType")
+    return resolver(this, parameterContext, extensionContext)
+  }
+
+  private fun resolveConsumer(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): KafkaConsumer<String, GenericRecord> {
+    val properties = Properties()
+    properties.setProperty(
+        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+        brokerExternalHost.read(metadata),
+    )
+    properties.setProperty(
+        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+        schemaRegistryExternalUri.read(metadata),
+    )
+    properties.setProperty(
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+        StringDeserializer::class.java.getName(),
+    )
+    properties.setProperty(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        KafkaAvroDeserializer::class.java.getName(),
+    )
+    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
+    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, metadata.consumerOffset)
+    val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    consumer.subscribe(listOf(metadata.topic))
+    return consumer
+  }
+
+  private fun resolveSession(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    val uri = neo4jExternalUri.read(metadata)
+    val username = neo4jUser.read(metadata)
+    val password = neo4jPassword.read(metadata)
+    driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password))
+    // TODO: handle multiple parameter injection
+    session = driver.session()
+    return session
   }
 
   private fun findAnnotation(context: ExtensionContext?): Neo4jSource? {
@@ -132,32 +216,6 @@ class Neo4jSourceExtension :
     }
     return null
   }
-
-  override fun resolveParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
-  ): KafkaConsumer<String, GenericRecord> {
-    val properties = Properties()
-    properties.setProperty(
-        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerExternalHost.readAnnotationOrEnv(metadata))
-    properties.setProperty(
-        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaRegistryExternalUri.readAnnotationOrEnv(metadata),
-    )
-    properties.setProperty(
-        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        StringDeserializer::class.java.getName(),
-    )
-    properties.setProperty(
-        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-        KafkaAvroDeserializer::class.java.getName(),
-    )
-    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
-    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, metadata.consumerOffset)
-    val consumer = KafkaConsumer<String, GenericRecord>(properties)
-    consumer.subscribe(listOf(metadata.topic))
-    return consumer
-  }
 }
 
 class EnvBackedSetting(
@@ -170,15 +228,19 @@ class EnvBackedSetting(
     return getter(annotation) != DEFAULT_TO_ENV || System.getenv(envVarName) != null
   }
 
-  fun readAnnotationOrEnv(annotation: Neo4jSource): String {
-    val field = getter(annotation)
-    if (field != DEFAULT_TO_ENV) {
-      return field
+  fun read(annotation: Neo4jSource): String {
+    val fieldValue = getter(annotation)
+    if (fieldValue != DEFAULT_TO_ENV) {
+      return fieldValue
     }
     return System.getenv(envVarName)
   }
 
   fun errorMessage(): String {
     return "Both @Neo4jSource.$name and environment variable $envVarName are unset. Please specify one"
+  }
+
+  override fun toString(): String {
+    return "EnvBackedSetting(name='$name', envVarName='$envVarName')"
   }
 }

@@ -19,39 +19,16 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.source.testing.Neo4jSource
 import org.neo4j.connectors.kafka.source.testing.TopicVerifier
-import org.neo4j.driver.AuthTokens
-import org.neo4j.driver.Driver
-import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 
 class Neo4jSourceIT {
 
   companion object {
     const val TOPIC = "neo4j-source-topic"
-
-    private lateinit var driver: Driver
-    private lateinit var session: Session
-
-    @BeforeAll
-    @JvmStatic
-    fun setUpConnector() {
-      driver = GraphDatabase.driver("neo4j://localhost", AuthTokens.basic("neo4j", "password"))
-      driver.verifyConnectivity()
-      session = driver.session()
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun tearDownConnector() {
-      session.close()
-      driver.close()
-    }
   }
 
   @Neo4jSource(
@@ -65,7 +42,8 @@ class Neo4jSourceIT {
   @Test
   fun `reads latest changes from Neo4j source`(
       testInfo: TestInfo,
-      consumer: KafkaConsumer<String, GenericRecord>
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
 
