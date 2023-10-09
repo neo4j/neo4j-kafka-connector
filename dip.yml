@@ -62,18 +62,6 @@ interaction:
     compose:
       method: exec
 
-  export-env:
-    description: exports environment variables required for e2e testing
-    runner: local
-    command: >
-      export BROKER_EXTERNAL_HOST="localhost:9092"
-      export SCHEMA_CONTROL_REGISTRY_URI="http://schema-registry:8081"
-      export SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI="http://localhost:8081"
-      export KAFKA_CONNECT_EXTERNAL_URI="http://localhost:8083"
-      export NEO4J_URI="neo4j://neo4j"
-      export NEO4J_USER="neo4j"
-      export NEO4J_PASSWORD="password"
-
 provision:
   - dip build-package
   - dip compose down --rmi local
