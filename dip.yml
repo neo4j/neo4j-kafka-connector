@@ -9,7 +9,7 @@ interaction:
   format:
     description: format sources
     runner: local
-    command: sh -c "./mvnw license:format spotless:apply"
+    command: sh -c "./mvnw sortpom:sort license:format spotless:apply"
 
   build-package:
     description: build connector packages
