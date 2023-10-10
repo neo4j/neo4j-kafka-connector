@@ -43,8 +43,8 @@ class IntegrationTests(id: String, name: String) :
           scriptContent = """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
-                apt-get update -y
-                apt-get install ruby-full
+                apt-get update
+                apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip provision
@@ -71,8 +71,8 @@ class IntegrationTests(id: String, name: String) :
           scriptContent = """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
-                apt-get update -y
-                apt-get install ruby-full
+                apt-get update
+                apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip compose down --rmi local
