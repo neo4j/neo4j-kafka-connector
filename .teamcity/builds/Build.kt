@@ -21,7 +21,18 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
         dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
         dependentBuildType(collectArtifacts(packaging))
         dependentBuildType(
-              IntegrationTests("${name}-integration-tests", "integration tests"))
+            IntegrationTests("${name}-integration-tests", "integration tests") {
+              dependencies {
+                artifacts(packaging) {
+                  artifactRules =
+                      """
+                        +:packaging/*.jar => docker/plugins
+                        -:packaging/*-kc-oss.jar
+                      """
+                          .trimIndent()
+                }
+              }
+            })
         dependentBuildType(Empty("${name}-complete", "complete"))
       }
 

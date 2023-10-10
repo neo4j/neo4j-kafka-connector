@@ -10,7 +10,7 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class IntegrationTests(id: String, name: String) :
+class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
     BuildType({
       this.id(id.toId())
       this.name = name
