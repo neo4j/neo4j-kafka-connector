@@ -51,7 +51,7 @@ class IntegrationTests(id: String, name: String) :
 
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:11-jdk"
+          dockerImage = "ruby:3"
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
         maven {
