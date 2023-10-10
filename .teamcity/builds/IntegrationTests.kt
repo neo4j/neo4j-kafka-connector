@@ -33,6 +33,7 @@ class IntegrationTests(id: String, name: String) :
       </settings>
        */
 
+      artifactRules = "packaging/neo4j-kafka-connect-neo4j-*-SNAPSHOT.jar => docker/plugins"
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
@@ -47,10 +48,9 @@ class IntegrationTests(id: String, name: String) :
                 apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
-                dip provision
+                dip compose up -d neo4j zookeeper broker schema-registry control-center
             """.trimIndent()
           formatStderrAsError = true
-
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
           dockerImage = "eclipse-temurin:11-jdk"
