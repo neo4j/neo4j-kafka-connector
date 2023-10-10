@@ -42,7 +42,8 @@ class IntegrationTests(id: String, name: String) :
         script {
           scriptContent = """
                 #!/bin/bash -eu
-                
+                # TODO: publish custom image instead
+                apt-get install ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip provision
@@ -51,7 +52,7 @@ class IntegrationTests(id: String, name: String) :
 
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "ruby:3"
+          dockerImage = "eclipse-temurin:11-jdk"
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
         maven {
@@ -68,8 +69,8 @@ class IntegrationTests(id: String, name: String) :
         script {
           scriptContent = """
                 #!/bin/bash -eu
-                
                 # TODO: publish custom image instead
+                apt-get install ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip compose down --rmi local
@@ -78,7 +79,7 @@ class IntegrationTests(id: String, name: String) :
 
           executionMode = BuildStep.ExecutionMode.ALWAYS
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "ruby:3"
+          dockerImage = "eclipse-temurin:11-jdk"
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
       }
