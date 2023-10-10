@@ -21,7 +21,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
         parallel {
           dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
           dependentBuildType(
-              Maven("${name}-integration-tests", "integration tests", "verify", "-DskipUnitTests"))
+              IntegrationTests("${name}-integration-tests", "integration tests"))
         }
         if (forPullRequests) dependentBuildType(packaging)
         else dependentBuildType(collectArtifacts(packaging))
