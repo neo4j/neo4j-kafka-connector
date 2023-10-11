@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -26,11 +25,14 @@ import org.apache.kafka.common.config.ConfigDef.Range
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration.Companion.ENFORCE_SCHEMA
+import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration.Companion.TOPIC
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.TransactionConfig
 
@@ -155,80 +157,80 @@ class SourceConfiguration(originals: Map<*, *>) :
     fun config(): ConfigDef =
         Neo4jConfiguration.config()
             .define(
-                ConfigKeyBuilder.of(STREAM_FROM, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(STREAM_FROM))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(StreamingFrom.NOW.toString())
-                    .validator(Validators.enum(StreamingFrom::class.java))
-                    .recommender(Recommenders.enum(StreamingFrom::class.java))
-                    .build())
+                ConfigKeyBuilder.of(STREAM_FROM, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(STREAM_FROM)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = StreamingFrom.NOW.toString()
+                  validator = Validators.enum(StreamingFrom::class.java)
+                  recommender = Recommenders.enum(StreamingFrom::class.java)
+                })
             .define(
-                ConfigKeyBuilder.of(STRATEGY, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(STRATEGY))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(SourceType.QUERY.name)
-                    .validator(Validators.enum(SourceType::class.java))
-                    .recommender(Recommenders.enum(SourceType::class.java))
-                    .build())
+                ConfigKeyBuilder.of(STRATEGY, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(STRATEGY)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = SourceType.QUERY.name
+                  validator = Validators.enum(SourceType::class.java)
+                  recommender = Recommenders.enum(SourceType::class.java)
+                })
             .define(
-                ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(QUERY))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .dependents(STRATEGY)
-                    .recommender(
-                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
-                    .build())
+                ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(QUERY)
+                  importance = ConfigDef.Importance.HIGH
+                  dependents = listOf(STRATEGY)
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                })
             .define(
-                ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(QUERY_STREAMING_PROPERTY))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .dependents(STRATEGY)
-                    .recommender(
-                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
-                    .defaultValue("")
-                    .build())
+                ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(QUERY_STREAMING_PROPERTY)
+                  importance = ConfigDef.Importance.HIGH
+                  dependents = listOf(STRATEGY)
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  defaultValue = ""
+                })
             .define(
-                ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(QUERY_POLL_INTERVAL))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .dependents(STRATEGY)
-                    .recommender(
-                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
-                    .validator(Validators.pattern(SIMPLE_DURATION_PATTERN))
-                    .defaultValue(DEFAULT_POLL_INTERVAL.toSimpleString())
-                    .build())
+                ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(QUERY_POLL_INTERVAL)
+                  importance = ConfigDef.Importance.HIGH
+                  dependents = listOf(STRATEGY)
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                  defaultValue = DEFAULT_POLL_INTERVAL.toSimpleString()
+                })
             .define(
-                ConfigKeyBuilder.of(QUERY_BATCH_SIZE, ConfigDef.Type.INT)
-                    .documentation(PropertiesUtil.getProperty(QUERY_BATCH_SIZE))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .dependents(STRATEGY)
-                    .recommender(
-                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
-                    .validator(Range.atLeast(1))
-                    .defaultValue(DEFAULT_QUERY_BATCH_SIZE)
-                    .build())
+                ConfigKeyBuilder.of(QUERY_BATCH_SIZE, ConfigDef.Type.INT) {
+                  documentation = PropertiesUtil.getProperty(QUERY_BATCH_SIZE)
+                  importance = ConfigDef.Importance.HIGH
+                  dependents = listOf(STRATEGY)
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Range.atLeast(1)
+                  defaultValue = DEFAULT_QUERY_BATCH_SIZE
+                })
             .define(
-                ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(QUERY_TIMEOUT))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .dependents(STRATEGY)
-                    .recommender(
-                        Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)))
-                    .validator(Validators.pattern(SIMPLE_DURATION_PATTERN))
-                    .defaultValue(DEFAULT_QUERY_TIMEOUT.toSimpleString())
-                    .build())
+                ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(QUERY_TIMEOUT)
+                  importance = ConfigDef.Importance.HIGH
+                  dependents = listOf(STRATEGY)
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                  defaultValue = DEFAULT_QUERY_TIMEOUT.toSimpleString()
+                })
             .define(
-                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN)
-                    .documentation(PropertiesUtil.getProperty(ENFORCE_SCHEMA))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(false)
-                    .validator(ConfigDef.NonNullValidator())
-                    .build())
+                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(ENFORCE_SCHEMA)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = false
+                  validator = ConfigDef.NonNullValidator()
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .validator(ConfigDef.NonEmptyString())
-                    .build())
+                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC)
+                  importance = ConfigDef.Importance.HIGH
+                  validator = ConfigDef.NonEmptyString()
+                })
   }
 }

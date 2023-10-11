@@ -20,14 +20,6 @@ Third-party licenses
 
 Apache Software License, Version 2.0
   Apache Commons Lang
-  Apache FreeMarker
-  connect-utils
-  error-prone annotations
-  FindBugs-jsr305
-  Guava InternalFutureFailureAccess and InternalFutures
-  Guava ListenableFuture only
-  Guava: Google Core Libraries for Java
-  J2ObjC Annotations
   Jackson-annotations
   Jackson-core
   jackson-databind
@@ -40,10 +32,8 @@ Apache Software License, Version 2.0
   Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
   Neo4j Java Driver
-  org.immutables.value
 
 MIT License
-  Checker Qual
   SLF4J API Module
 
 MIT No Attribution License

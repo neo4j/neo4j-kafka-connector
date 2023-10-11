@@ -16,10 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import org.apache.kafka.common.config.ConfigDef
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
+import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
@@ -46,52 +46,52 @@ class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(
-                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN)
-                    .documentation(PropertiesUtil.getProperty(ENFORCE_SCHEMA))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(false)
-                    .validator(ConfigDef.NonNullValidator())
-                    .build())
+                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(ENFORCE_SCHEMA)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = false
+                  validator = ConfigDef.NonNullValidator()
+                })
             .define(
-                ConfigKeyBuilder.of(STREAMING_POLL_INTERVAL, ConfigDef.Type.INT)
-                    .documentation(PropertiesUtil.getProperty(STREAMING_POLL_INTERVAL))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(10000)
-                    .validator(ConfigDef.Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(STREAMING_POLL_INTERVAL, ConfigDef.Type.INT) {
+                  documentation = PropertiesUtil.getProperty(STREAMING_POLL_INTERVAL)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = 10000
+                  validator = ConfigDef.Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(STREAMING_PROPERTY, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(STREAMING_PROPERTY))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue("")
-                    .build())
+                ConfigKeyBuilder.of(STREAMING_PROPERTY, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(STREAMING_PROPERTY)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .validator(ConfigDef.NonEmptyString())
-                    .build())
+                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC)
+                  importance = ConfigDef.Importance.HIGH
+                  validator = ConfigDef.NonEmptyString()
+                })
             .define(
-                ConfigKeyBuilder.of(STREAMING_FROM, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(STREAMING_FROM))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(StreamingFrom.NOW.toString())
-                    .validator(Validators.enum(StreamingFrom::class.java))
-                    .recommender(Recommenders.enum(StreamingFrom::class.java))
-                    .build())
+                ConfigKeyBuilder.of(STREAMING_FROM, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(STREAMING_FROM)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = StreamingFrom.NOW.toString()
+                  validator = Validators.enum(StreamingFrom::class.java)
+                  recommender = Recommenders.enum(StreamingFrom::class.java)
+                })
             .define(
-                ConfigKeyBuilder.of(SOURCE_TYPE, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(SOURCE_TYPE))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(SourceType.QUERY.toString())
-                    .validator(Validators.enum(SourceType::class.java))
-                    .recommender(Recommenders.enum(SourceType::class.java))
-                    .build())
+                ConfigKeyBuilder.of(SOURCE_TYPE, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(SOURCE_TYPE)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = SourceType.QUERY.toString()
+                  validator = Validators.enum(SourceType::class.java)
+                  recommender = Recommenders.enum(SourceType::class.java)
+                })
             .define(
-                ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(SOURCE_TYPE_QUERY))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue("")
-                    .build())
+                ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(SOURCE_TYPE_QUERY)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                })
   }
 }

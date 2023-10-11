@@ -33,9 +33,6 @@
             <useStrictFiltering>true</useStrictFiltering>
             <useTransitiveDependencies>true</useTransitiveDependencies>
             <useTransitiveFiltering>true</useTransitiveFiltering>
-            <excludes>
-                <exclude>com.google.guava:guava</exclude>
-            </excludes>
         </dependencySet>
     </dependencySets>
 </assembly>

@@ -50,7 +50,7 @@ class Neo4jValueConverterNestedStructTest {
     val body = getTreeStruct()
 
     // when
-    val result = Neo4jValueConverter().convert(body) as Map<*, *>
+    val result = Neo4jValueConverter().convert(body as Any) as Map<*, *>
 
     // then
     val expected = getExpectedMap()

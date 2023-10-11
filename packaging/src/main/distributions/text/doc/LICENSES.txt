@@ -5,14 +5,6 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 ------------------------------------------------------------------------------
 Apache Software License, Version 2.0
   Apache Commons Lang
-  Apache FreeMarker
-  connect-utils
-  error-prone annotations
-  FindBugs-jsr305
-  Guava InternalFutureFailureAccess and InternalFutures
-  Guava ListenableFuture only
-  Guava: Google Core Libraries for Java
-  J2ObjC Annotations
   Jackson-annotations
   Jackson-core
   jackson-databind
@@ -25,7 +17,6 @@ Apache Software License, Version 2.0
   Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
   Neo4j Java Driver
-  org.immutables.value
 ------------------------------------------------------------------------------
 
                                  Apache License
@@ -234,7 +225,6 @@ Apache Software License, Version 2.0
 
 ------------------------------------------------------------------------------
 MIT License
-  Checker Qual
   SLF4J API Module
 ------------------------------------------------------------------------------
 

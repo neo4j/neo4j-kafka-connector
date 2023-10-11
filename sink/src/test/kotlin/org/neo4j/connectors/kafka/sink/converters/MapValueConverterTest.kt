@@ -36,7 +36,7 @@ class MapValueConverterTest {
     val body = getTreeStruct()
 
     // when
-    val result = MapValueConverter<Any>().convert(body) as Map<*, *>
+    val result = MapValueConverter<Any>().convert(body as Any) as Map<*, *>
 
     // then
     val expected = getTreeMap()

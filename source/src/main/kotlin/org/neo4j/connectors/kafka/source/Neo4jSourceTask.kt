@@ -16,10 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import kotlinx.coroutines.DelicateCoroutinesApi
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
+import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -31,7 +31,7 @@ class Neo4jSourceTask : SourceTask() {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceTask::class.java)
 
-  override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
+  override fun version(): String = VersionUtil.version(this.javaClass)
 
   override fun start(props: MutableMap<String, String>?) {
     this.props = props!!
