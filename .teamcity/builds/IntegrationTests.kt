@@ -38,12 +38,12 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
 
-        text("env.BROKER_EXTERNAL_HOST", "localhost:9092")
+        text("env.BROKER_EXTERNAL_HOST", "broker:9092")
         text("env.SCHEMA_CONTROL_REGISTRY_URI", "http://schema-registry:8081")
-        text("env.SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI", "http://localhost:8081")
-        text("env.KAFKA_CONNECT_EXTERNAL_URI", "http://localhost:8083")
+        text("env.SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI", "http://schema-registry:8081")
+        text("env.KAFKA_CONNECT_EXTERNAL_URI", "http://connect:8083")
         text("env.NEO4J_URI", "neo4j://neo4j")
-        text("env.NEO4J_EXTERNAL_URI", "neo4j://localhost")
+        text("env.NEO4J_EXTERNAL_URI", "neo4j://neo4j")
         text("env.NEO4J_USER", "neo4j")
         text("env.NEO4J_PASSWORD", "password")
       }
