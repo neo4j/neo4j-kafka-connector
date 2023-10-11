@@ -63,11 +63,18 @@
         <reactor.version>2022.0.11</reactor.version>
         <slf4j.version>2.0.9</slf4j.version>
         <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.38.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
         <testcontainers.version>1.19.0</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>io.projectreactor</groupId>
                 <artifactId>reactor-bom</artifactId>
@@ -109,11 +116,6 @@
                 <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.fasterxml.jackson.module</groupId>
-                <artifactId>jackson-module-kotlin</artifactId>
-                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.confluent</groupId>
@@ -182,6 +184,12 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
     <pluginRepositories>
         <pluginRepository>
             <id>github</id>
@@ -379,7 +387,7 @@
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
                         <ktfmt>
-                            <version>0.44</version>
+                            <version>0.46</version>
                             <style>DEFAULT</style>
                             <blockIndent>2</blockIndent>
                             <continuationIndent>4</continuationIndent>

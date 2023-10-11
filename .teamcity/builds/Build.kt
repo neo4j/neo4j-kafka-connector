@@ -18,13 +18,21 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
             buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
         if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
         dependentBuildType(Maven("${name}-build", "build", "test-compile"))
-        parallel {
-          dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
-          dependentBuildType(
-              Maven("${name}-integration-tests", "integration tests", "verify", "-DskipUnitTests"))
-        }
-        if (forPullRequests) dependentBuildType(packaging)
-        else dependentBuildType(collectArtifacts(packaging))
+        dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
+        dependentBuildType(collectArtifacts(packaging))
+        dependentBuildType(
+            IntegrationTests("${name}-integration-tests", "integration tests") {
+              dependencies {
+                artifacts(packaging) {
+                  artifactRules =
+                      """
+                        +:packaging/*.jar => docker/plugins
+                        -:packaging/*-kc-oss.jar
+                      """
+                          .trimIndent()
+                }
+              }
+            })
         dependentBuildType(Empty("${name}-complete", "complete"))
       }
 

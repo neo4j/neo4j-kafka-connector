@@ -1,0 +1,69 @@
+version: '7.5'
+
+compose:
+  files:
+    - docker/docker-compose.yml
+  project_name: neo4j-kafka-connector
+
+interaction:
+  format:
+    description: format sources
+    runner: local
+    command: sh -c "./mvnw sortpom:sort license:format spotless:apply"
+
+  build-package:
+    description: build connector packages
+    runner: local
+    command: >
+      sh -c "./mvnw clean package -DskipTests -pl :packaging -am &&
+        find ./docker/plugins ! -name '.keep' -type f -exec rm -f {} + && 
+        cp ./packaging/target/*.jar ./docker/plugins"
+
+  run-e2e:
+    description: verify connector packages
+    runner: local
+    command: >
+      sh -c "./mvnw verify"
+    environment:
+      BROKER_EXTERNAL_HOST: "localhost:9092"
+      SCHEMA_CONTROL_REGISTRY_URI: "http://schema-registry:8081"
+      SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI: "http://localhost:8081"
+      KAFKA_CONNECT_EXTERNAL_URI: "http://localhost:8083"
+      NEO4J_URI: "neo4j://neo4j"
+      NEO4J_EXTERNAL_URI: "neo4j://localhost"
+      NEO4J_USER: "neo4j"
+      NEO4J_PASSWORD: "password"
+
+  stop-connect:
+    description: stops connect container
+    service: connect
+    compose:
+      method: down
+      service: connect
+      run_options: [ volumes, rmi local ]
+
+  start-connect:
+    description: starts connect container
+    service: connect
+    compose:
+      method: up
+      service: connect
+      run_options: [ detach ]
+
+  relaunch:
+    description: builds package and re-starts connect container
+    runner: local
+    command: >
+      sh -c "dip build-package && dip stop-connect && dip start-connect"
+
+  cypher-shell:
+    description: run interactive cypher-shell inside neo4j container
+    service: neo4j
+    command: cypher-shell -a neo4j://neo4j:7687 -u neo4j -p password
+    compose:
+      method: exec
+
+provision:
+  - dip build-package
+  - dip compose down --rmi local
+  - dip compose up -d neo4j zookeeper broker schema-registry control-center
