@@ -34,7 +34,6 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
       </settings>
        */
 
-      artifactRules = "packaging/neo4j-kafka-connect-neo4j-*-SNAPSHOT.jar => docker/plugins"
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
