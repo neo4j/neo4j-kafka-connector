@@ -14,6 +14,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
     BuildType({
       this.id(id.toId())
       this.name = name
+      init()
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
       // with the following content, so we set the relevant environment variables here.
@@ -89,4 +90,5 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
       features { dockerSupport {} }
 
       requirements { runOnLinux(LinuxSize.LARGE) }
+
     })
