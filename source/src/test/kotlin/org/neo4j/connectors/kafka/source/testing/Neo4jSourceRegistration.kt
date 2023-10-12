@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.source.testing
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -27,8 +29,6 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
 import org.neo4j.connectors.kafka.source.StreamingFrom
 import streams.kafka.connect.source.Neo4jSourceConnector
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 class Neo4jSourceRegistration(
     topic: String,
@@ -76,7 +76,6 @@ class Neo4jSourceRegistration(
     run(listOf("docker", "ps"))
     run(listOf("docker", "inspect", "connect"))
 
-
     this.connectBaseUri = connectBaseUri
     val uri = URI("${this.connectBaseUri}/connectors")
     val requestBody = registrationJson()
@@ -108,7 +107,7 @@ class Neo4jSourceRegistration(
       while (line != null) {
         println(line)
         line = it.readLine()
-        }
+      }
       process.waitFor()
     }
   }
