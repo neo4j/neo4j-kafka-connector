@@ -49,7 +49,7 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
     val receivedMessages = RingBuffer<V>(predicates.size)
     try {
       await().atMost(timeout).until {
-        consumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it.value()) }
+        consumer.poll(Duration.ofMillis(2000)).forEach { receivedMessages.add(it.value()) }
         val messages = receivedMessages.toList()
         messages.size == predicates.size &&
             predicates.foldIndexed(true) { i, prev, predicate ->
