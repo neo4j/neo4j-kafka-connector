@@ -58,7 +58,19 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip compose up -d neo4j zookeeper broker schema-registry control-center
+            """.trimIndent()
+          formatStderrAsError = true
+
+          dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+          dockerImage = "eclipse-temurin:11-jdk"
+          dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+        }
+        script {
+          scriptContent = """
+                #!/bin/bash -eu
+                curl -fsSL https://get.docker.com | sh
                 docker ps
+                docker inspect connect 
             """.trimIndent()
           formatStderrAsError = true
 
