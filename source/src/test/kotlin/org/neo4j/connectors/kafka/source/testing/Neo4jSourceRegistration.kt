@@ -27,6 +27,8 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
 import org.neo4j.connectors.kafka.source.StreamingFrom
 import streams.kafka.connect.source.Neo4jSourceConnector
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class Neo4jSourceRegistration(
     topic: String,
@@ -71,6 +73,10 @@ class Neo4jSourceRegistration(
   private lateinit var connectBaseUri: String
 
   fun register(connectBaseUri: String) {
+    run(listOf("docker", "ps"))
+    run(listOf("docker", "inspect", "connect"))
+
+
     this.connectBaseUri = connectBaseUri
     val uri = URI("${this.connectBaseUri}/connectors")
     val requestBody = registrationJson()
@@ -89,6 +95,21 @@ class Neo4jSourceRegistration(
               response.body(),
           )
       throw RuntimeException(error)
+    }
+  }
+
+  private fun run(command: List<String>) {
+    println("Command is ${command.joinToString(" ")}")
+    val builder = ProcessBuilder(command)
+    builder.redirectErrorStream(true)
+    val process = builder.start()
+    BufferedReader(InputStreamReader(process.inputStream)).use {
+      var line = it.readLine()
+      while (line != null) {
+        println(line)
+        line = it.readLine()
+        }
+      process.waitFor()
     }
   }
 
