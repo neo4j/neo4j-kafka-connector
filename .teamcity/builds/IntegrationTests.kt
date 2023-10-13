@@ -84,6 +84,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
                 apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
+                docker ps -q | xargs -L 1 -P `docker ps | wc -l` docker logs --since 360s
                 dip compose down --rmi local
             """.trimIndent()
           formatStderrAsError = true
