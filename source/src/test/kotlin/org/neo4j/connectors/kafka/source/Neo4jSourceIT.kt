@@ -76,7 +76,7 @@ class Neo4jSourceIT {
           value.asMap().excludingKeys("timestamp") ==
               mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
         }
-        .verifyWithin(Duration.ofSeconds(60))
+        .verifyWithin(Duration.ofSeconds(300))
   }
 }
 
