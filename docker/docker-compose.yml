@@ -12,6 +12,11 @@ services:
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
       NEO4J_server_memory_heap_max__size: "4G"
       NEO4J_internal_dbms_change__data__capture: "true"
+    healthcheck:
+      test: [ "CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -22,6 +27,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "2181" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   broker:
     image: confluentinc/cp-server:7.5.0
@@ -51,6 +61,11 @@ services:
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "9092" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.5.0
@@ -64,6 +79,11 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "8081" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   connect:
     image: confluentinc/cp-server-connect:7.5.0
@@ -101,15 +121,25 @@ services:
       - -c
       - |
         /etc/confluent/docker/run
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "8083" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.5.0
     hostname: control-center
     container_name: control-center
     depends_on:
-      - broker
-      - schema-registry
-      - connect
+      broker:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      connect:
+        condition: service_healthy
+      neo4j: # not required but makes it easier to make sure everything is started
+        condition: service_healthy
     ports:
       - "9021:9021"
     environment:
@@ -121,3 +151,8 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9021" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5

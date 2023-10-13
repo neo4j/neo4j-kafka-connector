@@ -58,6 +58,9 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip compose up -d neo4j zookeeper broker schema-registry control-center
+                until [ "`docker inspect -f {{.State.Health.Status}} control-center`"=="healthy" ]; do
+                    sleep 0.1;
+                done;
             """.trimIndent()
           formatStderrAsError = true
 
