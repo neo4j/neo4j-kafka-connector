@@ -51,6 +51,7 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
       await().atMost(timeout).until {
         consumer.poll(Duration.ofMillis(2000)).forEach { receivedMessages.add(it.value()) }
         val messages = receivedMessages.toList()
+        println(messages.map { it.toString() })
         messages.size == predicates.size &&
             predicates.foldIndexed(true) { i, prev, predicate ->
               prev && predicate.test(messages[i])
