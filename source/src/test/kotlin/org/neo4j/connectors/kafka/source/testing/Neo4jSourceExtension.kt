@@ -184,6 +184,8 @@ class Neo4jSourceExtension :
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, metadata.consumerOffset)
     val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    println(
+        "consumer subscribes to ${metadata.topic}, with offset ${metadata.consumerOffset} and group ID ${extensionContext?.displayName}")
     consumer.subscribe(listOf(metadata.topic))
     return consumer
   }
