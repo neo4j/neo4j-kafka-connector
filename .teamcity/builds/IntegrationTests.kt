@@ -38,7 +38,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
 
-        text("env.BROKER_EXTERNAL_HOST", "broker:9092")
+        text("env.BROKER_EXTERNAL_HOST", "broker:29092")
         text("env.SCHEMA_CONTROL_REGISTRY_URI", "http://schema-registry:8081")
         text("env.SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI", "http://schema-registry:8081")
         text("env.KAFKA_CONNECT_EXTERNAL_URI", "http://connect:8083")
