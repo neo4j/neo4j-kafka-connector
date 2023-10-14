@@ -10,13 +10,18 @@ project {
     password("github-pull-request-token", "credentialsJSON:be6ac011-ba27-4f2e-a628-edce6708504e")
     text("github-packages-user", "neo4j-build-service")
     password("github-packages-token", "credentialsJSON:d5ea2df2-7a81-41d4-98bf-cb7ebd607493")
+
+    // set global maven args
+    text(
+        "env.MAVEN_ARGS",
+        "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2")
   }
 
   subProject(
       Build(
           "main",
           """
-                +:main
+                +:refs/heads/main
             """
               .trimIndent(),
           false))

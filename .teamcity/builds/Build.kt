@@ -26,8 +26,8 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
                 artifacts(packaging) {
                   artifactRules =
                       """
-                        +:packaging/*.jar => docker/plugins
-                        -:packaging/*-kc-oss.jar
+                        +:packages/*.jar => docker/plugins
+                        -:packages/*-kc-oss.jar
                       """
                           .trimIndent()
                 }

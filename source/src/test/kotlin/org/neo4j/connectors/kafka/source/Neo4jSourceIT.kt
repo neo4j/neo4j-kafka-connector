@@ -37,7 +37,7 @@ class Neo4jSourceIT {
       streamingFrom = StreamingFrom.ALL,
       streamingQuery =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
-      consumerOffset = "latest",
+      consumerOffset = "earliest",
   )
   @Test
   fun `reads latest changes from Neo4j source`(
