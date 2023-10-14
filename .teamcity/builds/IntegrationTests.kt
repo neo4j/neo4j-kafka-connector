@@ -72,7 +72,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs = "-DskipUnitTests"
+          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
