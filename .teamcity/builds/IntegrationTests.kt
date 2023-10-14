@@ -77,6 +77,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
+          localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
           dockerImage = "eclipse-temurin:11-jdk"

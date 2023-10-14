@@ -16,7 +16,7 @@ project {
       Build(
           "main",
           """
-                +:main
+                +:refs/heads/main
             """
               .trimIndent(),
           false))
