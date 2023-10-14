@@ -1,8 +1,8 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildStep
-import jetbrains.buildServer.configs.kotlin.BuildStepConditions
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
@@ -50,7 +50,8 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
 
       steps {
         script {
-          scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
@@ -61,7 +62,8 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
                 until [ "`docker inspect -f {{.State.Health.Status}} control-center`"=="healthy" ]; do
                     sleep 0.1;
                 done;
-            """.trimIndent()
+            """
+                  .trimIndent()
           formatStderrAsError = true
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
@@ -70,26 +72,30 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs = "-DskipUnitTests"
+          this.runnerArgs =
+              "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2 -DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
           dockerImage = "eclipse-temurin:11-jdk"
-          dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
+          dockerRunParameters =
+              "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
         }
         script {
-          scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
                 apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
-                docker ps -q | xargs -L 1 -P `docker ps | wc -l` docker logs --since 360s
+                dip compose logs --no-color
                 dip compose down --rmi local
-            """.trimIndent()
+            """
+                  .trimIndent()
           formatStderrAsError = true
 
           executionMode = BuildStep.ExecutionMode.ALWAYS
@@ -99,8 +105,17 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
       }
 
-      features { dockerSupport {} }
+      features {
+        dockerSupport {}
+
+        buildCache {
+          this.name = "neo4j-kafka-connector"
+          publish = true
+          use = true
+          publishOnlyChanged = true
+          rules = ".m2/repository"
+        }
+      }
 
       requirements { runOnLinux(LinuxSize.LARGE) }
-
     })
