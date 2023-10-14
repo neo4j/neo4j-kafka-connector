@@ -72,8 +72,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs =
-              "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2 -DskipUnitTests"
+          this.runnerArgs = "-DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
