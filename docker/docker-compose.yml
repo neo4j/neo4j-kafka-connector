@@ -14,6 +14,8 @@ services:
       NEO4J_internal_dbms_change__data__capture: "true"
     healthcheck:
       test: [ "CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1" ]
+      start_period: 2m
+      start_interval: 10s
       interval: 30s
       timeout: 10s
       retries: 5
@@ -29,7 +31,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "2181" ]
-      interval: 30s
+      start_period: 5m
+      start_interval: 10s
+      interval: 1m
       timeout: 10s
       retries: 5
 
@@ -63,7 +67,9 @@ services:
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "9092" ]
-      interval: 30s
+      start_period: 5m
+      start_interval: 10s
+      interval: 1m
       timeout: 10s
       retries: 5
 
@@ -81,7 +87,9 @@ services:
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "8081" ]
-      interval: 30s
+      start_period: 5m
+      start_interval: 10s
+      interval: 1m
       timeout: 10s
       retries: 5
 
@@ -123,7 +131,9 @@ services:
         /etc/confluent/docker/run
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "8083" ]
-      interval: 30s
+      start_period: 5m
+      start_interval: 10s
+      interval: 1m
       timeout: 10s
       retries: 5
 
@@ -153,6 +163,8 @@ services:
       PORT: 9021
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9021" ]
-      interval: 30s
+      start_period: 5m
+      start_interval: 10s
+      interval: 1m
       timeout: 10s
       retries: 5

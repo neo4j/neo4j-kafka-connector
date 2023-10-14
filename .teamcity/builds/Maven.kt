@@ -37,7 +37,7 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
       steps {
         maven {
           this.goals = goals
-          this.runnerArgs = args
+          this.runnerArgs = "--no-transfer-progress --batch-mode ${args}"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
