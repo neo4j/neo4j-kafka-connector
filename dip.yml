@@ -23,7 +23,7 @@ interaction:
     description: verify connector packages
     runner: local
     command: >
-      sh -c "./mvnw verify"
+      sh -c "./mvnw verify -DskipUnitTests"
     environment:
       BROKER_EXTERNAL_HOST: "localhost:9092"
       SCHEMA_CONTROL_REGISTRY_URI: "http://schema-registry:8081"

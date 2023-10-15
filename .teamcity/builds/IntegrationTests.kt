@@ -1,8 +1,8 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildStep
-import jetbrains.buildServer.configs.kotlin.BuildStepConditions
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
@@ -34,15 +34,24 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
       </settings>
        */
 
-      artifactRules = "packaging/neo4j-kafka-connect-neo4j-*-SNAPSHOT.jar => docker/plugins"
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
+
+        text("env.BROKER_EXTERNAL_HOST", "broker:29092")
+        text("env.SCHEMA_CONTROL_REGISTRY_URI", "http://schema-registry:8081")
+        text("env.SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI", "http://schema-registry:8081")
+        text("env.KAFKA_CONNECT_EXTERNAL_URI", "http://connect:8083")
+        text("env.NEO4J_URI", "neo4j://neo4j")
+        text("env.NEO4J_EXTERNAL_URI", "neo4j://neo4j")
+        text("env.NEO4J_USER", "neo4j")
+        text("env.NEO4J_PASSWORD", "password")
       }
 
       steps {
         script {
-          scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
@@ -50,7 +59,11 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
                 dip compose up -d neo4j zookeeper broker schema-registry control-center
-            """.trimIndent()
+                until [ "`docker inspect -f {{.State.Health.Status}} control-center`"=="healthy" ]; do
+                    sleep 0.1;
+                done;
+            """
+                  .trimIndent()
           formatStderrAsError = true
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
@@ -59,25 +72,30 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs = "-DskipUnitTests"
+          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
+          localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
           dockerImage = "eclipse-temurin:11-jdk"
-          dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+          dockerRunParameters =
+              "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
         }
         script {
-          scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
                 apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
+                dip compose logs --no-color
                 dip compose down --rmi local
-            """.trimIndent()
+            """
+                  .trimIndent()
           formatStderrAsError = true
 
           executionMode = BuildStep.ExecutionMode.ALWAYS
@@ -87,8 +105,17 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
       }
 
-      features { dockerSupport {} }
+      features {
+        dockerSupport {}
+
+        buildCache {
+          this.name = "neo4j-kafka-connector"
+          publish = true
+          use = true
+          publishOnlyChanged = true
+          rules = ".m2/repository"
+        }
+      }
 
       requirements { runOnLinux(LinuxSize.LARGE) }
-
     })

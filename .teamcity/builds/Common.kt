@@ -13,6 +13,8 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
+const val MAVEN_DEFAULT_ARGS =
+    "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
