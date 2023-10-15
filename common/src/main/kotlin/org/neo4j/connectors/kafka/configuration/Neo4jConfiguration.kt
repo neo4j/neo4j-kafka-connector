@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigUtils
 import java.io.Closeable
 import java.io.File
 import java.net.URI
@@ -28,6 +27,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigValue
 import org.apache.kafka.common.config.types.Password
 import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.driver.AccessMode
 import org.neo4j.driver.AuthToken
@@ -108,7 +108,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
   internal val authenticationToken
     get(): AuthToken =
-        when (ConfigUtils.getEnum(AuthenticationType::class.java, this, AUTHENTICATION_TYPE)) {
+        when (ConfigUtils.getEnum<AuthenticationType>(this, AUTHENTICATION_TYPE)) {
           null -> throw ConnectException("Configuration '$AUTHENTICATION_TYPE' is not provided")
           AuthenticationType.NONE -> AuthTokens.none()
           AuthenticationType.BASIC ->
@@ -131,8 +131,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   internal val trustStrategy
     get(): TrustStrategy {
       val strategy: TrustStrategy =
-          when (ConfigUtils.getEnum(
-              Strategy::class.java,
+          when (ConfigUtils.getEnum<Strategy>(
               this,
               SECURITY_TRUST_STRATEGY,
           )) {

@@ -16,9 +16,9 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import com.github.jcustenborder.kafka.connect.utils.VersionUtil
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
+import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.extensions.asProperties
 import org.neo4j.connectors.kafka.service.errors.ErrorData
 import org.neo4j.connectors.kafka.service.errors.ErrorService

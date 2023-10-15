@@ -16,7 +16,7 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
+import com.fasterxml.jackson.databind.util.ClassUtil.defaultValue
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
@@ -25,6 +25,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
 import org.apache.kafka.common.config.ConfigDef.Type
+import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
@@ -101,172 +102,171 @@ open class DeprecatedNeo4jConfiguration(
     fun config(): ConfigDef =
         ConfigDef()
             .define(
-                ConfigKeyBuilder.of(AUTHENTICATION_TYPE, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_TYPE))
-                    .importance(Importance.HIGH)
-                    .defaultValue(AuthenticationType.BASIC.toString())
-                    .group(ConfigGroup.AUTHENTICATION)
-                    .validator(Validators.enum(AuthenticationType::class.java))
-                    .build())
+                ConfigKeyBuilder.of(AUTHENTICATION_TYPE, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_TYPE)
+                  importance = Importance.HIGH
+                  defaultValue = AuthenticationType.BASIC.toString()
+                  group = ConfigGroup.AUTHENTICATION
+                  validator = Validators.enum(AuthenticationType::class.java)
+                })
             .define(
-                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_USERNAME, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_USERNAME))
-                    .importance(Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.AUTHENTICATION)
-                    .recommender(
-                        Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE,
-                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
-                    .build())
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_USERNAME, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_USERNAME)
+                  importance = Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.AUTHENTICATION
+                  recommender =
+                      Recommenders.visibleIf(
+                          AUTHENTICATION_TYPE,
+                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
+                })
             .define(
-                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, Type.PASSWORD)
-                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_PASSWORD))
-                    .importance(Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.AUTHENTICATION)
-                    .recommender(
-                        Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE,
-                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
-                    .build())
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, Type.PASSWORD) {
+                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_PASSWORD)
+                  importance = Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.AUTHENTICATION
+                  recommender =
+                      Recommenders.visibleIf(
+                          AUTHENTICATION_TYPE,
+                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
+                })
             .define(
-                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_BASIC_REALM))
-                    .importance(Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.AUTHENTICATION)
-                    .recommender(
-                        Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE,
-                            Predicate.isEqual(AuthenticationType.BASIC.toString())))
-                    .build())
+                ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_REALM)
+                  importance = Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.AUTHENTICATION
+                  recommender =
+                      Recommenders.visibleIf(
+                          AUTHENTICATION_TYPE,
+                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
+                })
             .define(
-                ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, Type.PASSWORD)
-                    .documentation(PropertiesUtil.getProperty(AUTHENTICATION_KERBEROS_TICKET))
-                    .importance(Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.AUTHENTICATION)
-                    .recommender(
-                        Recommenders.visibleIf(
-                            AUTHENTICATION_TYPE,
-                            Predicate.isEqual(AuthenticationType.KERBEROS.toString())))
-                    .build())
+                ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, Type.PASSWORD) {
+                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_KERBEROS_TICKET)
+                  importance = Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.AUTHENTICATION
+                  recommender =
+                      Recommenders.visibleIf(
+                          AUTHENTICATION_TYPE,
+                          Predicate.isEqual(AuthenticationType.KERBEROS.toString()))
+                })
             .define(
-                ConfigKeyBuilder.of(SERVER_URI, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(SERVER_URI))
-                    .importance(Importance.HIGH)
-                    .defaultValue("bolt://localhost:7687")
-                    .group(ConfigGroup.CONNECTION)
-                    .validator(
-                        Validators.uri(
-                            "bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"))
-                    .build())
+                ConfigKeyBuilder.of(SERVER_URI, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(SERVER_URI)
+                  importance = Importance.HIGH
+                  defaultValue = "bolt://localhost:7687"
+                  group = ConfigGroup.CONNECTION
+                  validator =
+                      Validators.uri("bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc")
+                })
             .define(
-                ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, Type.INT)
-                    .documentation(PropertiesUtil.getProperty(CONNECTION_POOL_MAX_SIZE))
-                    .importance(Importance.LOW)
-                    .defaultValue(CONNECTION_POOL_MAX_SIZE_DEFAULT)
-                    .group(ConfigGroup.CONNECTION)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, Type.INT) {
+                  documentation = PropertiesUtil.getProperty(CONNECTION_POOL_MAX_SIZE)
+                  importance = Importance.LOW
+                  defaultValue = CONNECTION_POOL_MAX_SIZE_DEFAULT
+                  group = ConfigGroup.CONNECTION
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS, Type.LONG)
-                    .documentation(
-                        PropertiesUtil.getProperty(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS))
-                    .importance(Importance.LOW)
-                    .defaultValue(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT)
-                    .group(ConfigGroup.CONNECTION)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS, Type.LONG) {
+                  documentation =
+                      PropertiesUtil.getProperty(CONNECTION_MAX_CONNECTION_LIFETIME_MSECS)
+                  importance = Importance.LOW
+                  defaultValue = CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT
+                  group = ConfigGroup.CONNECTION
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS, Type.LONG)
-                    .documentation(
-                        PropertiesUtil.getProperty(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS))
-                    .importance(Importance.LOW)
-                    .defaultValue(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT)
-                    .group(ConfigGroup.CONNECTION)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS, Type.LONG) {
+                  documentation =
+                      PropertiesUtil.getProperty(CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS)
+                  importance = Importance.LOW
+                  defaultValue = CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT
+                  group = ConfigGroup.CONNECTION
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS, Type.LONG)
-                    .documentation(
-                        PropertiesUtil.getProperty(
-                            CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS))
-                    .importance(Importance.LOW)
-                    .defaultValue(PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT)
-                    .group(ConfigGroup.CONNECTION)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(
+                    CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS, Type.LONG) {
+                      documentation =
+                          PropertiesUtil.getProperty(
+                              CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS)
+                      importance = Importance.LOW
+                      defaultValue = PoolSettings.DEFAULT_CONNECTION_ACQUISITION_TIMEOUT
+                      group = ConfigGroup.CONNECTION
+                      validator = Range.atLeast(1)
+                    })
             .define(
-                ConfigKeyBuilder.of(ENCRYPTION_ENABLED, Type.BOOLEAN)
-                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_ENABLED))
-                    .importance(Importance.HIGH)
-                    .defaultValue(false)
-                    .group(ConfigGroup.ENCRYPTION)
-                    .build())
+                ConfigKeyBuilder.of(ENCRYPTION_ENABLED, Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(ENCRYPTION_ENABLED)
+                  importance = Importance.HIGH
+                  defaultValue = false
+                  group = ConfigGroup.ENCRYPTION
+                })
             .define(
-                ConfigKeyBuilder.of(ENCRYPTION_TRUST_STRATEGY, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_TRUST_STRATEGY))
-                    .importance(Importance.MEDIUM)
-                    .defaultValue(TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString())
-                    .group(ConfigGroup.ENCRYPTION)
-                    .validator(Validators.enum(TrustStrategy.Strategy::class.java))
-                    .recommender(
-                        Recommenders.visibleIf(ENCRYPTION_ENABLED, Predicate.isEqual(true)))
-                    .build())
+                ConfigKeyBuilder.of(ENCRYPTION_TRUST_STRATEGY, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(ENCRYPTION_TRUST_STRATEGY)
+                  importance = Importance.MEDIUM
+                  defaultValue = TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString()
+                  group = ConfigGroup.ENCRYPTION
+                  validator = Validators.enum(TrustStrategy.Strategy::class.java)
+                  recommender = Recommenders.visibleIf(ENCRYPTION_ENABLED, Predicate.isEqual(true))
+                })
             .define(
-                ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(ENCRYPTION_CA_CERTIFICATE_PATH))
-                    .importance(Importance.MEDIUM)
-                    .defaultValue("")
-                    .group(ConfigGroup.ENCRYPTION)
-                    .validator(Validators.or(Validators.blank(), Validators.file()))
-                    .recommender(
-                        Recommenders.visibleIf(
-                            ENCRYPTION_TRUST_STRATEGY,
-                            Predicate.isEqual(
-                                TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES
-                                    .toString())))
-                    .build())
+                ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(ENCRYPTION_CA_CERTIFICATE_PATH)
+                  importance = Importance.MEDIUM
+                  defaultValue = ""
+                  group = ConfigGroup.ENCRYPTION
+                  validator = Validators.or(Validators.blank(), Validators.file())
+                  recommender =
+                      Recommenders.visibleIf(
+                          ENCRYPTION_TRUST_STRATEGY,
+                          Predicate.isEqual(
+                              TrustStrategy.Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES
+                                  .toString()))
+                })
             .define(
-                ConfigKeyBuilder.of(BATCH_SIZE, Type.INT)
-                    .documentation(PropertiesUtil.getProperty(BATCH_SIZE))
-                    .importance(Importance.LOW)
-                    .defaultValue(BATCH_SIZE_DEFAULT)
-                    .group(ConfigGroup.BATCH)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(BATCH_SIZE, Type.INT) {
+                  documentation = PropertiesUtil.getProperty(BATCH_SIZE)
+                  importance = Importance.LOW
+                  defaultValue = BATCH_SIZE_DEFAULT
+                  group = ConfigGroup.BATCH
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(BATCH_TIMEOUT_MSECS, Type.LONG)
-                    .documentation(PropertiesUtil.getProperty(BATCH_TIMEOUT_MSECS))
-                    .importance(Importance.LOW)
-                    .defaultValue(BATCH_TIMEOUT_DEFAULT)
-                    .group(ConfigGroup.BATCH)
-                    .validator(Range.atLeast(0))
-                    .build())
+                ConfigKeyBuilder.of(BATCH_TIMEOUT_MSECS, Type.LONG) {
+                  documentation = PropertiesUtil.getProperty(BATCH_TIMEOUT_MSECS)
+                  importance = Importance.LOW
+                  defaultValue = BATCH_TIMEOUT_DEFAULT
+                  group = ConfigGroup.BATCH
+                  validator = Range.atLeast(0)
+                })
             .define(
-                ConfigKeyBuilder.of(RETRY_BACKOFF_MSECS, Type.LONG)
-                    .documentation(PropertiesUtil.getProperty(RETRY_BACKOFF_MSECS))
-                    .importance(Importance.MEDIUM)
-                    .defaultValue(RETRY_BACKOFF_DEFAULT)
-                    .group(ConfigGroup.RETRY)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(RETRY_BACKOFF_MSECS, Type.LONG) {
+                  documentation = PropertiesUtil.getProperty(RETRY_BACKOFF_MSECS)
+                  importance = Importance.MEDIUM
+                  defaultValue = RETRY_BACKOFF_DEFAULT
+                  group = ConfigGroup.RETRY
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(RETRY_MAX_ATTEMPTS, Type.INT)
-                    .documentation(PropertiesUtil.getProperty(RETRY_MAX_ATTEMPTS))
-                    .importance(Importance.MEDIUM)
-                    .defaultValue(RETRY_MAX_ATTEMPTS_DEFAULT)
-                    .group(ConfigGroup.RETRY)
-                    .validator(Range.atLeast(1))
-                    .build())
+                ConfigKeyBuilder.of(RETRY_MAX_ATTEMPTS, Type.INT) {
+                  documentation = PropertiesUtil.getProperty(RETRY_MAX_ATTEMPTS)
+                  importance = Importance.MEDIUM
+                  defaultValue = RETRY_MAX_ATTEMPTS_DEFAULT
+                  group = ConfigGroup.RETRY
+                  validator = Range.atLeast(1)
+                })
             .define(
-                ConfigKeyBuilder.of(DATABASE, Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(DATABASE))
-                    .importance(Importance.HIGH)
-                    .group(ConfigGroup.CONNECTION)
-                    .defaultValue("")
-                    .build())
+                ConfigKeyBuilder.of(DATABASE, Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(DATABASE)
+                  importance = Importance.HIGH
+                  group = ConfigGroup.CONNECTION
+                  defaultValue = ""
+                })
   }
 }

@@ -16,11 +16,11 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import com.github.jcustenborder.kafka.connect.utils.config.ConfigKeyBuilder
 import org.apache.kafka.common.config.ConfigDef
 import org.neo4j.connectors.kafka.configuration.ConfigGroup
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
+import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
@@ -56,65 +56,65 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(SourceIdIngestionStrategyConfig.DEFAULT.labelName)
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue(SourceIdIngestionStrategyConfig.DEFAULT.idName)
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC_CDC_SCHEMA))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SCHEMA)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                })
             .define(
-                ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN)
-                    .documentation(PropertiesUtil.getProperty(BATCH_PARALLELIZE))
-                    .importance(ConfigDef.Importance.MEDIUM)
-                    .defaultValue(DEFAULT_BATCH_PARALLELIZE)
-                    .group(ConfigGroup.BATCH)
-                    .build())
+                ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(BATCH_PARALLELIZE)
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BATCH_PARALLELIZE
+                  group = ConfigGroup.BATCH
+                })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.STRING)
-                    .documentation(PropertiesUtil.getProperty(TOPIC_CUD))
-                    .importance(ConfigDef.Importance.HIGH)
-                    .defaultValue("")
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
-            .define(
-                ConfigKeyBuilder.of(
-                        TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
-                    .documentation(
-                        PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED))
-                    .importance(ConfigDef.Importance.MEDIUM)
-                    .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED)
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.STRING) {
+                  documentation = PropertiesUtil.getProperty(TOPIC_CUD)
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                })
             .define(
                 ConfigKeyBuilder.of(
-                        TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN)
-                    .documentation(
-                        PropertiesUtil.getProperty(
-                            TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED))
-                    .importance(ConfigDef.Importance.MEDIUM)
-                    .defaultValue(DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED)
-                    .group(ConfigGroup.TOPIC_CYPHER_MAPPING)
-                    .build())
+                    TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN) {
+                      documentation =
+                          PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED)
+                      importance = ConfigDef.Importance.MEDIUM
+                      defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED
+                      group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                    })
+            .define(
+                ConfigKeyBuilder.of(
+                    TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED, ConfigDef.Type.BOOLEAN) {
+                      documentation =
+                          PropertiesUtil.getProperty(
+                              TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED)
+                      importance = ConfigDef.Importance.MEDIUM
+                      defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED
+                      group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                    })
   }
 }

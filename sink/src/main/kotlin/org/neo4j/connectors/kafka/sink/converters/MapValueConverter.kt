@@ -16,14 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.converters
 
-import com.github.jcustenborder.kafka.connect.utils.data.AbstractConverter
 import java.math.BigDecimal
 import java.util.*
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Struct
 
 @Suppress("UNCHECKED_CAST")
-open class MapValueConverter<T> : AbstractConverter<MutableMap<String, T?>>() {
+open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
 
   open fun setValue(result: MutableMap<String, T?>?, fieldName: String, value: Any?) {
     if (result != null) {
