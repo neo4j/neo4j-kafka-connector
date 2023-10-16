@@ -36,6 +36,5 @@ annotation class Neo4jSource(
     val topic: String,
     val streamingProperty: String,
     val streamingFrom: StreamingFrom,
-    val streamingQuery: String,
-    val consumerOffset: String = "latest"
+    val streamingQuery: String
 )

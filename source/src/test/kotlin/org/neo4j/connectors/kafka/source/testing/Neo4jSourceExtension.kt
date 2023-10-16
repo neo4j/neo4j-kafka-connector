@@ -50,7 +50,7 @@ class Neo4jSourceExtension :
             Session::class.java to Neo4jSourceExtension::resolveSession)
   }
 
-  private lateinit var metadata: Neo4jSource
+  private lateinit var sourceAnnotation: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
 
   private lateinit var driver: Driver
@@ -111,7 +111,7 @@ class Neo4jSourceExtension :
       )
     }
 
-    this.metadata = metadata
+    this.sourceAnnotation = metadata
     return ConditionEvaluationResult.enabled("@Neo4jSource and environment properly configured")
   }
 
@@ -121,16 +121,16 @@ class Neo4jSourceExtension :
     }
     source =
         Neo4jSourceRegistration(
-            schemaControlRegistryUri = schemaRegistryUri.read(metadata),
-            neo4jUri = neo4jUri.read(metadata),
-            neo4jUser = neo4jUser.read(metadata),
-            neo4jPassword = neo4jPassword.read(metadata),
-            topic = metadata.topic,
-            streamingProperty = metadata.streamingProperty,
-            streamingFrom = metadata.streamingFrom,
-            streamingQuery = metadata.streamingQuery,
+            schemaControlRegistryUri = schemaRegistryUri.read(sourceAnnotation),
+            neo4jUri = neo4jUri.read(sourceAnnotation),
+            neo4jUser = neo4jUser.read(sourceAnnotation),
+            neo4jPassword = neo4jPassword.read(sourceAnnotation),
+            topic = sourceAnnotation.topic,
+            streamingProperty = sourceAnnotation.streamingProperty,
+            streamingFrom = sourceAnnotation.streamingFrom,
+            streamingQuery = sourceAnnotation.streamingQuery,
         )
-    source.register(kafkaConnectExternalUri.read(metadata))
+    source.register(kafkaConnectExternalUri.read(sourceAnnotation))
   }
 
   override fun afterEach(context: ExtensionContext?) {
@@ -167,11 +167,11 @@ class Neo4jSourceExtension :
     val properties = Properties()
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHost.read(metadata),
+        brokerExternalHost.read(sourceAnnotation),
     )
     properties.setProperty(
         KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaRegistryExternalUri.read(metadata),
+        schemaRegistryExternalUri.read(sourceAnnotation),
     )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -182,9 +182,10 @@ class Neo4jSourceExtension :
         KafkaAvroDeserializer::class.java.getName(),
     )
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
-    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, metadata.consumerOffset)
+    val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
+    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
     val consumer = KafkaConsumer<String, GenericRecord>(properties)
-    consumer.subscribe(listOf(metadata.topic))
+    consumer.subscribe(listOf(consumerAnnotation.topic))
     return consumer
   }
 
@@ -192,9 +193,9 @@ class Neo4jSourceExtension :
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
-    val uri = neo4jExternalUri.read(metadata)
-    val username = neo4jUser.read(metadata)
-    val password = neo4jPassword.read(metadata)
+    val uri = neo4jExternalUri.read(sourceAnnotation)
+    val username = neo4jUser.read(sourceAnnotation)
+    val password = neo4jPassword.read(sourceAnnotation)
     driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password))
     // TODO: handle multiple parameter injection
     session = driver.session()
