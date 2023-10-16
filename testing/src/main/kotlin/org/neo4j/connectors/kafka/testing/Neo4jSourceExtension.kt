@@ -39,18 +39,20 @@ import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 
-internal class Neo4jSourceExtension :
-    ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+internal class Neo4jSourceExtension(
+    private val consumerSupplier: ConsumerSupplier<String, GenericRecord> = DefaultConsumerSupplier
+) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   companion object {
     val PARAMETER_RESOLVERS:
         Map<Class<*>, (Neo4jSourceExtension, ParameterContext?, ExtensionContext?) -> Any> =
         mapOf(
             KafkaConsumer::class.java to Neo4jSourceExtension::resolveConsumer,
-            Session::class.java to Neo4jSourceExtension::resolveSession)
+            Session::class.java to Neo4jSourceExtension::resolveSession,
+        )
   }
 
-  private lateinit var sourceAnnotation: Neo4jSource
+  /*visible for testing */ internal lateinit var sourceAnnotation: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
 
   private lateinit var driver: Driver
@@ -156,7 +158,8 @@ internal class Neo4jSourceExtension :
     val resolver =
         PARAMETER_RESOLVERS[parameterType]
             ?: throw ParameterResolutionException(
-                "@Neo4jSource does not support injection of parameters typed $parameterType")
+                "@Neo4jSource does not support injection of parameters typed $parameterType",
+            )
     return resolver(this, parameterContext, extensionContext)
   }
 
@@ -184,9 +187,7 @@ internal class Neo4jSourceExtension :
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
-    val consumer = KafkaConsumer<String, GenericRecord>(properties)
-    consumer.subscribe(listOf(consumerAnnotation.topic))
-    return consumer
+    return consumerSupplier.getSubscribed(properties, consumerAnnotation.topic)
   }
 
   private fun resolveSession(
@@ -219,7 +220,22 @@ internal class Neo4jSourceExtension :
   }
 }
 
-class EnvBackedSetting(
+internal interface ConsumerSupplier<K, V> {
+  fun getSubscribed(properties: Properties, topic: String): KafkaConsumer<K, V>
+}
+
+internal object DefaultConsumerSupplier : ConsumerSupplier<String, GenericRecord> {
+  override fun getSubscribed(
+      properties: Properties,
+      topic: String
+  ): KafkaConsumer<String, GenericRecord> {
+    val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    consumer.subscribe(listOf(topic))
+    return consumer
+  }
+}
+
+internal class EnvBackedSetting(
     private val name: String,
     private val envVarName: String,
     private val getter: (Neo4jSource) -> String
