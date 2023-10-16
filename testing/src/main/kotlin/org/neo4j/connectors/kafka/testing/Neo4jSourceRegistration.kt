@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.source.testing
+package org.neo4j.connectors.kafka.testing
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
@@ -25,10 +25,8 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.streams.asSequence
-import org.neo4j.connectors.kafka.source.StreamingFrom
-import streams.kafka.connect.source.Neo4jSourceConnector
 
-class Neo4jSourceRegistration(
+internal class Neo4jSourceRegistration(
     topic: String,
     neo4jUri: String,
     neo4jUser: String = "neo4j",
@@ -36,7 +34,7 @@ class Neo4jSourceRegistration(
     pollInterval: Duration = Duration.ofMillis(5000),
     enforceSchema: Boolean = true,
     streamingProperty: String,
-    streamingFrom: StreamingFrom,
+    streamingFrom: String,
     streamingQuery: String,
     schemaControlRegistryUri: String
 ) {
@@ -51,7 +49,7 @@ class Neo4jSourceRegistration(
             "config" to
                 mapOf(
                     "topic" to topic,
-                    "connector.class" to Neo4jSourceConnector::class.java.name,
+                    "connector.class" to "streams.kafka.connect.source.Neo4jSourceConnector",
                     "key.converter" to "io.confluent.connect.avro.AvroConverter",
                     "key.converter.schema.registry.url" to "http://schema-registry:8081",
                     "value.converter" to "io.confluent.connect.avro.AvroConverter",
@@ -61,7 +59,7 @@ class Neo4jSourceRegistration(
                     "neo4j.authentication.basic.password" to neo4jPassword,
                     "neo4j.streaming.poll.interval.msecs" to pollInterval.toMillis(),
                     "neo4j.streaming.property" to streamingProperty,
-                    "neo4j.streaming.from" to streamingFrom.name,
+                    "neo4j.streaming.from" to streamingFrom,
                     "neo4j.enforce.schema" to enforceSchema,
                     "neo4j.source.query" to streamingQuery,
                 ),

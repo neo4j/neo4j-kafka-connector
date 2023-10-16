@@ -33,6 +33,7 @@
         <module>source</module>
         <module>sink</module>
         <module>packaging</module>
+        <module>testing</module>
     </modules>
     <properties>
         <annotations.version>24.0.1</annotations.version>
