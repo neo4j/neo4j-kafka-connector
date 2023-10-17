@@ -54,25 +54,33 @@ class Neo4jSourceService(
 
   private val isClose = AtomicBoolean()
 
-  private val lastCheck: AtomicLong by lazy {
+  private val currentOffset: AtomicLong by lazy {
     val offset = offsetStorageReader.offset(sourcePartition) ?: emptyMap()
-    // if the user wants to recover from LAST_COMMITTED
+
     val startValue =
-        if (config.streamFrom == StreamingFrom.LAST_COMMITTED &&
-            offset["value"] != null &&
-            offset["property"] == config.queryStreamingProperty) {
+        if (offset["value"] != null && offset["property"] == config.queryStreamingProperty) {
           log.info(
-              "Resuming offset $offset, the ${SourceConfiguration.STREAM_FROM} value is ignored")
+              "Resuming from offset $offset, '${config.startFrom}' specified for configuration '${SourceConfiguration.START_FROM}' is ignored.")
           offset["value"] as Long
         } else {
-          if (config.streamFrom == StreamingFrom.LAST_COMMITTED) {
-            log.info(
-                "You provided ${SourceConfiguration.STREAM_FROM}: ${config.streamFrom} but no offset has been found, we'll start to consume from NOW")
-          } else {
-            log.info(
-                "No offset to resume, we'll use the provided value of ${SourceConfiguration.STREAM_FROM}: ${config.streamFrom}")
+          when (config.startFrom) {
+            StartFrom.EARLIEST -> {
+              log.info(
+                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used.")
+              (-1)
+            }
+            StartFrom.NOW -> {
+              log.info(
+                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used.")
+              System.currentTimeMillis()
+            }
+            StartFrom.USER_PROVIDED -> {
+              val provided = config.startFromCustom.toLong()
+              log.info(
+                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used with a starting offset value '${provided}'.")
+              provided
+            }
           }
-          config.streamFrom.value()
         }
     AtomicLong(startValue)
   }
@@ -92,15 +100,16 @@ class Neo4jSourceService(
             if (!isStreamingPropertyDefined) {
               // we update the lastCheck property only if the last loop round
               // returned results otherwise we stick to the old value
+              // TODO: Not sure what this does exactly
               if (lastCheckHadResult) {
-                lastCheck.set(System.currentTimeMillis() - pollInterval)
+                currentOffset.set(System.currentTimeMillis() - pollInterval)
               }
             }
             config
                 .session()
                 .readTransaction(
                     { tx ->
-                      val result = tx.run(config.query, mapOf("lastCheck" to lastCheck.get()))
+                      val result = tx.run(config.query, mapOf("lastCheck" to currentOffset.get()))
                       lastCheckHadResult = result.hasNext()
                       result.forEach { record ->
                         try {
@@ -135,7 +144,7 @@ class Neo4jSourceService(
       try {
         if (isStreamingPropertyDefined) {
           val value = record.get(config.queryStreamingProperty, Values.value(-1L)).asLong()
-          lastCheck.getAndUpdate { oldValue ->
+          currentOffset.getAndUpdate { oldValue ->
             if (oldValue >= value) {
               oldValue
             } else {
@@ -144,10 +153,11 @@ class Neo4jSourceService(
           }
           value
         } else {
-          lastCheck.get()
+          currentOffset.get()
         }
       } catch (e: Throwable) {
-        lastCheck.get()
+        // TODO: should we not log an error here?
+        currentOffset.get()
       }
 
   private fun checkError() {

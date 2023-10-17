@@ -150,7 +150,7 @@ class Neo4jSourceTaskTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
     props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.STREAM_FROM] = "ALL"
+    props[SourceConfiguration.START_FROM] = "EARLIEST"
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY_STREAMING_PROPERTY] = "timestamp"
     props[SourceConfiguration.QUERY] = getSourceQuery()
@@ -174,7 +174,7 @@ class Neo4jSourceTaskTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
     props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.STREAM_FROM] = "ALL"
+    props[SourceConfiguration.START_FROM] = "EARLIEST"
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.ENFORCE_SCHEMA] = "true"
     props[SourceConfiguration.QUERY_STREAMING_PROPERTY] = "timestamp"

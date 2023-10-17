@@ -11,7 +11,15 @@
     <packaging>jar</packaging>
     <name>source</name>
     <description>Neo4j Connector for Kafka - Source</description>
+    <properties>
+        <cdc.version>1.0.3</cdc.version>
+    </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.neo4j.connectors</groupId>
+            <artifactId>cdc</artifactId>
+            <version>${cdc.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.neo4j.connectors.kafka</groupId>
             <artifactId>common</artifactId>
@@ -26,6 +34,11 @@
             <artifactId>connect-api</artifactId>
             <version>${kafka.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotest</groupId>
+            <artifactId>kotest-assertions-core-jvm</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>

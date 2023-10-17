@@ -49,6 +49,7 @@
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <kafka-avro-serializer.version>5.2.2</kafka-avro-serializer.version>
         <kafka.version>2.6.3</kafka.version>
+        <kotest-assertions-core-jvm.version>5.6.2</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
         <kotlin.version>1.9.0</kotlin.version>
         <license-maven-plugin.version>4.2</license-maven-plugin.version>
@@ -125,6 +126,11 @@
                 <version>${kafka-avro-serializer.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.kotest</groupId>
+                <artifactId>kotest-assertions-core-jvm</artifactId>
+                <version>${kotest-assertions-core-jvm.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.avro</groupId>
                 <artifactId>avro</artifactId>
                 <version>${avro.version}</version>
@@ -192,6 +198,10 @@
         </dependencies>
     </dependencyManagement>
     <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/neo4j/connectors-build-resources</url>
+        </repository>
         <repository>
             <id>confluent</id>
             <url>https://packages.confluent.io/maven/</url>

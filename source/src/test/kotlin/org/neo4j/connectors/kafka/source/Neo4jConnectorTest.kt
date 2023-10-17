@@ -16,8 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import kotlin.test.assertContains
-import kotlin.test.assertTrue
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldExist
+import io.kotest.matchers.collections.shouldMatchEach
+import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 
@@ -28,25 +30,18 @@ class Neo4jConnectorTest {
     val connector = Neo4jConnector()
     val config = connector.validate(mutableMapOf(Neo4jConfiguration.AUTHENTICATION_TYPE to "BASIC"))
 
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME }
-            .errorMessages(),
-        "Must be non-empty.")
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD }
-            .errorMessages(),
-        "Must be non-empty.")
-    assertTrue {
-      config
-          .configValues()
-          .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_REALM }
-          .errorMessages()
-          .isEmpty()
-    }
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME }
+        .errorMessages() shouldContain "Must be non-empty."
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD }
+        .errorMessages() shouldContain "Must be non-empty."
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_REALM }
+        .errorMessages() shouldBe emptyList()
   }
 
   @Test
@@ -55,12 +50,10 @@ class Neo4jConnectorTest {
     val config =
         connector.validate(mutableMapOf(Neo4jConfiguration.AUTHENTICATION_TYPE to "KERBEROS"))
 
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET }
-            .errorMessages(),
-        "Must be non-empty.")
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET }
+        .errorMessages() shouldContain "Must be non-empty."
   }
 
   @Test
@@ -69,12 +62,10 @@ class Neo4jConnectorTest {
     val config =
         connector.validate(mutableMapOf(Neo4jConfiguration.AUTHENTICATION_TYPE to "BEARER"))
 
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN }
-            .errorMessages(),
-        "Must be non-empty.")
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN }
+        .errorMessages() shouldContain "Must be non-empty."
   }
 
   @Test
@@ -83,30 +74,91 @@ class Neo4jConnectorTest {
     val config =
         connector.validate(mutableMapOf(Neo4jConfiguration.AUTHENTICATION_TYPE to "CUSTOM"))
 
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME }
-            .errorMessages(),
-        "Must be non-empty.")
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL }
-            .errorMessages(),
-        "Must be non-empty.")
-    assertContains(
-        config
-            .configValues()
-            .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS }
-            .errorMessages(),
-        "Must be non-empty.")
-    assertTrue {
-      config
-          .configValues()
-          .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM }
-          .errorMessages()
-          .isEmpty()
-    }
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME }
+        .errorMessages() shouldContain "Must be non-empty."
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL }
+        .errorMessages() shouldContain "Must be non-empty."
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS }
+        .errorMessages() shouldContain "Must be non-empty."
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM }
+        .errorMessages() shouldBe emptyList()
+  }
+
+  @Test
+  fun `should validate empty topic configuration with cdc strategy`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SourceConfiguration.STRATEGY to "CDC"))
+
+    config
+        .configValues()
+        .first { it.name() == SourceConfiguration.STRATEGY }
+        .errorMessages() shouldContain
+        "Exactly one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information."
+  }
+
+  @Test
+  fun `should validate topic patterns with cdc strategy`() {
+    val connector = Neo4jConnector()
+
+    connector
+        .validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SourceConfiguration.STRATEGY to "CDC",
+                "neo4j.cdc.topic.topic-1" to ""))
+        .apply {
+          this.configValues()
+              .first { it.name() == SourceConfiguration.STRATEGY }
+              .errorMessages() shouldContain
+              "Invalid value  for configuration neo4j.cdc.topic.topic-1: Must not be blank."
+        }
+
+    connector
+        .validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SourceConfiguration.STRATEGY to "CDC",
+                "neo4j.cdc.topic.topic-1" to "(;ABC]"))
+        .apply {
+          this.configValues()
+              .first { it.name() == SourceConfiguration.STRATEGY }
+              .errorMessages() shouldExist
+              {
+                it.startsWith("Invalid value (;ABC] for configuration neo4j.cdc.topic.topic-1:")
+              }
+        }
+
+    connector
+        .validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SourceConfiguration.STRATEGY to "CDC",
+                "neo4j.cdc.topic.topic-1" to "(:Person),()-[:KNOWS]-()",
+                "neo4j.cdc.topic.topic-2.patterns" to "(:Person),()-[:KNOWS]-(:Company)"))
+        .apply {
+          this.configValues()
+              .first { it.name() == SourceConfiguration.STRATEGY }
+              .errorMessages() shouldMatchEach
+              listOf {
+                !it.startsWith(
+                    "Exactly one topic needs to be configured with pattern(s) describing the entities to query changes for.")
+              }
+        }
   }
 }

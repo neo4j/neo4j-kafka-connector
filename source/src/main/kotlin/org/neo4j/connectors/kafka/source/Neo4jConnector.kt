@@ -40,9 +40,10 @@ class Neo4jConnector : SourceConnector() {
   override fun config(): ConfigDef = SourceConfiguration.config()
 
   override fun validate(connectorConfigs: MutableMap<String, String>?): Config {
-    val result = super.validate(connectorConfigs)
+    val originals = connectorConfigs ?: emptyMap()
+    val result = super.validate(originals)
 
-    SourceConfiguration.validate(result)
+    SourceConfiguration.validate(result, originals)
 
     return result
   }

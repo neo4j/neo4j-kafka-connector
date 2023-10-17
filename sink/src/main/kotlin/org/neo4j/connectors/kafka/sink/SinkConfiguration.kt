@@ -124,8 +124,11 @@ class SinkConfiguration(originals: Map<*, *>) :
       return migrated
     }
 
-    fun validate(config: org.apache.kafka.common.config.Config) {
-      Neo4jConfiguration.validate(config)
+    internal fun validate(
+        config: org.apache.kafka.common.config.Config,
+        originals: Map<String, String>
+    ) {
+      Neo4jConfiguration.validate(config, originals)
     }
 
     fun config(): ConfigDef =

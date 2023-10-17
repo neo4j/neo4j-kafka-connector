@@ -19,7 +19,9 @@ Third-party licenses
 --------------------
 
 Apache Software License, Version 2.0
+  Apache Commons Collections
   Apache Commons Lang
+  cdc
   Jackson-annotations
   Jackson-core
   jackson-databind
@@ -32,6 +34,10 @@ Apache Software License, Version 2.0
   Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
   Neo4j Java Driver
+  Non-Blocking Reactive Foundation for the JVM
+
+BSD License
+  ANTLR 4 Runtime
 
 MIT License
   SLF4J API Module

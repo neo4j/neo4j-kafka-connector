@@ -40,9 +40,10 @@ class Neo4jConnector : SinkConnector() {
   override fun config(): ConfigDef = SinkConfiguration.config()
 
   override fun validate(connectorConfigs: MutableMap<String, String>?): Config {
-    val result = super.validate(connectorConfigs)
+    val originals = connectorConfigs ?: emptyMap()
+    val result = super.validate(originals)
 
-    SinkConfiguration.validate(result)
+    SinkConfiguration.validate(result, originals)
 
     return result
   }

@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.matchers.throwable.shouldHaveMessage
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -41,21 +42,20 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "none"))
         }
         .also {
-          assertEquals(
-              "Invalid value none for configuration neo4j.source-strategy: Must be one of: 'QUERY'.",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value none for configuration neo4j.source-strategy: Must be one of: 'QUERY', 'CDC'."
         }
 
     assertFailsWith(ConfigException::class) {
           SourceConfiguration(
               mapOf(
                   Neo4jConfiguration.URI to "neo4j://localhost",
+                  SourceConfiguration.TOPIC to "topic",
                   SourceConfiguration.STRATEGY to "QUERY"))
         }
         .also {
-          assertEquals(
-              "Missing required configuration \"neo4j.query\" which has no default value.",
-              it.message)
+          it shouldHaveMessage
+              "Missing required configuration \"neo4j.query\" which has no default value."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -65,9 +65,8 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "none"))
         }
         .also {
-          assertEquals(
-              "Invalid value none for configuration neo4j.source-strategy: Must be one of: 'QUERY'.",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value none for configuration neo4j.source-strategy: Must be one of: 'QUERY', 'CDC'."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -78,8 +77,8 @@ class SourceConfigurationTest {
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n"))
         }
         .also {
-          assertEquals(
-              "Missing required configuration \"topic\" which has no default value.", it.message)
+          it shouldHaveMessage
+              "Missing required configuration \"topic\" which has no default value."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -89,12 +88,11 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                   SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.STREAM_FROM to "none"))
+                  SourceConfiguration.START_FROM to "none"))
         }
         .also {
-          assertEquals(
-              "Invalid value none for configuration neo4j.stream-from: Must be one of: 'ALL', 'NOW', 'LAST_COMMITTED'.",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value none for configuration neo4j.start-from: Must be one of: 'EARLIEST', 'NOW', 'USER_PROVIDED'."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -104,13 +102,12 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                   SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.STREAM_FROM to "ALL",
+                  SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1k"))
         }
         .also {
-          assertEquals(
-              "Invalid value 1k for configuration neo4j.query.poll-interval: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value 1k for configuration neo4j.query.poll-interval: Must match pattern '(\\d+(ms|s|m|h|d))+'."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -120,14 +117,13 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                   SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.STREAM_FROM to "ALL",
+                  SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_TIMEOUT to "1k"))
         }
         .also {
-          assertEquals(
-              "Invalid value 1k for configuration neo4j.query.timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value 1k for configuration neo4j.query.timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'."
         }
 
     assertFailsWith(ConfigException::class) {
@@ -137,15 +133,14 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                   SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.STREAM_FROM to "ALL",
+                  SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_TIMEOUT to "5m",
                   SourceConfiguration.QUERY_BATCH_SIZE to "-1"))
         }
         .also {
-          assertEquals(
-              "Invalid value -1 for configuration neo4j.query.batch-size: Value must be at least 1",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value -1 for configuration neo4j.query.batch-size: Value must be at least 1"
         }
 
     assertFailsWith(ConfigException::class) {
@@ -155,16 +150,33 @@ class SourceConfigurationTest {
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                   SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.STREAM_FROM to "ALL",
+                  SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_TIMEOUT to "5m",
                   SourceConfiguration.QUERY_BATCH_SIZE to "50",
                   SourceConfiguration.ENFORCE_SCHEMA to "disabled"))
         }
         .also {
-          assertEquals(
-              "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false",
-              it.message)
+          it shouldHaveMessage
+              "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false"
+        }
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+              mapOf(
+                  Neo4jConfiguration.URI to "neo4j://localhost",
+                  SourceConfiguration.STRATEGY to "QUERY",
+                  SourceConfiguration.QUERY to "MATCH (n) RETURN n",
+                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.START_FROM to "USER_PROVIDED",
+                  SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
+                  SourceConfiguration.QUERY_TIMEOUT to "5m",
+                  SourceConfiguration.QUERY_BATCH_SIZE to "50",
+                  SourceConfiguration.ENFORCE_SCHEMA to "disabled"))
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false"
         }
   }
 
@@ -177,7 +189,7 @@ class SourceConfigurationTest {
                 SourceConfiguration.STRATEGY to "QUERY",
                 SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                 SourceConfiguration.TOPIC to "my-topic",
-                SourceConfiguration.STREAM_FROM to "ALL",
+                SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                 SourceConfiguration.QUERY_TIMEOUT to "5m",
                 SourceConfiguration.QUERY_BATCH_SIZE to "50",
@@ -187,7 +199,7 @@ class SourceConfigurationTest {
     assertEquals("MATCH (n) RETURN n", config.query)
     assertEquals("", config.queryStreamingProperty)
     assertEquals("my-topic", config.topic)
-    assertEquals(StreamingFrom.ALL, config.streamFrom)
+    assertEquals(StartFrom.EARLIEST, config.startFrom)
     assertEquals(1.minutes, config.queryPollingInterval)
     assertEquals(5.minutes, config.queryTimeout)
     assertEquals(50, config.queryBatchSize)
@@ -204,7 +216,7 @@ class SourceConfigurationTest {
                 SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                 SourceConfiguration.QUERY_STREAMING_PROPERTY to "timestamp",
                 SourceConfiguration.TOPIC to "my-topic",
-                SourceConfiguration.STREAM_FROM to "ALL",
+                SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                 SourceConfiguration.QUERY_TIMEOUT to "5m",
                 SourceConfiguration.QUERY_BATCH_SIZE to "50",
@@ -214,7 +226,7 @@ class SourceConfigurationTest {
     assertEquals("MATCH (n) RETURN n", config.query)
     assertEquals("timestamp", config.queryStreamingProperty)
     assertEquals("my-topic", config.topic)
-    assertEquals(StreamingFrom.ALL, config.streamFrom)
+    assertEquals(StartFrom.EARLIEST, config.startFrom)
     assertEquals(1.minutes, config.queryPollingInterval)
     assertEquals(5.minutes, config.queryTimeout)
     assertEquals(50, config.queryBatchSize)

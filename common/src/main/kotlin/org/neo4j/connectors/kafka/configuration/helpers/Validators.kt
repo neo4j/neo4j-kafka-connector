@@ -20,8 +20,10 @@ import java.io.File
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.regex.Pattern
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.types.Password
 
 object Validators {
 
@@ -57,6 +59,22 @@ object Validators {
       } else if (value is List<*>) {
         if (value.any()) {
           throw ConfigException(name, value, "Must be empty.")
+        }
+      } else {
+        throw ConfigException(name, value, "Must be a String or a List.")
+      }
+    }
+  }
+
+  fun notBlank(): ConfigDef.Validator {
+    return ConfigDef.Validator { name, value ->
+      if (value is String) {
+        if (value.isEmpty()) {
+          throw ConfigException(name, value, "Must not be blank.")
+        }
+      } else if (value is List<*>) {
+        if (value.isEmpty()) {
+          throw ConfigException(name, value, "Must not be empty.")
         }
       } else {
         throw ConfigException(name, value, "Must be a String or a List.")
@@ -175,5 +193,25 @@ object Validators {
         }
       }
     }
+  }
+
+  fun Config.validateNonEmptyIfVisible(name: String) {
+    this.configValues()
+        .first { it.name() == name }
+        .let { config ->
+          if (config.visible() &&
+              (when (val value = config.value()) {
+                is Int? -> value != null
+                is Boolean? -> value != null
+                is String? -> value.isNullOrEmpty()
+                is Password? -> value?.value().isNullOrEmpty()
+                is List<*>? -> value.isEmpty()
+                else ->
+                    throw IllegalArgumentException(
+                        "unexpected value '$value' for configuration $name")
+              })) {
+            config.addErrorMessage("Must be non-empty.")
+          }
+        }
   }
 }
