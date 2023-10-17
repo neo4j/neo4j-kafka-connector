@@ -16,16 +16,22 @@
  */
 package org.neo4j.connectors.kafka.configuration.helpers
 
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
 import java.io.File
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigValue
+import org.apache.kafka.common.config.types.Password
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 
 class ValidatorsTest {
 
@@ -234,7 +240,7 @@ class ValidatorsTest {
           }
           .also {
             assertEquals(
-                "Invalid value $v for configuration my.property: Must be non-empty.", it.message)
+                "Invalid value $v for configuration my.property: Must not be blank.", it.message)
           }
     }
 
@@ -282,7 +288,7 @@ class ValidatorsTest {
       assertFailsWith(ConfigException::class) { Validators.file().ensureValid("my.property", v) }
           .also {
             assertEquals(
-                "Invalid value $v for configuration my.property: Must be non-empty.", it.message)
+                "Invalid value $v for configuration my.property: Must not be blank.", it.message)
           }
     }
 
@@ -319,5 +325,131 @@ class ValidatorsTest {
       Validators.file().ensureValid("my.property", f.absolutePath)
       Validators.file().ensureValid("my.property", listOf(f.absolutePath))
     }
+  }
+
+  @Test
+  fun `validate non-empty if visible should behave correctly based on value types if blank`() {
+    Config(
+            listOf(
+                ConfigValue("BOOL_CONFIG", null as Boolean?, emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("BOOL_CONFIG")
+
+          configValues()[0].errorMessages() shouldContain
+              "Invalid value for configuration BOOL_CONFIG: Must not be blank."
+        }
+
+    Config(
+            listOf(
+                ConfigValue("INT_CONFIG", null as Int?, emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("INT_CONFIG")
+
+          configValues()[0].errorMessages() shouldContain
+              "Invalid value for configuration INT_CONFIG: Must not be blank."
+        }
+
+    listOf(null, "").forEach { s ->
+      Config(
+              listOf(
+                  ConfigValue("STRING_CONFIG", s, emptyList(), mutableListOf()).also {
+                    it.visible(true)
+                  }))
+          .apply {
+            validateNonEmptyIfVisible("STRING_CONFIG")
+
+            configValues()[0].errorMessages() shouldContain
+                "Invalid value for configuration STRING_CONFIG: Must not be blank."
+          }
+    }
+
+    listOf(null as Password?, Password(null), Password("")).forEach { s ->
+      Config(
+              listOf(
+                  ConfigValue("PASSWORD_CONFIG", s, emptyList(), mutableListOf()).also {
+                    it.visible(true)
+                  }))
+          .apply {
+            validateNonEmptyIfVisible("PASSWORD_CONFIG")
+
+            configValues()[0].errorMessages() shouldContain
+                "Invalid value for configuration PASSWORD_CONFIG: Must not be blank."
+          }
+    }
+
+    listOf(null as List<*>?, listOf<Any>(), mutableListOf<Any>()).forEach { s ->
+      Config(
+              listOf(
+                  ConfigValue("LIST_CONFIG", s, emptyList(), mutableListOf()).also {
+                    it.visible(true)
+                  }))
+          .apply {
+            validateNonEmptyIfVisible("LIST_CONFIG")
+
+            configValues()[0].errorMessages() shouldContain
+                "Invalid value for configuration LIST_CONFIG: Must not be blank."
+          }
+    }
+  }
+
+  @Test
+  fun `validate non-empty if visible should behave correctly based on value types if not blank`() {
+    Config(
+            listOf(
+                ConfigValue("BOOL_CONFIG", true, emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("BOOL_CONFIG")
+
+          configValues()[0].errorMessages() shouldHaveSize 0
+        }
+
+    Config(
+            listOf(
+                ConfigValue("INT_CONFIG", 10_000, emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("INT_CONFIG")
+
+          configValues()[0].errorMessages() shouldHaveSize 0
+        }
+
+    Config(
+            listOf(
+                ConfigValue("STRING_CONFIG", "value", emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("STRING_CONFIG")
+
+          configValues()[0].errorMessages() shouldHaveSize 0
+        }
+
+    Config(
+            listOf(
+                ConfigValue("PASSWORD_CONFIG", Password("value"), emptyList(), mutableListOf())
+                    .also { it.visible(true) }))
+        .apply {
+          validateNonEmptyIfVisible("PASSWORD_CONFIG")
+
+          configValues()[0].errorMessages() shouldHaveSize 0
+        }
+
+    Config(
+            listOf(
+                ConfigValue("LIST_CONFIG", listOf("value"), emptyList(), mutableListOf()).also {
+                  it.visible(true)
+                }))
+        .apply {
+          validateNonEmptyIfVisible("LIST_CONFIG")
+
+          configValues()[0].errorMessages() shouldHaveSize 0
+        }
   }
 }

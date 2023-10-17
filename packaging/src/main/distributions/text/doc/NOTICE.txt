@@ -33,6 +33,8 @@ Apache Software License, Version 2.0
   Kotlin Stdlib Jdk7
   Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
+  kotlinx-coroutines-reactive
+  kotlinx-coroutines-reactor
   Neo4j Java Driver
   Non-Blocking Reactive Foundation for the JVM
 

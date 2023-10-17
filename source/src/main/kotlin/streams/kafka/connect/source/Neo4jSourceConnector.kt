@@ -20,7 +20,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration
-import org.neo4j.connectors.kafka.source.Neo4jSourceTask
+import org.neo4j.connectors.kafka.source.Neo4jQueryTask
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
@@ -45,7 +45,7 @@ class Neo4jSourceConnector : SourceConnector() {
 
   override fun version(): String = PropertiesUtil.getVersion()
 
-  override fun taskClass(): Class<out Task> = Neo4jSourceTask::class.java
+  override fun taskClass(): Class<out Task> = Neo4jQueryTask::class.java
 
   override fun config(): ConfigDef = DeprecatedNeo4jSourceConfiguration.config()
 }

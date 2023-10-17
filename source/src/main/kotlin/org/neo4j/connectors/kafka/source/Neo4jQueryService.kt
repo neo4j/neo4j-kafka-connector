@@ -40,12 +40,12 @@ import org.neo4j.driver.Values
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jSourceService(
+class Neo4jQueryService(
     private val config: SourceConfiguration,
     offsetStorageReader: OffsetStorageReader
 ) : AutoCloseable {
 
-  private val log: Logger = LoggerFactory.getLogger(Neo4jSourceService::class.java)
+  private val log: Logger = LoggerFactory.getLogger(Neo4jQueryService::class.java)
 
   private val queue: BlockingQueue<SourceRecord> = LinkedBlockingQueue()
   private val error: AtomicReference<Throwable> = AtomicReference(null)
@@ -184,7 +184,7 @@ class Neo4jSourceService(
     val events = mutableListOf<SourceRecord>()
     return try {
       events.add(firstEvent)
-      queue.drainTo(events, config.queryBatchSize - 1)
+      queue.drainTo(events, config.batchSize - 1)
       log.info("Poll returns {} result(s)", events.size)
       events
     } catch (e: Exception) {

@@ -132,7 +132,7 @@ object Validators {
         when (value) {
           is String -> {
             if (value.isBlank()) {
-              throw ConfigException(name, value, "Must be non-empty.")
+              throw ConfigException(name, value, "Must not be blank.")
             }
 
             try {
@@ -148,7 +148,7 @@ object Validators {
           }
           is List<*> -> {
             if (value.isEmpty()) {
-              throw ConfigException(name, value, "Must be non-empty.")
+              throw ConfigException(name, value, "Must not be blank.")
             }
 
             value.forEach { ensureValid(name, it) }
@@ -166,7 +166,7 @@ object Validators {
       override fun ensureValid(name: String?, value: Any?) {
         if (value is String) {
           if (value.isBlank()) {
-            throw ConfigException(name, value, "Must be non-empty.")
+            throw ConfigException(name, value, "Must not be blank.")
           }
 
           val file = File(value)
@@ -184,7 +184,7 @@ object Validators {
           }
         } else if (value is List<*>) {
           if (value.isEmpty()) {
-            throw ConfigException(name, value, "Must be non-empty.")
+            throw ConfigException(name, value, "Must not be blank.")
           }
 
           value.forEach { ensureValid(name, it) }
@@ -201,8 +201,8 @@ object Validators {
         .let { config ->
           if (config.visible() &&
               (when (val value = config.value()) {
-                is Int? -> value != null
-                is Boolean? -> value != null
+                is Int? -> value == null
+                is Boolean? -> value == null
                 is String? -> value.isNullOrEmpty()
                 is Password? -> value?.value().isNullOrEmpty()
                 is List<*>? -> value.isEmpty()
@@ -210,7 +210,7 @@ object Validators {
                     throw IllegalArgumentException(
                         "unexpected value '$value' for configuration $name")
               })) {
-            config.addErrorMessage("Must be non-empty.")
+            config.addErrorMessage("Invalid value for configuration $name: Must not be blank.")
           }
         }
   }

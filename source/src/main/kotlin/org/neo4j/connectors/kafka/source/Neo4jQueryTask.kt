@@ -24,27 +24,27 @@ import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jSourceTask : SourceTask() {
+class Neo4jQueryTask : SourceTask() {
   private lateinit var props: Map<String, String>
   private lateinit var config: SourceConfiguration
-  private lateinit var neo4jSourceService: Neo4jSourceService
+  private lateinit var neo4JQueryService: Neo4jQueryService
 
-  private val log: Logger = LoggerFactory.getLogger(Neo4jSourceTask::class.java)
+  private val log: Logger = LoggerFactory.getLogger(Neo4jQueryTask::class.java)
 
   override fun version(): String = VersionUtil.version(this.javaClass)
 
   override fun start(props: MutableMap<String, String>?) {
     this.props = props!!
     config = SourceConfiguration(this.props)
-    neo4jSourceService = Neo4jSourceService(config, context.offsetStorageReader())
+    neo4JQueryService = Neo4jQueryService(config, context.offsetStorageReader())
   }
 
   @DelicateCoroutinesApi
   override fun stop() {
     log.info("Stop() - Closing Neo4j Source Service.")
     StreamsUtils.ignoreExceptions(
-        { neo4jSourceService.close() }, UninitializedPropertyAccessException::class.java)
+        { neo4JQueryService.close() }, UninitializedPropertyAccessException::class.java)
   }
 
-  override fun poll(): List<SourceRecord>? = neo4jSourceService.poll()
+  override fun poll(): List<SourceRecord>? = neo4JQueryService.poll()
 }

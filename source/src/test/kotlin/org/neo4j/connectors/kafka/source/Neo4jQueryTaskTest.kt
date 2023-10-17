@@ -40,7 +40,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class Neo4jSourceTaskTest {
+class Neo4jQueryTaskTest {
 
   companion object {
     @Container
@@ -77,7 +77,7 @@ class Neo4jSourceTaskTest {
 
   @BeforeEach
   fun before() {
-    task = Neo4jSourceTask()
+    task = Neo4jQueryTask()
     val sourceTaskContextMock = Mockito.mock(SourceTaskContext::class.java)
     val offsetStorageReader = Mockito.mock(OffsetStorageReader::class.java)
     Mockito.`when`(sourceTaskContextMock.offsetStorageReader()).thenReturn(offsetStorageReader)
