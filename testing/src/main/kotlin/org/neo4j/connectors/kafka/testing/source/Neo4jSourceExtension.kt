@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing
+package org.neo4j.connectors.kafka.testing.source
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
-import kotlin.jvm.optionals.getOrNull
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -33,7 +32,8 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
-import org.junit.platform.commons.support.AnnotationSupport
+import org.neo4j.connectors.kafka.testing.AnnotationSupport
+import org.neo4j.connectors.kafka.testing.EnvBackedSetting
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -59,31 +59,28 @@ internal class Neo4jSourceExtension(
   private lateinit var session: Session
 
   private val brokerExternalHost =
-      EnvBackedSetting("brokerExternalHost", "BROKER_EXTERNAL_HOST") { it.brokerExternalHost }
+      EnvBackedSetting<Neo4jSource>(
+          "brokerExternalHost", "BROKER_EXTERNAL_HOST", { it.brokerExternalHost })
   private val schemaRegistryUri =
-      EnvBackedSetting(
+      EnvBackedSetting<Neo4jSource>(
           "schemaControlRegistryUri",
           "SCHEMA_CONTROL_REGISTRY_URI",
-      ) {
-        it.schemaControlRegistryUri
-      }
+          { it.schemaControlRegistryUri })
   private val schemaRegistryExternalUri =
-      EnvBackedSetting(
+      EnvBackedSetting<Neo4jSource>(
           "schemaControlRegistryExternalUri",
           "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI",
-      ) {
-        it.schemaControlRegistryExternalUri
-      }
+          { it.schemaControlRegistryExternalUri })
   private val kafkaConnectExternalUri =
-      EnvBackedSetting("kafkaConnectExternalUri", "KAFKA_CONNECT_EXTERNAL_URI") {
-        it.kafkaConnectExternalUri
-      }
-  private val neo4jUri = EnvBackedSetting("neo4jUri", "NEO4J_URI") { it.neo4jUri }
+      EnvBackedSetting<Neo4jSource>(
+          "kafkaConnectExternalUri", "KAFKA_CONNECT_EXTERNAL_URI", { it.kafkaConnectExternalUri })
+  private val neo4jUri = EnvBackedSetting<Neo4jSource>("neo4jUri", "NEO4J_URI", { it.neo4jUri })
   private val neo4jExternalUri =
-      EnvBackedSetting("neo4jExternalUri", "NEO4J_EXTERNAL_URI") { it.neo4jExternalUri }
-  private val neo4jUser = EnvBackedSetting("neo4jUser", "NEO4J_USER") { it.neo4jUser }
+      EnvBackedSetting<Neo4jSource>(
+          "neo4jExternalUri", "NEO4J_EXTERNAL_URI", { it.neo4jExternalUri })
+  private val neo4jUser = EnvBackedSetting<Neo4jSource>("neo4jUser", "NEO4J_USER", { it.neo4jUser })
   private val neo4jPassword =
-      EnvBackedSetting("neo4jPassword", "NEO4J_PASSWORD") { it.neo4jPassword }
+      EnvBackedSetting<Neo4jSource>("neo4jPassword", "NEO4J_PASSWORD", { it.neo4jPassword })
 
   private val envSettings =
       listOf(
@@ -99,7 +96,8 @@ internal class Neo4jSourceExtension(
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
-        findAnnotation(context) ?: throw ExtensionConfigurationException("@Neo4jSource not found")
+        AnnotationSupport.findAnnotation<Neo4jSource>(context)
+            ?: throw ExtensionConfigurationException("@Neo4jSource not found")
 
     val errors = mutableListOf<String>()
     envSettings.forEach {
@@ -202,22 +200,6 @@ internal class Neo4jSourceExtension(
     session = driver.session()
     return session
   }
-
-  private fun findAnnotation(context: ExtensionContext?): Neo4jSource? {
-    var current = context
-    while (current != null) {
-      val annotation =
-          AnnotationSupport.findAnnotation(
-              current.requiredTestMethod,
-              Neo4jSource::class.java,
-          )
-      if (annotation.isPresent) {
-        return annotation.get()
-      }
-      current = current.parent.getOrNull()
-    }
-    return null
-  }
 }
 
 internal interface ConsumerSupplier<K, V> {
@@ -232,32 +214,5 @@ internal object DefaultConsumerSupplier : ConsumerSupplier<String, GenericRecord
     val consumer = KafkaConsumer<String, GenericRecord>(properties)
     consumer.subscribe(listOf(topic))
     return consumer
-  }
-}
-
-internal class EnvBackedSetting(
-    private val name: String,
-    private val envVarName: String,
-    private val getter: (Neo4jSource) -> String
-) {
-
-  fun isValid(annotation: Neo4jSource): Boolean {
-    return getter(annotation) != DEFAULT_TO_ENV || System.getenv(envVarName) != null
-  }
-
-  fun read(annotation: Neo4jSource): String {
-    val fieldValue = getter(annotation)
-    if (fieldValue != DEFAULT_TO_ENV) {
-      return fieldValue
-    }
-    return System.getenv(envVarName)
-  }
-
-  fun errorMessage(): String {
-    return "Both @Neo4jSource.$name and environment variable $envVarName are unset. Please specify one"
-  }
-
-  override fun toString(): String {
-    return "EnvBackedSetting(name='$name', envVarName='$envVarName')"
   }
 }

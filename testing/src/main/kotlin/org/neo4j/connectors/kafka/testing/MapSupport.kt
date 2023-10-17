@@ -16,6 +16,17 @@
  */
 package org.neo4j.connectors.kafka.testing
 
-@Target(AnnotationTarget.VALUE_PARAMETER)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class TopicConsumer(val topic: String, val offset: String)
+import java.lang.IllegalStateException
+
+internal object MapSupport {
+
+  @Suppress("UNCHECKED_CAST")
+  fun <K, Any> MutableMap<K, Any>.nestUnder(key: K, values: Map<K, Any>): MutableMap<K, Any> {
+    val map = this[key]
+    if (map !is MutableMap<*, *>) {
+      throw IllegalStateException("entry at key $key is not a mutable map")
+    }
+    (map as MutableMap<K, Any>).putAll(values)
+    return this
+  }
+}

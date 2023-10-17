@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing
+package org.neo4j.connectors.kafka.testing.source
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpRequest.BodyPublishers
-import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
-import java.util.concurrent.ThreadLocalRandom
-import kotlin.streams.asSequence
+import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
+import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
+import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
 
 internal class Neo4jSourceRegistration(
     topic: String,
@@ -39,7 +35,7 @@ internal class Neo4jSourceRegistration(
     schemaControlRegistryUri: String
 ) {
 
-  private val name: String = randomized("Neo4jSourceConnector")
+  private val name: String = randomizedName("Neo4jSourceConnector")
   private val payload: Map<String, Any>
 
   init {
@@ -70,56 +66,10 @@ internal class Neo4jSourceRegistration(
 
   fun register(connectBaseUri: String) {
     this.connectBaseUri = connectBaseUri
-    val uri = URI("${this.connectBaseUri}/connectors")
-    val requestBody = registrationJson()
-    val registration =
-        HttpRequest.newBuilder(uri)
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .POST(BodyPublishers.ofString(requestBody))
-            .build()
-    val response = HttpClient.newHttpClient().send(registration, BodyHandlers.ofString())
-    if (response.statusCode() != 201) {
-      val error =
-          String.format(
-              "Could not register source, expected 201, got: %s\n%s",
-              response.statusCode(),
-              response.body(),
-          )
-      throw RuntimeException(error)
-    }
+    registerConnector(URI("${this.connectBaseUri}/connectors"), payload)
   }
 
   fun unregister() {
-    val uri = URI("$connectBaseUri/connectors/$name/")
-    val deregistration =
-        HttpRequest.newBuilder(uri).header("Accept", "application/json").DELETE().build()
-    val response = HttpClient.newHttpClient().send(deregistration, BodyHandlers.ofString())
-    if (response.statusCode() != 204) {
-      val error =
-          String.format(
-              "Could not unregister source, expected 204, got: %s\n%s",
-              response.statusCode(),
-              response.body(),
-          )
-      throw RuntimeException(error)
-    }
-  }
-
-  private fun registrationJson(): String {
-    return ObjectMapper().writeValueAsString(payload)
-  }
-
-  companion object {
-    private fun randomized(baseName: String): String {
-      val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-      val suffix =
-          ThreadLocalRandom.current()
-              .ints(8, 0, charPool.size)
-              .asSequence()
-              .map(charPool::get)
-              .joinToString("")
-      return "${baseName}_$suffix"
-    }
+    unregisterConnector(URI("$connectBaseUri/connectors/$name/"))
   }
 }

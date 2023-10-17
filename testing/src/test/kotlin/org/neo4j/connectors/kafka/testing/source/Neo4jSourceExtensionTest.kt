@@ -14,13 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing
+package org.neo4j.connectors.kafka.testing.source
 
 import java.lang.reflect.Parameter
+import kotlin.reflect.jvm.javaMethod
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ConditionEvaluationResult
+import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.mockito.kotlin.anyOrNull
@@ -30,6 +36,34 @@ import org.mockito.kotlin.verify
 import org.neo4j.driver.Session
 
 class Neo4jSourceExtensionTest {
+
+  @Test
+  fun `continues execution evaluation if annotation is found and valid`() {
+    val extension = Neo4jSourceExtension()
+    val validTestMethod = Neo4jSourceExtensionTest::methodWithSourceAnnotation.javaMethod
+    val extensionContext =
+        mock<ExtensionContext> { on { requiredTestMethod } doReturn validTestMethod }
+
+    val result = extension.evaluateExecutionCondition(extensionContext)
+
+    assertIs<ConditionEvaluationResult>(result)
+    assertFalse { result.isDisabled }
+  }
+
+  @Test
+  fun `stops execution evaluation if annotation is not found`() {
+    val extension = Neo4jSourceExtension()
+    val invalidTestMethod =
+        Neo4jSourceExtensionTest::invalidMethodWithoutSourceAnnotation.javaMethod
+    val extensionContext =
+        mock<ExtensionContext> { on { requiredTestMethod } doReturn invalidTestMethod }
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContext)
+        }
+    assertEquals(exception.message, "@Neo4jSource not found")
+  }
 
   @Test
   fun `resolves Neo4j session`() {
@@ -89,4 +123,20 @@ class Neo4jSourceExtensionTest {
     assertIs<KafkaConsumer<String, GenericRecord>>(actualConsumer)
     verify(consumerSupplier).getSubscribed(anyOrNull(), anyOrNull())
   }
+
+  @Suppress("UNUSED") fun invalidMethodWithoutSourceAnnotation() {}
+
+  @Neo4jSource(
+      schemaControlRegistryExternalUri = "http://example.com",
+      schemaControlRegistryUri = "http://example.com",
+      brokerExternalHost = "example.com",
+      neo4jExternalUri = "neo4j://example.com",
+      topic = "topic",
+      neo4jUser = "user",
+      neo4jPassword = "password",
+      streamingProperty = "property",
+      streamingFrom = "ALL",
+      streamingQuery = "MATCH (n) RETURN n")
+  @Suppress("UNUSED")
+  fun methodWithSourceAnnotation() {}
 }
