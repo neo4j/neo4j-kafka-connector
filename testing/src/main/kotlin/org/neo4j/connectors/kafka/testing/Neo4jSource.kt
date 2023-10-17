@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.source.testing
+package org.neo4j.connectors.kafka.testing
 
 import org.junit.jupiter.api.extension.ExtendWith
-import org.neo4j.connectors.kafka.source.StreamingFrom
 
 const val DEFAULT_TO_ENV = "___UNSET___"
 
@@ -35,7 +34,6 @@ annotation class Neo4jSource(
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val topic: String,
     val streamingProperty: String,
-    val streamingFrom: StreamingFrom,
-    val streamingQuery: String,
-    val consumerOffset: String = "latest"
+    val streamingFrom: String,
+    val streamingQuery: String
 )

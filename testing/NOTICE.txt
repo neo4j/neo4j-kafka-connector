@@ -1,0 +1,61 @@
+Copyright (c) "Neo4j"
+Neo4j Sweden AB [http://neo4j.com]
+
+This file is part of Neo4j.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Full license texts are found in LICENSES.txt.
+
+
+Third-party licenses
+--------------------
+
+Apache Software License, Version 2.0
+  Apache Avro
+  Apache Commons Compress
+  Apache Kafka
+  Apache Yetus - Audience Annotations
+  Awaitility
+  config
+  Jackson-annotations
+  Jackson-core
+  jackson-databind
+  JetBrains Java Annotations
+  kafka-avro-serializer
+  kafka-schema-registry-client
+  Kotlin Stdlib
+  Kotlin Stdlib Common
+  LZ4 and xxHash
+  Neo4j Java Driver
+  Netty
+  org.apiguardian:apiguardian-api
+  org.opentest4j:opentest4j
+  snappy-java
+  utils
+  zookeeper
+
+BSD License
+  Hamcrest
+  JLine
+
+BSD License 2-clause
+  zstd-jni
+
+Eclipse Public License v2.0
+  JUnit Jupiter API
+  JUnit Platform Commons
+
+MIT License
+  SLF4J API Module
+
+MIT No Attribution License
+  reactive-streams
+

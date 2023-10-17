@@ -21,8 +21,9 @@ import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.source.testing.Neo4jSource
-import org.neo4j.connectors.kafka.source.testing.TopicVerifier
+import org.neo4j.connectors.kafka.testing.Neo4jSource
+import org.neo4j.connectors.kafka.testing.TopicConsumer
+import org.neo4j.connectors.kafka.testing.TopicVerifier
 import org.neo4j.driver.Session
 
 class Neo4jSourceIT {
@@ -34,14 +35,13 @@ class Neo4jSourceIT {
   @Neo4jSource(
       topic = TOPIC,
       streamingProperty = "timestamp",
-      streamingFrom = StreamingFrom.ALL,
+      streamingFrom = "ALL",
       streamingQuery =
-          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId",
-      consumerOffset = "earliest",
-  )
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId")
   @Test
   fun `reads latest changes from Neo4j source`(
       testInfo: TestInfo,
+      @TopicConsumer(topic = TOPIC, offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
