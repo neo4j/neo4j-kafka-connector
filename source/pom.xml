@@ -12,7 +12,7 @@
     <name>source</name>
     <description>Neo4j Connector for Kafka - Source</description>
     <properties>
-        <cdc.version>1.0.4-SNAPSHOT</cdc.version>
+        <cdc.version>1.0.3</cdc.version>
     </properties>
     <dependencies>
         <dependency>
