@@ -17,9 +17,9 @@
 package org.neo4j.connectors.kafka.testing
 
 import java.lang.reflect.Parameter
+import kotlin.test.assertIs
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
@@ -51,7 +51,7 @@ class Neo4jSourceExtensionTest {
 
     val session = extension.resolveParameter(parameterContext, extensionContext)
 
-    assertThat(session).isInstanceOf(Session::class.java)
+    assertIs<Session>(session)
   }
 
   @Test
@@ -84,9 +84,9 @@ class Neo4jSourceExtensionTest {
     val extensionContext =
         mock<ExtensionContext> { on { displayName } doReturn "some-running-test" }
 
-    val session = extension.resolveParameter(parameterContext, extensionContext)
+    val actualConsumer = extension.resolveParameter(parameterContext, extensionContext)
 
-    assertThat(session).isInstanceOf(KafkaConsumer::class.java)
+    assertIs<KafkaConsumer<String, GenericRecord>>(actualConsumer)
     verify(consumerSupplier).getSubscribed(anyOrNull(), anyOrNull())
   }
 }
