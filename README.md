@@ -31,16 +31,32 @@ Then add the following content into `settings/servers` inside ~/.m2/settings.xml
 
 ### Build locally
 
-You can build and package the project using;
+Make sure you install [dip](https://github.com/bibendi/dip) and [direnv](https://direnv.net/).
 
+For the end-to-end tests, you need to provision a local Kafka cluster, Kafka Connect instance and a Neo4j server.
+This is done by running (re-running recreates the containers):
+
+```shell
+dip provision
 ```
-mvn clean package
+
+Make sure `direnv` exports environment variables by running:
+```shell
+direnv allow .
+```
+
+You can build and package the project using (as many as time as necessary):
+
+```shell
+mvn verify
 ```
 
 You'll find the connector archive
 at `kafka-connect-neo4j/target/components/packages/neo4j-kafka-connect-neo4j-{version}.zip`.
 
 ### Code Format
+
+TL;DR? You can run `dip format`.
 
 For Kotlin code, we follow the [ktfmt](https://github.com/facebook/ktfmt) code style. There is an `.editorconfig` file
 to mimic the underlying style guides for built-in Intellij code style rules, but we recommend
