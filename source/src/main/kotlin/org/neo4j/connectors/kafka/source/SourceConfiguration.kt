@@ -40,8 +40,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration.Companion.ENFORCE_SCHEMA
-import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration.Companion.TOPIC
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.TransactionConfig
 
@@ -248,11 +246,8 @@ class SourceConfiguration(originals: Map<*, *>) :
       return migrated
     }
 
-    internal fun validate(
-        config: org.apache.kafka.common.config.Config,
-        originals: Map<String, String>
-    ) {
-      Neo4jConfiguration.validate(config, originals)
+    internal fun validate(config: Config, originals: Map<String, String>) {
+      Neo4jConfiguration.validate(config)
 
       // START_FROM user defined validation
       config.validateNonEmptyIfVisible(START_FROM_VALUE)
@@ -280,7 +275,7 @@ class SourceConfiguration(originals: Map<*, *>) :
           cdcTopics.forEach {
             // parse & validate CDC patterns
             try {
-              Validators.notBlank().ensureValid(it.key, it.value)
+              Validators.notBlankOrEmpty().ensureValid(it.key, it.value)
 
               try {
                 Pattern.parse(it.value as String?)

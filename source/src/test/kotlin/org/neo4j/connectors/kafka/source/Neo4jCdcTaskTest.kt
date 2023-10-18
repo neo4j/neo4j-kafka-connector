@@ -45,7 +45,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class Neo4jCDCTaskTest {
+class Neo4jCdcTaskTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
@@ -95,7 +95,7 @@ class Neo4jCDCTaskTest {
             mapOf("db" to "neo4j", "mode" to "FULL"))
         .consume()
 
-    task = Neo4jCDCTask()
+    task = Neo4jCdcTask()
     task.initialize(newTaskContextWithOffset())
   }
 

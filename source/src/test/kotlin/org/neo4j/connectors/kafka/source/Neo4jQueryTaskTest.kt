@@ -16,9 +16,16 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.matchers.collections.shouldHaveSize
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertFailsWith
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.errors.ConnectException
 import org.apache.kafka.connect.source.SourceRecord
@@ -27,7 +34,11 @@ import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.*
-import org.mockito.Mockito
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
+import org.mockito.ArgumentMatchers
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.utils.JSONUtils
@@ -78,11 +89,7 @@ class Neo4jQueryTaskTest {
   @BeforeEach
   fun before() {
     task = Neo4jQueryTask()
-    val sourceTaskContextMock = Mockito.mock(SourceTaskContext::class.java)
-    val offsetStorageReader = Mockito.mock(OffsetStorageReader::class.java)
-    Mockito.`when`(sourceTaskContextMock.offsetStorageReader()).thenReturn(offsetStorageReader)
-    Mockito.`when`(offsetStorageReader.offset(Mockito.anyMap<String, Any>())).thenReturn(emptyMap())
-    task.initialize(sourceTaskContextMock)
+    task.initialize(newTaskContextWithOffset(emptyMap()))
   }
 
   private fun structToMap(struct: Struct): Map<String, Any?> =
@@ -101,6 +108,241 @@ class Neo4jQueryTaskTest {
   fun Struct.toMap() = structToMap(this)
 
   @Test
+  fun `should use correct offset when startFrom=earliest`() {
+    // create data with timestamp set as 0
+    insertRecords(50, Clock.fixed(Instant.EPOCH, ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        100, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+
+    // start task with EARLIEST, previous changes should be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery()))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see previously created data
+      changes shouldHaveSize 150
+    }
+  }
+
+  @Test
+  fun `should use correct offset when startFrom=now`() {
+    // create data with timestamp set as NOW - 5m
+    insertRecords(
+        100, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+
+    // start task with NOW, previous changes should NOT be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery()))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see only the data created after task is started
+      changes shouldHaveSize 75
+    }
+  }
+
+  @Test
+  fun `should use correct offset when startFrom=user provided`() {
+    // create data with timestamp set as NOW - 5m
+    insertRecords(
+        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 10m
+    insertRecords(
+        75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+
+    // start task with NOW, previous changes should NOT be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
+            SourceConfiguration.START_FROM_VALUE to
+                Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery()))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see only the data created after task is started
+      changes shouldHaveSize 75
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(StartFrom::class)
+  fun `should use stored offset regardless of provided startFrom`(startFrom: StartFrom) {
+    // create data with timestamp set as NOW - 5m
+    insertRecords(
+        25, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW - 2m
+    insertRecords(
+        25, Clock.fixed(Instant.now().minus(Duration.ofMinutes(2)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 2m
+    insertRecords(
+        25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(2)), ZoneId.systemDefault()))
+
+    // set an offset of NOW - 3m
+    task.initialize(
+        newTaskContextWithOffset(
+            "timestamp", Instant.now().minus(Duration.ofMinutes(3)).toEpochMilli()))
+
+    // start task with provided START_FROM, with the mocked task context
+    task.start(
+        buildMap {
+          put(Neo4jConfiguration.URI, neo4j.boltUrl)
+          put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
+          put(SourceConfiguration.STRATEGY, SourceType.QUERY.toString())
+          put(SourceConfiguration.TOPIC, UUID.randomUUID().toString())
+          put(SourceConfiguration.QUERY, getSourceQuery())
+          put(SourceConfiguration.QUERY_STREAMING_PROPERTY, "timestamp")
+
+          put(SourceConfiguration.START_FROM, startFrom.toString())
+          if (startFrom == StartFrom.USER_PROVIDED) {
+            put(SourceConfiguration.START_FROM_VALUE, "-1")
+          }
+        })
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see only the data created after task is started
+      changes shouldHaveSize 50
+    }
+  }
+
+  @Test
+  fun `should ignore stored offset when startFrom=earliest`() {
+    // create data with timestamp set as 0
+    insertRecords(50, Clock.fixed(Instant.EPOCH, ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        100, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+
+    task.initialize(newTaskContextWithOffset("", Instant.now().toEpochMilli()))
+
+    // start task with EARLIEST, previous changes should be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery(),
+            SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see previously created data
+      changes shouldHaveSize 150
+    }
+  }
+
+  @Test
+  fun `should ignore stored offset when startFrom=now`() {
+    // create data with timestamp set as NOW - 5m
+    insertRecords(
+        100, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+
+    task.initialize(newTaskContextWithOffset("", Instant.EPOCH.toEpochMilli()))
+
+    // start task with NOW, previous changes should NOT be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery(),
+            SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see only the data created after task is started
+      changes shouldHaveSize 75
+    }
+  }
+
+  @Test
+  fun `should ignore stored offset when startFrom=user provided`() {
+    // create data with timestamp set as NOW - 5m
+    insertRecords(
+        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 5m
+    insertRecords(
+        25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    // create data with timestamp set as NOW + 10m
+    insertRecords(
+        75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+
+    task.initialize(newTaskContextWithOffset("", Instant.EPOCH.toEpochMilli()))
+
+    // start task with NOW, previous changes should NOT be visible
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
+            SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
+            SourceConfiguration.START_FROM_VALUE to
+                Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
+            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY to getSourceQuery(),
+            SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+
+    // poll for changes
+    val changes = mutableListOf<SourceRecord>()
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      task.poll()?.let { changes.addAll(it) }
+
+      // expect to see only the data created after task is started
+      changes shouldHaveSize 75
+    }
+  }
+
+  @Test
   fun `should source data from Neo4j with custom QUERY from NOW`() {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
@@ -110,12 +352,16 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
+    val expected =
+        insertRecords(
+            10,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+            true)
+
     task.start(props)
-    val totalRecords = 10
-    val expected = insertRecords(totalRecords, true)
 
     val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
+    await().atMost(30, TimeUnit.SECONDS).until {
       task.poll()?.let { list.addAll(it) }
       val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
       expected.containsAll(actualList)
@@ -133,12 +379,14 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
+    val expected =
+        insertRecords(
+            10, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+
     task.start(props)
-    val totalRecords = 10
-    val expected = insertRecords(totalRecords)
 
     val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
+    await().atMost(30, TimeUnit.SECONDS).until {
       task.poll()?.let { list.addAll(it) }
       val actualList = list.map { (it.value() as Struct).toMap() }
       expected.containsAll(actualList)
@@ -156,13 +404,22 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    val totalRecords = 10
-    val expected = insertRecords(totalRecords, true)
+    val expected = mutableListOf<Map<String, Any>>()
+    expected.addAll(
+        insertRecords(
+            10,
+            Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+            true))
+    expected.addAll(
+        insertRecords(
+            10,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+            true))
 
     task.start(props)
 
     val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
+    await().atMost(30, TimeUnit.SECONDS).until {
       task.poll()?.let { list.addAll(it) }
       val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
       expected == actualList
@@ -181,20 +438,102 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    val totalRecords = 10
-    val expected = insertRecords(totalRecords)
+    val expected = mutableListOf<Map<String, Any>>()
+    expected.addAll(
+        insertRecords(
+            10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+    expected.addAll(
+        insertRecords(
+            10, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
 
     task.start(props)
 
     val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
+    await().atMost(30, TimeUnit.SECONDS).until {
       task.poll()?.let { list.addAll(it) }
       val actualList = list.map { (it.value() as Struct).toMap() }
       expected == actualList
     }
   }
 
-  private fun insertRecords(totalRecords: Int, longToInt: Boolean = false) =
+  @Test
+  fun `should source data from Neo4j with custom QUERY from USER_PROVIDED`() {
+    val props = mutableMapOf<String, String>()
+    props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
+    props[SourceConfiguration.QUERY_STREAMING_PROPERTY] = "timestamp"
+    props[SourceConfiguration.QUERY] = getSourceQuery()
+    props[SourceConfiguration.START_FROM] = StartFrom.USER_PROVIDED.toString()
+    props[SourceConfiguration.START_FROM_VALUE] =
+        Instant.now().minus(Duration.ofMinutes(7)).toEpochMilli().toString()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+
+    insertRecords(
+        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+
+    val expected = mutableListOf<Map<String, Any>>()
+    expected.addAll(
+        insertRecords(
+            10,
+            Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+            true))
+    expected.addAll(
+        insertRecords(
+            10,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+            true))
+
+    task.start(props)
+
+    val list = mutableListOf<SourceRecord>()
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
+      expected.containsAll(actualList)
+    }
+  }
+
+  @Test
+  fun `should source data from Neo4j with custom QUERY from USER_PROVIDED with Schema`() {
+    val props = mutableMapOf<String, String>()
+    props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
+    props[SourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[SourceConfiguration.QUERY_STREAMING_PROPERTY] = "timestamp"
+    props[SourceConfiguration.QUERY] = getSourceQuery()
+    props[SourceConfiguration.START_FROM] = StartFrom.USER_PROVIDED.toString()
+    props[SourceConfiguration.START_FROM_VALUE] =
+        Instant.now().minus(Duration.ofMinutes(7)).toEpochMilli().toString()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+
+    insertRecords(
+        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+
+    val expected = mutableListOf<Map<String, Any>>()
+    expected.addAll(
+        insertRecords(
+            10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+    expected.addAll(
+        insertRecords(
+            10, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+
+    task.start(props)
+
+    val list = mutableListOf<SourceRecord>()
+    await().atMost(30, TimeUnit.SECONDS).until {
+      task.poll()?.let { list.addAll(it) }
+      val actualList = list.map { (it.value() as Struct).toMap() }
+      expected.containsAll(actualList)
+    }
+  }
+
+  private fun insertRecords(
+      totalRecords: Int,
+      clock: Clock = Clock.systemDefaultZone(),
+      longToInt: Boolean = false
+  ) =
       session.beginTransaction().use { tx ->
         val elements =
             (1..totalRecords).map {
@@ -203,7 +542,7 @@ class Neo4jQueryTaskTest {
                       """
                                 |CREATE (n:Test{
                                 |   name: 'Name ' + $it,
-                                |   timestamp: timestamp(),
+                                |   timestamp: ${'$'}timestamp,
                                 |   point: point({longitude: 56.7, latitude: 12.78, height: 8}),
                                 |   array: [1,2,3],
                                 |   datetime: localdatetime(),
@@ -220,7 +559,8 @@ class Neo4jQueryTaskTest {
                                 |   } AS map,
                                 |   n AS node
                             """
-                          .trimMargin())
+                          .trimMargin(),
+                      mapOf("timestamp" to clock.millis()))
               val next = result.next()
               val map = next.asMap().toMutableMap()
               map["array"] =
@@ -367,5 +707,20 @@ class Neo4jQueryTaskTest {
       val actualList = list.map { (it.value() as Struct).toMap() }
       actualList.first() == expected
     }
+  }
+
+  private fun newTaskContextWithOffset(property: String, offset: Long): SourceTaskContext {
+    return newTaskContextWithOffset(mapOf("property" to property, "value" to offset))
+  }
+
+  private fun newTaskContextWithOffset(
+      offsetMap: Map<String, Any> = emptyMap()
+  ): SourceTaskContext {
+    val offsetStorageReader =
+        mock<OffsetStorageReader> {
+          on { offset(ArgumentMatchers.anyMap<String, Any>()) } doReturn offsetMap
+        }
+
+    return mock<SourceTaskContext> { on { offsetStorageReader() } doReturn offsetStorageReader }
   }
 }

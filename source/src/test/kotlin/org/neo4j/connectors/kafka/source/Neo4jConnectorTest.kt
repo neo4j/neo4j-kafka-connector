@@ -224,6 +224,6 @@ class Neo4jConnectorTest {
             SourceConfiguration.STRATEGY to "CDC",
             "neo4j.cdc.topic.topic-1" to "(:Person)"))
 
-    connector.taskClass() shouldBe Neo4jCDCTask::class.java
+    connector.taskClass() shouldBe Neo4jCdcTask::class.java
   }
 }

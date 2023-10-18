@@ -38,7 +38,7 @@ class Neo4jConnector : SourceConnector() {
 
   override fun taskClass(): Class<out Task> =
       when (config.strategy) {
-        SourceType.CDC -> Neo4jCDCTask::class.java
+        SourceType.CDC -> Neo4jCdcTask::class.java
         SourceType.QUERY -> Neo4jQueryTask::class.java
       }
 

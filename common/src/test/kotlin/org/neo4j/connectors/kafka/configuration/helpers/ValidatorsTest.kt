@@ -234,15 +234,21 @@ class ValidatorsTest {
           }
     }
 
-    listOf("", listOf<Any>()).forEach { v ->
-      assertFailsWith(ConfigException::class) {
-            Validators.uri().apply { this.ensureValid("my.property", v) }
-          }
-          .also {
-            assertEquals(
-                "Invalid value $v for configuration my.property: Must not be blank.", it.message)
-          }
-    }
+    assertFailsWith(ConfigException::class) {
+          Validators.uri().apply { this.ensureValid("my.property", "") }
+        }
+        .also {
+          assertEquals(
+              "Invalid value  for configuration my.property: Must not be blank.", it.message)
+        }
+
+    assertFailsWith(ConfigException::class) {
+          Validators.uri().apply { this.ensureValid("my.property", listOf<Any>()) }
+        }
+        .also {
+          assertEquals(
+              "Invalid value [] for configuration my.property: Must not be empty.", it.message)
+        }
 
     assertFailsWith(ConfigException::class) {
           Validators.uri().apply { this.ensureValid("my.property", "fxz:\\sab.set") }
@@ -284,13 +290,19 @@ class ValidatorsTest {
           }
     }
 
-    listOf("", listOf<Any>()).forEach { v ->
-      assertFailsWith(ConfigException::class) { Validators.file().ensureValid("my.property", v) }
-          .also {
-            assertEquals(
-                "Invalid value $v for configuration my.property: Must not be blank.", it.message)
-          }
-    }
+    assertFailsWith(ConfigException::class) { Validators.file().ensureValid("my.property", "") }
+        .also {
+          assertEquals(
+              "Invalid value  for configuration my.property: Must not be blank.", it.message)
+        }
+
+    assertFailsWith(ConfigException::class) {
+          Validators.file().ensureValid("my.property", listOf<Any>())
+        }
+        .also {
+          assertEquals(
+              "Invalid value [] for configuration my.property: Must not be empty.", it.message)
+        }
 
     assertFailsWith(ConfigException::class) {
           Validators.file().ensureValid("my.property", "deneme.txt")

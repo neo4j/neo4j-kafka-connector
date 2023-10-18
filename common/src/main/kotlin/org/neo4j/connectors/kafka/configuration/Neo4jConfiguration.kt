@@ -278,7 +278,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     }
 
     /** Perform validation on dependent configuration items */
-    fun validate(config: org.apache.kafka.common.config.Config, originals: Map<String, String>) {
+    fun validate(config: org.apache.kafka.common.config.Config) {
       // authentication configuration
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_USERNAME)
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_PASSWORD)

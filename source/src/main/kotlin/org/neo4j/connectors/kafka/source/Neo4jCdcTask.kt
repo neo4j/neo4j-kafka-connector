@@ -41,8 +41,8 @@ import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jCDCTask : SourceTask() {
-  private val log: Logger = LoggerFactory.getLogger(Neo4jCDCTask::class.java)
+class Neo4jCdcTask : SourceTask() {
+  private val log: Logger = LoggerFactory.getLogger(Neo4jCdcTask::class.java)
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
@@ -140,7 +140,7 @@ class Neo4jCDCTask : SourceTask() {
 
   private fun resumeFrom(config: SourceConfiguration, cdc: CDCService): String {
     val offset = context.offsetStorageReader().offset(config.partition) ?: emptyMap()
-    if (!config.ignoreStoredOffset && offset["value"] != null && offset["value"] is String) {
+    if (!config.ignoreStoredOffset && offset["value"] is String) {
       log.debug("previously stored offset is {}", offset["value"])
       return offset["value"] as String
     }
@@ -152,9 +152,11 @@ class Neo4jCDCTask : SourceTask() {
           StartFrom.USER_PROVIDED -> config.startFromCustom
         }
     log.debug(
-        "{} is set as {}, offset to resume from is {}",
+        "{} is set as {} ({} = {}), offset to resume from is {}",
         SourceConfiguration.START_FROM,
         config.startFrom,
+        SourceConfiguration.IGNORE_STORED_OFFSET,
+        config.ignoreStoredOffset,
         value)
     return value
   }

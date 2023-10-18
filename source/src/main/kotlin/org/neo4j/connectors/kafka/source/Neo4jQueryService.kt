@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory
 
 class Neo4jQueryService(
     private val config: SourceConfiguration,
-    offsetStorageReader: OffsetStorageReader
+    private val offsetStorageReader: OffsetStorageReader
 ) : AutoCloseable {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jQueryService::class.java)
@@ -54,36 +54,7 @@ class Neo4jQueryService(
 
   private val isClose = AtomicBoolean()
 
-  private val currentOffset: AtomicLong by lazy {
-    val offset = offsetStorageReader.offset(sourcePartition) ?: emptyMap()
-
-    val startValue =
-        if (offset["value"] != null && offset["property"] == config.queryStreamingProperty) {
-          log.info(
-              "Resuming from offset $offset, '${config.startFrom}' specified for configuration '${SourceConfiguration.START_FROM}' is ignored.")
-          offset["value"] as Long
-        } else {
-          when (config.startFrom) {
-            StartFrom.EARLIEST -> {
-              log.info(
-                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used.")
-              (-1)
-            }
-            StartFrom.NOW -> {
-              log.info(
-                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used.")
-              System.currentTimeMillis()
-            }
-            StartFrom.USER_PROVIDED -> {
-              val provided = config.startFromCustom.toLong()
-              log.info(
-                  "No offset has been found and '${config.startFrom}' for configuration '${SourceConfiguration.START_FROM}' will be used with a starting offset value '${provided}'.")
-              provided
-            }
-          }
-        }
-    AtomicLong(startValue)
-  }
+  private val currentOffset: AtomicLong = AtomicLong(resumeFrom())
 
   private val pollInterval = config.queryPollingInterval.inWholeMilliseconds
   private val isStreamingPropertyDefined = config.queryStreamingProperty.isNotBlank()
@@ -207,5 +178,32 @@ class Neo4jQueryService(
     runBlocking { job.cancelAndJoin() }
     config.close()
     log.info("Neo4j Source Service closed successfully")
+  }
+
+  private fun resumeFrom(): Long {
+    val offset = offsetStorageReader.offset(config.partition) ?: emptyMap()
+
+    if (!config.ignoreStoredOffset &&
+        offset["value"] is Long &&
+        offset["property"] == config.queryStreamingProperty) {
+      log.debug("previously stored offset is {}", offset["value"])
+      return offset["value"] as Long
+    }
+
+    val value =
+        when (config.startFrom) {
+          StartFrom.EARLIEST -> (-1)
+          StartFrom.NOW -> System.currentTimeMillis()
+          StartFrom.USER_PROVIDED -> config.startFromCustom.toLong()
+        }
+
+    log.debug(
+        "{} is set as {} ({} = {}), offset to resume from is {}",
+        SourceConfiguration.START_FROM,
+        config.startFrom,
+        SourceConfiguration.IGNORE_STORED_OFFSET,
+        config.ignoreStoredOffset,
+        value)
+    return value
   }
 }

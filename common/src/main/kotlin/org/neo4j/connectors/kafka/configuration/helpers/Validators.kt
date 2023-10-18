@@ -53,7 +53,7 @@ object Validators {
   fun blank(): ConfigDef.Validator {
     return ConfigDef.Validator { name, value ->
       if (value is String) {
-        if (value.isNotEmpty()) {
+        if (value.isNotBlank()) {
           throw ConfigException(name, value, "Must be blank.")
         }
       } else if (value is List<*>) {
@@ -66,10 +66,10 @@ object Validators {
     }
   }
 
-  fun notBlank(): ConfigDef.Validator {
+  fun notBlankOrEmpty(): ConfigDef.Validator {
     return ConfigDef.Validator { name, value ->
       if (value is String) {
-        if (value.isEmpty()) {
+        if (value.isBlank()) {
           throw ConfigException(name, value, "Must not be blank.")
         }
       } else if (value is List<*>) {
@@ -129,12 +129,10 @@ object Validators {
   fun uri(vararg schemes: String): ConfigDef.Validator {
     return object : ConfigDef.Validator {
       override fun ensureValid(name: String?, value: Any?) {
+        notBlankOrEmpty().ensureValid(name, value)
+
         when (value) {
           is String -> {
-            if (value.isBlank()) {
-              throw ConfigException(name, value, "Must not be blank.")
-            }
-
             try {
               val parsed = URI(value)
 
@@ -147,14 +145,7 @@ object Validators {
             }
           }
           is List<*> -> {
-            if (value.isEmpty()) {
-              throw ConfigException(name, value, "Must not be blank.")
-            }
-
             value.forEach { ensureValid(name, it) }
-          }
-          else -> {
-            throw ConfigException(name, value, "Must be a String or a List.")
           }
         }
       }
@@ -164,32 +155,27 @@ object Validators {
   fun file(readable: Boolean = true, writable: Boolean = false): ConfigDef.Validator {
     return object : ConfigDef.Validator {
       override fun ensureValid(name: String?, value: Any?) {
-        if (value is String) {
-          if (value.isBlank()) {
-            throw ConfigException(name, value, "Must not be blank.")
-          }
+        notBlankOrEmpty().ensureValid(name, value)
 
-          val file = File(value)
-          if (!file.isAbsolute) {
-            throw ConfigException(name, value, "Must be an absolute path.")
+        when (value) {
+          is String -> {
+            val file = File(value)
+            if (!file.isAbsolute) {
+              throw ConfigException(name, value, "Must be an absolute path.")
+            }
+            if (!file.isFile) {
+              throw ConfigException(name, value, "Must be a file.")
+            }
+            if (readable && !file.canRead()) {
+              throw ConfigException(name, value, "Must be readable.")
+            }
+            if (writable && !file.canWrite()) {
+              throw ConfigException(name, value, "Must be writable.")
+            }
           }
-          if (!file.isFile) {
-            throw ConfigException(name, value, "Must be a file.")
+          is List<*> -> {
+            value.forEach { ensureValid(name, it) }
           }
-          if (readable && !file.canRead()) {
-            throw ConfigException(name, value, "Must be readable.")
-          }
-          if (writable && !file.canWrite()) {
-            throw ConfigException(name, value, "Must be writable.")
-          }
-        } else if (value is List<*>) {
-          if (value.isEmpty()) {
-            throw ConfigException(name, value, "Must not be blank.")
-          }
-
-          value.forEach { ensureValid(name, it) }
-        } else {
-          throw ConfigException(name, value, "Must be a String or a List.")
         }
       }
     }

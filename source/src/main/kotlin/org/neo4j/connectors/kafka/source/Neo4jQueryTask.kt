@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory
 class Neo4jQueryTask : SourceTask() {
   private lateinit var props: Map<String, String>
   private lateinit var config: SourceConfiguration
-  private lateinit var neo4JQueryService: Neo4jQueryService
+  private lateinit var neo4jQueryService: Neo4jQueryService
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jQueryTask::class.java)
 
@@ -36,15 +36,15 @@ class Neo4jQueryTask : SourceTask() {
   override fun start(props: MutableMap<String, String>?) {
     this.props = props!!
     config = SourceConfiguration(this.props)
-    neo4JQueryService = Neo4jQueryService(config, context.offsetStorageReader())
+    neo4jQueryService = Neo4jQueryService(config, context.offsetStorageReader())
   }
 
   @DelicateCoroutinesApi
   override fun stop() {
     log.info("Stop() - Closing Neo4j Source Service.")
     StreamsUtils.ignoreExceptions(
-        { neo4JQueryService.close() }, UninitializedPropertyAccessException::class.java)
+        { neo4jQueryService.close() }, UninitializedPropertyAccessException::class.java)
   }
 
-  override fun poll(): List<SourceRecord>? = neo4JQueryService.poll()
+  override fun poll(): List<SourceRecord>? = neo4jQueryService.poll()
 }
