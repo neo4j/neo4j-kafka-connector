@@ -20,16 +20,27 @@ import java.util.function.Predicate
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 
+interface DependentRecommender {
+  val dependsOn: Set<String>
+}
+
 object Recommenders {
 
   fun and(vararg recommenders: ConfigDef.Recommender): ConfigDef.Recommender {
-    return object : ConfigDef.Recommender {
+    return object : ConfigDef.Recommender, DependentRecommender {
       override fun validValues(name: String?, parsedConfig: Map<String, Any>?): List<Any> =
           recommenders.flatMap { it.validValues(name, parsedConfig) }
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
         return recommenders.all { it.visible(name, parsedConfig) }
       }
+
+      override val dependsOn: Set<String>
+        get() =
+            recommenders
+                .filter { it is DependentRecommender }
+                .flatMap { (it as DependentRecommender).dependsOn }
+                .toSet()
     }
   }
 
@@ -51,7 +62,7 @@ object Recommenders {
   }
 
   fun visibleIf(dependent: String, valueMatcher: Predicate<Any?>): ConfigDef.Recommender {
-    return object : ConfigDef.Recommender {
+    return object : ConfigDef.Recommender, DependentRecommender {
       override fun validValues(
           name: String?,
           parsedConfig: MutableMap<String, Any>?
@@ -61,6 +72,9 @@ object Recommenders {
         val dependentValue = parsedConfig?.get(dependent)
         return valueMatcher.test(dependentValue)
       }
+
+      override val dependsOn: Set<String>
+        get() = setOf(dependent)
     }
   }
 

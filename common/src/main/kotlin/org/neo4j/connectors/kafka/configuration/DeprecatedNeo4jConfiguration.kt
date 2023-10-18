@@ -103,7 +103,6 @@ open class DeprecatedNeo4jConfiguration(
         ConfigDef()
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_TYPE, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_TYPE)
                   importance = Importance.HIGH
                   defaultValue = AuthenticationType.BASIC.toString()
                   group = ConfigGroup.AUTHENTICATION
@@ -111,7 +110,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_BASIC_USERNAME, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_USERNAME)
                   importance = Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.AUTHENTICATION
@@ -122,7 +120,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_BASIC_PASSWORD, Type.PASSWORD) {
-                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_PASSWORD)
                   importance = Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.AUTHENTICATION
@@ -133,7 +130,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_BASIC_REALM, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_BASIC_REALM)
                   importance = Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.AUTHENTICATION
@@ -144,7 +140,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(AUTHENTICATION_KERBEROS_TICKET, Type.PASSWORD) {
-                  documentation = PropertiesUtil.getProperty(AUTHENTICATION_KERBEROS_TICKET)
                   importance = Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.AUTHENTICATION
@@ -155,7 +150,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(SERVER_URI, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(SERVER_URI)
                   importance = Importance.HIGH
                   defaultValue = "bolt://localhost:7687"
                   group = ConfigGroup.CONNECTION
@@ -164,7 +158,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(CONNECTION_POOL_MAX_SIZE, Type.INT) {
-                  documentation = PropertiesUtil.getProperty(CONNECTION_POOL_MAX_SIZE)
                   importance = Importance.LOW
                   defaultValue = CONNECTION_POOL_MAX_SIZE_DEFAULT
                   group = ConfigGroup.CONNECTION
@@ -201,14 +194,12 @@ open class DeprecatedNeo4jConfiguration(
                     })
             .define(
                 ConfigKeyBuilder.of(ENCRYPTION_ENABLED, Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(ENCRYPTION_ENABLED)
                   importance = Importance.HIGH
                   defaultValue = false
                   group = ConfigGroup.ENCRYPTION
                 })
             .define(
                 ConfigKeyBuilder.of(ENCRYPTION_TRUST_STRATEGY, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(ENCRYPTION_TRUST_STRATEGY)
                   importance = Importance.MEDIUM
                   defaultValue = TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES.toString()
                   group = ConfigGroup.ENCRYPTION
@@ -217,7 +208,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(ENCRYPTION_CA_CERTIFICATE_PATH, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(ENCRYPTION_CA_CERTIFICATE_PATH)
                   importance = Importance.MEDIUM
                   defaultValue = ""
                   group = ConfigGroup.ENCRYPTION
@@ -231,7 +221,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, Type.INT) {
-                  documentation = PropertiesUtil.getProperty(BATCH_SIZE)
                   importance = Importance.LOW
                   defaultValue = BATCH_SIZE_DEFAULT
                   group = ConfigGroup.BATCH
@@ -239,7 +228,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_TIMEOUT_MSECS, Type.LONG) {
-                  documentation = PropertiesUtil.getProperty(BATCH_TIMEOUT_MSECS)
                   importance = Importance.LOW
                   defaultValue = BATCH_TIMEOUT_DEFAULT
                   group = ConfigGroup.BATCH
@@ -247,7 +235,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(RETRY_BACKOFF_MSECS, Type.LONG) {
-                  documentation = PropertiesUtil.getProperty(RETRY_BACKOFF_MSECS)
                   importance = Importance.MEDIUM
                   defaultValue = RETRY_BACKOFF_DEFAULT
                   group = ConfigGroup.RETRY
@@ -255,7 +242,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(RETRY_MAX_ATTEMPTS, Type.INT) {
-                  documentation = PropertiesUtil.getProperty(RETRY_MAX_ATTEMPTS)
                   importance = Importance.MEDIUM
                   defaultValue = RETRY_MAX_ATTEMPTS_DEFAULT
                   group = ConfigGroup.RETRY
@@ -263,7 +249,6 @@ open class DeprecatedNeo4jConfiguration(
                 })
             .define(
                 ConfigKeyBuilder.of(DATABASE, Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(DATABASE)
                   importance = Importance.HIGH
                   group = ConfigGroup.CONNECTION
                   defaultValue = ""

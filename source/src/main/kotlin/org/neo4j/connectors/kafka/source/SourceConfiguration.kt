@@ -40,7 +40,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType {
@@ -294,7 +293,6 @@ class SourceConfiguration(originals: Map<*, *>) :
         Neo4jConfiguration.config()
             .define(
                 ConfigKeyBuilder.of(STRATEGY, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(STRATEGY)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceType.QUERY.name
                   validator = Validators.enum(SourceType::class.java)
@@ -302,7 +300,6 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(START_FROM, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(START_FROM)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = StartFrom.NOW.toString()
                   validator = Validators.enum(StartFrom::class.java)
@@ -310,52 +307,41 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(START_FROM_VALUE, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(START_FROM_VALUE)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(START_FROM)
                   recommender =
                       Recommenders.visibleIf(
                           START_FROM, Predicate.isEqual(StartFrom.USER_PROVIDED.name))
                 })
             .define(
                 ConfigKeyBuilder.of(IGNORE_STORED_OFFSET, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(IGNORE_STORED_OFFSET)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = false
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(TOPIC)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(QUERY)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(QUERY_STREAMING_PROPERTY)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   defaultValue = ""
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(QUERY_POLL_INTERVAL)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -363,9 +349,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
-                  documentation = PropertiesUtil.getProperty(BATCH_SIZE)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Range.atLeast(1)
@@ -373,9 +357,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(QUERY_TIMEOUT)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -383,9 +365,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_INTERVAL, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(CDC_POLL_INTERVAL)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -393,9 +373,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_DURATION, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(CDC_POLL_DURATION)
                   importance = ConfigDef.Importance.HIGH
-                  dependents = listOf(STRATEGY)
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -403,7 +381,6 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(ENFORCE_SCHEMA)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = false
                   validator = ConfigDef.NonNullValidator()
