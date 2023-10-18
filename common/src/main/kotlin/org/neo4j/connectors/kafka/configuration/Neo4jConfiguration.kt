@@ -24,10 +24,9 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
 import org.apache.kafka.common.config.ConfigDef
-import org.apache.kafka.common.config.ConfigValue
-import org.apache.kafka.common.config.types.Password
 import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
+import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.driver.AccessMode
 import org.neo4j.driver.AuthToken
@@ -280,33 +279,20 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
     /** Perform validation on dependent configuration items */
     fun validate(config: org.apache.kafka.common.config.Config) {
-      val values = config.configValues()
+      // authentication configuration
+      config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_USERNAME)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_PASSWORD)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_KERBEROS_TICKET)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_BEARER_TOKEN)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_CUSTOM_PRINCIPAL)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_CUSTOM_CREDENTIALS)
+      config.validateNonEmptyIfVisible(AUTHENTICATION_CUSTOM_SCHEME)
 
-      validateNonEmptyIfVisible(values, AUTHENTICATION_BASIC_USERNAME)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_BASIC_PASSWORD)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_KERBEROS_TICKET)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_BEARER_TOKEN)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_CUSTOM_PRINCIPAL)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_CUSTOM_CREDENTIALS)
-      validateNonEmptyIfVisible(values, AUTHENTICATION_CUSTOM_SCHEME)
-    }
-
-    protected fun validateNonEmptyIfVisible(values: MutableList<ConfigValue>, name: String) {
-      values
-          .first { it.name() == name }
-          .run {
-            if (this.visible() &&
-                (when (val value = this.value()) {
-                      is String? -> value
-                      is Password? -> value?.value()
-                      else ->
-                          throw IllegalArgumentException(
-                              "unexpected value '$value' for configuration $name")
-                    })
-                    .isNullOrBlank()) {
-              this.addErrorMessage("Must be non-empty.")
-            }
-          }
+      // security configuration
+      config.validateNonEmptyIfVisible(SECURITY_ENCRYPTED)
+      config.validateNonEmptyIfVisible(SECURITY_HOST_NAME_VERIFICATION_ENABLED)
+      config.validateNonEmptyIfVisible(SECURITY_TRUST_STRATEGY)
+      config.validateNonEmptyIfVisible(SECURITY_CERT_FILES)
     }
 
     fun config(): ConfigDef =

@@ -78,6 +78,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -92,6 +93,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -106,6 +108,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -120,6 +123,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -134,6 +138,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -148,6 +153,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -163,6 +169,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -177,6 +184,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -191,6 +199,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
+                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -226,8 +235,8 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
               documentation = PropertiesUtil.getProperty(Neo4jConfiguration.SECURITY_TRUST_STRATEGY)
               group = ADVANCED.title
               importance = Importance.LOW
-              dependents = listOf(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
               validator = Validators.enum(Strategy::class.java)
+              dependents = listOf(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
               recommender =
                   Recommenders.and(
                       Recommenders.enum(Strategy::class.java),

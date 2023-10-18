@@ -33,13 +33,13 @@ class Neo4jConnectorTest {
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.basic.username: Must not be blank.")
     assertContains(
         config
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.basic.password: Must not be blank.")
     assertTrue {
       config
           .configValues()
@@ -60,7 +60,7 @@ class Neo4jConnectorTest {
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.kerberos.ticket: Must not be blank.")
   }
 
   @Test
@@ -74,7 +74,7 @@ class Neo4jConnectorTest {
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.bearer.token: Must not be blank.")
   }
 
   @Test
@@ -88,19 +88,19 @@ class Neo4jConnectorTest {
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.custom.scheme: Must not be blank.")
     assertContains(
         config
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.custom.principal: Must not be blank.")
     assertContains(
         config
             .configValues()
             .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS }
             .errorMessages(),
-        "Must be non-empty.")
+        "Invalid value for configuration neo4j.authentication.custom.credentials: Must not be blank.")
     assertTrue {
       config
           .configValues()

@@ -28,9 +28,15 @@ import org.neo4j.connectors.kafka.utils.PropertiesUtil
 class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
     DeprecatedNeo4jConfiguration(config(), originals, ConnectorType.SOURCE) {
 
+  enum class StreamingFrom {
+    ALL,
+    NOW,
+    LAST_COMMITTED
+  }
+
   companion object {
     const val TOPIC = "topic"
-    @Deprecated("deprecated in favour of ${SourceConfiguration.STREAM_FROM}")
+    @Deprecated("deprecated in favour of ${SourceConfiguration.START_FROM}")
     const val STREAMING_FROM = "neo4j.streaming.from"
     @Deprecated("deprecated in favour of ${SourceConfiguration.ENFORCE_SCHEMA}")
     const val ENFORCE_SCHEMA = "neo4j.enforce.schema"
@@ -84,8 +90,8 @@ class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
                   documentation = PropertiesUtil.getProperty(SOURCE_TYPE)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceType.QUERY.toString()
-                  validator = Validators.enum(SourceType::class.java)
-                  recommender = Recommenders.enum(SourceType::class.java)
+                  validator = Validators.enum(SourceType::class.java, SourceType.CDC)
+                  recommender = Recommenders.enum(SourceType::class.java, SourceType.CDC)
                 })
             .define(
                 ConfigKeyBuilder.of(SOURCE_TYPE_QUERY, ConfigDef.Type.STRING) {
