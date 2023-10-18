@@ -125,7 +125,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery()))
 
     // expect to see all data
-    runBlocking { assertReceivedSize(150) }
+    pollAndAssertReceivedSize(150)
   }
 
   @Test
@@ -148,7 +148,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery()))
 
     // expect to see only the data created after task is started
-    runBlocking { assertReceivedSize(75) }
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -176,7 +176,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery()))
 
     // expect to see only the data created after the provided timestamp
-    runBlocking { assertReceivedSize(75) }
+    pollAndAssertReceivedSize(75)
   }
 
   @ParameterizedTest
@@ -214,7 +214,7 @@ class Neo4jQueryTaskTest {
         })
 
     // expect to see only the data created after the stored offset
-    runBlocking { assertReceivedSize(50) }
+    pollAndAssertReceivedSize(50)
   }
 
   @Test
@@ -239,7 +239,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
     // expect to see all data
-    runBlocking { assertReceivedSize(150) }
+    pollAndAssertReceivedSize(150)
   }
 
   @Test
@@ -265,7 +265,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
     // expect to see only the data created after task is started
-    runBlocking { assertReceivedSize(75) }
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -296,7 +296,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
     // expect to see only the data created after the provided timestamp
-    runBlocking { assertReceivedSize(75) }
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -317,7 +317,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -335,7 +335,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -357,7 +357,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -382,7 +382,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -408,7 +408,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -435,7 +435,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   private fun insertRecords(
@@ -505,7 +505,7 @@ class Neo4jQueryTaskTest {
     val expected =
         insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMillis(10)), true)
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -522,7 +522,7 @@ class Neo4jQueryTaskTest {
 
     val expected = insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMillis(10)))
 
-    runBlocking { assertReceivedMatches(expected) }
+    pollAndAssertReceived(expected)
   }
 
   private fun getSourceQuery() =
@@ -612,21 +612,26 @@ class Neo4jQueryTaskTest {
     }
   }
 
-  private suspend fun assertReceivedSize(expected: Int) {
+  private fun pollAndAssertReceivedSize(expected: Int) {
     val changes = mutableListOf<SourceRecord>()
-    until(30.seconds) {
-      task.poll()?.let { changes.addAll(it) }
 
-      changes.size == expected
+    runBlocking {
+      until(30.seconds) {
+        task.poll()?.let { changes.addAll(it) }
+
+        changes.size == expected
+      }
     }
   }
 
-  private suspend fun assertReceivedMatches(expected: List<Map<String, Any>>) {
+  private fun pollAndAssertReceived(expected: List<Map<String, Any>>) {
     val list = mutableListOf<SourceRecord>()
 
-    until(30.seconds) {
-      task.poll()?.let { list.addAll(it) }
-      list.size == expected.size
+    runBlocking {
+      until(30.seconds) {
+        task.poll()?.let { list.addAll(it) }
+        list.size == expected.size
+      }
     }
 
     list.map {
