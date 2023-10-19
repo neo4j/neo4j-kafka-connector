@@ -23,10 +23,10 @@ import org.neo4j.connectors.kafka.testing.MapSupport.nestUnder
 import org.neo4j.connectors.kafka.testing.RegistrationSupport
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 
-class Neo4jSinkRegistration(
+internal class Neo4jSinkRegistration(
     topicQuerys: Map<String, String>,
     neo4jUri: String,
-    neo4jUsername: String,
+    neo4jUser: String,
     neo4jPassword: String,
     enableKeySchemas: Boolean = false,
     enableValueSchemas: Boolean = false,
@@ -59,7 +59,7 @@ class Neo4jSinkRegistration(
                         "errors.log.enable" to enableErrorLog,
                         "errors.log.include.messages" to includeMessagesInErrorLog,
                         "neo4j.server.uri" to neo4jUri,
-                        "neo4j.authentication.basic.username" to neo4jUsername,
+                        "neo4j.authentication.basic.username" to neo4jUser,
                         "neo4j.authentication.basic.password" to neo4jPassword,
                     ))
             .nestUnder("config", queries)
@@ -77,7 +77,7 @@ class Neo4jSinkRegistration(
     RegistrationSupport.unregisterConnector(URI("$connectBaseUri/connectors/$name/"))
   }
 
-  internal fun getPayload(): Map<String, Any> {
+  /*nocommit*/ fun getPayload(): Map<String, Any> {
     return payload
   }
 }

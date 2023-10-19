@@ -59,28 +59,19 @@ internal class Neo4jSourceExtension(
   private lateinit var session: Session
 
   private val brokerExternalHost =
-      EnvBackedSetting<Neo4jSource>(
-          "brokerExternalHost", "BROKER_EXTERNAL_HOST", { it.brokerExternalHost })
+      EnvBackedSetting<Neo4jSource>("brokerExternalHost", { it.brokerExternalHost })
   private val schemaRegistryUri =
-      EnvBackedSetting<Neo4jSource>(
-          "schemaControlRegistryUri",
-          "SCHEMA_CONTROL_REGISTRY_URI",
-          { it.schemaControlRegistryUri })
+      EnvBackedSetting<Neo4jSource>("schemaControlRegistryUri", { it.schemaControlRegistryUri })
   private val schemaRegistryExternalUri =
       EnvBackedSetting<Neo4jSource>(
-          "schemaControlRegistryExternalUri",
-          "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI",
-          { it.schemaControlRegistryExternalUri })
+          "schemaControlRegistryExternalUri", { it.schemaControlRegistryExternalUri })
   private val kafkaConnectExternalUri =
-      EnvBackedSetting<Neo4jSource>(
-          "kafkaConnectExternalUri", "KAFKA_CONNECT_EXTERNAL_URI", { it.kafkaConnectExternalUri })
-  private val neo4jUri = EnvBackedSetting<Neo4jSource>("neo4jUri", "NEO4J_URI", { it.neo4jUri })
+      EnvBackedSetting<Neo4jSource>("kafkaConnectExternalUri", { it.kafkaConnectExternalUri })
+  private val neo4jUri = EnvBackedSetting<Neo4jSource>("neo4jUri", { it.neo4jUri })
   private val neo4jExternalUri =
-      EnvBackedSetting<Neo4jSource>(
-          "neo4jExternalUri", "NEO4J_EXTERNAL_URI", { it.neo4jExternalUri })
-  private val neo4jUser = EnvBackedSetting<Neo4jSource>("neo4jUser", "NEO4J_USER", { it.neo4jUser })
-  private val neo4jPassword =
-      EnvBackedSetting<Neo4jSource>("neo4jPassword", "NEO4J_PASSWORD", { it.neo4jPassword })
+      EnvBackedSetting<Neo4jSource>("neo4jExternalUri", { it.neo4jExternalUri })
+  private val neo4jUser = EnvBackedSetting<Neo4jSource>("neo4jUser", { it.neo4jUser })
+  private val neo4jPassword = EnvBackedSetting<Neo4jSource>("neo4jPassword", { it.neo4jPassword })
 
   private val envSettings =
       listOf(

@@ -45,7 +45,7 @@ class Neo4jSinkRegistrationTest {
         Neo4jSinkRegistration(
             topicQuerys = mapOf("my-topic" to "MERGE ()"),
             neo4jUri = "neo4j://example.com",
-            neo4jUsername = "user",
+            neo4jUser = "user",
             neo4jPassword = "password",
         )
 
@@ -61,7 +61,7 @@ class Neo4jSinkRegistrationTest {
         Neo4jSinkRegistration(
             topicQuerys = mapOf("topic1" to "MERGE ()", "topic2" to "CREATE ()"),
             neo4jUri = "neo4j://example.com",
-            neo4jUsername = "user",
+            neo4jUser = "user",
             neo4jPassword = "password",
         )
 

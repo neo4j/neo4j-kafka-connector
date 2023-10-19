@@ -16,25 +16,26 @@
  */
 package org.neo4j.connectors.kafka.testing
 
-import kotlin.jvm.optionals.getOrNull
-import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.platform.commons.support.AnnotationSupport
+import kotlin.math.absoluteValue
 
-internal object AnnotationSupport {
+internal object WordSupport {
 
-  inline fun <reified T : Annotation> findAnnotation(context: ExtensionContext?): T? {
-    var current = context
-    while (current != null) {
-      val annotation =
-          AnnotationSupport.findAnnotation(
-              current.requiredTestMethod,
-              T::class.java,
-          )
-      if (annotation.isPresent) {
-        return annotation.get()
-      }
-      current = current.parent.getOrNull()
+  // implementation note: this is a naive pluralization helper, which is not meant to work outside
+  // English
+  fun pluralize(count: Int, singular: String, plural: String): String {
+    if (count.absoluteValue < 2) {
+      return singular
     }
-    return null
+    return plural
+  }
+
+  fun camelCaseToUpperSnakeCase(word: String): String {
+    fun convertChar(char: Char): List<Char> {
+      return if (Character.isUpperCase(char)) {
+        listOf('_', char)
+      } else listOf(char.uppercaseChar())
+    }
+
+    return word.flatMap { convertChar(it) }.joinToString("")
   }
 }

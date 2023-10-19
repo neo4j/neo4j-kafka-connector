@@ -23,6 +23,7 @@ import org.neo4j.connectors.kafka.testing.source.DEFAULT_TO_ENV
 @Retention(AnnotationRetention.RUNTIME)
 @ExtendWith(Neo4jSinkExtension::class)
 annotation class Neo4jSink(
+    val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,

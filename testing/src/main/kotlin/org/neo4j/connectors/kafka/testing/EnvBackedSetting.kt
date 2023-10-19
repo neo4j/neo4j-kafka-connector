@@ -16,14 +16,15 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import org.neo4j.connectors.kafka.testing.WordSupport.camelCaseToUpperSnakeCase
 import org.neo4j.connectors.kafka.testing.source.DEFAULT_TO_ENV
 
 internal class EnvBackedSetting<T : Annotation>(
     private val name: String,
-    private val envVarName: String,
     private val getter: (T) -> String,
     private val envAccessor: (String) -> String? = System::getenv,
 ) {
+  private val envVarName = camelCaseToUpperSnakeCase(name)
 
   fun isValid(annotation: T): Boolean {
     return getter(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
