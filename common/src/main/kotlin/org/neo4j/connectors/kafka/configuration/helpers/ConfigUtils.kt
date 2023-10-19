@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.configuration.helpers
 
 import org.apache.kafka.common.config.AbstractConfig
 import org.apache.kafka.common.config.ConfigDef
+import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 object ConfigUtils {
   inline fun <reified E : Enum<E>> getEnum(config: AbstractConfig, key: String): E {
@@ -25,33 +26,18 @@ object ConfigUtils {
   }
 }
 
-class ConfigKeyBuilder private constructor(name: String, type: ConfigDef.Type) {
-  val name: String
-  val type: ConfigDef.Type
-  var documentation: String
-  var defaultValue: Any
+class ConfigKeyBuilder private constructor(val name: String, val type: ConfigDef.Type) {
+  var documentation: String = ""
+  var defaultValue: Any = ConfigDef.NO_DEFAULT_VALUE
   var validator: ConfigDef.Validator? = null
   var importance: ConfigDef.Importance? = null
-  var group: String
-  var orderInGroup: Int
-  var width: ConfigDef.Width
-  var displayName: String
-  var dependents: List<String>
+  var group: String = ""
+  var orderInGroup: Int = -1
+  var width: ConfigDef.Width = ConfigDef.Width.NONE
+  var displayName: String = name
+  var dependents: Set<String> = emptySet()
   var recommender: ConfigDef.Recommender? = null
-  var internalConfig: Boolean
-
-  init {
-    documentation = ""
-    defaultValue = ConfigDef.NO_DEFAULT_VALUE
-    group = ""
-    orderInGroup = -1
-    width = ConfigDef.Width.NONE
-    dependents = emptyList()
-    internalConfig = true
-    this.name = name
-    displayName = name
-    this.type = type
-  }
+  var internalConfig: Boolean = true
 
   fun build(): ConfigDef.ConfigKey {
     return ConfigDef.ConfigKey(
@@ -60,12 +46,20 @@ class ConfigKeyBuilder private constructor(name: String, type: ConfigDef.Type) {
         defaultValue,
         validator,
         importance,
-        documentation,
+        documentation.ifBlank { PropertiesUtil.getProperty(name) },
         group,
         orderInGroup,
         width,
         displayName,
-        dependents,
+        recommender
+            .let {
+              when (it) {
+                is DependentRecommender -> it.dependsOn
+                else -> emptySet()
+              }
+            }
+            .union(dependents)
+            .toList(),
         recommender,
         internalConfig,
     )

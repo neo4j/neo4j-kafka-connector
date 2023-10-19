@@ -132,14 +132,12 @@ class SinkConfiguration(originals: Map<*, *>) :
         Neo4jConfiguration.config()
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.LIST) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_LABEL_NAME)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
@@ -148,7 +146,6 @@ class SinkConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SOURCE_ID_ID_NAME)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
@@ -157,21 +154,18 @@ class SinkConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.LIST) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_CDC_SCHEMA)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.LIST) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_CUD)
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_PATTERN_MERGE_NODE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES)
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
@@ -197,21 +191,18 @@ class SinkConfiguration(originals: Map<*, *>) :
                     })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
-                  documentation = PropertiesUtil.getProperty(BATCH_SIZE)
                   importance = ConfigDef.Importance.HIGH
                   validator = ConfigDef.Range.atLeast(1)
                   defaultValue = DEFAULT_BATCH_SIZE
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_TIMEOUT, ConfigDef.Type.STRING) {
-                  documentation = PropertiesUtil.getProperty(BATCH_TIMEOUT)
                   importance = ConfigDef.Importance.HIGH
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(BATCH_PARALLELIZE)
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_PARALLELIZE
                   group = ConfigGroup.BATCH

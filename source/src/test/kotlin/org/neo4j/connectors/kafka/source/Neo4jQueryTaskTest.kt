@@ -16,23 +16,22 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.assertions.until.until
+import io.kotest.matchers.collections.shouldContainExactly
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.errors.ConnectException
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -125,14 +124,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to getSourceQuery()))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see previously created data
-      changes shouldHaveSize 150
-    }
+    // expect to see all data
+    pollAndAssertReceivedSize(150)
   }
 
   @Test
@@ -154,14 +147,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to getSourceQuery()))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see only the data created after task is started
-      changes shouldHaveSize 75
-    }
+    // expect to see only the data created after task is started
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -188,14 +175,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to getSourceQuery()))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see only the data created after task is started
-      changes shouldHaveSize 75
-    }
+    // expect to see only the data created after the provided timestamp
+    pollAndAssertReceivedSize(75)
   }
 
   @ParameterizedTest
@@ -232,14 +213,8 @@ class Neo4jQueryTaskTest {
           }
         })
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see only the data created after task is started
-      changes shouldHaveSize 50
-    }
+    // expect to see only the data created after the stored offset
+    pollAndAssertReceivedSize(50)
   }
 
   @Test
@@ -263,14 +238,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see previously created data
-      changes shouldHaveSize 150
-    }
+    // expect to see all data
+    pollAndAssertReceivedSize(150)
   }
 
   @Test
@@ -295,14 +264,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see only the data created after task is started
-      changes shouldHaveSize 75
-    }
+    // expect to see only the data created after task is started
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -332,14 +295,8 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.QUERY to getSourceQuery(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
-    // poll for changes
-    val changes = mutableListOf<SourceRecord>()
-    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
-      task.poll()?.let { changes.addAll(it) }
-
-      // expect to see only the data created after task is started
-      changes shouldHaveSize 75
-    }
+    // expect to see only the data created after the provided timestamp
+    pollAndAssertReceivedSize(75)
   }
 
   @Test
@@ -360,12 +317,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-      expected.containsAll(actualList)
-    }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -373,24 +325,17 @@ class Neo4jQueryTaskTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
     props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "1s"
     props[SourceConfiguration.ENFORCE_SCHEMA] = "true"
     props[SourceConfiguration.QUERY_STREAMING_PROPERTY] = "timestamp"
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    val expected =
-        insertRecords(
-            10, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+    val expected = insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofSeconds(5)))
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { (it.value() as Struct).toMap() }
-      expected.containsAll(actualList)
-    }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -406,24 +351,13 @@ class Neo4jQueryTaskTest {
 
     val expected = mutableListOf<Map<String, Any>>()
     expected.addAll(
-        insertRecords(
-            10,
-            Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
-            true))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(-5)), true))
     expected.addAll(
-        insertRecords(
-            10,
-            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
-            true))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(5)), true))
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-      expected == actualList
-    }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -448,12 +382,7 @@ class Neo4jQueryTaskTest {
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { (it.value() as Struct).toMap() }
-      expected == actualList
-    }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -469,29 +398,17 @@ class Neo4jQueryTaskTest {
         Instant.now().minus(Duration.ofMinutes(7)).toEpochMilli().toString()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    insertRecords(
-        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+    insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(-10)))
 
     val expected = mutableListOf<Map<String, Any>>()
     expected.addAll(
-        insertRecords(
-            10,
-            Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
-            true))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(-5)), true))
     expected.addAll(
-        insertRecords(
-            10,
-            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
-            true))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(5)), true))
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-      expected.containsAll(actualList)
-    }
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -508,32 +425,24 @@ class Neo4jQueryTaskTest {
         Instant.now().minus(Duration.ofMinutes(7)).toEpochMilli().toString()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
-    insertRecords(
-        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+    insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(-10)))
 
     val expected = mutableListOf<Map<String, Any>>()
     expected.addAll(
-        insertRecords(
-            10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(-5))))
     expected.addAll(
-        insertRecords(
-            10, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMinutes(5))))
 
     task.start(props)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(30, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { (it.value() as Struct).toMap() }
-      expected.containsAll(actualList)
-    }
+    pollAndAssertReceived(expected)
   }
 
   private fun insertRecords(
       totalRecords: Int,
       clock: Clock = Clock.systemDefaultZone(),
       longToInt: Boolean = false
-  ) =
+  ): List<Map<String, Any>> =
       session.beginTransaction().use { tx ->
         val elements =
             (1..totalRecords).map {
@@ -587,20 +496,16 @@ class Neo4jQueryTaskTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
     props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "5s"
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
     task.start(props)
-    val totalRecords = 10
-    insertRecords(totalRecords)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { JSONUtils.readValue<Map<String, Any?>>(it.value()) }
-      actualList.size >= 2
-    }
+    val expected =
+        insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMillis(10)), true)
+
+    pollAndAssertReceived(expected)
   }
 
   @Test
@@ -608,21 +513,16 @@ class Neo4jQueryTaskTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
     props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "5s"
     props[SourceConfiguration.ENFORCE_SCHEMA] = "true"
     props[SourceConfiguration.QUERY] = getSourceQuery()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
     task.start(props)
-    val totalRecords = 10
-    insertRecords(totalRecords)
 
-    val list = mutableListOf<SourceRecord>()
-    await().atMost(60, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { (it.value() as Struct).toMap() }
-      actualList.size >= 2
-    }
+    val expected = insertRecords(10, Clock.offset(Clock.systemDefaultZone(), Duration.ofMillis(10)))
+
+    pollAndAssertReceived(expected)
   }
 
   private fun getSourceQuery() =
@@ -640,6 +540,7 @@ class Neo4jQueryTaskTest {
                 |       key2: "value2"
                 |   } AS map,
                 |   n AS node
+                |ORDER BY n.timestamp
             """
           .trimMargin()
 
@@ -688,8 +589,6 @@ class Neo4jQueryTaskTest {
     val totalRecords = 10
     insertRecords(totalRecords)
 
-    val list = mutableListOf<SourceRecord>()
-
     val expected =
         mapOf(
             "id" to "ROOT_ID",
@@ -702,11 +601,45 @@ class Neo4jQueryTaskTest {
                             mapOf("children" to emptyList<Map<String, Any>>()),
                             mapOf("children" to listOf(mapOf("name" to "child"))))))
 
-    await().atMost(60, TimeUnit.SECONDS).until {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { (it.value() as Struct).toMap() }
-      actualList.first() == expected
+    runBlocking {
+      val list = mutableListOf<SourceRecord>()
+
+      until(30.seconds) {
+        task.poll()?.let { list.addAll(it) }
+        val actualList = list.map { (it.value() as Struct).toMap() }
+        actualList.first() == expected
+      }
     }
+  }
+
+  private fun pollAndAssertReceivedSize(expected: Int) {
+    val changes = mutableListOf<SourceRecord>()
+
+    runBlocking {
+      until(30.seconds) {
+        task.poll()?.let { changes.addAll(it) }
+
+        changes.size == expected
+      }
+    }
+  }
+
+  private fun pollAndAssertReceived(expected: List<Map<String, Any>>) {
+    val list = mutableListOf<SourceRecord>()
+
+    runBlocking {
+      until(30.seconds) {
+        task.poll()?.let { list.addAll(it) }
+        list.size == expected.size
+      }
+    }
+
+    list.map {
+      when (val value = it.value()) {
+        is Struct -> value.toMap()
+        else -> JSONUtils.readValue<Map<String, Any?>>(value)
+      }
+    } shouldContainExactly expected
   }
 
   private fun newTaskContextWithOffset(property: String, offset: Long): SourceTaskContext {

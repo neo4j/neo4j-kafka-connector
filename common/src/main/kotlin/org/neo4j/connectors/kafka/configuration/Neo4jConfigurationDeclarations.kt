@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-import com.fasterxml.jackson.databind.util.ClassUtil.defaultValue
 import java.net.URI
 import java.util.function.Predicate
 import kotlin.time.Duration.Companion.milliseconds
@@ -31,7 +30,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.driver.Config
 import org.neo4j.driver.Config.TrustStrategy.Strategy
 
@@ -44,7 +42,6 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
     this.define(
             ConfigKeyBuilder.of(Neo4jConfiguration.URI, ConfigDef.Type.LIST) {
               displayName = "URI"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.URI)
               group = CONNECTION.title
               importance = Importance.HIGH
               validator =
@@ -53,7 +50,6 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.DATABASE, ConfigDef.Type.STRING) {
               displayName = "Database"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.DATABASE)
               group = CONNECTION.title
               importance = Importance.HIGH
               defaultValue = ""
@@ -63,7 +59,6 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(Neo4jConfiguration.AUTHENTICATION_TYPE, ConfigDef.Type.STRING) {
               defaultValue = AuthenticationType.BASIC.toString()
               displayName = "Authentication Type"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_TYPE)
               group = CONNECTION.title
               importance = Importance.HIGH
               validator = Validators.enum(AuthenticationType::class.java)
@@ -73,12 +68,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME, ConfigDef.Type.STRING) {
                   displayName = "Username"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -88,12 +80,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD, ConfigDef.Type.PASSWORD) {
                   displayName = "Password"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -103,12 +92,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_BASIC_REALM, ConfigDef.Type.STRING) {
                   displayName = "Realm"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_BASIC_REALM)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -118,12 +104,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET, ConfigDef.Type.PASSWORD) {
                   displayName = "Kerberos Ticket"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -133,12 +116,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN, ConfigDef.Type.PASSWORD) {
                   displayName = "Bearer Token"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -148,12 +128,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL, ConfigDef.Type.STRING) {
                   displayName = "Principal"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -163,13 +140,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS, ConfigDef.Type.PASSWORD) {
                   displayName = "Credentials"
-                  documentation =
-                      PropertiesUtil.getProperty(
-                          Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -179,12 +152,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM, ConfigDef.Type.STRING) {
                   displayName = "Realm"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -194,12 +164,9 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME, ConfigDef.Type.STRING) {
                   displayName = "Scheme"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME)
                   group = CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
-                  dependents = listOf(Neo4jConfiguration.AUTHENTICATION_TYPE)
                   recommender =
                       Recommenders.visibleIf(
                           Neo4jConfiguration.AUTHENTICATION_TYPE,
@@ -210,10 +177,8 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
     this.define(
             ConfigKeyBuilder.of(Neo4jConfiguration.SECURITY_ENCRYPTED, ConfigDef.Type.BOOLEAN) {
               displayName = "Encryption"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.SECURITY_ENCRYPTED)
               group = ADVANCED.title
               importance = Importance.LOW
-              dependents = listOf(Neo4jConfiguration.URI)
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.URI,
@@ -232,11 +197,9 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.SECURITY_TRUST_STRATEGY, ConfigDef.Type.STRING) {
               displayName = "Trust Strategy"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.SECURITY_TRUST_STRATEGY)
               group = ADVANCED.title
               importance = Importance.LOW
               validator = Validators.enum(Strategy::class.java)
-              dependents = listOf(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
               recommender =
                   Recommenders.and(
                       Recommenders.enum(Strategy::class.java),
@@ -261,12 +224,8 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                 Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED,
                 ConfigDef.Type.BOOLEAN) {
                   displayName = "Hostname Verification"
-                  documentation =
-                      PropertiesUtil.getProperty(
-                          Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED)
                   group = ADVANCED.title
                   importance = Importance.LOW
-                  dependents = listOf(Neo4jConfiguration.URI, Neo4jConfiguration.SECURITY_ENCRYPTED)
                   recommender =
                       Recommenders.and(
                           Recommenders.visibleIf(
@@ -288,14 +247,9 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.SECURITY_CERT_FILES, ConfigDef.Type.LIST) {
               displayName = "Trusted Certificate List"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.SECURITY_CERT_FILES)
+
               group = ADVANCED.title
               importance = Importance.HIGH
-              dependents =
-                  listOf(
-                      Neo4jConfiguration.URI,
-                      Neo4jConfiguration.SECURITY_ENCRYPTED,
-                      Neo4jConfiguration.SECURITY_TRUST_STRATEGY)
               validator = Validators.or(Validators.blank(), Validators.file())
               recommender =
                   Recommenders.and(
@@ -324,7 +278,6 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
     this.define(
             ConfigKeyBuilder.of(Neo4jConfiguration.CONNECTION_TIMEOUT, ConfigDef.Type.STRING) {
               displayName = "Connection Timeout"
-              documentation = PropertiesUtil.getProperty(Neo4jConfiguration.CONNECTION_TIMEOUT)
               group = ADVANCED.title
               importance = Importance.LOW
               validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -335,8 +288,6 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE, ConfigDef.Type.INT) {
                   displayName = "Max Connection Pool Size"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator = Range.atLeast(1)
@@ -346,9 +297,6 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT, ConfigDef.Type.STRING) {
                   displayName = "Connection Acquisition Timeout"
-                  documentation =
-                      PropertiesUtil.getProperty(
-                          Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -362,8 +310,6 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME, ConfigDef.Type.STRING) {
                   displayName = "Max Connection Lifetime"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -377,8 +323,6 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST, ConfigDef.Type.STRING) {
                   displayName = "Idle Time Before Connection Test"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator =
@@ -391,8 +335,6 @@ fun ConfigDef.defineRetrySettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT, ConfigDef.Type.STRING) {
                   displayName = "Transaction Retry Timeout"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
@@ -402,8 +344,6 @@ fun ConfigDef.defineRetrySettings(): ConfigDef =
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS, ConfigDef.Type.INT) {
                   displayName = "Max Transaction Retry Attempts"
-                  documentation =
-                      PropertiesUtil.getProperty(Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS)
                   group = ADVANCED.title
                   importance = Importance.LOW
                   validator = Range.atLeast(1)
