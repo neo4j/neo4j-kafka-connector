@@ -56,21 +56,29 @@ internal class Neo4jSourceExtension(
   private lateinit var source: Neo4jSourceRegistration
 
   private lateinit var driver: Driver
+
   private lateinit var session: Session
 
   private val brokerExternalHost =
       EnvBackedSetting<Neo4jSource>("brokerExternalHost", { it.brokerExternalHost })
+
   private val schemaRegistryUri =
       EnvBackedSetting<Neo4jSource>("schemaControlRegistryUri", { it.schemaControlRegistryUri })
+
   private val schemaRegistryExternalUri =
       EnvBackedSetting<Neo4jSource>(
           "schemaControlRegistryExternalUri", { it.schemaControlRegistryExternalUri })
+
   private val kafkaConnectExternalUri =
       EnvBackedSetting<Neo4jSource>("kafkaConnectExternalUri", { it.kafkaConnectExternalUri })
+
   private val neo4jUri = EnvBackedSetting<Neo4jSource>("neo4jUri", { it.neo4jUri })
+
   private val neo4jExternalUri =
       EnvBackedSetting<Neo4jSource>("neo4jExternalUri", { it.neo4jExternalUri })
+
   private val neo4jUser = EnvBackedSetting<Neo4jSource>("neo4jUser", { it.neo4jUser })
+
   private val neo4jPassword = EnvBackedSetting<Neo4jSource>("neo4jPassword", { it.neo4jPassword })
 
   private val envSettings =

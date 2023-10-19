@@ -22,23 +22,42 @@ import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExecutionCondition
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.EnvBackedSetting
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
+import org.neo4j.driver.AuthToken
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
 
 internal class Neo4jSinkExtension(
     // visible for testing
-    envAccessor: (String) -> String? = System::getenv
-) : ExecutionCondition, BeforeEachCallback, AfterEachCallback {
+    envAccessor: (String) -> String? = System::getenv,
+    private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver
+) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   private lateinit var sinkAnnotation: Neo4jSink
+
   private lateinit var sink: Neo4jSinkRegistration
+
+  private lateinit var driver: Driver
+
+  private lateinit var session: Session
 
   private val kafkaConnectExternalUri =
       EnvBackedSetting<Neo4jSink>(
           "kafkaConnectExternalUri", { it.kafkaConnectExternalUri }, envAccessor)
+
   private val neo4jUri = EnvBackedSetting<Neo4jSink>("neo4jUri", { it.neo4jUri }, envAccessor)
+
+  private val neo4jExternalUri =
+      EnvBackedSetting<Neo4jSink>("neo4jExternalUri", { it.neo4jExternalUri }, envAccessor)
+
   private val neo4jUser = EnvBackedSetting<Neo4jSink>("neo4jUser", { it.neo4jUser }, envAccessor)
+
   private val neo4jPassword =
       EnvBackedSetting<Neo4jSink>("neo4jPassword", { it.neo4jPassword }, envAccessor)
 
@@ -77,6 +96,10 @@ internal class Neo4jSinkExtension(
   }
 
   override fun beforeEach(extensionContext: ExtensionContext?) {
+    if (::driver.isInitialized) {
+      driver.verifyConnectivity()
+    }
+
     sink =
         Neo4jSinkRegistration(
             neo4jUri = neo4jUri.read(sinkAnnotation),
@@ -87,6 +110,27 @@ internal class Neo4jSinkExtension(
   }
 
   override fun afterEach(extensionContent: ExtensionContext?) {
+    if (::driver.isInitialized) {
+      session.close()
+      driver.close()
+    }
     sink.unregister()
+  }
+
+  override fun supportsParameter(
+      parameterContext: ParameterContext?,
+      p1: ExtensionContext?
+  ): Boolean {
+    return parameterContext?.parameter?.type == Session::class.java
+  }
+
+  override fun resolveParameter(parameterContext: ParameterContext?, p1: ExtensionContext?): Any {
+    val uri = neo4jExternalUri.read(sinkAnnotation)
+    val username = neo4jUser.read(sinkAnnotation)
+    val password = neo4jPassword.read(sinkAnnotation)
+    driver = driverFactory(uri, AuthTokens.basic(username, password))
+    // TODO: handle multiple parameter injection
+    session = driver.session()
+    return session
   }
 }

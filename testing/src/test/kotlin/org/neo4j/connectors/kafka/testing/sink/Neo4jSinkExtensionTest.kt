@@ -16,27 +16,38 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import com.sun.net.httpserver.HttpExchange
+import java.lang.reflect.Parameter
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.reflect.KFunction0
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.ParameterContext
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
+import org.neo4j.driver.Driver
+import org.neo4j.driver.Session
 
 class Neo4jSinkExtensionTest {
 
   private val extension = Neo4jSinkExtension()
+
   private val kafkaConnectServer = KafkaConnectServer()
 
   @AfterEach
@@ -58,14 +69,12 @@ class Neo4jSinkExtensionTest {
     kafkaConnectServer.start(
         registrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
-            exchange.sendResponseHeaders(500, -1)
-            exchange.responseBody
-                .bufferedWriter()
-                .write("expected handler flag to be initially false")
+            internalServerError(exchange, "expected handler flag to be initially false")
             return@start true
           }
           return@start false
-        })
+        },
+    )
     val environment =
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
@@ -85,14 +94,12 @@ class Neo4jSinkExtensionTest {
     kafkaConnectServer.start(
         unregistrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
-            exchange.sendResponseHeaders(500, -1)
-            exchange.responseBody
-                .bufferedWriter()
-                .write("expected handler flag to be initially false")
+            internalServerError(exchange, "expected handler flag to be initially false")
             return@start true
           }
           return@start false
-        })
+        },
+    )
     val environment =
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
@@ -105,6 +112,93 @@ class Neo4jSinkExtensionTest {
     extension.afterEach(extensionContext)
 
     assertTrue(handlerCalled.get(), "unregistration should be successful")
+  }
+
+  @Test
+  fun `supports specific parameters`() {
+    assertTrue(
+        extension.supportsParameter(
+            parameterContextForType(Session::class),
+            mock<ExtensionContext>(),
+        ),
+        "session parameters should be resolvable",
+    )
+    assertFalse(
+        extension.supportsParameter(
+            parameterContextForType(Thread::class),
+            mock<ExtensionContext>(),
+        ),
+        "arbitrary parameters should not be supported",
+    )
+  }
+
+  @Test
+  fun `resolves Session parameters`() {
+    val session = mock<Session>()
+    val driver = mock<Driver> { on { session() } doReturn session }
+    val extension = Neo4jSinkExtension(driverFactory = { _, _ -> driver })
+    val extensionContext = extensionContextFor(::validMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+
+    val sessionParam =
+        extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+
+    assertIs<Session>(sessionParam)
+    assertSame(session, sessionParam)
+  }
+
+  @Test
+  fun `verifies connectivity if driver is initialized before each test`() {
+    kafkaConnectServer.start()
+    val session = mock<Session>()
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { verifyConnectivity() } doAnswer {}
+        }
+    val extension =
+        Neo4jSinkExtension(
+            envAccessor = environment::get,
+            driverFactory = { _, _ -> driver },
+        )
+    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+
+    extension.beforeEach(extensionContext)
+
+    verify(driver).verifyConnectivity()
+  }
+
+  @Test
+  fun `closes Driver and Session after each test`() {
+    kafkaConnectServer.start()
+    val session = mock<Session>()
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val driver = mock<Driver> { on { session() } doReturn session }
+    val extension =
+        Neo4jSinkExtension(
+            envAccessor = environment::get,
+            driverFactory = { _, _ -> driver },
+        )
+    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+    extension.beforeEach(extensionContext)
+
+    extension.afterEach(extensionContext)
+
+    inOrder(session, driver) {
+      verify(session).close()
+      verify(driver).close()
+    }
   }
 
   @Test
@@ -220,13 +314,22 @@ class Neo4jSinkExtensionTest {
     )
   }
 
-  private fun extensionContextFor(method: KFunction0<Unit>) =
+  private fun parameterContextForType(parameterType: KClass<*>): ParameterContext {
+    val param = mock<Parameter> { on { type } doReturn parameterType.java }
+    return mock<ParameterContext> { on { parameter } doReturn param }
+  }
+
+  private fun extensionContextFor(method: KFunction<Unit>) =
       mock<ExtensionContext> { on { requiredTestMethod } doReturn method.javaMethod }
 
-  @Suppress("UNUSED") fun missingAnnotationMethod() {}
+  private fun internalServerError(exchange: HttpExchange, error: String) {
+    exchange.sendResponseHeaders(500, -1)
+    exchange.responseBody.bufferedWriter().write(error)
+  }
 
   @Neo4jSink(
       kafkaConnectExternalUri = "http://example.com",
+      neo4jExternalUri = "neo4j://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
@@ -237,6 +340,7 @@ class Neo4jSinkExtensionTest {
   fun validMethod() {}
 
   @Neo4jSink(
+      neo4jExternalUri = "neo4j://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
@@ -249,6 +353,8 @@ class Neo4jSinkExtensionTest {
   @Neo4jSink(topics = ["topic1"], queries = ["MERGE ()"])
   @Suppress("UNUSED")
   fun envBackedMethod() {}
+
+  @Suppress("UNUSED") fun missingAnnotationMethod() {}
 
   @Neo4jSink(
       kafkaConnectExternalUri = "http://example.com",
