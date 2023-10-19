@@ -23,7 +23,7 @@ internal object MapSupport {
   @Suppress("UNCHECKED_CAST")
   fun <K, Any> MutableMap<K, Any>.nestUnder(key: K, values: Map<K, Any>): MutableMap<K, Any> {
     val map = this[key]
-    if (map !is MutableMap<*, *>) {
+    if (map !is Map<*, *>) {
       throw IllegalStateException("entry at key $key is not a mutable map")
     }
     (map as MutableMap<K, Any>).putAll(values)
