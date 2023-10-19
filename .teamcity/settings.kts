@@ -1,6 +1,6 @@
 import builds.Build
+import builds.Neo4jKafkaConnectorVcs
 import jetbrains.buildServer.configs.kotlin.project
-import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 import jetbrains.buildServer.configs.kotlin.version
 
 version = "2023.05"
@@ -13,15 +13,7 @@ project {
     password("github-packages-token", "credentialsJSON:d5ea2df2-7a81-41d4-98bf-cb7ebd607493")
   }
 
-  vcsRoot(
-      GitVcsRoot {
-        id("Connectors_Neo4jKafkaConnector_VCS")
-
-        name = "git@github.com:neo4j/neo4j-kafka-connector.git"
-        url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-        branch = "refs/heads/main"
-        branchSpec = "refs/heads/*"
-      })
+  vcsRoot(Neo4jKafkaConnectorVcs)
 
   subProject(
       Build(
