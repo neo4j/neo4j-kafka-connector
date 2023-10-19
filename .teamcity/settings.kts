@@ -15,6 +15,8 @@ project {
 
   vcsRoot(
       GitVcsRoot {
+        id("Connectors_Neo4jKafkaConnector_VCS")
+
         name = "git@github.com:neo4j/neo4j-kafka-connector.git"
         url = "git@github.com:neo4j/neo4j-kafka-connector.git"
         branch = "refs/heads/main"
