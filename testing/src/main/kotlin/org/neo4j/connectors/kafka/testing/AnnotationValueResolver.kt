@@ -17,27 +17,34 @@
 package org.neo4j.connectors.kafka.testing
 
 import org.neo4j.connectors.kafka.testing.WordSupport.camelCaseToUpperSnakeCase
-import org.neo4j.connectors.kafka.testing.source.DEFAULT_TO_ENV
+
+internal const val DEFAULT_TO_ENV = "___UNSET___"
 
 /**
- * Setting represents an annotation attribute that is potentially backed by an environment variable
- * Such attributes hold a specific value that will trigger the search of the corresponding
- * environment variable The corresponding environment variable is automatically derived from the
- * annotation attribute name, following a simple camel case to upper snake case conversion
+ * AnnotationValueResolver resolves an annotation attribute value in at most two steps. If the value
+ * has been explicitly initialized on the annotation T, it is returned. If the value holds a
+ * specific default value, the resolver will look for the corresponding environment variable and
+ * return the value. The environment variable name results from the camel case to upper snake case
+ * conversion operated on the attribute name.
  */
-internal class Setting<T : Annotation>(
+internal class AnnotationValueResolver<T : Annotation>(
     private val name: String,
-    private val envAccessor: (String) -> String? = System::getenv,
+    private val envAccessor: (String) -> String?,
 ) {
   private val fieldValueOf: (T) -> String = resolveFieldAccessor(name)
 
   private val envVarName = camelCaseToUpperSnakeCase(name)
 
+  /** Determines whether the value is resolvable. */
   fun isValid(annotation: T): Boolean {
     return fieldValueOf(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
   }
 
-  fun read(annotation: T): String {
+  /**
+   * Resolves the value of the provided annotation's attribute. This assumes [isValid] has been
+   * called first and returned true.
+   */
+  fun resolve(annotation: T): String {
     val fieldValue = fieldValueOf(annotation)
     if (fieldValue != DEFAULT_TO_ENV) {
       return fieldValue
@@ -46,7 +53,7 @@ internal class Setting<T : Annotation>(
   }
 
   fun errorMessage(): String {
-    return "Both annotation field and environment variable $envVarName are unset. Please specify one"
+    return "Both annotation field $name and environment variable $envVarName are unset. Please specify one"
   }
 
   override fun toString(): String {

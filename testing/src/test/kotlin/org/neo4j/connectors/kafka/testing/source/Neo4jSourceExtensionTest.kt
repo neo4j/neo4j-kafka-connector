@@ -16,127 +16,421 @@
  */
 package org.neo4j.connectors.kafka.testing.source
 
-import java.lang.reflect.Parameter
-import kotlin.reflect.jvm.javaMethod
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.jupiter.api.extension.ParameterContext
-import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.neo4j.connectors.kafka.testing.JUnitSupport.annotatedParameterContextForType
+import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
+import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
+import org.neo4j.connectors.kafka.testing.KafkaConnectServer
+import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 
 class Neo4jSourceExtensionTest {
 
+  private val extension = Neo4jSourceExtension()
+
+  private val kafkaConnectServer = KafkaConnectServer()
+
+  @AfterEach
+  fun cleanUp() {
+    kafkaConnectServer.close()
+  }
+
   @Test
   fun `continues execution evaluation if annotation is found and valid`() {
-    val extension = Neo4jSourceExtension()
-    val validTestMethod = Neo4jSourceExtensionTest::methodWithSourceAnnotation.javaMethod
-    val extensionContext =
-        mock<ExtensionContext> { on { requiredTestMethod } doReturn validTestMethod }
-
-    val result = extension.evaluateExecutionCondition(extensionContext)
+    val result = extension.evaluateExecutionCondition(extensionContextFor(::validMethod))
 
     assertIs<ConditionEvaluationResult>(result)
     assertFalse { result.isDisabled }
   }
 
   @Test
-  fun `stops execution evaluation if annotation is not found`() {
-    val extension = Neo4jSourceExtension()
-    val invalidTestMethod =
-        Neo4jSourceExtensionTest::invalidMethodWithoutSourceAnnotation.javaMethod
-    val extensionContext =
-        mock<ExtensionContext> { on { requiredTestMethod } doReturn invalidTestMethod }
+  fun `registers source connector`() {
+    val handlerCalled = AtomicBoolean()
+    kafkaConnectServer.start(
+        registrationHandler = { exchange ->
+          if (!handlerCalled.compareAndSet(false, true)) {
+            kafkaConnectServer.internalServerError(
+                exchange, "expected handler flag to be initially false")
+            return@start true
+          }
+          return@start false
+        },
+    )
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
 
+    extension.beforeEach(extensionContext)
+
+    assertTrue(handlerCalled.get(), "registration should be successful")
+  }
+
+  @Test
+  fun `unregisters source connector`() {
+    val handlerCalled = AtomicBoolean()
+    kafkaConnectServer.start(
+        unregistrationHandler = { exchange ->
+          if (!handlerCalled.compareAndSet(false, true)) {
+            kafkaConnectServer.internalServerError(
+                exchange, "expected handler flag to be initially false")
+            return@start true
+          }
+          return@start false
+        },
+    )
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    extension.beforeEach(extensionContext)
+
+    extension.afterEach(extensionContext)
+
+    assertTrue(handlerCalled.get(), "unregistration should be successful")
+  }
+
+  @Test
+  fun `supports specific parameters`() {
+    assertTrue(
+        extension.supportsParameter(
+            parameterContextForType(Session::class),
+            mock<ExtensionContext>(),
+        ),
+        "session parameter should be resolvable",
+    )
+    assertTrue(
+        extension.supportsParameter(
+            parameterContextForType(KafkaConsumer::class),
+            mock<ExtensionContext>(),
+        ),
+        "consumer parameter should be resolvable",
+    )
+    assertFalse(
+        extension.supportsParameter(
+            parameterContextForType(Thread::class),
+            mock<ExtensionContext>(),
+        ),
+        "arbitrary parameters should not be supported",
+    )
+  }
+
+  @Test
+  fun `resolves Session parameter`() {
+    val session = mock<Session>()
+    val driver = mock<Driver> { on { session() } doReturn session }
+    val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
+    val extensionContext = extensionContextFor(::validMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+
+    val sessionParam =
+        extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+
+    assertIs<Session>(sessionParam)
+    assertSame(session, sessionParam)
+  }
+
+  @Test
+  fun `resolves consumer parameter`() {
+    val consumer = mock<KafkaConsumer<String, GenericRecord>>()
+    val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
+    val extensionContext = extensionContextFor(::validMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
+
+    val consumerParam =
+        extension.resolveParameter(
+            annotatedParameterContextForType(KafkaConsumer::class, consumerAnnotation),
+            extensionContext)
+
+    assertIs<KafkaConsumer<String, GenericRecord>>(consumerParam)
+    assertSame(consumer, consumerParam)
+  }
+
+  @Test
+  fun `verifies connectivity if driver is initialized before each test`() {
+    kafkaConnectServer.start()
+    val session = mock<Session>()
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { verifyConnectivity() } doAnswer {}
+        }
+    val extension =
+        Neo4jSourceExtension(
+            envAccessor = environment::get,
+            driverFactory = { _, _ -> driver },
+        )
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+
+    extension.beforeEach(extensionContext)
+
+    verify(driver).verifyConnectivity()
+  }
+
+  @Test
+  fun `closes Driver and Session after each test`() {
+    kafkaConnectServer.start()
+    val session = mock<Session>()
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
+        )
+    val driver = mock<Driver> { on { session() } doReturn session }
+    val extension =
+        Neo4jSourceExtension(
+            envAccessor = environment::get,
+            driverFactory = { _, _ -> driver },
+        )
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
+    extension.evaluateExecutionCondition(extensionContext)
+    extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
+    extension.beforeEach(extensionContext)
+
+    extension.afterEach(extensionContext)
+
+    inOrder(session, driver) {
+      verify(session).close()
+      verify(driver).close()
+    }
+  }
+
+  @Test
+  fun `stops execution evaluation if annotation is not found`() {
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContext)
+          extension.evaluateExecutionCondition(extensionContextFor(::missingAnnotationMethod))
         }
+
     assertEquals(exception.message, "@Neo4jSource not found")
   }
 
   @Test
-  fun `resolves Neo4j session`() {
-    val extension = Neo4jSourceExtension()
-    extension.sourceAnnotation =
-        Neo4jSource(
-            topic = "unused",
-            streamingQuery = "unused",
-            streamingFrom = "unused",
-            streamingProperty = "unused",
-            neo4jExternalUri = "neo4j://example.com",
-            neo4jUri = "neo4j://example.com",
-            neo4jUser = "neo4j",
-            neo4jPassword = "s3cr3t!!",
+  fun `stops execution evaluation if broker external host is not specified`() {
+    val environment =
+        mapOf(
+            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
+            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
+            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
+            "NEO4J_URI" to "neo4j://example",
+            "NEO4J_USER" to "user",
+            "NEO4J_PASSWORD" to "password",
         )
-    val parameter = mock<Parameter> { on { getType() } doReturn Session::class.java }
-    val parameterContext = mock<ParameterContext> { on { getParameter() } doReturn parameter }
-    val extensionContext = mock<ExtensionContext>()
+    val extension = Neo4jSourceExtension(environment::get)
 
-    val session = extension.resolveParameter(parameterContext, extensionContext)
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
 
-    assertIs<Session>(session)
+    assertContains(
+        exception.message!!,
+        "Both annotation field brokerExternalHost and environment variable BROKER_EXTERNAL_HOST are unset. Please specify one",
+    )
   }
 
   @Test
-  fun `resolves Kafka consumer`() {
-    val consumer = mock<KafkaConsumer<String, GenericRecord>>()
-    val consumerSupplier =
-        mock<ConsumerSupplier<String, GenericRecord>> {
-          on { getSubscribed(anyOrNull(), anyOrNull()) } doReturn consumer
+  fun `stops execution evaluation if schema control registry URI is not specified`() {
+    val environment =
+        mapOf(
+            "BROKER_EXTERNAL_HOST" to "example.com",
+            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
+            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
+            "NEO4J_URI" to "neo4j://example",
+            "NEO4J_USER" to "user",
+            "NEO4J_PASSWORD" to "password",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
         }
-    val extension = Neo4jSourceExtension(consumerSupplier)
-    extension.sourceAnnotation =
-        Neo4jSource(
-            topic = "unused",
-            streamingQuery = "unused",
-            streamingFrom = "unused",
-            streamingProperty = "unused",
-            neo4jUri = "unused",
-            neo4jUser = "unused",
-            neo4jPassword = "unused",
-            brokerExternalHost = "example.com",
-            schemaControlRegistryExternalUri = "example.com")
 
-    val annotation = TopicConsumer(topic = "topic", offset = "earliest")
-    val parameter =
-        mock<Parameter> {
-          on { getType() } doReturn KafkaConsumer::class.java
-          on { getAnnotation(TopicConsumer::class.java) } doReturn annotation
-        }
-    val parameterContext = mock<ParameterContext> { on { getParameter() } doReturn parameter }
-    val extensionContext =
-        mock<ExtensionContext> { on { displayName } doReturn "some-running-test" }
-
-    val actualConsumer = extension.resolveParameter(parameterContext, extensionContext)
-
-    assertIs<KafkaConsumer<String, GenericRecord>>(actualConsumer)
-    verify(consumerSupplier).getSubscribed(anyOrNull(), anyOrNull())
+    assertContains(
+        exception.message!!,
+        "Both annotation field schemaControlRegistryUri and environment variable SCHEMA_CONTROL_REGISTRY_URI are unset. Please specify one",
+    )
   }
 
-  @Suppress("UNUSED") fun invalidMethodWithoutSourceAnnotation() {}
+  @Test
+  fun `stops execution evaluation if schema control registry external URI is not specified`() {
+    val environment =
+        mapOf(
+            "BROKER_EXTERNAL_HOST" to "example.com",
+            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
+            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
+            "NEO4J_URI" to "neo4j://example",
+            "NEO4J_USER" to "user",
+            "NEO4J_PASSWORD" to "password",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
+
+    assertContains(
+        exception.message!!,
+        "Both annotation field schemaControlRegistryExternalUri and environment variable SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI are unset. Please specify one",
+    )
+  }
+
+  @Test
+  fun `stops execution evaluation if kafka connect external URI is not specified`() {
+    val environment =
+        mapOf(
+            "BROKER_EXTERNAL_HOST" to "example.com",
+            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
+            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
+            "NEO4J_URI" to "neo4j://example",
+            "NEO4J_USER" to "user",
+            "NEO4J_PASSWORD" to "password",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
+
+    assertContains(
+        exception.message!!,
+        "Both annotation field kafkaConnectExternalUri and environment variable KAFKA_CONNECT_EXTERNAL_URI are unset. Please specify one",
+    )
+  }
+
+  @Test
+  fun `stops execution evaluation if neo4j URI is not specified`() {
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to "http://example.com",
+            "NEO4J_USER" to "user",
+            "NEO4J_PASSWORD" to "password",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
+
+    assertContains(
+        exception.message!!,
+        "Both annotation field neo4jUri and environment variable NEO4J_URI are unset. Please specify one",
+    )
+  }
+
+  @Test
+  fun `stops execution evaluation if neo4j user is not specified`() {
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to "http://example.com",
+            "NEO4J_URI" to "neo4j://example.com",
+            "NEO4J_PASSWORD" to "password",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
+    assertContains(
+        exception.message!!,
+        "Both annotation field neo4jUser and environment variable NEO4J_USER are unset. Please specify one",
+    )
+  }
+
+  @Test
+  fun `stops execution evaluation if neo4j password is not specified`() {
+    val environment =
+        mapOf(
+            "KAFKA_CONNECT_EXTERNAL_URI" to "http://example.com",
+            "NEO4J_URI" to "neo4j://example.com",
+            "NEO4J_USER" to "user",
+        )
+    val extension = Neo4jSourceExtension(environment::get)
+
+    val exception =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
+        }
+    assertContains(
+        exception.message!!,
+        "Both annotation field neo4jPassword and environment variable NEO4J_PASSWORD are unset. Please specify one",
+    )
+  }
 
   @Neo4jSource(
-      schemaControlRegistryExternalUri = "http://example.com",
-      schemaControlRegistryUri = "http://example.com",
       brokerExternalHost = "example.com",
+      schemaControlRegistryUri = "http://example.com",
+      schemaControlRegistryExternalUri = "http://example.com",
+      kafkaConnectExternalUri = "http://example.com",
       neo4jExternalUri = "neo4j://example.com",
-      topic = "topic",
+      neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      streamingProperty = "property",
+      topic = "topic",
+      streamingProperty = "prop",
       streamingFrom = "ALL",
-      streamingQuery = "MATCH (n) RETURN n")
+      streamingQuery = "MERGE (:Example)")
   @Suppress("UNUSED")
-  fun methodWithSourceAnnotation() {}
+  fun validMethod() {}
+
+  @Neo4jSource(
+      brokerExternalHost = "example.com",
+      schemaControlRegistryUri = "http://example.com",
+      schemaControlRegistryExternalUri = "http://example.com",
+      neo4jExternalUri = "neo4j://example.com",
+      neo4jUri = "neo4j://example.com",
+      neo4jUser = "user",
+      neo4jPassword = "password",
+      topic = "topic",
+      streamingProperty = "prop",
+      streamingFrom = "ALL",
+      streamingQuery = "MERGE (:Example)")
+  @Suppress("UNUSED")
+  fun onlyKafkaConnectExternalUriFromEnvMethod() {}
+
+  @Neo4jSource(
+      topic = "topic",
+      streamingProperty = "prop",
+      streamingFrom = "ALL",
+      streamingQuery = "MERGE (:Example)")
+  @Suppress("UNUSED")
+  fun envBackedMethod() {}
+
+  @Suppress("UNUSED") fun missingAnnotationMethod() {}
 }

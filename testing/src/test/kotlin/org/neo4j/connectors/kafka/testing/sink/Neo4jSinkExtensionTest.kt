@@ -16,12 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
-import com.sun.net.httpserver.HttpExchange
-import java.lang.reflect.Parameter
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -34,12 +29,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.jupiter.api.extension.ParameterContext
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
+import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
@@ -69,7 +65,8 @@ class Neo4jSinkExtensionTest {
     kafkaConnectServer.start(
         registrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
-            internalServerError(exchange, "expected handler flag to be initially false")
+            kafkaConnectServer.internalServerError(
+                exchange, "expected handler flag to be initially false")
             return@start true
           }
           return@start false
@@ -80,7 +77,7 @@ class Neo4jSinkExtensionTest {
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
     val extension = Neo4jSinkExtension(environment::get)
-    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
     extension.beforeEach(extensionContext)
@@ -94,7 +91,8 @@ class Neo4jSinkExtensionTest {
     kafkaConnectServer.start(
         unregistrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
-            internalServerError(exchange, "expected handler flag to be initially false")
+            kafkaConnectServer.internalServerError(
+                exchange, "expected handler flag to be initially false")
             return@start true
           }
           return@start false
@@ -105,7 +103,7 @@ class Neo4jSinkExtensionTest {
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
     val extension = Neo4jSinkExtension(environment::get)
-    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.beforeEach(extensionContext)
 
@@ -133,7 +131,7 @@ class Neo4jSinkExtensionTest {
   }
 
   @Test
-  fun `resolves Session parameters`() {
+  fun `resolves Session parameter`() {
     val session = mock<Session>()
     val driver = mock<Driver> { on { session() } doReturn session }
     val extension = Neo4jSinkExtension(driverFactory = { _, _ -> driver })
@@ -165,7 +163,7 @@ class Neo4jSinkExtensionTest {
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
-    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
 
@@ -188,7 +186,7 @@ class Neo4jSinkExtensionTest {
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
-    val extensionContext = extensionContextFor(::onlyKafkaExternalUriFromEnvMethod)
+    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
     extension.beforeEach(extensionContext)
@@ -228,7 +226,7 @@ class Neo4jSinkExtensionTest {
 
     assertContains(
         exception.message!!,
-        "Both annotation field and environment variable KAFKA_CONNECT_EXTERNAL_URI are unset. Please specify one",
+        "Both annotation field kafkaConnectExternalUri and environment variable KAFKA_CONNECT_EXTERNAL_URI are unset. Please specify one",
     )
   }
 
@@ -249,7 +247,7 @@ class Neo4jSinkExtensionTest {
 
     assertContains(
         exception.message!!,
-        "Both annotation field and environment variable NEO4J_URI are unset. Please specify one",
+        "Both annotation field neo4jUri and environment variable NEO4J_URI are unset. Please specify one",
     )
   }
 
@@ -269,7 +267,7 @@ class Neo4jSinkExtensionTest {
         }
     assertContains(
         exception.message!!,
-        "Both annotation field and environment variable NEO4J_USER are unset. Please specify one",
+        "Both annotation field neo4jUser and environment variable NEO4J_USER are unset. Please specify one",
     )
   }
 
@@ -289,7 +287,7 @@ class Neo4jSinkExtensionTest {
         }
     assertContains(
         exception.message!!,
-        "Both annotation field and environment variable NEO4J_PASSWORD are unset. Please specify one",
+        "Both annotation field neo4jPassword and environment variable NEO4J_PASSWORD are unset. Please specify one",
     )
   }
 
@@ -314,19 +312,6 @@ class Neo4jSinkExtensionTest {
     )
   }
 
-  private fun parameterContextForType(parameterType: KClass<*>): ParameterContext {
-    val param = mock<Parameter> { on { type } doReturn parameterType.java }
-    return mock<ParameterContext> { on { parameter } doReturn param }
-  }
-
-  private fun extensionContextFor(method: KFunction<Unit>) =
-      mock<ExtensionContext> { on { requiredTestMethod } doReturn method.javaMethod }
-
-  private fun internalServerError(exchange: HttpExchange, error: String) {
-    exchange.sendResponseHeaders(500, -1)
-    exchange.responseBody.bufferedWriter().write(error)
-  }
-
   @Neo4jSink(
       kafkaConnectExternalUri = "http://example.com",
       neo4jExternalUri = "neo4j://example.com",
@@ -348,7 +333,7 @@ class Neo4jSinkExtensionTest {
       queries = ["MERGE ()"],
   )
   @Suppress("UNUSED")
-  fun onlyKafkaExternalUriFromEnvMethod() {}
+  fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
   @Neo4jSink(topics = ["topic1"], queries = ["MERGE ()"])
   @Suppress("UNUSED")

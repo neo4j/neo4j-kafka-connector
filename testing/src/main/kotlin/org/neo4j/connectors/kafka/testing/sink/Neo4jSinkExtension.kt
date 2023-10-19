@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
-import org.neo4j.connectors.kafka.testing.Setting
+import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -47,15 +47,16 @@ internal class Neo4jSinkExtension(
 
   private lateinit var session: Session
 
-  private val kafkaConnectExternalUri = Setting<Neo4jSink>("kafkaConnectExternalUri", envAccessor)
+  private val kafkaConnectExternalUri =
+      AnnotationValueResolver<Neo4jSink>("kafkaConnectExternalUri", envAccessor)
 
-  private val neo4jUri = Setting<Neo4jSink>("neo4jUri", envAccessor)
+  private val neo4jUri = AnnotationValueResolver<Neo4jSink>("neo4jUri", envAccessor)
 
-  private val neo4jExternalUri = Setting<Neo4jSink>("neo4jExternalUri", envAccessor)
+  private val neo4jExternalUri = AnnotationValueResolver<Neo4jSink>("neo4jExternalUri", envAccessor)
 
-  private val neo4jUser = Setting<Neo4jSink>("neo4jUser", envAccessor)
+  private val neo4jUser = AnnotationValueResolver<Neo4jSink>("neo4jUser", envAccessor)
 
-  private val neo4jPassword = Setting<Neo4jSink>("neo4jPassword", envAccessor)
+  private val neo4jPassword = AnnotationValueResolver<Neo4jSink>("neo4jPassword", envAccessor)
 
   private val settings =
       listOf(
@@ -98,11 +99,11 @@ internal class Neo4jSinkExtension(
 
     sink =
         Neo4jSinkRegistration(
-            neo4jUri = neo4jUri.read(sinkAnnotation),
-            neo4jUser = neo4jUser.read(sinkAnnotation),
-            neo4jPassword = neo4jPassword.read(sinkAnnotation),
+            neo4jUri = neo4jUri.resolve(sinkAnnotation),
+            neo4jUser = neo4jUser.resolve(sinkAnnotation),
+            neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
             topicQuerys = sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap())
-    sink.register(kafkaConnectExternalUri.read(sinkAnnotation))
+    sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
   }
 
   override fun afterEach(extensionContent: ExtensionContext?) {
@@ -121,9 +122,9 @@ internal class Neo4jSinkExtension(
   }
 
   override fun resolveParameter(parameterContext: ParameterContext?, p1: ExtensionContext?): Any {
-    val uri = neo4jExternalUri.read(sinkAnnotation)
-    val username = neo4jUser.read(sinkAnnotation)
-    val password = neo4jPassword.read(sinkAnnotation)
+    val uri = neo4jExternalUri.resolve(sinkAnnotation)
+    val username = neo4jUser.resolve(sinkAnnotation)
+    val password = neo4jPassword.resolve(sinkAnnotation)
     driver = driverFactory(uri, AuthTokens.basic(username, password))
     // TODO: handle multiple parameter injection
     session = driver.session()

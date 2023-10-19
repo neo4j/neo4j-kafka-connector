@@ -17,15 +17,15 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import org.junit.jupiter.api.extension.ExtendWith
-import org.neo4j.connectors.kafka.testing.source.DEFAULT_TO_ENV
+import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
 @ExtendWith(Neo4jSinkExtension::class)
 annotation class Neo4jSink(
     val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
-    val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUri: String = DEFAULT_TO_ENV,
+    val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val topics: Array<String>,

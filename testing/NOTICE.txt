@@ -31,6 +31,7 @@ Apache Software License, Version 2.0
   JetBrains Java Annotations
   kafka-avro-serializer
   kafka-schema-registry-client
+  Kotlin Reflect
   Kotlin Stdlib
   Kotlin Stdlib Common
   LZ4 and xxHash

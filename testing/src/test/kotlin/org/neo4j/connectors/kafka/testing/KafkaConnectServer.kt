@@ -67,6 +67,11 @@ class KafkaConnectServer : AutoCloseable {
     return "http://localhost:${httpServer.address.port}"
   }
 
+  fun internalServerError(exchange: HttpExchange, error: String) {
+    exchange.sendResponseHeaders(500, -1)
+    exchange.responseBody.bufferedWriter().write(error)
+  }
+
   override fun close() {
     if (this.started) {
       this.started = false

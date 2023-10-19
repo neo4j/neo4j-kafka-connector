@@ -33,47 +33,49 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
-import org.neo4j.connectors.kafka.testing.Setting
+import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
+import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 
 internal class Neo4jSourceExtension(
-    private val consumerSupplier: ConsumerSupplier<String, GenericRecord> = DefaultConsumerSupplier
+    // visible for testing
+    envAccessor: (String) -> String? = System::getenv,
+    private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<String, GenericRecord> =
+        ::getSubscribedConsumer
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
-  companion object {
-    val PARAMETER_RESOLVERS:
-        Map<Class<*>, (Neo4jSourceExtension, ParameterContext?, ExtensionContext?) -> Any> =
-        mapOf(
-            KafkaConsumer::class.java to Neo4jSourceExtension::resolveConsumer,
-            Session::class.java to Neo4jSourceExtension::resolveSession,
-        )
-  }
+  private lateinit var sourceAnnotation: Neo4jSource
 
-  /*visible for testing */ internal lateinit var sourceAnnotation: Neo4jSource
   private lateinit var source: Neo4jSourceRegistration
 
   private lateinit var driver: Driver
 
   private lateinit var session: Session
 
-  private val brokerExternalHost = Setting<Neo4jSource>("brokerExternalHost")
+  private val brokerExternalHost =
+      AnnotationValueResolver<Neo4jSource>("brokerExternalHost", envAccessor)
 
-  private val schemaRegistryUri = Setting<Neo4jSource>("schemaControlRegistryUri")
+  private val schemaRegistryUri =
+      AnnotationValueResolver<Neo4jSource>("schemaControlRegistryUri", envAccessor)
 
-  private val schemaRegistryExternalUri = Setting<Neo4jSource>("schemaControlRegistryExternalUri")
+  private val schemaRegistryExternalUri =
+      AnnotationValueResolver<Neo4jSource>("schemaControlRegistryExternalUri", envAccessor)
 
-  private val kafkaConnectExternalUri = Setting<Neo4jSource>("kafkaConnectExternalUri")
+  private val kafkaConnectExternalUri =
+      AnnotationValueResolver<Neo4jSource>("kafkaConnectExternalUri", envAccessor)
 
-  private val neo4jUri = Setting<Neo4jSource>("neo4jUri")
+  private val neo4jUri = AnnotationValueResolver<Neo4jSource>("neo4jUri", envAccessor)
 
-  private val neo4jExternalUri = Setting<Neo4jSource>("neo4jExternalUri")
+  private val neo4jExternalUri =
+      AnnotationValueResolver<Neo4jSource>("neo4jExternalUri", envAccessor)
 
-  private val neo4jUser = Setting<Neo4jSource>("neo4jUser")
+  private val neo4jUser = AnnotationValueResolver<Neo4jSource>("neo4jUser", envAccessor)
 
-  private val neo4jPassword = Setting<Neo4jSource>("neo4jPassword")
+  private val neo4jPassword = AnnotationValueResolver<Neo4jSource>("neo4jPassword", envAccessor)
 
   private val settings =
       listOf(
@@ -113,16 +115,16 @@ internal class Neo4jSourceExtension(
     }
     source =
         Neo4jSourceRegistration(
-            schemaControlRegistryUri = schemaRegistryUri.read(sourceAnnotation),
-            neo4jUri = neo4jUri.read(sourceAnnotation),
-            neo4jUser = neo4jUser.read(sourceAnnotation),
-            neo4jPassword = neo4jPassword.read(sourceAnnotation),
+            schemaControlRegistryUri = schemaRegistryUri.resolve(sourceAnnotation),
+            neo4jUri = neo4jUri.resolve(sourceAnnotation),
+            neo4jUser = neo4jUser.resolve(sourceAnnotation),
+            neo4jPassword = neo4jPassword.resolve(sourceAnnotation),
             topic = sourceAnnotation.topic,
             streamingProperty = sourceAnnotation.streamingProperty,
             streamingFrom = sourceAnnotation.streamingFrom,
             streamingQuery = sourceAnnotation.streamingQuery,
         )
-    source.register(kafkaConnectExternalUri.read(sourceAnnotation))
+    source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
   }
 
   override fun afterEach(context: ExtensionContext?) {
@@ -160,11 +162,11 @@ internal class Neo4jSourceExtension(
     val properties = Properties()
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHost.read(sourceAnnotation),
+        brokerExternalHost.resolve(sourceAnnotation),
     )
     properties.setProperty(
         KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaRegistryExternalUri.read(sourceAnnotation),
+        schemaRegistryExternalUri.resolve(sourceAnnotation),
     )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -177,34 +179,37 @@ internal class Neo4jSourceExtension(
     properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
-    return consumerSupplier.getSubscribed(properties, consumerAnnotation.topic)
+    return consumerFactory(properties, consumerAnnotation.topic)
   }
 
   private fun resolveSession(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
-    val uri = neo4jExternalUri.read(sourceAnnotation)
-    val username = neo4jUser.read(sourceAnnotation)
-    val password = neo4jPassword.read(sourceAnnotation)
-    driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password))
+    val uri = neo4jExternalUri.resolve(sourceAnnotation)
+    val username = neo4jUser.resolve(sourceAnnotation)
+    val password = neo4jPassword.resolve(sourceAnnotation)
+    driver = driverFactory(uri, AuthTokens.basic(username, password))
     // TODO: handle multiple parameter injection
     session = driver.session()
     return session
   }
-}
 
-internal interface ConsumerSupplier<K, V> {
-  fun getSubscribed(properties: Properties, topic: String): KafkaConsumer<K, V>
-}
+  companion object {
+    private val PARAMETER_RESOLVERS:
+        Map<Class<*>, (Neo4jSourceExtension, ParameterContext?, ExtensionContext?) -> Any> =
+        mapOf(
+            KafkaConsumer::class.java to Neo4jSourceExtension::resolveConsumer,
+            Session::class.java to Neo4jSourceExtension::resolveSession,
+        )
 
-internal object DefaultConsumerSupplier : ConsumerSupplier<String, GenericRecord> {
-  override fun getSubscribed(
-      properties: Properties,
-      topic: String
-  ): KafkaConsumer<String, GenericRecord> {
-    val consumer = KafkaConsumer<String, GenericRecord>(properties)
-    consumer.subscribe(listOf(topic))
-    return consumer
+    private fun getSubscribedConsumer(
+        properties: Properties,
+        topic: String
+    ): KafkaConsumer<String, GenericRecord> {
+      val consumer = KafkaConsumer<String, GenericRecord>(properties)
+      consumer.subscribe(listOf(topic))
+      return consumer
+    }
   }
 }
