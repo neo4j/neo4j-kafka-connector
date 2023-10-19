@@ -1,4 +1,5 @@
 import builds.Build
+import builds.Neo4jKafkaConnectorVcs
 import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.version
 
@@ -11,6 +12,8 @@ project {
     text("github-packages-user", "neo4j-build-service")
     password("github-packages-token", "credentialsJSON:d5ea2df2-7a81-41d4-98bf-cb7ebd607493")
   }
+
+  vcsRoot(Neo4jKafkaConnectorVcs)
 
   subProject(
       Build(
