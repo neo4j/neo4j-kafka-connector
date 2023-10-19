@@ -82,7 +82,6 @@ internal class Neo4jSourceExtension(
           schemaRegistryExternalUri,
           kafkaConnectExternalUri,
           neo4jUri,
-          neo4jExternalUri,
           neo4jUser,
           neo4jPassword,
       )
