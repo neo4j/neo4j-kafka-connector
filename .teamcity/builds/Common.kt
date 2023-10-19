@@ -28,6 +28,8 @@ object Neo4jKafkaConnectorVcs :
       url = "git@github.com:neo4j/neo4j-kafka-connector.git"
       branch = "refs/heads/main"
       branchSpec = "refs/heads/*"
+
+      authMethod = defaultPrivateKey { userName = "git" }
     })
 
 fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {
