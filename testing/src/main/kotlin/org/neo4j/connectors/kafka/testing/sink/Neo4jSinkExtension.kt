@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
-import org.neo4j.connectors.kafka.testing.EnvBackedSetting
+import org.neo4j.connectors.kafka.testing.Setting
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -47,21 +47,17 @@ internal class Neo4jSinkExtension(
 
   private lateinit var session: Session
 
-  private val kafkaConnectExternalUri =
-      EnvBackedSetting<Neo4jSink>(
-          "kafkaConnectExternalUri", { it.kafkaConnectExternalUri }, envAccessor)
+  private val kafkaConnectExternalUri = Setting<Neo4jSink>("kafkaConnectExternalUri", envAccessor)
 
-  private val neo4jUri = EnvBackedSetting<Neo4jSink>("neo4jUri", { it.neo4jUri }, envAccessor)
+  private val neo4jUri = Setting<Neo4jSink>("neo4jUri", envAccessor)
 
-  private val neo4jExternalUri =
-      EnvBackedSetting<Neo4jSink>("neo4jExternalUri", { it.neo4jExternalUri }, envAccessor)
+  private val neo4jExternalUri = Setting<Neo4jSink>("neo4jExternalUri", envAccessor)
 
-  private val neo4jUser = EnvBackedSetting<Neo4jSink>("neo4jUser", { it.neo4jUser }, envAccessor)
+  private val neo4jUser = Setting<Neo4jSink>("neo4jUser", envAccessor)
 
-  private val neo4jPassword =
-      EnvBackedSetting<Neo4jSink>("neo4jPassword", { it.neo4jPassword }, envAccessor)
+  private val neo4jPassword = Setting<Neo4jSink>("neo4jPassword", envAccessor)
 
-  private val envSettings =
+  private val settings =
       listOf(
           kafkaConnectExternalUri,
           neo4jUri,
@@ -75,7 +71,7 @@ internal class Neo4jSinkExtension(
             ?: throw ExtensionConfigurationException("@Neo4jSink not found")
 
     val errors = mutableListOf<String>()
-    envSettings.forEach {
+    settings.forEach {
       if (!it.isValid(metadata)) {
         errors.add(it.errorMessage())
       }

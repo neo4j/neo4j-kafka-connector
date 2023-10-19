@@ -33,7 +33,7 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
-import org.neo4j.connectors.kafka.testing.EnvBackedSetting
+import org.neo4j.connectors.kafka.testing.Setting
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -59,29 +59,23 @@ internal class Neo4jSourceExtension(
 
   private lateinit var session: Session
 
-  private val brokerExternalHost =
-      EnvBackedSetting<Neo4jSource>("brokerExternalHost", { it.brokerExternalHost })
+  private val brokerExternalHost = Setting<Neo4jSource>("brokerExternalHost")
 
-  private val schemaRegistryUri =
-      EnvBackedSetting<Neo4jSource>("schemaControlRegistryUri", { it.schemaControlRegistryUri })
+  private val schemaRegistryUri = Setting<Neo4jSource>("schemaControlRegistryUri")
 
-  private val schemaRegistryExternalUri =
-      EnvBackedSetting<Neo4jSource>(
-          "schemaControlRegistryExternalUri", { it.schemaControlRegistryExternalUri })
+  private val schemaRegistryExternalUri = Setting<Neo4jSource>("schemaControlRegistryExternalUri")
 
-  private val kafkaConnectExternalUri =
-      EnvBackedSetting<Neo4jSource>("kafkaConnectExternalUri", { it.kafkaConnectExternalUri })
+  private val kafkaConnectExternalUri = Setting<Neo4jSource>("kafkaConnectExternalUri")
 
-  private val neo4jUri = EnvBackedSetting<Neo4jSource>("neo4jUri", { it.neo4jUri })
+  private val neo4jUri = Setting<Neo4jSource>("neo4jUri")
 
-  private val neo4jExternalUri =
-      EnvBackedSetting<Neo4jSource>("neo4jExternalUri", { it.neo4jExternalUri })
+  private val neo4jExternalUri = Setting<Neo4jSource>("neo4jExternalUri")
 
-  private val neo4jUser = EnvBackedSetting<Neo4jSource>("neo4jUser", { it.neo4jUser })
+  private val neo4jUser = Setting<Neo4jSource>("neo4jUser")
 
-  private val neo4jPassword = EnvBackedSetting<Neo4jSource>("neo4jPassword", { it.neo4jPassword })
+  private val neo4jPassword = Setting<Neo4jSource>("neo4jPassword")
 
-  private val envSettings =
+  private val settings =
       listOf(
           brokerExternalHost,
           schemaRegistryUri,
@@ -99,7 +93,7 @@ internal class Neo4jSourceExtension(
             ?: throw ExtensionConfigurationException("@Neo4jSource not found")
 
     val errors = mutableListOf<String>()
-    envSettings.forEach {
+    settings.forEach {
       if (!it.isValid(metadata)) {
         errors.add(it.errorMessage())
       }

@@ -19,19 +19,26 @@ package org.neo4j.connectors.kafka.testing
 import org.neo4j.connectors.kafka.testing.WordSupport.camelCaseToUpperSnakeCase
 import org.neo4j.connectors.kafka.testing.source.DEFAULT_TO_ENV
 
-internal class EnvBackedSetting<T : Annotation>(
+/**
+ * Setting represents an annotation attribute that is potentially backed by an environment variable
+ * Such attributes hold a specific value that will trigger the search of the corresponding
+ * environment variable The corresponding environment variable is automatically derived from the
+ * annotation attribute name, following a simple camel case to upper snake case conversion
+ */
+internal class Setting<T : Annotation>(
     private val name: String,
-    private val getter: (T) -> String,
     private val envAccessor: (String) -> String? = System::getenv,
 ) {
+  private val fieldValueOf: (T) -> String = resolveFieldAccessor(name)
+
   private val envVarName = camelCaseToUpperSnakeCase(name)
 
   fun isValid(annotation: T): Boolean {
-    return getter(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
+    return fieldValueOf(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
   }
 
   fun read(annotation: T): String {
-    val fieldValue = getter(annotation)
+    val fieldValue = fieldValueOf(annotation)
     if (fieldValue != DEFAULT_TO_ENV) {
       return fieldValue
     }
@@ -44,5 +51,11 @@ internal class EnvBackedSetting<T : Annotation>(
 
   override fun toString(): String {
     return "EnvBackedSetting(name='$name', envVarName='$envVarName')"
+  }
+
+  private fun resolveFieldAccessor(name: String): (T) -> String {
+    return { annotation ->
+      annotation::class.members.first { member -> member.name == name }.call(annotation) as String
+    }
   }
 }
