@@ -30,10 +30,10 @@ import org.junit.jupiter.api.extension.ExecutionCondition
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
-import org.junit.jupiter.api.extension.ParameterResolutionException
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
+import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -45,8 +45,15 @@ internal class Neo4jSourceExtension(
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
     private val consumerFactory: (Properties, String) -> KafkaConsumer<String, GenericRecord> =
-        ::getSubscribedConsumer
+        ::getSubscribedConsumer,
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+
+  private val paramResolvers =
+      ParameterResolvers(
+          mapOf(
+              Session::class.java to ::resolveSession,
+              KafkaConsumer::class.java to ::resolveConsumer,
+          ))
 
   private lateinit var sourceAnnotation: Neo4jSource
 
@@ -62,7 +69,7 @@ internal class Neo4jSourceExtension(
   private val schemaRegistryUri =
       AnnotationValueResolver<Neo4jSource>("schemaControlRegistryUri", envAccessor)
 
-  private val schemaRegistryExternalUri =
+  private val schemaControlRegistryExternalUri =
       AnnotationValueResolver<Neo4jSource>("schemaControlRegistryExternalUri", envAccessor)
 
   private val kafkaConnectExternalUri =
@@ -81,8 +88,6 @@ internal class Neo4jSourceExtension(
       listOf(
           brokerExternalHost,
           schemaRegistryUri,
-          schemaRegistryExternalUri,
-          kafkaConnectExternalUri,
           neo4jUri,
           neo4jUser,
           neo4jPassword,
@@ -135,26 +140,6 @@ internal class Neo4jSourceExtension(
     }
   }
 
-  override fun supportsParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
-  ): Boolean {
-    return PARAMETER_RESOLVERS.contains(parameterContext?.parameter?.type)
-  }
-
-  override fun resolveParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
-  ): Any {
-    val parameterType = parameterContext?.parameter?.type
-    val resolver =
-        PARAMETER_RESOLVERS[parameterType]
-            ?: throw ParameterResolutionException(
-                "@Neo4jSource does not support injection of parameters typed $parameterType",
-            )
-    return resolver(this, parameterContext, extensionContext)
-  }
-
   private fun resolveConsumer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
@@ -166,7 +151,7 @@ internal class Neo4jSourceExtension(
     )
     properties.setProperty(
         KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaRegistryExternalUri.resolve(sourceAnnotation),
+        schemaControlRegistryExternalUri.resolve(sourceAnnotation),
     )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -183,26 +168,18 @@ internal class Neo4jSourceExtension(
   }
 
   private fun resolveSession(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
+      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
   ): Any {
     val uri = neo4jExternalUri.resolve(sourceAnnotation)
     val username = neo4jUser.resolve(sourceAnnotation)
     val password = neo4jPassword.resolve(sourceAnnotation)
     driver = driverFactory(uri, AuthTokens.basic(username, password))
-    // TODO: handle multiple parameter injection
     session = driver.session()
     return session
   }
 
   companion object {
-    private val PARAMETER_RESOLVERS:
-        Map<Class<*>, (Neo4jSourceExtension, ParameterContext?, ExtensionContext?) -> Any> =
-        mapOf(
-            KafkaConsumer::class.java to Neo4jSourceExtension::resolveConsumer,
-            Session::class.java to Neo4jSourceExtension::resolveSession,
-        )
-
     private fun getSubscribedConsumer(
         properties: Properties,
         topic: String
@@ -211,5 +188,19 @@ internal class Neo4jSourceExtension(
       consumer.subscribe(listOf(topic))
       return consumer
     }
+  }
+
+  override fun supportsParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Boolean {
+    return paramResolvers.supportsParameter(parameterContext, extensionContext)
+  }
+
+  override fun resolveParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    return paramResolvers.resolveParameter(parameterContext, extensionContext)
   }
 }

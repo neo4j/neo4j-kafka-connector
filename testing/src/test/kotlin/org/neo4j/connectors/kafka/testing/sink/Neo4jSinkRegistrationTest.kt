@@ -28,10 +28,10 @@ class Neo4jSinkRegistrationTest {
         mapOf(
             "topics" to "my-topic",
             "connector.class" to "streams.kafka.connect.sink.Neo4jSinkConnector",
-            "key.converter" to "org.apache.kafka.connect.json.JsonConverter",
-            "key.converter.schemas.enable" to false,
-            "value.converter" to "org.apache.kafka.connect.json.JsonConverter",
-            "value.converter.schemas.enable" to false,
+            "key.converter" to "io.confluent.connect.avro.AvroConverter",
+            "key.converter.schema.registry.url" to "http://example.com",
+            "value.converter" to "io.confluent.connect.avro.AvroConverter",
+            "value.converter.schema.registry.url" to "http://example.com",
             "errors.retry.timeout" to -1L,
             "errors.retry.delay.max.ms" to 1000L,
             "errors.tolerance" to "all",
@@ -47,7 +47,7 @@ class Neo4jSinkRegistrationTest {
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
-        )
+            schemaControlRegistryUri = "http://example.com")
 
     val payload = registration.getPayload()
 
@@ -63,7 +63,7 @@ class Neo4jSinkRegistrationTest {
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
-        )
+            schemaControlRegistryUri = "http://example.com")
 
     val payload = registration.getPayload()
 

@@ -285,54 +285,6 @@ class Neo4jSourceExtensionTest {
   }
 
   @Test
-  fun `stops execution evaluation if schema control registry external URI is not specified`() {
-    val environment =
-        mapOf(
-            "BROKER_EXTERNAL_HOST" to "example.com",
-            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
-            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
-            "NEO4J_URI" to "neo4j://example",
-            "NEO4J_USER" to "user",
-            "NEO4J_PASSWORD" to "password",
-        )
-    val extension = Neo4jSourceExtension(environment::get)
-
-    val exception =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
-        }
-
-    assertContains(
-        exception.message!!,
-        "Both annotation field schemaControlRegistryExternalUri and environment variable SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI are unset. Please specify one",
-    )
-  }
-
-  @Test
-  fun `stops execution evaluation if kafka connect external URI is not specified`() {
-    val environment =
-        mapOf(
-            "BROKER_EXTERNAL_HOST" to "example.com",
-            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
-            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
-            "NEO4J_URI" to "neo4j://example",
-            "NEO4J_USER" to "user",
-            "NEO4J_PASSWORD" to "password",
-        )
-    val extension = Neo4jSourceExtension(environment::get)
-
-    val exception =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
-        }
-
-    assertContains(
-        exception.message!!,
-        "Both annotation field kafkaConnectExternalUri and environment variable KAFKA_CONNECT_EXTERNAL_URI are unset. Please specify one",
-    )
-  }
-
-  @Test
   fun `stops execution evaluation if neo4j URI is not specified`() {
     val environment =
         mapOf(

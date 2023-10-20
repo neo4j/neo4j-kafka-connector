@@ -47,7 +47,7 @@ internal class Neo4jSourceRegistration(
                     "topic" to topic,
                     "connector.class" to "streams.kafka.connect.source.Neo4jSourceConnector",
                     "key.converter" to "io.confluent.connect.avro.AvroConverter",
-                    "key.converter.schema.registry.url" to "http://schema-registry:8081",
+                    "key.converter.schema.registry.url" to schemaControlRegistryUri,
                     "value.converter" to "io.confluent.connect.avro.AvroConverter",
                     "value.converter.schema.registry.url" to schemaControlRegistryUri,
                     "neo4j.server.uri" to neo4jUri,

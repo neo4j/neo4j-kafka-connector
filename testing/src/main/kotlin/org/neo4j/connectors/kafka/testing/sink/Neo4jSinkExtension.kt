@@ -16,6 +16,14 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import io.confluent.kafka.serializers.KafkaAvroSerializer
+import java.util.*
+import org.apache.avro.generic.GenericRecord
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -26,6 +34,7 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
+import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -39,6 +48,13 @@ internal class Neo4jSinkExtension(
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
+  private val paramResolvers =
+      ParameterResolvers(
+          mapOf(
+              Session::class.java to ::resolveSession,
+              KafkaProducer::class.java to ::resolveProducer,
+          ))
+
   private lateinit var sinkAnnotation: Neo4jSink
 
   private lateinit var sink: Neo4jSinkRegistration
@@ -46,6 +62,15 @@ internal class Neo4jSinkExtension(
   private lateinit var driver: Driver
 
   private lateinit var session: Session
+
+  private val brokerExternalHost =
+      AnnotationValueResolver<Neo4jSink>("brokerExternalHost", envAccessor)
+
+  private val schemaControlRegistryUri =
+      AnnotationValueResolver<Neo4jSink>("schemaControlRegistryUri", envAccessor)
+
+  private val schemaControlRegistryExternalUri =
+      AnnotationValueResolver<Neo4jSink>("schemaControlRegistryExternalUri", envAccessor)
 
   private val kafkaConnectExternalUri =
       AnnotationValueResolver<Neo4jSink>("kafkaConnectExternalUri", envAccessor)
@@ -61,6 +86,7 @@ internal class Neo4jSinkExtension(
   private val settings =
       listOf(
           kafkaConnectExternalUri,
+          schemaControlRegistryUri,
           neo4jUri,
           neo4jUser,
           neo4jPassword,
@@ -99,10 +125,11 @@ internal class Neo4jSinkExtension(
 
     sink =
         Neo4jSinkRegistration(
+            topicQuerys = sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap(),
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
-            topicQuerys = sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap())
+            schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation))
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
   }
 
@@ -116,18 +143,51 @@ internal class Neo4jSinkExtension(
 
   override fun supportsParameter(
       parameterContext: ParameterContext?,
-      p1: ExtensionContext?
+      extensionContext: ExtensionContext?
   ): Boolean {
-    return parameterContext?.parameter?.type == Session::class.java
+    return paramResolvers.supportsParameter(parameterContext, extensionContext)
   }
 
-  override fun resolveParameter(parameterContext: ParameterContext?, p1: ExtensionContext?): Any {
+  override fun resolveParameter(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    return paramResolvers.resolveParameter(parameterContext, extensionContext)
+  }
+
+  private fun resolveSession(
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
+      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
+  ): Any {
     val uri = neo4jExternalUri.resolve(sinkAnnotation)
     val username = neo4jUser.resolve(sinkAnnotation)
     val password = neo4jPassword.resolve(sinkAnnotation)
     driver = driverFactory(uri, AuthTokens.basic(username, password))
-    // TODO: handle multiple parameter injection
     session = driver.session()
     return session
+  }
+
+  private fun resolveProducer(
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
+      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
+  ): Any {
+    val properties = Properties()
+    properties.setProperty(
+        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+        brokerExternalHost.resolve(sinkAnnotation),
+    )
+    properties.setProperty(
+        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+        schemaControlRegistryExternalUri.resolve(sinkAnnotation),
+    )
+    properties.setProperty(
+        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+        StringSerializer::class.java.getName(),
+    )
+    properties.setProperty(
+        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+        KafkaAvroSerializer::class.java.getName(),
+    )
+    return KafkaProducer<String, GenericRecord>(properties)
   }
 }

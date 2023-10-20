@@ -320,7 +320,7 @@ class Neo4jSinkExtensionTest {
       neo4jPassword = "password",
       topics = ["topic1"],
       queries = ["MERGE ()"],
-  )
+      schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun validMethod() {}
 
@@ -331,7 +331,7 @@ class Neo4jSinkExtensionTest {
       neo4jPassword = "password",
       topics = ["topic1"],
       queries = ["MERGE ()"],
-  )
+      schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 

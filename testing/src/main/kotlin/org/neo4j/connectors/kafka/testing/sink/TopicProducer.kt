@@ -16,21 +16,6 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
-import org.junit.jupiter.api.extension.ExtendWith
-import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
-
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
-@ExtendWith(Neo4jSinkExtension::class)
-annotation class Neo4jSink(
-    val brokerExternalHost: String = DEFAULT_TO_ENV,
-    val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
-    val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
-    val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
-    val neo4jUri: String = DEFAULT_TO_ENV,
-    val neo4jExternalUri: String = DEFAULT_TO_ENV,
-    val neo4jUser: String = DEFAULT_TO_ENV,
-    val neo4jPassword: String = DEFAULT_TO_ENV,
-    val topics: Array<String>,
-    val queries: Array<String>
-)
+annotation class TopicProducer()

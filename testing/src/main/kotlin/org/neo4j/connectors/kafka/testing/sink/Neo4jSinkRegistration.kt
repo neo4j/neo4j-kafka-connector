@@ -28,13 +28,12 @@ internal class Neo4jSinkRegistration(
     neo4jUri: String,
     neo4jUser: String,
     neo4jPassword: String,
-    enableKeySchemas: Boolean = false,
-    enableValueSchemas: Boolean = false,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "all",
     enableErrorLog: Boolean = true,
     includeMessagesInErrorLog: Boolean = true,
+    schemaControlRegistryUri: String
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
@@ -49,10 +48,10 @@ internal class Neo4jSinkRegistration(
                     mutableMapOf(
                         "topics" to topicQuerys.keys.joinToString(","),
                         "connector.class" to "streams.kafka.connect.sink.Neo4jSinkConnector",
-                        "key.converter" to "org.apache.kafka.connect.json.JsonConverter",
-                        "key.converter.schemas.enable" to enableKeySchemas,
-                        "value.converter" to "org.apache.kafka.connect.json.JsonConverter",
-                        "value.converter.schemas.enable" to enableValueSchemas,
+                        "key.converter" to "io.confluent.connect.avro.AvroConverter",
+                        "key.converter.schema.registry.url" to schemaControlRegistryUri,
+                        "value.converter" to "io.confluent.connect.avro.AvroConverter",
+                        "value.converter.schema.registry.url" to schemaControlRegistryUri,
                         "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
                         "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
                         "errors.tolerance" to errorTolerance,
