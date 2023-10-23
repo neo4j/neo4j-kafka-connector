@@ -83,7 +83,7 @@ internal class Neo4jSinkExtension(
 
   private val neo4jPassword = AnnotationValueResolver(Neo4jSink::neo4jPassword, envAccessor)
 
-  private val settings =
+  private val mandatorySettings =
       listOf(
           kafkaConnectExternalUri,
           schemaControlRegistryUri,
@@ -98,7 +98,7 @@ internal class Neo4jSinkExtension(
             ?: throw ExtensionConfigurationException("@Neo4jSink not found")
 
     val errors = mutableListOf<String>()
-    settings.forEach {
+    mandatorySettings.forEach {
       if (!it.isValid(metadata)) {
         errors.add(it.errorMessage())
       }

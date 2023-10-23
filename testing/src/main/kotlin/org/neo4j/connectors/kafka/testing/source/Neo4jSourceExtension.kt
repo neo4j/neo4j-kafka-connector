@@ -83,7 +83,7 @@ internal class Neo4jSourceExtension(
 
   private val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
 
-  private val settings =
+  private val mandatorySettings =
       listOf(
           brokerExternalHost,
           schemaRegistryUri,
@@ -98,7 +98,7 @@ internal class Neo4jSourceExtension(
             ?: throw ExtensionConfigurationException("@Neo4jSource not found")
 
     val errors = mutableListOf<String>()
-    settings.forEach {
+    mandatorySettings.forEach {
       if (!it.isValid(metadata)) {
         errors.add(it.errorMessage())
       }
