@@ -59,8 +59,8 @@ class Neo4jSinkIT {
                         .field("surname", Schema.STRING_SCHEMA)
                         .field("executionId", Schema.STRING_SCHEMA)
                         .build()))
-    avroRecord.put("name", "Ali")
-    avroRecord.put("surname", "İnce")
+    avroRecord.put("name", "Jane")
+    avroRecord.put("surname", "Doe")
     avroRecord.put("executionId", executionId)
     val record = ProducerRecord<String, GenericRecord>(TOPIC, avroRecord)
 
@@ -70,7 +70,7 @@ class Neo4jSinkIT {
       session
           .run(
               "MATCH (p:Person {name: \$name, surname: \$surname, executionId: \$executionId}) RETURN count(p) = 1 AS result",
-              mapOf("name" to "Ali", "surname" to "İnce", "executionId" to executionId))
+              mapOf("name" to "Jane", "surname" to "Doe", "executionId" to executionId))
           .single()["result"]
           .asBoolean()
     }
