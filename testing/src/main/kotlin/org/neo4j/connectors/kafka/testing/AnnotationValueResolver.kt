@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import kotlin.reflect.KProperty1
 import org.neo4j.connectors.kafka.testing.WordSupport.camelCaseToUpperSnakeCase
 
 internal const val DEFAULT_TO_ENV = "___UNSET___"
@@ -28,16 +29,14 @@ internal const val DEFAULT_TO_ENV = "___UNSET___"
  * conversion operated on the attribute name.
  */
 internal class AnnotationValueResolver<T : Annotation>(
-    private val name: String,
+    private val property: KProperty1<T, String>,
     private val envAccessor: (String) -> String?,
 ) {
-  private val fieldValueOf: (T) -> String = resolveFieldAccessor(name)
-
-  private val envVarName = camelCaseToUpperSnakeCase(name)
+  private val envVarName = camelCaseToUpperSnakeCase(property.name)
 
   /** Determines whether the value is resolvable. */
   fun isValid(annotation: T): Boolean {
-    return fieldValueOf(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
+    return property.get(annotation) != DEFAULT_TO_ENV || envAccessor(envVarName) != null
   }
 
   /**
@@ -45,7 +44,7 @@ internal class AnnotationValueResolver<T : Annotation>(
    * called first and returned true.
    */
   fun resolve(annotation: T): String {
-    val fieldValue = fieldValueOf(annotation)
+    val fieldValue = property.get(annotation)
     if (fieldValue != DEFAULT_TO_ENV) {
       return fieldValue
     }
@@ -53,16 +52,10 @@ internal class AnnotationValueResolver<T : Annotation>(
   }
 
   fun errorMessage(): String {
-    return "Both annotation field $name and environment variable $envVarName are unset. Please specify one"
+    return "Both annotation field ${property.name} and environment variable $envVarName are unset. Please specify one"
   }
 
   override fun toString(): String {
-    return "EnvBackedSetting(name='$name', envVarName='$envVarName')"
-  }
-
-  private fun resolveFieldAccessor(name: String): (T) -> String {
-    return { annotation ->
-      annotation::class.members.first { member -> member.name == name }.call(annotation) as String
-    }
+    return "EnvBackedSetting(name='$property', envVarName='$envVarName')"
   }
 }

@@ -64,25 +64,24 @@ internal class Neo4jSourceExtension(
   private lateinit var session: Session
 
   private val brokerExternalHost =
-      AnnotationValueResolver<Neo4jSource>("brokerExternalHost", envAccessor)
+      AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
 
   private val schemaRegistryUri =
-      AnnotationValueResolver<Neo4jSource>("schemaControlRegistryUri", envAccessor)
+      AnnotationValueResolver(Neo4jSource::schemaControlRegistryUri, envAccessor)
 
   private val schemaControlRegistryExternalUri =
-      AnnotationValueResolver<Neo4jSource>("schemaControlRegistryExternalUri", envAccessor)
+      AnnotationValueResolver(Neo4jSource::schemaControlRegistryExternalUri, envAccessor)
 
   private val kafkaConnectExternalUri =
-      AnnotationValueResolver<Neo4jSource>("kafkaConnectExternalUri", envAccessor)
+      AnnotationValueResolver(Neo4jSource::kafkaConnectExternalUri, envAccessor)
 
-  private val neo4jUri = AnnotationValueResolver<Neo4jSource>("neo4jUri", envAccessor)
+  private val neo4jUri = AnnotationValueResolver(Neo4jSource::neo4jUri, envAccessor)
 
-  private val neo4jExternalUri =
-      AnnotationValueResolver<Neo4jSource>("neo4jExternalUri", envAccessor)
+  private val neo4jExternalUri = AnnotationValueResolver(Neo4jSource::neo4jExternalUri, envAccessor)
 
-  private val neo4jUser = AnnotationValueResolver<Neo4jSource>("neo4jUser", envAccessor)
+  private val neo4jUser = AnnotationValueResolver(Neo4jSource::neo4jUser, envAccessor)
 
-  private val neo4jPassword = AnnotationValueResolver<Neo4jSource>("neo4jPassword", envAccessor)
+  private val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
 
   private val settings =
       listOf(

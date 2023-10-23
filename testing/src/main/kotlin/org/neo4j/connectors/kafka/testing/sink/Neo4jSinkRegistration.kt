@@ -76,7 +76,7 @@ internal class Neo4jSinkRegistration(
     RegistrationSupport.unregisterConnector(URI("$connectBaseUri/connectors/$name/"))
   }
 
-  /*nocommit*/ fun getPayload(): Map<String, Any> {
+  internal fun getPayload(): Map<String, Any> {
     return payload
   }
 }
