@@ -47,8 +47,10 @@
         <jackson.version>2.15.2</jackson.version>
         <java.version>11</java.version>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
-        <kafka-avro-serializer.version>5.2.2</kafka-avro-serializer.version>
-        <kafka.version>2.6.3</kafka.version>
+        <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
+        <!-- as well as versions in the docker-compose.yml file -->
+        <kafka-schema-registry.version>6.1.13</kafka-schema-registry.version>
+        <kafka.version>2.7.2</kafka.version>
         <kotest-assertions-core-jvm.version>5.6.2</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
         <kotlin.version>1.9.0</kotlin.version>
@@ -121,9 +123,19 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>testing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-avro-serializer</artifactId>
-                <version>${kafka-avro-serializer.version}</version>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-avro-converter</artifactId>
+                <version>${kafka-schema-registry.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.kotest</groupId>

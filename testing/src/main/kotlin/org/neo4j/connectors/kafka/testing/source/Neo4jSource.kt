@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing
+package org.neo4j.connectors.kafka.testing.source
 
 import org.junit.jupiter.api.extension.ExtendWith
-
-const val DEFAULT_TO_ENV = "___UNSET___"
+import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)

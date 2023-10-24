@@ -21,9 +21,9 @@ import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.Neo4jSource
-import org.neo4j.connectors.kafka.testing.TopicConsumer
-import org.neo4j.connectors.kafka.testing.TopicVerifier
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.source.Neo4jSource
+import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
 class Neo4jSourceIT {
