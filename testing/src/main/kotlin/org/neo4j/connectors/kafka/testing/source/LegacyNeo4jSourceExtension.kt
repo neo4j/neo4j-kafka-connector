@@ -40,7 +40,7 @@ import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 
-internal class Neo4jSourceExtension(
+internal class LegacyNeo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
@@ -55,33 +55,34 @@ internal class Neo4jSourceExtension(
               KafkaConsumer::class.java to ::resolveConsumer,
           ))
 
-  private lateinit var sourceAnnotation: Neo4jSource
+  private lateinit var sourceAnnotation: LegacyNeo4jSource
 
-  private lateinit var source: Neo4jSourceRegistration
+  private lateinit var source: LegacyNeo4jSourceRegistration
 
   private lateinit var driver: Driver
 
   private lateinit var session: Session
 
   private val brokerExternalHost =
-      AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
+      AnnotationValueResolver(LegacyNeo4jSource::brokerExternalHost, envAccessor)
 
   private val schemaRegistryUri =
-      AnnotationValueResolver(Neo4jSource::schemaControlRegistryUri, envAccessor)
+      AnnotationValueResolver(LegacyNeo4jSource::schemaControlRegistryUri, envAccessor)
 
   private val schemaControlRegistryExternalUri =
-      AnnotationValueResolver(Neo4jSource::schemaControlRegistryExternalUri, envAccessor)
+      AnnotationValueResolver(LegacyNeo4jSource::schemaControlRegistryExternalUri, envAccessor)
 
   private val kafkaConnectExternalUri =
-      AnnotationValueResolver(Neo4jSource::kafkaConnectExternalUri, envAccessor)
+      AnnotationValueResolver(LegacyNeo4jSource::kafkaConnectExternalUri, envAccessor)
 
-  private val neo4jUri = AnnotationValueResolver(Neo4jSource::neo4jUri, envAccessor)
+  private val neo4jUri = AnnotationValueResolver(LegacyNeo4jSource::neo4jUri, envAccessor)
 
-  private val neo4jExternalUri = AnnotationValueResolver(Neo4jSource::neo4jExternalUri, envAccessor)
+  private val neo4jExternalUri =
+      AnnotationValueResolver(LegacyNeo4jSource::neo4jExternalUri, envAccessor)
 
-  private val neo4jUser = AnnotationValueResolver(Neo4jSource::neo4jUser, envAccessor)
+  private val neo4jUser = AnnotationValueResolver(LegacyNeo4jSource::neo4jUser, envAccessor)
 
-  private val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
+  private val neo4jPassword = AnnotationValueResolver(LegacyNeo4jSource::neo4jPassword, envAccessor)
 
   private val mandatorySettings =
       listOf(
@@ -94,8 +95,8 @@ internal class Neo4jSourceExtension(
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
-        AnnotationSupport.findAnnotation<Neo4jSource>(context)
-            ?: throw ExtensionConfigurationException("@Neo4jSource not found")
+        AnnotationSupport.findAnnotation<LegacyNeo4jSource>(context)
+            ?: throw ExtensionConfigurationException("@LegacyNeo4jSource not found")
 
     val errors = mutableListOf<String>()
     mandatorySettings.forEach {
@@ -110,7 +111,8 @@ internal class Neo4jSourceExtension(
     }
 
     this.sourceAnnotation = metadata
-    return ConditionEvaluationResult.enabled("@Neo4jSource and environment properly configured")
+    return ConditionEvaluationResult.enabled(
+        "@LegacyNeo4jSource and environment properly configured")
   }
 
   override fun beforeEach(context: ExtensionContext?) {
@@ -118,7 +120,7 @@ internal class Neo4jSourceExtension(
       driver.verifyConnectivity()
     }
     source =
-        Neo4jSourceRegistration(
+        LegacyNeo4jSourceRegistration(
             schemaControlRegistryUri = schemaRegistryUri.resolve(sourceAnnotation),
             neo4jUri = neo4jUri.resolve(sourceAnnotation),
             neo4jUser = neo4jUser.resolve(sourceAnnotation),

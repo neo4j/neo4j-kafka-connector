@@ -22,7 +22,7 @@ import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
 
-internal class Neo4jSourceRegistration(
+internal class LegacyNeo4jSourceRegistration(
     topic: String,
     neo4jUri: String,
     neo4jUser: String = "neo4j",
