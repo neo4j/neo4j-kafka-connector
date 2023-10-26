@@ -55,7 +55,7 @@ internal class Neo4jSourceRegistration(
                     "neo4j.authentication.basic.username" to neo4jUser,
                     "neo4j.authentication.basic.password" to neo4jPassword,
                     "neo4j.query" to query,
-                    "neo4j.query.poll-interval" to pollInterval.toMillis(),
+                    "neo4j.query.poll-interval" to "${pollInterval.toMillis()}ms",
                     "neo4j.query.streaming-property" to streamingProperty,
                     "neo4j.start-from" to startFrom,
                     "neo4j.enforce-schema" to enforceSchema,

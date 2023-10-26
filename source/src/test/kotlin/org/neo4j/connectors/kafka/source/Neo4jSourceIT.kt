@@ -35,7 +35,7 @@ class Neo4jSourceIT {
   @Neo4jSource(
       topic = TOPIC,
       streamingProperty = "timestamp",
-      startFrom = "ALL",
+      startFrom = "EARLIEST",
       query =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId")
   @Test
