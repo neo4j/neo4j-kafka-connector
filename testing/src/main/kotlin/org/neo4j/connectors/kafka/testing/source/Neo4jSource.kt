@@ -21,7 +21,7 @@ import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-@ExtendWith(LegacyNeo4jSourceExtension::class)
+@ExtendWith(Neo4jSourceExtension::class)
 annotation class Neo4jSource(
     val brokerExternalHost: String = DEFAULT_TO_ENV,
     val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
