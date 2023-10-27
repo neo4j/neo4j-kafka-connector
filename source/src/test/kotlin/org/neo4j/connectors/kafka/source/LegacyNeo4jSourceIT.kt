@@ -39,7 +39,7 @@ class LegacyNeo4jSourceIT {
       streamingQuery =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp, ts.execId AS execId")
   @Test
-  fun `reads latest changes from Neo4j source`(
+  fun `reads latest changes from legacy Neo4j source`(
       testInfo: TestInfo,
       @TopicConsumer(topic = TOPIC, offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,

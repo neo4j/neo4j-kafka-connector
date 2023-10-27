@@ -160,7 +160,10 @@ internal class Neo4jSourceExtension(
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
         KafkaAvroDeserializer::class.java.getName(),
     )
-    properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, extensionContext?.displayName)
+    properties.setProperty(
+        ConsumerConfig.GROUP_ID_CONFIG,
+        // note: ExtensionContext#getUniqueId() returns null in the CLI
+        "${extensionContext?.testClass?: ""}#${extensionContext?.displayName}")
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
     return consumerFactory(properties, consumerAnnotation.topic)
