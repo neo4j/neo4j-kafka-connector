@@ -28,23 +28,23 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
+import org.neo4j.connectors.kafka.testing.sink.LegacyNeo4jSink
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
-class Neo4jSinkIT {
+class LegacyNeo4jSinkIT {
 
   companion object {
     const val TOPIC = "persons"
   }
 
-  @Neo4jSink(
+  @LegacyNeo4jSink(
       topics = [TOPIC],
       queries =
           [
               "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})"])
   @Test
-  fun `writes messages to Neo4j via sink connector`(
+  fun `writes messages to Neo4j via legacy sink connector`(
       @TopicProducer producer: KafkaProducer<String, GenericRecord>,
       session: Session,
       testInfo: TestInfo
