@@ -41,6 +41,7 @@
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.0</awaitility.version>
         <build-resources.version>1.0.0</build-resources.version>
+        <cdc.version>1.0.3</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.13.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
@@ -188,6 +189,11 @@
                 <version>${mockito-kotlin.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.neo4j.connectors</groupId>
+                <artifactId>cdc</artifactId>
+                <version>${cdc.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.neo4j.driver</groupId>
                 <artifactId>neo4j-java-driver</artifactId>
                 <version>${neo4j-java-driver.version}</version>
@@ -237,7 +243,7 @@
                         <failIfMissing>true</failIfMissing>
                         <plainTextReport>true</plainTextReport>
                         <prependText>${licensing.prepend.text}</prependText>
-                        <excludedGroups>^((org.neo4j.connectors.kafka){1})$</excludedGroups>
+                        <excludedGroups>^((org.neo4j.connectors){1})$</excludedGroups>
                         <includedScopes>compile,runtime</includedScopes>
                     </configuration>
                     <dependencies>
