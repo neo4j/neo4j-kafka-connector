@@ -43,9 +43,9 @@ import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 
-class Neo4jSourceExtensionTest {
+class LegacyNeo4jSourceExtensionTest {
 
-  private val extension = Neo4jSourceExtension()
+  private val extension = LegacyNeo4jSourceExtension()
 
   private val kafkaConnectServer = KafkaConnectServer()
 
@@ -79,7 +79,7 @@ class Neo4jSourceExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -105,7 +105,7 @@ class Neo4jSourceExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.beforeEach(extensionContext)
@@ -144,7 +144,7 @@ class Neo4jSourceExtensionTest {
   fun `resolves Session parameter`() {
     val session = mock<Session>()
     val driver = mock<Driver> { on { session() } doReturn session }
-    val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
+    val extension = LegacyNeo4jSourceExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -158,7 +158,7 @@ class Neo4jSourceExtensionTest {
   @Test
   fun `resolves consumer parameter`() {
     val consumer = mock<KafkaConsumer<String, GenericRecord>>()
-    val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
+    val extension = LegacyNeo4jSourceExtension(consumerFactory = { _, _ -> consumer })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
@@ -186,7 +186,7 @@ class Neo4jSourceExtensionTest {
           on { verifyConnectivity() } doAnswer {}
         }
     val extension =
-        Neo4jSourceExtension(
+        LegacyNeo4jSourceExtension(
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
@@ -209,7 +209,7 @@ class Neo4jSourceExtensionTest {
         )
     val driver = mock<Driver> { on { session() } doReturn session }
     val extension =
-        Neo4jSourceExtension(
+        LegacyNeo4jSourceExtension(
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
@@ -233,7 +233,7 @@ class Neo4jSourceExtensionTest {
           extension.evaluateExecutionCondition(extensionContextFor(::missingAnnotationMethod))
         }
 
-    assertEquals(exception.message, "@Neo4jSource not found")
+    assertEquals(exception.message, "@LegacyNeo4jSource not found")
   }
 
   @Test
@@ -247,7 +247,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_USER" to "user",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -271,7 +271,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_USER" to "user",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -292,7 +292,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_USER" to "user",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -313,7 +313,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_URI" to "neo4j://example.com",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -333,7 +333,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_URI" to "neo4j://example.com",
             "NEO4J_USER" to "user",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSourceExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -345,7 +345,7 @@ class Neo4jSourceExtensionTest {
     )
   }
 
-  @Neo4jSource(
+  @LegacyNeo4jSource(
       brokerExternalHost = "example.com",
       schemaControlRegistryUri = "http://example.com",
       schemaControlRegistryExternalUri = "http://example.com",
@@ -356,12 +356,12 @@ class Neo4jSourceExtensionTest {
       neo4jPassword = "password",
       topic = "topic",
       streamingProperty = "prop",
-      startFrom = "ALL",
-      query = "MERGE (:Example)")
+      streamingFrom = "ALL",
+      streamingQuery = "MERGE (:Example)")
   @Suppress("UNUSED")
   fun validMethod() {}
 
-  @Neo4jSource(
+  @LegacyNeo4jSource(
       brokerExternalHost = "example.com",
       schemaControlRegistryUri = "http://example.com",
       schemaControlRegistryExternalUri = "http://example.com",
@@ -371,13 +371,16 @@ class Neo4jSourceExtensionTest {
       neo4jPassword = "password",
       topic = "topic",
       streamingProperty = "prop",
-      startFrom = "ALL",
-      query = "MERGE (:Example)")
+      streamingFrom = "ALL",
+      streamingQuery = "MERGE (:Example)")
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
-  @Neo4jSource(
-      topic = "topic", streamingProperty = "prop", startFrom = "ALL", query = "MERGE (:Example)")
+  @LegacyNeo4jSource(
+      topic = "topic",
+      streamingProperty = "prop",
+      streamingFrom = "ALL",
+      streamingQuery = "MERGE (:Example)")
   @Suppress("UNUSED")
   fun envBackedMethod() {}
 

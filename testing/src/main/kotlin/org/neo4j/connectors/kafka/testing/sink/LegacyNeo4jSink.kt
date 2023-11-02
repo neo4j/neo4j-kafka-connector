@@ -14,25 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.source
+package org.neo4j.connectors.kafka.testing.sink
 
 import org.junit.jupiter.api.extension.ExtendWith
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-@ExtendWith(Neo4jSourceExtension::class)
-annotation class Neo4jSource(
+@ExtendWith(LegacyNeo4jSinkExtension::class)
+annotation class LegacyNeo4jSink(
     val brokerExternalHost: String = DEFAULT_TO_ENV,
+    val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
-    val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUri: String = DEFAULT_TO_ENV,
     val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
-    val topic: String,
-    val streamingProperty: String,
-    val startFrom: String,
-    val query: String
+    val topics: Array<String>,
+    val queries: Array<String>
 )

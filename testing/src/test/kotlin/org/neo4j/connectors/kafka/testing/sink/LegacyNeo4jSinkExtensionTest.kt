@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.source
+package org.neo4j.connectors.kafka.testing.sink
 
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertContains
@@ -24,8 +24,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -36,16 +34,15 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.neo4j.connectors.kafka.testing.JUnitSupport.annotatedParameterContextForType
 import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
 import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 
-class Neo4jSourceExtensionTest {
+class LegacyNeo4jSinkExtensionTest {
 
-  private val extension = Neo4jSourceExtension()
+  private val extension = LegacyNeo4jSinkExtension()
 
   private val kafkaConnectServer = KafkaConnectServer()
 
@@ -63,7 +60,7 @@ class Neo4jSourceExtensionTest {
   }
 
   @Test
-  fun `registers source connector`() {
+  fun `registers sink connector`() {
     val handlerCalled = AtomicBoolean()
     kafkaConnectServer.start(
         registrationHandler = { exchange ->
@@ -79,7 +76,7 @@ class Neo4jSourceExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -89,7 +86,7 @@ class Neo4jSourceExtensionTest {
   }
 
   @Test
-  fun `unregisters source connector`() {
+  fun `unregisters sink connector`() {
     val handlerCalled = AtomicBoolean()
     kafkaConnectServer.start(
         unregistrationHandler = { exchange ->
@@ -105,7 +102,7 @@ class Neo4jSourceExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.beforeEach(extensionContext)
@@ -122,14 +119,7 @@ class Neo4jSourceExtensionTest {
             parameterContextForType(Session::class),
             mock<ExtensionContext>(),
         ),
-        "session parameter should be resolvable",
-    )
-    assertTrue(
-        extension.supportsParameter(
-            parameterContextForType(KafkaConsumer::class),
-            mock<ExtensionContext>(),
-        ),
-        "consumer parameter should be resolvable",
+        "session parameters should be resolvable",
     )
     assertFalse(
         extension.supportsParameter(
@@ -144,7 +134,7 @@ class Neo4jSourceExtensionTest {
   fun `resolves Session parameter`() {
     val session = mock<Session>()
     val driver = mock<Driver> { on { session() } doReturn session }
-    val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
+    val extension = LegacyNeo4jSinkExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -153,23 +143,6 @@ class Neo4jSourceExtensionTest {
 
     assertIs<Session>(sessionParam)
     assertSame(session, sessionParam)
-  }
-
-  @Test
-  fun `resolves consumer parameter`() {
-    val consumer = mock<KafkaConsumer<String, GenericRecord>>()
-    val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
-    val extensionContext = extensionContextFor(::validMethod)
-    extension.evaluateExecutionCondition(extensionContext)
-    val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
-
-    val consumerParam =
-        extension.resolveParameter(
-            annotatedParameterContextForType(KafkaConsumer::class, consumerAnnotation),
-            extensionContext)
-
-    assertIs<KafkaConsumer<String, GenericRecord>>(consumerParam)
-    assertSame(consumer, consumerParam)
   }
 
   @Test
@@ -186,7 +159,7 @@ class Neo4jSourceExtensionTest {
           on { verifyConnectivity() } doAnswer {}
         }
     val extension =
-        Neo4jSourceExtension(
+        LegacyNeo4jSinkExtension(
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
@@ -209,7 +182,7 @@ class Neo4jSourceExtensionTest {
         )
     val driver = mock<Driver> { on { session() } doReturn session }
     val extension =
-        Neo4jSourceExtension(
+        LegacyNeo4jSinkExtension(
             envAccessor = environment::get,
             driverFactory = { _, _ -> driver },
         )
@@ -233,21 +206,18 @@ class Neo4jSourceExtensionTest {
           extension.evaluateExecutionCondition(extensionContextFor(::missingAnnotationMethod))
         }
 
-    assertEquals(exception.message, "@Neo4jSource not found")
+    assertEquals(exception.message, "@LegacyNeo4jSink not found")
   }
 
   @Test
-  fun `stops execution evaluation if broker external host is not specified`() {
+  fun `stops execution evaluation if kafka connect external URI is not specified`() {
     val environment =
         mapOf(
-            "SCHEMA_CONTROL_REGISTRY_URI" to "http://example.com",
-            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
-            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
             "NEO4J_URI" to "neo4j://example",
             "NEO4J_USER" to "user",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -256,31 +226,7 @@ class Neo4jSourceExtensionTest {
 
     assertContains(
         exception.message!!,
-        "Both annotation field brokerExternalHost and environment variable BROKER_EXTERNAL_HOST are unset. Please specify one",
-    )
-  }
-
-  @Test
-  fun `stops execution evaluation if schema control registry URI is not specified`() {
-    val environment =
-        mapOf(
-            "BROKER_EXTERNAL_HOST" to "example.com",
-            "SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI" to "http://example.com",
-            "KAFKA_CONNECT_EXTERNAL_URI" to "example.com",
-            "NEO4J_URI" to "neo4j://example",
-            "NEO4J_USER" to "user",
-            "NEO4J_PASSWORD" to "password",
-        )
-    val extension = Neo4jSourceExtension(environment::get)
-
-    val exception =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::envBackedMethod))
-        }
-
-    assertContains(
-        exception.message!!,
-        "Both annotation field schemaControlRegistryUri and environment variable SCHEMA_CONTROL_REGISTRY_URI are unset. Please specify one",
+        "Both annotation field kafkaConnectExternalUri and environment variable KAFKA_CONNECT_EXTERNAL_URI are unset. Please specify one",
     )
   }
 
@@ -292,7 +238,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_USER" to "user",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -313,7 +259,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_URI" to "neo4j://example.com",
             "NEO4J_PASSWORD" to "password",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -333,7 +279,7 @@ class Neo4jSourceExtensionTest {
             "NEO4J_URI" to "neo4j://example.com",
             "NEO4J_USER" to "user",
         )
-    val extension = Neo4jSourceExtension(environment::get)
+    val extension = LegacyNeo4jSinkExtension(environment::get)
 
     val exception =
         assertFailsWith<ExtensionConfigurationException> {
@@ -345,41 +291,75 @@ class Neo4jSourceExtensionTest {
     )
   }
 
-  @Neo4jSource(
-      brokerExternalHost = "example.com",
-      schemaControlRegistryUri = "http://example.com",
-      schemaControlRegistryExternalUri = "http://example.com",
+  @Test
+  fun `stops execution evaluation if number of queries does not match number of topics`() {
+    val exception1 =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::moreQueriesThanTopicsMethod))
+        }
+    val exception2 =
+        assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::moreTopicsThanQueriesMethod))
+        }
+
+    assertContains(
+        exception1.message!!,
+        "Expected 1 query, but got 2. There must be as many topics (here: 1) as queries defined.",
+    )
+    assertContains(
+        exception2.message!!,
+        "Expected 2 queries, but got 1. There must be as many topics (here: 2) as queries defined.",
+    )
+  }
+
+  @LegacyNeo4jSink(
       kafkaConnectExternalUri = "http://example.com",
       neo4jExternalUri = "neo4j://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topic = "topic",
-      streamingProperty = "prop",
-      startFrom = "ALL",
-      query = "MERGE (:Example)")
+      topics = ["topic1"],
+      queries = ["MERGE ()"],
+      schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun validMethod() {}
 
-  @Neo4jSource(
-      brokerExternalHost = "example.com",
-      schemaControlRegistryUri = "http://example.com",
-      schemaControlRegistryExternalUri = "http://example.com",
+  @LegacyNeo4jSink(
       neo4jExternalUri = "neo4j://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topic = "topic",
-      streamingProperty = "prop",
-      startFrom = "ALL",
-      query = "MERGE (:Example)")
+      topics = ["topic1"],
+      queries = ["MERGE ()"],
+      schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
-  @Neo4jSource(
-      topic = "topic", streamingProperty = "prop", startFrom = "ALL", query = "MERGE (:Example)")
+  @LegacyNeo4jSink(topics = ["topic1"], queries = ["MERGE ()"])
   @Suppress("UNUSED")
   fun envBackedMethod() {}
 
   @Suppress("UNUSED") fun missingAnnotationMethod() {}
+
+  @LegacyNeo4jSink(
+      kafkaConnectExternalUri = "http://example.com",
+      neo4jUri = "neo4j://example.com",
+      neo4jUser = "user",
+      neo4jPassword = "password",
+      topics = ["topic1"],
+      queries = ["MERGE ()", "CREATE ()"],
+  )
+  @Suppress("UNUSED")
+  fun moreQueriesThanTopicsMethod() {}
+
+  @LegacyNeo4jSink(
+      kafkaConnectExternalUri = "http://example.com",
+      neo4jUri = "neo4j://example.com",
+      neo4jUser = "user",
+      neo4jPassword = "password",
+      topics = ["topic1", "topic2"],
+      queries = ["MERGE ()"],
+  )
+  @Suppress("UNUSED")
+  fun moreTopicsThanQueriesMethod() {}
 }

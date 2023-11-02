@@ -23,7 +23,7 @@ import org.neo4j.connectors.kafka.testing.MapSupport.nestUnder
 import org.neo4j.connectors.kafka.testing.RegistrationSupport
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 
-internal class Neo4jSinkRegistration(
+internal class LegacyNeo4jSinkRegistration(
     topicQuerys: Map<String, String>,
     neo4jUri: String,
     neo4jUser: String,
@@ -47,7 +47,7 @@ internal class Neo4jSinkRegistration(
                 "config" to
                     mutableMapOf(
                         "topics" to topicQuerys.keys.joinToString(","),
-                        "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+                        "connector.class" to "streams.kafka.connect.sink.Neo4jSinkConnector",
                         "key.converter" to "io.confluent.connect.avro.AvroConverter",
                         "key.converter.schema.registry.url" to schemaControlRegistryUri,
                         "value.converter" to "io.confluent.connect.avro.AvroConverter",
@@ -57,8 +57,7 @@ internal class Neo4jSinkRegistration(
                         "errors.tolerance" to errorTolerance,
                         "errors.log.enable" to enableErrorLog,
                         "errors.log.include.messages" to includeMessagesInErrorLog,
-                        "neo4j.uri" to neo4jUri,
-                        "neo4j.authentication.type" to "BASIC",
+                        "neo4j.server.uri" to neo4jUri,
                         "neo4j.authentication.basic.username" to neo4jUser,
                         "neo4j.authentication.basic.password" to neo4jPassword,
                     ))

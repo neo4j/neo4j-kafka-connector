@@ -20,14 +20,14 @@ import kotlin.test.assertIs
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-class Neo4jSinkRegistrationTest {
+class LegacyNeo4jSinkRegistrationTest {
 
   @Test
   fun `creates payload`() {
     val expectedConfig =
         mapOf(
             "topics" to "my-topic",
-            "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+            "connector.class" to "streams.kafka.connect.sink.Neo4jSinkConnector",
             "key.converter" to "io.confluent.connect.avro.AvroConverter",
             "key.converter.schema.registry.url" to "http://example.com",
             "value.converter" to "io.confluent.connect.avro.AvroConverter",
@@ -37,13 +37,12 @@ class Neo4jSinkRegistrationTest {
             "errors.tolerance" to "all",
             "errors.log.enable" to true,
             "errors.log.include.messages" to true,
-            "neo4j.uri" to "neo4j://example.com",
-            "neo4j.authentication.type" to "BASIC",
+            "neo4j.server.uri" to "neo4j://example.com",
             "neo4j.authentication.basic.username" to "user",
             "neo4j.authentication.basic.password" to "password",
             "neo4j.topic.cypher.my-topic" to "MERGE ()")
     val registration =
-        Neo4jSinkRegistration(
+        LegacyNeo4jSinkRegistration(
             topicQuerys = mapOf("my-topic" to "MERGE ()"),
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
@@ -59,7 +58,7 @@ class Neo4jSinkRegistrationTest {
   @Test
   fun `creates payload with multiple topics`() {
     val registration =
-        Neo4jSinkRegistration(
+        LegacyNeo4jSinkRegistration(
             topicQuerys = mapOf("topic1" to "MERGE ()", "topic2" to "CREATE ()"),
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",

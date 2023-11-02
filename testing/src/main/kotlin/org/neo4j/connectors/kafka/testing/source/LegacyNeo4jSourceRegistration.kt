@@ -22,7 +22,7 @@ import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
 
-internal class Neo4jSourceRegistration(
+internal class LegacyNeo4jSourceRegistration(
     topic: String,
     neo4jUri: String,
     neo4jUser: String = "neo4j",
@@ -30,8 +30,8 @@ internal class Neo4jSourceRegistration(
     pollInterval: Duration = Duration.ofMillis(5000),
     enforceSchema: Boolean = true,
     streamingProperty: String,
-    startFrom: String,
-    query: String,
+    streamingFrom: String,
+    streamingQuery: String,
     schemaControlRegistryUri: String
 ) {
 
@@ -45,20 +45,19 @@ internal class Neo4jSourceRegistration(
             "config" to
                 mapOf(
                     "topic" to topic,
-                    "connector.class" to "org.neo4j.connectors.kafka.source.Neo4jConnector",
+                    "connector.class" to "streams.kafka.connect.source.Neo4jSourceConnector",
                     "key.converter" to "io.confluent.connect.avro.AvroConverter",
                     "key.converter.schema.registry.url" to schemaControlRegistryUri,
                     "value.converter" to "io.confluent.connect.avro.AvroConverter",
                     "value.converter.schema.registry.url" to schemaControlRegistryUri,
-                    "neo4j.uri" to neo4jUri,
-                    "neo4j.authentication.type" to "BASIC",
+                    "neo4j.server.uri" to neo4jUri,
                     "neo4j.authentication.basic.username" to neo4jUser,
                     "neo4j.authentication.basic.password" to neo4jPassword,
-                    "neo4j.query" to query,
-                    "neo4j.query.poll-interval" to "${pollInterval.toMillis()}ms",
-                    "neo4j.query.streaming-property" to streamingProperty,
-                    "neo4j.start-from" to startFrom,
-                    "neo4j.enforce-schema" to enforceSchema,
+                    "neo4j.streaming.poll.interval.msecs" to pollInterval.toMillis(),
+                    "neo4j.streaming.property" to streamingProperty,
+                    "neo4j.streaming.from" to streamingFrom,
+                    "neo4j.enforce.schema" to enforceSchema,
+                    "neo4j.source.query" to streamingQuery,
                 ),
         )
   }
