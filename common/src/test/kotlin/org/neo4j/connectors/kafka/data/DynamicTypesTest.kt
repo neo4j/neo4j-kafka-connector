@@ -134,54 +134,55 @@ class DynamicTypesTest {
         SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build()
 
     // Temporal Types
-    DynamicTypes.schemaFor(LocalDate.of(1999, 12, 31), false) shouldBe SimpleTypes.LOCALDATE.schema
+    DynamicTypes.schemaFor(LocalDate.of(1999, 12, 31), false) shouldBe
+        SimpleTypes.LOCALDATE.schema()
     DynamicTypes.schemaFor(LocalDate.of(1999, 12, 31), true) shouldBe
-        SimpleTypes.LOCALDATE_NULLABLE.schema
+        SimpleTypes.LOCALDATE.schema(true)
 
-    DynamicTypes.schemaFor(LocalTime.of(23, 59, 59), false) shouldBe SimpleTypes.LOCALTIME.schema
+    DynamicTypes.schemaFor(LocalTime.of(23, 59, 59), false) shouldBe SimpleTypes.LOCALTIME.schema()
     DynamicTypes.schemaFor(LocalTime.of(23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALTIME_NULLABLE.schema
+        SimpleTypes.LOCALTIME.schema(true)
 
     DynamicTypes.schemaFor(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALDATETIME.schema
+        SimpleTypes.LOCALDATETIME.schema()
     DynamicTypes.schemaFor(LocalDateTime.of(1999, 12, 31, 23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALDATETIME_NULLABLE.schema
+        SimpleTypes.LOCALDATETIME.schema(true)
 
     DynamicTypes.schemaFor(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.OFFSETTIME.schema
+        SimpleTypes.OFFSETTIME.schema()
     DynamicTypes.schemaFor(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.OFFSETTIME_NULLABLE.schema
+        SimpleTypes.OFFSETTIME.schema(true)
 
     DynamicTypes.schemaFor(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema
+        SimpleTypes.ZONEDDATETIME.schema()
     DynamicTypes.schemaFor(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_NULLABLE.schema
+        SimpleTypes.ZONEDDATETIME.schema(true)
 
     DynamicTypes.schemaFor(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema
+        SimpleTypes.ZONEDDATETIME.schema()
     DynamicTypes.schemaFor(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_NULLABLE.schema
+        SimpleTypes.ZONEDDATETIME.schema(true)
 
     DynamicTypes.schemaFor(Duration.parse("P1DT23H59M59S"), false) shouldBe
-        SimpleTypes.DURATION.schema
+        SimpleTypes.DURATION.schema()
     DynamicTypes.schemaFor(Duration.parse("P1DT23H59M59S"), true) shouldBe
-        SimpleTypes.DURATION_NULLABLE.schema
+        SimpleTypes.DURATION.schema(true)
 
     DynamicTypes.schemaFor(Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe
-        SimpleTypes.DURATION.schema
+        SimpleTypes.DURATION.schema()
     DynamicTypes.schemaFor(Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), true) shouldBe
-        SimpleTypes.DURATION_NULLABLE.schema
+        SimpleTypes.DURATION.schema(true)
 
     // Point
     listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
         .forEach { point ->
           withClue(point) {
-            DynamicTypes.schemaFor(point, false) shouldBe SimpleTypes.POINT.schema
-            DynamicTypes.schemaFor(point, true) shouldBe SimpleTypes.POINT_NULLABLE.schema
+            DynamicTypes.schemaFor(point, false) shouldBe SimpleTypes.POINT.schema()
+            DynamicTypes.schemaFor(point, true) shouldBe SimpleTypes.POINT.schema(true)
           }
         }
 

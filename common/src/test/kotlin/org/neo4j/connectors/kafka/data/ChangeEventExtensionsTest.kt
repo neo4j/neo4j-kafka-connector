@@ -68,8 +68,8 @@ class ChangeEventExtensionsTest {
             .field("connectionServer", Schema.OPTIONAL_STRING_SCHEMA)
             .field("serverId", Schema.STRING_SCHEMA)
             .field("captureMode", Schema.STRING_SCHEMA)
-            .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema)
-            .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema)
+            .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema())
+            .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
             .field(
                 "txMetadata",
                 SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
@@ -98,7 +98,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for node create events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -198,7 +198,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for node update events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -318,7 +318,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for node delete events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -420,7 +420,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for relationship create events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -495,7 +495,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE_NULLABLE.schema)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -536,7 +536,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for relationship update events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -604,7 +604,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE_NULLABLE.schema)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -616,7 +616,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE_NULLABLE.schema)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -665,7 +665,7 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `schema and value should be generated correctly for relationship delete events`() {
-    val (event, _, schema, value) =
+    val (_, _, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -733,7 +733,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE_NULLABLE.schema)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
                                     .build())
                             .optional()
                             .build())

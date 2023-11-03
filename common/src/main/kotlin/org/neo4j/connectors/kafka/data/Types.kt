@@ -37,34 +37,29 @@ import org.neo4j.driver.types.Relationship
 internal fun SchemaBuilder.namespaced(vararg paths: String): SchemaBuilder =
     this.name("org.neo4j.connectors.kafka." + paths.joinToString("."))
 
-enum class SimpleTypes(val schema: Schema) {
-  BOOLEAN(Schema.BOOLEAN_SCHEMA),
-  BOOLEAN_NULLABLE(Schema.OPTIONAL_BOOLEAN_SCHEMA),
-  LONG(Schema.INT64_SCHEMA),
-  LONG_NULLABLE(Schema.OPTIONAL_INT64_SCHEMA),
-  FLOAT(Schema.FLOAT64_SCHEMA),
-  FLOAT_NULLABLE(Schema.OPTIONAL_FLOAT64_SCHEMA),
-  STRING(Schema.STRING_SCHEMA),
-  STRING_NULLABLE(Schema.OPTIONAL_STRING_SCHEMA),
-  BYTES(Schema.BYTES_SCHEMA),
-  BYTES_NULLABLE(Schema.OPTIONAL_BYTES_SCHEMA),
-  LOCALDATE(SchemaBuilder(Schema.Type.STRING).namespaced("LocalDate").build()),
-  LOCALDATE_NULLABLE(
+enum class SimpleTypes(private val schema: Schema, private val optionalSchema: Schema) {
+  BOOLEAN(Schema.BOOLEAN_SCHEMA, Schema.OPTIONAL_BOOLEAN_SCHEMA),
+  LONG(Schema.INT64_SCHEMA, Schema.OPTIONAL_INT64_SCHEMA),
+  FLOAT(Schema.FLOAT64_SCHEMA, Schema.OPTIONAL_FLOAT64_SCHEMA),
+  STRING(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA),
+  BYTES(Schema.BYTES_SCHEMA, Schema.OPTIONAL_BYTES_SCHEMA),
+  LOCALDATE(
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDate").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalDate").optional().build()),
-  LOCALDATETIME(SchemaBuilder(Schema.Type.STRING).namespaced("LocalDateTime").build()),
-  LOCALDATETIME_NULLABLE(
+  LOCALDATETIME(
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDateTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalDateTime").optional().build()),
-  LOCALTIME(SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").build()),
-  LOCALTIME_NULLABLE(
+  LOCALTIME(
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalTime").optional().build()),
-  ZONEDDATETIME(SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").build()),
-  ZONEDDATETIME_NULLABLE(
+  ZONEDDATETIME(
+      SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalZonedDateTime").optional().build()),
-  OFFSETTIME(SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").build()),
-  OFFSETTIME_NULLABLE(
+  OFFSETTIME(
+      SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalOffsetTime").optional().build()),
-  DURATION(SchemaBuilder(Schema.Type.STRING).namespaced("Duration").build()),
-  DURATION_NULLABLE(
+  DURATION(
+      SchemaBuilder(Schema.Type.STRING).namespaced("Duration").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalDuration").optional().build()),
   POINT(
       SchemaBuilder(Schema.Type.STRUCT)
@@ -73,8 +68,7 @@ enum class SimpleTypes(val schema: Schema) {
           .field("x", Schema.FLOAT64_SCHEMA)
           .field("y", Schema.FLOAT64_SCHEMA)
           .field("z", Schema.FLOAT64_SCHEMA)
-          .build()),
-  POINT_NULLABLE(
+          .build(),
       SchemaBuilder(Schema.Type.STRUCT)
           .namespaced("OptionalPoint")
           .field("srid", Schema.INT32_SCHEMA)
@@ -82,7 +76,9 @@ enum class SimpleTypes(val schema: Schema) {
           .field("y", Schema.FLOAT64_SCHEMA)
           .field("z", Schema.FLOAT64_SCHEMA)
           .optional()
-          .build()),
+          .build());
+
+  fun schema(optional: Boolean = false): Schema = if (optional) this.optionalSchema else this.schema
 }
 
 object DynamicTypes {
@@ -191,18 +187,15 @@ object DynamicTypes {
   fun schemaFor(value: Any?, optional: Boolean = false): Schema =
       when (value) {
         null -> SchemaBuilder.struct().optional().build()
-        is Boolean ->
-            if (optional) SimpleTypes.BOOLEAN_NULLABLE.schema else SimpleTypes.BOOLEAN.schema
+        is Boolean -> SimpleTypes.BOOLEAN.schema(optional)
         is Float,
-        is Double -> if (optional) SimpleTypes.FLOAT_NULLABLE.schema else SimpleTypes.FLOAT.schema
-        is Number -> if (optional) SimpleTypes.LONG_NULLABLE.schema else SimpleTypes.LONG.schema
+        is Double -> SimpleTypes.FLOAT.schema(optional)
+        is Number -> SimpleTypes.LONG.schema(optional)
         is Char,
         is CharArray,
-        is CharSequence ->
-            if (optional) SimpleTypes.STRING_NULLABLE.schema else SimpleTypes.STRING.schema
+        is CharSequence -> SimpleTypes.STRING.schema(optional)
         is ByteBuffer,
-        is ByteArray ->
-            if (optional) SimpleTypes.BYTES_NULLABLE.schema else SimpleTypes.BYTES.schema
+        is ByteArray -> SimpleTypes.BYTES.schema(optional)
         is ShortArray,
         is IntArray,
         is LongArray ->
@@ -217,31 +210,21 @@ object DynamicTypes {
                 .firstNotNullOfOrNull { schemaFor(it, false) }
                 ?.run { SchemaBuilder.array(this).apply { if (optional) optional() }.build() }
                 ?: SchemaBuilder.struct().apply { if (optional) optional() }.build()
-        is LocalDate ->
-            if (optional) SimpleTypes.LOCALDATE_NULLABLE.schema else SimpleTypes.LOCALDATE.schema
-        is LocalDateTime ->
-            if (optional) SimpleTypes.LOCALDATETIME_NULLABLE.schema
-            else SimpleTypes.LOCALDATETIME.schema
-        is LocalTime ->
-            if (optional) SimpleTypes.LOCALTIME_NULLABLE.schema else SimpleTypes.LOCALTIME.schema
-        is OffsetDateTime ->
-            if (optional) SimpleTypes.ZONEDDATETIME_NULLABLE.schema
-            else SimpleTypes.ZONEDDATETIME.schema
-        is ZonedDateTime ->
-            if (optional) SimpleTypes.ZONEDDATETIME_NULLABLE.schema
-            else SimpleTypes.ZONEDDATETIME.schema
-        is OffsetTime ->
-            if (optional) SimpleTypes.OFFSETTIME_NULLABLE.schema else SimpleTypes.OFFSETTIME.schema
+        is LocalDate -> SimpleTypes.LOCALDATE.schema(optional)
+        is LocalDateTime -> SimpleTypes.LOCALDATETIME.schema(optional)
+        is LocalTime -> SimpleTypes.LOCALTIME.schema(optional)
+        is OffsetDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
+        is ZonedDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
+        is OffsetTime -> SimpleTypes.OFFSETTIME.schema(optional)
         is Duration,
-        is IsoDuration ->
-            if (optional) SimpleTypes.DURATION_NULLABLE.schema else SimpleTypes.DURATION.schema
-        is Point -> if (optional) SimpleTypes.POINT_NULLABLE.schema else SimpleTypes.POINT.schema
+        is IsoDuration -> SimpleTypes.DURATION.schema(optional)
+        is Point -> SimpleTypes.POINT.schema(optional)
         is Node ->
             SchemaBuilder.struct()
                 .namespaced("Node")
                 .apply {
-                  field("<id>", SimpleTypes.LONG.schema)
-                  field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+                  field("<id>", SimpleTypes.LONG.schema())
+                  field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
 
                   value.keys().forEach { field(it, schemaFor(value.get(it).asObject(), optional)) }
 
@@ -252,10 +235,10 @@ object DynamicTypes {
             SchemaBuilder.struct()
                 .namespaced("Relationship")
                 .apply {
-                  field("<id>", SimpleTypes.LONG.schema)
-                  field("<type>", SimpleTypes.STRING.schema)
-                  field("<start.id>", SimpleTypes.LONG.schema)
-                  field("<end.id>", SimpleTypes.LONG.schema)
+                  field("<id>", SimpleTypes.LONG.schema())
+                  field("<type>", SimpleTypes.STRING.schema())
+                  field("<start.id>", SimpleTypes.LONG.schema())
+                  field("<end.id>", SimpleTypes.LONG.schema())
 
                   value.keys().forEach { field(it, schemaFor(value.get(it).asObject(), optional)) }
 

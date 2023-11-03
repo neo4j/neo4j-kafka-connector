@@ -40,9 +40,9 @@ object ChangeEventExtensions {
   private fun ChangeEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
           .namespaced("cdc.ChangeEvent")
-          .field("id", SimpleTypes.STRING.schema)
-          .field("txId", SimpleTypes.LONG.schema)
-          .field("seq", SimpleTypes.LONG.schema)
+          .field("id", SimpleTypes.STRING.schema())
+          .field("txId", SimpleTypes.LONG.schema())
+          .field("seq", SimpleTypes.LONG.schema())
           .field("metadata", this.metadata.toConnectSchema())
           .field("event", this.event.toConnectSchema())
           .build()
@@ -59,15 +59,15 @@ object ChangeEventExtensions {
   private fun Metadata.toConnectSchema(): Schema =
       SchemaBuilder.struct()
           .namespaced("cdc.Metadata")
-          .field("authenticatedUser", SimpleTypes.STRING.schema)
-          .field("executingUser", SimpleTypes.STRING.schema)
-          .field("connectionType", SimpleTypes.STRING_NULLABLE.schema)
-          .field("connectionClient", SimpleTypes.STRING_NULLABLE.schema)
-          .field("connectionServer", SimpleTypes.STRING_NULLABLE.schema)
-          .field("serverId", SimpleTypes.STRING.schema)
-          .field("captureMode", SimpleTypes.STRING.schema)
-          .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema)
-          .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema)
+          .field("authenticatedUser", SimpleTypes.STRING.schema())
+          .field("executingUser", SimpleTypes.STRING.schema())
+          .field("connectionType", SimpleTypes.STRING.schema(true))
+          .field("connectionClient", SimpleTypes.STRING.schema(true))
+          .field("connectionServer", SimpleTypes.STRING.schema(true))
+          .field("serverId", SimpleTypes.STRING.schema())
+          .field("captureMode", SimpleTypes.STRING.schema())
+          .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema())
+          .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
           .also {
             this.additionalEntries.forEach { entry ->
               it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
@@ -111,10 +111,10 @@ object ChangeEventExtensions {
   private fun NodeEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
           .namespaced("cdc.NodeEvent")
-          .field("elementId", SimpleTypes.STRING.schema)
-          .field("eventType", SimpleTypes.STRING.schema)
-          .field("operation", SimpleTypes.STRING.schema)
-          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+          .field("elementId", SimpleTypes.STRING.schema())
+          .field("eventType", SimpleTypes.STRING.schema())
+          .field("operation", SimpleTypes.STRING.schema())
+          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
           .field("keys", schemaForKeys(this.keys))
           .field(
               "state",
@@ -144,10 +144,10 @@ object ChangeEventExtensions {
   private fun RelationshipEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
           .namespaced("cdc.RelationshipEvent")
-          .field("elementId", SimpleTypes.STRING.schema)
-          .field("eventType", SimpleTypes.STRING.schema)
-          .field("operation", SimpleTypes.STRING.schema)
-          .field("type", SimpleTypes.STRING.schema)
+          .field("elementId", SimpleTypes.STRING.schema())
+          .field("eventType", SimpleTypes.STRING.schema())
+          .field("operation", SimpleTypes.STRING.schema())
+          .field("type", SimpleTypes.STRING.schema())
           .field("start", this.start.toConnectSchema())
           .field("end", this.end.toConnectSchema())
           .field("key", schemaForKey(this.key))
@@ -182,7 +182,7 @@ object ChangeEventExtensions {
     if (this == null) {
       return SchemaBuilder.struct()
           .namespaced("cdc.EmptyNodeState")
-          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
           .field("properties", SchemaBuilder.struct().build())
           .optional()
           .build()
@@ -190,7 +190,7 @@ object ChangeEventExtensions {
 
     return SchemaBuilder.struct()
         .namespaced("cdc.NodeState")
-        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
         .field(
             "properties",
             SchemaBuilder.struct()
@@ -219,8 +219,8 @@ object ChangeEventExtensions {
   private fun Node.toConnectSchema(): Schema {
     return SchemaBuilder.struct()
         .namespaced("cdc.Node")
-        .field("elementId", SimpleTypes.STRING.schema)
-        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+        .field("elementId", SimpleTypes.STRING.schema())
+        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
         .field("keys", DynamicTypes.schemaFor(this.keys, true))
         .build()
   }

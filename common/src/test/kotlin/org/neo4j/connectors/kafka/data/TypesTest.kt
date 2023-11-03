@@ -119,11 +119,11 @@ class TypesTest {
         schema shouldBe
             SchemaBuilder.struct()
                 .name("org.neo4j.connectors.kafka.Node")
-                .field("<id>", SimpleTypes.LONG.schema)
-                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
-                .field("name", SimpleTypes.STRING.schema)
-                .field("surname", SimpleTypes.STRING.schema)
-                .field("dob", SimpleTypes.LOCALDATE.schema)
+                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
+                .field("name", SimpleTypes.STRING.schema())
+                .field("surname", SimpleTypes.STRING.schema())
+                .field("dob", SimpleTypes.LOCALDATE.schema())
                 .build()
 
         value shouldBe
@@ -140,10 +140,10 @@ class TypesTest {
         schema shouldBe
             SchemaBuilder.struct()
                 .name("org.neo4j.connectors.kafka.Node")
-                .field("<id>", SimpleTypes.LONG.schema)
-                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
-                .field("name", SimpleTypes.STRING.schema)
-                .field("est", SimpleTypes.LOCALDATE.schema)
+                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
+                .field("name", SimpleTypes.STRING.schema())
+                .field("est", SimpleTypes.LOCALDATE.schema())
                 .build()
 
         value shouldBe
@@ -159,12 +159,12 @@ class TypesTest {
         schema shouldBe
             SchemaBuilder.struct()
                 .name("org.neo4j.connectors.kafka.Relationship")
-                .field("<id>", SimpleTypes.LONG.schema)
-                .field("<type>", SimpleTypes.STRING.schema)
-                .field("<start.id>", SimpleTypes.LONG.schema)
-                .field("<end.id>", SimpleTypes.LONG.schema)
-                .field("contractId", SimpleTypes.LONG.schema)
-                .field("since", SimpleTypes.LOCALDATE.schema)
+                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<type>", SimpleTypes.STRING.schema())
+                .field("<start.id>", SimpleTypes.LONG.schema())
+                .field("<end.id>", SimpleTypes.LONG.schema())
+                .field("contractId", SimpleTypes.LONG.schema())
+                .field("since", SimpleTypes.LOCALDATE.schema())
                 .build()
 
         value shouldBe
@@ -251,70 +251,70 @@ class TypesTest {
     @JvmStatic
     fun values(): List<Arguments> {
       return listOf(
-          Arguments.of(Named.of("boolean", true), SimpleTypes.BOOLEAN.schema, true),
-          Arguments.of(Named.of("long", 1), SimpleTypes.LONG.schema, 1L),
-          Arguments.of(Named.of("float", 1.0), SimpleTypes.FLOAT.schema, 1.0),
-          Arguments.of(Named.of("string", "a string"), SimpleTypes.STRING.schema, "a string"),
+          Arguments.of(Named.of("boolean", true), SimpleTypes.BOOLEAN.schema(), true),
+          Arguments.of(Named.of("long", 1), SimpleTypes.LONG.schema(), 1L),
+          Arguments.of(Named.of("float", 1.0), SimpleTypes.FLOAT.schema(), 1.0),
+          Arguments.of(Named.of("string", "a string"), SimpleTypes.STRING.schema(), "a string"),
           Arguments.of(
               Named.of("local date", LocalDate.of(1999, 12, 31)),
-              SimpleTypes.LOCALDATE.schema,
+              SimpleTypes.LOCALDATE.schema(),
               "1999-12-31"),
           Arguments.of(
               Named.of("local time", LocalTime.of(23, 59, 59, 5)),
-              SimpleTypes.LOCALTIME.schema,
+              SimpleTypes.LOCALTIME.schema(),
               "23:59:59.000000005"),
           Arguments.of(
               Named.of("local date time", LocalDateTime.of(1999, 12, 31, 23, 59, 59, 5)),
-              SimpleTypes.LOCALDATETIME.schema,
+              SimpleTypes.LOCALDATETIME.schema(),
               "1999-12-31T23:59:59.000000005"),
           Arguments.of(
               Named.of("offset time", OffsetTime.of(23, 59, 59, 5, ZoneOffset.ofHours(1))),
-              SimpleTypes.OFFSETTIME.schema,
+              SimpleTypes.OFFSETTIME.schema(),
               "23:59:59.000000005+01:00"),
           Arguments.of(
               Named.of(
                   "offset date time",
                   OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneOffset.ofHours(1))),
-              SimpleTypes.ZONEDDATETIME.schema,
+              SimpleTypes.ZONEDDATETIME.schema(),
               "1999-12-31T23:59:59.000000005+01:00"),
           Arguments.of(
               Named.of("duration", Values.isoDuration(5, 2, 23, 5).asIsoDuration()),
-              SimpleTypes.DURATION.schema,
+              SimpleTypes.DURATION.schema(),
               "P5M2DT23.000000005S"),
           Arguments.of(
               Named.of("point - 2d", Values.point(7203, 2.3, 4.5).asPoint()),
-              SimpleTypes.POINT.schema,
-              Struct(SimpleTypes.POINT.schema)
+              SimpleTypes.POINT.schema(),
+              Struct(SimpleTypes.POINT.schema())
                   .put("srid", 7203)
                   .put("x", 2.3)
                   .put("y", 4.5)
                   .put("z", Double.NaN)),
           Arguments.of(
               Named.of("point - 3d", Values.point(4979, 12.78, 56.7, 100.0).asPoint()),
-              SimpleTypes.POINT.schema,
-              Struct(SimpleTypes.POINT.schema)
+              SimpleTypes.POINT.schema(),
+              Struct(SimpleTypes.POINT.schema())
                   .put("srid", 4979)
                   .put("x", 12.78)
                   .put("y", 56.7)
                   .put("z", 100.0)),
           Arguments.of(
               Named.of("list - uniformly typed elements", (1..50)),
-              SchemaBuilder.array(SimpleTypes.LONG.schema).build(),
+              SchemaBuilder.array(SimpleTypes.LONG.schema()).build(),
               (1L..50L).toList()),
           Arguments.of(
               Named.of("list - non-uniformly typed elements", listOf(1, true, 2.0, "a string")),
               SchemaBuilder.struct()
-                  .field("e0", SimpleTypes.LONG.schema)
-                  .field("e1", SimpleTypes.BOOLEAN.schema)
-                  .field("e2", SimpleTypes.FLOAT.schema)
-                  .field("e3", SimpleTypes.STRING.schema)
+                  .field("e0", SimpleTypes.LONG.schema())
+                  .field("e1", SimpleTypes.BOOLEAN.schema())
+                  .field("e2", SimpleTypes.FLOAT.schema())
+                  .field("e3", SimpleTypes.STRING.schema())
                   .build(),
               Struct(
                       SchemaBuilder.struct()
-                          .field("e0", SimpleTypes.LONG.schema)
-                          .field("e1", SimpleTypes.BOOLEAN.schema)
-                          .field("e2", SimpleTypes.FLOAT.schema)
-                          .field("e3", SimpleTypes.STRING.schema)
+                          .field("e0", SimpleTypes.LONG.schema())
+                          .field("e1", SimpleTypes.BOOLEAN.schema())
+                          .field("e2", SimpleTypes.FLOAT.schema())
+                          .field("e3", SimpleTypes.STRING.schema())
                           .build())
                   .put("e0", 1L)
                   .put("e1", true)
@@ -322,21 +322,21 @@ class TypesTest {
                   .put("e3", "a string")),
           Arguments.of(
               Named.of("map - uniformly typed values", mapOf("a" to 1, "b" to 2, "c" to 3)),
-              SchemaBuilder.map(SimpleTypes.STRING.schema, SimpleTypes.LONG.schema).build(),
+              SchemaBuilder.map(SimpleTypes.STRING.schema(), SimpleTypes.LONG.schema()).build(),
               mapOf("a" to 1, "b" to 2, "c" to 3)),
           Arguments.of(
               Named.of(
                   "map - non-uniformly typed values", mapOf("a" to 1, "b" to true, "c" to 3.0)),
               SchemaBuilder.struct()
-                  .field("a", SimpleTypes.LONG.schema)
-                  .field("b", SimpleTypes.BOOLEAN.schema)
-                  .field("c", SimpleTypes.FLOAT.schema)
+                  .field("a", SimpleTypes.LONG.schema())
+                  .field("b", SimpleTypes.BOOLEAN.schema())
+                  .field("c", SimpleTypes.FLOAT.schema())
                   .build(),
               Struct(
                       SchemaBuilder.struct()
-                          .field("a", SimpleTypes.LONG.schema)
-                          .field("b", SimpleTypes.BOOLEAN.schema)
-                          .field("c", SimpleTypes.FLOAT.schema)
+                          .field("a", SimpleTypes.LONG.schema())
+                          .field("b", SimpleTypes.BOOLEAN.schema())
+                          .field("c", SimpleTypes.FLOAT.schema())
                           .build())
                   .put("a", 1L)
                   .put("b", true)
