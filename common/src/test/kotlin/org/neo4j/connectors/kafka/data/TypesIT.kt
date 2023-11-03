@@ -51,7 +51,7 @@ class TypesIT {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5.13-enterprise")
+        Neo4jContainer("neo4j:5-enterprise")
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withNeo4jConfig("internal.dbms.change_data_capture", "true")
             .withoutAuthentication()
@@ -183,7 +183,7 @@ class TypesIT {
   fun `should build schema and value for change events`() {
     // set-up cdc
     driver.session().use {
-      it.run("CREATE OR REPLACE DATABASE neo4j OPTIONS { txLogEnrichment: 'FULL' }").consume()
+      it.run("CREATE OR REPLACE DATABASE neo4j OPTIONS { txLogEnrichment: 'FULL' } WAIT").consume()
 
       // set-up constraints
       it.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE (n.name, n.surname) IS KEY").consume()
