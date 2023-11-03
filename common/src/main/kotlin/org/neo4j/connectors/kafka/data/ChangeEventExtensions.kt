@@ -33,187 +33,153 @@ import org.neo4j.cdc.client.model.RelationshipState
 object ChangeEventExtensions {
 
   fun ChangeEvent.toConnectValue(): SchemaAndValue {
-    val schema = schemaFor(this)
-    return SchemaAndValue(schema, valueFor(schema, this))
+    val schema = this.toConnectSchema()
+    return SchemaAndValue(schema, this.toConnectValue(schema))
   }
 
-  private fun valueFor(schema: Schema, value: ChangeEvent): Struct =
-      Struct(schema).apply {
-        put("id", value.id.id)
-        put("txId", value.txId)
-        put("seq", value.seq.toLong())
-        put("metadata", valueFor(schema.field("metadata").schema(), value.metadata))
-        put("event", valueFor(schema.field("event").schema(), value.event))
-      }
-
-  private fun valueFor(schema: Schema, value: Metadata): Struct =
-      Struct(schema).apply {
-        put("authenticatedUser", value.authenticatedUser)
-        put("executingUser", value.executingUser)
-        put("connectionType", value.connectionType)
-        put("connectionClient", value.connectionClient)
-        put("connectionServer", value.connectionServer)
-        put("serverId", value.serverId)
-        put("captureMode", value.captureMode.name)
-        put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(value.txStartTime))
-        put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(value.txCommitTime))
-
-        value.additionalEntries.forEach {
-          put(it.key, DynamicTypes.valueFor(schema.field(it.key).schema(), it.value))
-        }
-      }
-
-  private fun valueFor(schema: Schema, value: Event): Struct =
-      when (value) {
-        is NodeEvent ->
-            Struct(schema).apply {
-              put("elementId", value.elementId)
-              put("eventType", value.eventType.name)
-              put("operation", value.operation.name)
-              put("labels", value.labels)
-              put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), value.keys))
-              put(
-                  "state",
-                  schema.field("state").schema().let { stateSchema ->
-                    Struct(stateSchema)
-                        .put("before", valueFor(stateSchema.field("before").schema(), value.before))
-                        .put("after", valueFor(stateSchema.field("after").schema(), value.after))
-                  })
-            }
-        is RelationshipEvent ->
-            Struct(schema).apply {
-              put("elementId", value.elementId)
-              put("eventType", value.eventType.name)
-              put("operation", value.operation.name)
-              put("type", value.type)
-              put("start", valueFor(schema.field("start").schema(), value.start))
-              put("end", valueFor(schema.field("end").schema(), value.end))
-              put("key", DynamicTypes.valueFor(schema.field("key").schema(), value.key))
-              put(
-                  "state",
-                  schema.field("state").schema().let { stateSchema ->
-                    Struct(stateSchema)
-                        .put("before", valueFor(stateSchema.field("before").schema(), value.before))
-                        .put("after", valueFor(stateSchema.field("after").schema(), value.after))
-                  })
-            }
-        else -> throw IllegalArgumentException("unsupported event type ${value.javaClass.name}")
-      }
-
-  private fun valueFor(schema: Schema, value: NodeState?): Struct? =
-      if (value == null) {
-        null
-      } else {
-        Struct(schema).apply {
-          put("labels", value.labels)
-          put(
-              "properties",
-              DynamicTypes.valueFor(schema.field("properties").schema(), value.properties))
-        }
-      }
-
-  private fun valueFor(schema: Schema, value: Node): Struct =
-      Struct(schema).apply {
-        put("elementId", value.elementId)
-        put("labels", value.labels)
-        put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), value.keys))
-      }
-
-  private fun valueFor(schema: Schema, value: RelationshipState?): Struct? =
-      if (value == null) {
-        null
-      } else {
-        Struct(schema).apply {
-          put(
-              "properties",
-              DynamicTypes.valueFor(schema.field("properties").schema(), value.properties))
-        }
-      }
-
-  private fun schemaFor(change: ChangeEvent): Schema =
+  private fun ChangeEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
           .namespaced("cdc.ChangeEvent")
           .field("id", SimpleTypes.STRING.schema)
           .field("txId", SimpleTypes.LONG.schema)
           .field("seq", SimpleTypes.LONG.schema)
-          .field(
-              "metadata",
-              SchemaBuilder.struct()
-                  .namespaced("cdc.Metadata")
-                  .field("authenticatedUser", SimpleTypes.STRING.schema)
-                  .field("executingUser", SimpleTypes.STRING.schema)
-                  .field("connectionType", SimpleTypes.STRING_NULLABLE.schema)
-                  .field("connectionClient", SimpleTypes.STRING_NULLABLE.schema)
-                  .field("connectionServer", SimpleTypes.STRING_NULLABLE.schema)
-                  .field("serverId", SimpleTypes.STRING.schema)
-                  .field("captureMode", SimpleTypes.STRING.schema)
-                  .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema)
-                  .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema)
-                  .apply {
-                    change.metadata.additionalEntries.forEach {
-                      field(it.key, DynamicTypes.schemaFor(it.value, true))
-                    }
-                  }
-                  .build())
-          .field(
-              "event",
-              when (val event = change.event) {
-                is NodeEvent ->
-                    SchemaBuilder.struct()
-                        .namespaced("cdc.NodeEvent")
-                        .field("elementId", SimpleTypes.STRING.schema)
-                        .field("eventType", SimpleTypes.STRING.schema)
-                        .field("operation", SimpleTypes.STRING.schema)
-                        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
-                        .field("keys", schemaForKeys(event.keys))
-                        .field(
-                            "state",
-                            SchemaBuilder.struct()
-                                .namespaced("cdc.NodeStates")
-                                .field("before", schemaFor(event.before))
-                                .field("after", schemaFor(event.after))
-                                .build())
-                        .build()
-                is RelationshipEvent ->
-                    SchemaBuilder.struct()
-                        .namespaced("cdc.RelationshipEvent")
-                        .field("elementId", SimpleTypes.STRING.schema)
-                        .field("eventType", SimpleTypes.STRING.schema)
-                        .field("operation", SimpleTypes.STRING.schema)
-                        .field("type", SimpleTypes.STRING.schema)
-                        .field("start", schemaFor(event.start))
-                        .field("end", schemaFor(event.end))
-                        .field("key", schemaForKey(event.key))
-                        .field(
-                            "state",
-                            SchemaBuilder.struct()
-                                .namespaced("cdc.RelationshipStates")
-                                .field("before", schemaFor(event.before))
-                                .field("after", schemaFor(event.after))
-                                .build())
-                        .build()
-                else ->
-                    throw IllegalArgumentException(
-                        "unsupported event type in change data: ${event.javaClass.name}")
-              })
+          .field("metadata", this.metadata.toConnectSchema())
+          .field("event", this.event.toConnectSchema())
           .build()
 
-  private fun schemaForKeys(keys: Map<String, Map<String, Any>>): Schema {
-    return SchemaBuilder.struct()
-        .apply { keys.forEach { field(it.key, schemaForKey(it.value)) } }
-        .optional()
-        .build()
-  }
+  private fun ChangeEvent.toConnectValue(schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("id", this.id.id)
+        it.put("txId", this.txId)
+        it.put("seq", this.seq.toLong())
+        it.put("metadata", this.metadata.toConnectValue(schema.field("metadata").schema()))
+        it.put("event", this.event.toConnectValue(schema.field("event").schema()))
+      }
 
-  private fun schemaForKey(key: Map<String, Any>): Schema {
-    return SchemaBuilder.struct()
-        .apply { key.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) } }
-        .optional()
-        .build()
-  }
+  private fun Metadata.toConnectSchema(): Schema =
+      SchemaBuilder.struct()
+          .namespaced("cdc.Metadata")
+          .field("authenticatedUser", SimpleTypes.STRING.schema)
+          .field("executingUser", SimpleTypes.STRING.schema)
+          .field("connectionType", SimpleTypes.STRING_NULLABLE.schema)
+          .field("connectionClient", SimpleTypes.STRING_NULLABLE.schema)
+          .field("connectionServer", SimpleTypes.STRING_NULLABLE.schema)
+          .field("serverId", SimpleTypes.STRING.schema)
+          .field("captureMode", SimpleTypes.STRING.schema)
+          .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema)
+          .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema)
+          .also {
+            this.additionalEntries.forEach { entry ->
+              it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+            }
+          }
+          .build()
 
-  private fun schemaFor(state: NodeState?): Schema {
-    if (state == null) {
+  private fun Metadata.toConnectValue(schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("authenticatedUser", this.authenticatedUser)
+        it.put("executingUser", this.executingUser)
+        it.put("connectionType", this.connectionType)
+        it.put("connectionClient", this.connectionClient)
+        it.put("connectionServer", this.connectionServer)
+        it.put("serverId", this.serverId)
+        it.put("captureMode", this.captureMode.name)
+        it.put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txStartTime))
+        it.put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txCommitTime))
+
+        this.additionalEntries.forEach { entry ->
+          it.put(entry.key, DynamicTypes.valueFor(schema.field(entry.key).schema(), entry.value))
+        }
+      }
+
+  private fun Event.toConnectSchema(): Schema =
+      when (val event = this) {
+        is NodeEvent -> event.toConnectSchema()
+        is RelationshipEvent -> event.toConnectSchema()
+        else ->
+            throw IllegalArgumentException(
+                "unsupported event type in change data: ${event.javaClass.name}")
+      }
+
+  private fun Event.toConnectValue(schema: Schema): Struct =
+      when (val event = this) {
+        is NodeEvent -> event.toConnectValue(schema)
+        is RelationshipEvent -> event.toConnectValue(schema)
+        else -> throw IllegalArgumentException("unsupported event type ${event.javaClass.name}")
+      }
+
+  private fun NodeEvent.toConnectSchema(): Schema =
+      SchemaBuilder.struct()
+          .namespaced("cdc.NodeEvent")
+          .field("elementId", SimpleTypes.STRING.schema)
+          .field("eventType", SimpleTypes.STRING.schema)
+          .field("operation", SimpleTypes.STRING.schema)
+          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+          .field("keys", schemaForKeys(this.keys))
+          .field(
+              "state",
+              SchemaBuilder.struct()
+                  .namespaced("cdc.NodeStates")
+                  .field("before", this.before.toConnectSchema())
+                  .field("after", this.after.toConnectSchema())
+                  .build())
+          .build()
+
+  private fun NodeEvent.toConnectValue(schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("elementId", this.elementId)
+        it.put("eventType", this.eventType.name)
+        it.put("operation", this.operation.name)
+        it.put("labels", this.labels)
+        it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
+        it.put(
+            "state",
+            schema.field("state").schema().let { stateSchema ->
+              Struct(stateSchema)
+                  .put("before", this.before.toConnectValue(stateSchema.field("before").schema()))
+                  .put("after", this.after.toConnectValue(stateSchema.field("after").schema()))
+            })
+      }
+
+  private fun RelationshipEvent.toConnectSchema(): Schema =
+      SchemaBuilder.struct()
+          .namespaced("cdc.RelationshipEvent")
+          .field("elementId", SimpleTypes.STRING.schema)
+          .field("eventType", SimpleTypes.STRING.schema)
+          .field("operation", SimpleTypes.STRING.schema)
+          .field("type", SimpleTypes.STRING.schema)
+          .field("start", this.start.toConnectSchema())
+          .field("end", this.end.toConnectSchema())
+          .field("key", schemaForKey(this.key))
+          .field(
+              "state",
+              SchemaBuilder.struct()
+                  .namespaced("cdc.RelationshipStates")
+                  .field("before", this.before.toConnectSchema())
+                  .field("after", this.after.toConnectSchema())
+                  .build())
+          .build()
+
+  private fun RelationshipEvent.toConnectValue(schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("elementId", this.elementId)
+        it.put("eventType", this.eventType.name)
+        it.put("operation", this.operation.name)
+        it.put("type", this.type)
+        it.put("start", this.start.toConnectValue(schema.field("start").schema()))
+        it.put("end", this.end.toConnectValue(schema.field("end").schema()))
+        it.put("key", DynamicTypes.valueFor(schema.field("key").schema(), this.key))
+        it.put(
+            "state",
+            schema.field("state").schema().let { stateSchema ->
+              Struct(stateSchema)
+                  .put("before", this.before.toConnectValue(stateSchema.field("before").schema()))
+                  .put("after", this.after.toConnectValue(stateSchema.field("after").schema()))
+            })
+      }
+
+  private fun NodeState?.toConnectSchema(): Schema {
+    if (this == null) {
       return SchemaBuilder.struct()
           .namespaced("cdc.EmptyNodeState")
           .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
@@ -228,16 +194,46 @@ object ChangeEventExtensions {
         .field(
             "properties",
             SchemaBuilder.struct()
-                .apply {
-                  state.properties.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) }
+                .also {
+                  this.properties.forEach { entry ->
+                    it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                  }
                 }
                 .build())
         .optional()
         .build()
   }
 
-  private fun schemaFor(state: RelationshipState?): Schema {
-    if (state == null) {
+  private fun NodeState?.toConnectValue(schema: Schema): Struct? =
+      if (this == null) {
+        null
+      } else {
+        Struct(schema).also {
+          it.put("labels", this.labels)
+          it.put(
+              "properties",
+              DynamicTypes.valueFor(schema.field("properties").schema(), this.properties))
+        }
+      }
+
+  private fun Node.toConnectSchema(): Schema {
+    return SchemaBuilder.struct()
+        .namespaced("cdc.Node")
+        .field("elementId", SimpleTypes.STRING.schema)
+        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+        .field("keys", DynamicTypes.schemaFor(this.keys, true))
+        .build()
+  }
+
+  private fun Node.toConnectValue(schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("elementId", this.elementId)
+        it.put("labels", this.labels)
+        it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
+      }
+
+  private fun RelationshipState?.toConnectSchema(): Schema {
+    if (this == null) {
       return SchemaBuilder.struct()
           .namespaced("cdc.EmptyRelationshipState")
           .field("properties", SchemaBuilder.struct().build())
@@ -250,20 +246,38 @@ object ChangeEventExtensions {
         .field(
             "properties",
             SchemaBuilder.struct()
-                .apply {
-                  state.properties.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) }
+                .also {
+                  this.properties.forEach { entry ->
+                    it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                  }
                 }
                 .build())
         .optional()
         .build()
   }
 
-  private fun schemaFor(node: Node): Schema {
+  private fun RelationshipState?.toConnectValue(schema: Schema): Struct? =
+      if (this == null) {
+        null
+      } else {
+        Struct(schema).also {
+          it.put(
+              "properties",
+              DynamicTypes.valueFor(schema.field("properties").schema(), this.properties))
+        }
+      }
+
+  private fun schemaForKeys(keys: Map<String, Map<String, Any>>): Schema {
     return SchemaBuilder.struct()
-        .namespaced("cdc.Node")
-        .field("elementId", SimpleTypes.STRING.schema)
-        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
-        .field("keys", DynamicTypes.schemaFor(node.keys, true))
+        .apply { keys.forEach { field(it.key, schemaForKey(it.value)) } }
+        .optional()
+        .build()
+  }
+
+  private fun schemaForKey(key: Map<String, Any>): Schema {
+    return SchemaBuilder.struct()
+        .apply { key.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) } }
+        .optional()
         .build()
   }
 }

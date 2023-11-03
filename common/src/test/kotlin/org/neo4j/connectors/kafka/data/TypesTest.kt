@@ -16,554 +16,337 @@
  */
 package org.neo4j.connectors.kafka.data
 
-import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.assertions.withClue
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.throwable.shouldHaveMessage
-import java.nio.ByteBuffer
-import java.time.Duration
+import io.kotest.matchers.types.beInstanceOf
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.OffsetTime
-import java.time.ZoneId
 import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.util.function.Function
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Named
 import org.junit.jupiter.api.Test
-import org.neo4j.driver.Value
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.neo4j.cdc.client.CDCClient
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
 import org.neo4j.driver.Values
-import org.neo4j.driver.types.Node
-import org.neo4j.driver.types.Relationship
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 
-class DynamicTypesSchemaTest {
+@Testcontainers
+class TypesTest {
+  companion object {
+    @Container
+    val neo4j: Neo4jContainer<*> =
+        Neo4jContainer("neo4j:5-enterprise")
+            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withNeo4jConfig("internal.dbms.change_data_capture", "true")
+            .withoutAuthentication()
 
-  @Test
-  fun `should derive schema for simple types correctly`() {
-    // NULL
-    DynamicTypes.schemaFor(null, false) shouldBe SchemaBuilder.struct().optional().build()
-    DynamicTypes.schemaFor(null, true) shouldBe SchemaBuilder.struct().optional().build()
+    private lateinit var driver: Driver
+    private lateinit var session: Session
 
-    // Integer, Long, etc.
-    listOf<Any>(8.toByte(), 8.toShort(), 8.toInt(), 8.toLong()).forEach { number ->
-      withClue(number) {
-        DynamicTypes.schemaFor(number, false) shouldBe SchemaBuilder.INT64_SCHEMA
-        DynamicTypes.schemaFor(number, true) shouldBe SchemaBuilder.OPTIONAL_INT64_SCHEMA
-      }
+    @BeforeAll
+    @JvmStatic
+    fun setUpContainer() {
+      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
+      session = driver.session()
     }
 
-    // Float, Double
-    listOf<Any>(8.toFloat(), 8.toDouble()).forEach { number ->
-      withClue(number) {
-        DynamicTypes.schemaFor(number, false) shouldBe SchemaBuilder.FLOAT64_SCHEMA
-        DynamicTypes.schemaFor(number, true) shouldBe SchemaBuilder.OPTIONAL_FLOAT64_SCHEMA
-      }
+    @AfterAll
+    @JvmStatic
+    fun tearDownContainer() {
+      session.close()
+      driver.close()
     }
+  }
 
-    // String
-    listOf<Any>(
-            "a string",
-            "a char array".toCharArray(),
-            StringBuilder("a string builder"),
-            StringBuffer("a string buffer"))
-        .forEach { string ->
-          withClue(string) {
-            DynamicTypes.schemaFor(string, false) shouldBe SchemaBuilder.STRING_SCHEMA
-            DynamicTypes.schemaFor(string, true) shouldBe SchemaBuilder.OPTIONAL_STRING_SCHEMA
-          }
-        }
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("org.neo4j.connectors.kafka.data.TypesTest\$SimpleDriverValues#values")
+  fun `should build schema and values out of simple driver values`(
+      input: Any,
+      expectedSchema: Schema,
+      expectedValue: Any
+  ) {
+    driver.session().use {
+      val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
+      val schema = DynamicTypes.schemaFor(returned)
+      val converted = DynamicTypes.valueFor(schema, returned)
 
-    // Byte Array
-    listOf<Any>(ByteArray(0), ByteBuffer.allocate(0)).forEach { bytes ->
-      withClue(bytes) {
-        DynamicTypes.schemaFor(bytes, false) shouldBe SchemaBuilder.BYTES_SCHEMA
-        DynamicTypes.schemaFor(bytes, true) shouldBe SchemaBuilder.OPTIONAL_BYTES_SCHEMA
-      }
+      schema shouldBe expectedSchema
+      converted shouldBe expectedValue
     }
-
-    // Boolean Array
-    listOf<Any>(BooleanArray(0), Array(1) { true }).forEach { array ->
-      withClue(array) {
-        DynamicTypes.schemaFor(array, false) shouldBe
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).build()
-        DynamicTypes.schemaFor(array, true) shouldBe
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).optional().build()
-      }
-    }
-
-    // Int Arrays
-    listOf(
-            ShortArray(1),
-            IntArray(1),
-            LongArray(1),
-            Array(1) { i -> i },
-            Array(1) { i -> i.toShort() },
-            Array(1) { i -> i.toLong() })
-        .forEach { array ->
-          withClue(array) {
-            DynamicTypes.schemaFor(array, false) shouldBe
-                SchemaBuilder.array(Schema.INT64_SCHEMA).build()
-            DynamicTypes.schemaFor(array, true) shouldBe
-                SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build()
-          }
-        }
-
-    // Float Arrays
-    listOf(
-            FloatArray(1),
-            DoubleArray(1),
-            Array(1) { i -> i.toFloat() },
-            Array(1) { i -> i.toDouble() })
-        .forEach { array ->
-          withClue(array) {
-            DynamicTypes.schemaFor(array, false) shouldBe
-                SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
-            DynamicTypes.schemaFor(array, true) shouldBe
-                SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build()
-          }
-        }
-
-    // String Array
-    DynamicTypes.schemaFor(Array(1) { "a" }, false) shouldBe
-        SchemaBuilder.array(Schema.STRING_SCHEMA).build()
-    DynamicTypes.schemaFor(Array(1) { "a" }, true) shouldBe
-        SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build()
-
-    // Temporal Types
-    DynamicTypes.schemaFor(LocalDate.of(1999, 12, 31), false) shouldBe SimpleTypes.LOCALDATE.schema
-    DynamicTypes.schemaFor(LocalDate.of(1999, 12, 31), true) shouldBe
-        SimpleTypes.LOCALDATE_NULLABLE.schema
-
-    DynamicTypes.schemaFor(LocalTime.of(23, 59, 59), false) shouldBe SimpleTypes.LOCALTIME.schema
-    DynamicTypes.schemaFor(LocalTime.of(23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALTIME_NULLABLE.schema
-
-    DynamicTypes.schemaFor(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALDATETIME.schema
-    DynamicTypes.schemaFor(LocalDateTime.of(1999, 12, 31, 23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALDATETIME_NULLABLE.schema
-
-    DynamicTypes.schemaFor(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.OFFSETTIME.schema
-    DynamicTypes.schemaFor(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.OFFSETTIME_NULLABLE.schema
-
-    DynamicTypes.schemaFor(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema
-    DynamicTypes.schemaFor(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_NULLABLE.schema
-
-    DynamicTypes.schemaFor(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema
-    DynamicTypes.schemaFor(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_NULLABLE.schema
-
-    DynamicTypes.schemaFor(Duration.parse("P1DT23H59M59S"), false) shouldBe
-        SimpleTypes.DURATION.schema
-    DynamicTypes.schemaFor(Duration.parse("P1DT23H59M59S"), true) shouldBe
-        SimpleTypes.DURATION_NULLABLE.schema
-
-    DynamicTypes.schemaFor(Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe
-        SimpleTypes.DURATION.schema
-    DynamicTypes.schemaFor(Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), true) shouldBe
-        SimpleTypes.DURATION_NULLABLE.schema
-
-    // Point
-    listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
-        .forEach { point ->
-          withClue(point) {
-            DynamicTypes.schemaFor(point, false) shouldBe SimpleTypes.POINT.schema
-            DynamicTypes.schemaFor(point, true) shouldBe SimpleTypes.POINT_NULLABLE.schema
-          }
-        }
-
-    // Node
-    DynamicTypes.schemaFor(
-        TestNode(
-            0,
-            listOf("Person"),
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
-        false) shouldBe
-        SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.Node")
-            .field("<id>", Schema.INT64_SCHEMA)
-            .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field("name", Schema.STRING_SCHEMA)
-            .field("surname", Schema.STRING_SCHEMA)
-            .build()
-
-    // Relationship
-    DynamicTypes.schemaFor(
-        TestRelationship(
-            0,
-            1,
-            2,
-            "KNOWS",
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
-        false) shouldBe
-        SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.Relationship")
-            .field("<id>", Schema.INT64_SCHEMA)
-            .field("<type>", SchemaBuilder.STRING_SCHEMA)
-            .field("<start.id>", Schema.INT64_SCHEMA)
-            .field("<end.id>", Schema.INT64_SCHEMA)
-            .field("name", Schema.STRING_SCHEMA)
-            .field("surname", Schema.STRING_SCHEMA)
-            .build()
   }
 
   @Test
-  fun `empty collections should map to an empty struct`() {
-    listOf<Any>(listOf<Any>(), setOf<Any>()).forEach { collection ->
-      withClue(collection) {
-        DynamicTypes.schemaFor(collection, false) shouldBe SchemaBuilder.struct().build()
-        DynamicTypes.schemaFor(collection, true) shouldBe SchemaBuilder.struct().optional().build()
+  fun `should build schema and values out of nodes and relationships`() {
+    driver.session().use {
+      val record =
+          it.run(
+                  """
+                CREATE (p:Person) SET p = ${'$'}person
+                CREATE (c:Company) SET c =${'$'}company
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                RETURN p, c, r
+              """
+                      .trimIndent(),
+                  mapOf(
+                      "person" to
+                          mapOf(
+                              "name" to "john",
+                              "surname" to "doe",
+                              "dob" to LocalDate.of(1999, 12, 31)),
+                      "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
+                      "works_for" to
+                          mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+              .single()
+
+      val person = record.get("p").asNode()
+      schemaAndValue(person).also { (schema, value) ->
+        schema shouldBe
+            SchemaBuilder.struct()
+                .name("org.neo4j.connectors.kafka.Node")
+                .field("<id>", SimpleTypes.LONG.schema)
+                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+                .field("name", SimpleTypes.STRING.schema)
+                .field("surname", SimpleTypes.STRING.schema)
+                .field("dob", SimpleTypes.LOCALDATE.schema)
+                .build()
+
+        value shouldBe
+            Struct(schema)
+                .put("<id>", person.id())
+                .put("<labels>", person.labels().toList())
+                .put("name", "john")
+                .put("surname", "doe")
+                .put("dob", "1999-12-31")
+      }
+
+      val company = record.get("c").asNode()
+      schemaAndValue(company).also { (schema, value) ->
+        schema shouldBe
+            SchemaBuilder.struct()
+                .name("org.neo4j.connectors.kafka.Node")
+                .field("<id>", SimpleTypes.LONG.schema)
+                .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
+                .field("name", SimpleTypes.STRING.schema)
+                .field("est", SimpleTypes.LOCALDATE.schema)
+                .build()
+
+        value shouldBe
+            Struct(schema)
+                .put("<id>", company.id())
+                .put("<labels>", company.labels().toList())
+                .put("name", "acme corp")
+                .put("est", "1980-01-01")
+      }
+
+      val worksFor = record.get("r").asRelationship()
+      schemaAndValue(worksFor).also { (schema, value) ->
+        schema shouldBe
+            SchemaBuilder.struct()
+                .name("org.neo4j.connectors.kafka.Relationship")
+                .field("<id>", SimpleTypes.LONG.schema)
+                .field("<type>", SimpleTypes.STRING.schema)
+                .field("<start.id>", SimpleTypes.LONG.schema)
+                .field("<end.id>", SimpleTypes.LONG.schema)
+                .field("contractId", SimpleTypes.LONG.schema)
+                .field("since", SimpleTypes.LOCALDATE.schema)
+                .build()
+
+        value shouldBe
+            Struct(schema)
+                .put("<id>", worksFor.id())
+                .put("<type>", worksFor.type())
+                .put("<start.id>", worksFor.startNodeId())
+                .put("<end.id>", worksFor.endNodeId())
+                .put("contractId", 5916L)
+                .put("since", "2000-01-05")
       }
     }
   }
 
   @Test
-  fun `collections with elements of single type should map to an array`() {
-    listOf<Pair<Any, Schema>>(
-            listOf(1, 2, 3) to Schema.INT64_SCHEMA,
-            listOf("a", "b", "c") to Schema.STRING_SCHEMA,
-            setOf(true) to Schema.BOOLEAN_SCHEMA)
-        .forEach { (collection, elementSchema) ->
-          withClue(collection) {
-            DynamicTypes.schemaFor(collection, false) shouldBe
-                SchemaBuilder.array(elementSchema).build()
-            DynamicTypes.schemaFor(collection, true) shouldBe
-                SchemaBuilder.array(elementSchema).optional().build()
-          }
-        }
-  }
+  fun `should build schema and value for change events`() {
+    // set-up cdc
+    driver.session().use {
+      it.run("CREATE OR REPLACE DATABASE neo4j OPTIONS { txLogEnrichment: 'FULL' } WAIT").consume()
 
-  @Test
-  fun `collections with elements of different types should map to a struct`() {
-    DynamicTypes.schemaFor(listOf(1, true, "a", 5.toFloat()), false) shouldBe
-        SchemaBuilder.struct()
-            .field("e0", Schema.INT64_SCHEMA)
-            .field("e1", Schema.BOOLEAN_SCHEMA)
-            .field("e2", Schema.STRING_SCHEMA)
-            .field("e3", Schema.FLOAT64_SCHEMA)
-            .build()
+      // set-up constraints
+      it.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE (n.name, n.surname) IS KEY").consume()
+      it.run("CREATE CONSTRAINT FOR (n:Company) REQUIRE (n.name) IS KEY").consume()
+      it.run("CREATE CONSTRAINT FOR ()-[r:WORKS_FOR]->() REQUIRE (r.contractId) IS KEY").consume()
+    }
 
-    DynamicTypes.schemaFor(listOf(1, true, "a", 5.toFloat()), true) shouldBe
-        SchemaBuilder.struct()
-            .field("e0", Schema.INT64_SCHEMA)
-            .field("e1", Schema.BOOLEAN_SCHEMA)
-            .field("e2", Schema.STRING_SCHEMA)
-            .field("e3", Schema.FLOAT64_SCHEMA)
-            .optional()
-            .build()
-  }
+    val cdc = CDCClient(driver)
+    val changeId = cdc.current().block()
+    driver.session().use {
+      it.run(
+              """
+                CREATE (p:Person) SET p = ${'$'}person
+                CREATE (c:Company) SET c =${'$'}company
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+              """
+                  .trimIndent(),
+              mapOf(
+                  "person" to
+                      mapOf(
+                          "name" to "john",
+                          "surname" to "doe",
+                          "dob" to LocalDate.of(1999, 12, 31)),
+                  "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
+                  "works_for" to mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+          .consume()
 
-  @Test
-  fun `empty maps should map to an empty struct`() {
-    DynamicTypes.schemaFor(mapOf<String, Any>(), false) shouldBe SchemaBuilder.struct().build()
-    DynamicTypes.schemaFor(mapOf<String, Any>(), true) shouldBe
-        SchemaBuilder.struct().optional().build()
-  }
+      val changes = cdc.query(changeId).collectList().block()
 
-  @Test
-  fun `map keys should be enforced to be a string`() {
-    shouldThrow<IllegalArgumentException> {
-      DynamicTypes.schemaFor(mapOf(1 to 5, "a" to "b"), false)
-    } shouldHaveMessage ("unsupported map key type java.lang.Integer")
-  }
+      changes!!.take(2).forEach { change ->
+        val converted = change.toConnectValue()
+        val schema = converted.schema()
+        val value = converted.value() as Struct
 
-  @Test
-  fun `maps with single typed values should map to a map`() {
-    listOf(
-            mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.INT64_SCHEMA,
-            mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.INT64_SCHEMA)
-        .forEach { (map, valueSchema) ->
-          withClue("not optional: $map") {
-            DynamicTypes.schemaFor(map, false) shouldBe
-                SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).build()
-          }
-        }
+        schema.type() shouldBe Schema.Type.STRUCT
+        schema.name() shouldBe "org.neo4j.connectors.kafka.cdc.ChangeEvent"
+        schema.field("event").schema() should
+            { eventSchema ->
+              eventSchema.type() shouldBe Schema.Type.STRUCT
+              eventSchema.name() shouldBe "org.neo4j.connectors.kafka.cdc.NodeEvent"
+            }
+        value.get("event") should beInstanceOf<Struct>()
+      }
 
-    listOf(
-            mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.OPTIONAL_INT64_SCHEMA,
-            mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.OPTIONAL_STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.OPTIONAL_INT64_SCHEMA)
-        .forEach { (map, valueSchema) ->
-          withClue("optional: $map") {
-            DynamicTypes.schemaFor(map, true) shouldBe
-                SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).optional().build()
-          }
-        }
-  }
+      changes[2].also { change ->
+        val converted = change.toConnectValue()
+        val schema = converted.schema()
+        val value = converted.value() as Struct
 
-  @Test
-  fun `maps with values of different types should map to a struct`() {
-    DynamicTypes.schemaFor(
-        mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()), false) shouldBe
-        SchemaBuilder.struct()
-            .field("a", Schema.INT64_SCHEMA)
-            .field("b", Schema.BOOLEAN_SCHEMA)
-            .field("c", Schema.STRING_SCHEMA)
-            .field("d", Schema.FLOAT64_SCHEMA)
-            .build()
-
-    DynamicTypes.schemaFor(
-        mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()), true) shouldBe
-        SchemaBuilder.struct()
-            .field("a", Schema.OPTIONAL_INT64_SCHEMA)
-            .field("b", Schema.OPTIONAL_BOOLEAN_SCHEMA)
-            .field("c", Schema.OPTIONAL_STRING_SCHEMA)
-            .field("d", Schema.OPTIONAL_FLOAT64_SCHEMA)
-            .optional()
-            .build()
-  }
-
-  @Test
-  fun `unsupported types should throw`() {
-    data class Test(val a: String)
-
-    listOf(object {}, java.sql.Date(0), object : Entity(emptyMap()) {}, Test("a string")).forEach {
-        value ->
-      shouldThrow<IllegalArgumentException> { DynamicTypes.schemaFor(value, false) }
+        schema.type() shouldBe Schema.Type.STRUCT
+        schema.name() shouldBe "org.neo4j.connectors.kafka.cdc.ChangeEvent"
+        schema.field("event").schema() should
+            { eventSchema ->
+              eventSchema.type() shouldBe Schema.Type.STRUCT
+              eventSchema.name() shouldBe "org.neo4j.connectors.kafka.cdc.RelationshipEvent"
+            }
+        value.get("event") should beInstanceOf<Struct>()
+      }
     }
   }
-}
 
-class DynamicTypesValueTest {
+  @Suppress("unused")
+  object SimpleDriverValues {
 
-  @Test
-  fun `simple types should be returned as themselves`() {
-    listOf(
-            true to true,
-            false to false,
-            1.toShort() to 1.toLong(),
-            2 to 2.toLong(),
-            3.toLong() to 3.toLong(),
-            4.toFloat() to 4.toDouble(),
-            5.toDouble() to 5.toDouble(),
-            'c' to "c",
-            "string" to "string",
-            "string".toCharArray() to "string",
-            "string".toByteArray() to "string".toByteArray())
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.schemaFor(value, false)
-            val converted = DynamicTypes.valueFor(schema, value)
-
-            converted shouldBe expected
-          }
-        }
+    @JvmStatic
+    fun values(): List<Arguments> {
+      return listOf(
+          Arguments.of(Named.of("boolean", true), SimpleTypes.BOOLEAN.schema, true),
+          Arguments.of(Named.of("long", 1), SimpleTypes.LONG.schema, 1L),
+          Arguments.of(Named.of("float", 1.0), SimpleTypes.FLOAT.schema, 1.0),
+          Arguments.of(Named.of("string", "a string"), SimpleTypes.STRING.schema, "a string"),
+          Arguments.of(
+              Named.of("local date", LocalDate.of(1999, 12, 31)),
+              SimpleTypes.LOCALDATE.schema,
+              "1999-12-31"),
+          Arguments.of(
+              Named.of("local time", LocalTime.of(23, 59, 59, 5)),
+              SimpleTypes.LOCALTIME.schema,
+              "23:59:59.000000005"),
+          Arguments.of(
+              Named.of("local date time", LocalDateTime.of(1999, 12, 31, 23, 59, 59, 5)),
+              SimpleTypes.LOCALDATETIME.schema,
+              "1999-12-31T23:59:59.000000005"),
+          Arguments.of(
+              Named.of("offset time", OffsetTime.of(23, 59, 59, 5, ZoneOffset.ofHours(1))),
+              SimpleTypes.OFFSETTIME.schema,
+              "23:59:59.000000005+01:00"),
+          Arguments.of(
+              Named.of(
+                  "offset date time",
+                  OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneOffset.ofHours(1))),
+              SimpleTypes.ZONEDDATETIME.schema,
+              "1999-12-31T23:59:59.000000005+01:00"),
+          Arguments.of(
+              Named.of("duration", Values.isoDuration(5, 2, 23, 5).asIsoDuration()),
+              SimpleTypes.DURATION.schema,
+              "P5M2DT23.000000005S"),
+          Arguments.of(
+              Named.of("point - 2d", Values.point(7203, 2.3, 4.5).asPoint()),
+              SimpleTypes.POINT.schema,
+              Struct(SimpleTypes.POINT.schema)
+                  .put("srid", 7203)
+                  .put("x", 2.3)
+                  .put("y", 4.5)
+                  .put("z", Double.NaN)),
+          Arguments.of(
+              Named.of("point - 3d", Values.point(4979, 12.78, 56.7, 100.0).asPoint()),
+              SimpleTypes.POINT.schema,
+              Struct(SimpleTypes.POINT.schema)
+                  .put("srid", 4979)
+                  .put("x", 12.78)
+                  .put("y", 56.7)
+                  .put("z", 100.0)),
+          Arguments.of(
+              Named.of("list - uniformly typed elements", (1..50)),
+              SchemaBuilder.array(SimpleTypes.LONG.schema).build(),
+              (1L..50L).toList()),
+          Arguments.of(
+              Named.of("list - non-uniformly typed elements", listOf(1, true, 2.0, "a string")),
+              SchemaBuilder.struct()
+                  .field("e0", SimpleTypes.LONG.schema)
+                  .field("e1", SimpleTypes.BOOLEAN.schema)
+                  .field("e2", SimpleTypes.FLOAT.schema)
+                  .field("e3", SimpleTypes.STRING.schema)
+                  .build(),
+              Struct(
+                      SchemaBuilder.struct()
+                          .field("e0", SimpleTypes.LONG.schema)
+                          .field("e1", SimpleTypes.BOOLEAN.schema)
+                          .field("e2", SimpleTypes.FLOAT.schema)
+                          .field("e3", SimpleTypes.STRING.schema)
+                          .build())
+                  .put("e0", 1L)
+                  .put("e1", true)
+                  .put("e2", 2.0)
+                  .put("e3", "a string")),
+          Arguments.of(
+              Named.of("map - uniformly typed values", mapOf("a" to 1, "b" to 2, "c" to 3)),
+              SchemaBuilder.map(SimpleTypes.STRING.schema, SimpleTypes.LONG.schema).build(),
+              mapOf("a" to 1, "b" to 2, "c" to 3)),
+          Arguments.of(
+              Named.of(
+                  "map - non-uniformly typed values", mapOf("a" to 1, "b" to true, "c" to 3.0)),
+              SchemaBuilder.struct()
+                  .field("a", SimpleTypes.LONG.schema)
+                  .field("b", SimpleTypes.BOOLEAN.schema)
+                  .field("c", SimpleTypes.FLOAT.schema)
+                  .build(),
+              Struct(
+                      SchemaBuilder.struct()
+                          .field("a", SimpleTypes.LONG.schema)
+                          .field("b", SimpleTypes.BOOLEAN.schema)
+                          .field("c", SimpleTypes.FLOAT.schema)
+                          .build())
+                  .put("a", 1L)
+                  .put("b", true)
+                  .put("c", 3.0)))
+    }
   }
 
-  @Test
-  fun `temporal types should be returned as strings`() {
-    listOf(
-            LocalDate.of(1999, 12, 31) to "1999-12-31",
-            LocalTime.of(23, 59, 59, 9999) to "23:59:59.000009999",
-            LocalDateTime.of(1999, 12, 31, 23, 59, 59, 9999) to "1999-12-31T23:59:59.000009999",
-            OffsetTime.of(23, 59, 59, 9999, ZoneOffset.UTC) to "23:59:59.000009999Z",
-            OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneOffset.ofHours(1)) to
-                "1999-12-31T23:59:59.000009999+01:00",
-            ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneId.of("Europe/Istanbul")) to
-                "1999-12-31T23:59:59.000009999+02:00[Europe/Istanbul]",
-            Duration.parse("P2DT6H4M0.9999S") to "PT54H4M0.9999S",
-            Values.isoDuration(5, 2, 0, 9999).asIsoDuration() to "P5M2DT0.000009999S")
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.schemaFor(value, false)
-            val converted = DynamicTypes.valueFor(schema, value)
-
-            converted shouldBe expected
-          }
-        }
+  private fun schemaAndValue(value: Any): Pair<Schema, Any?> {
+    val schema = DynamicTypes.schemaFor(value)
+    val converted = DynamicTypes.valueFor(schema, value)
+    return Pair(schema, converted)
   }
-
-  @Test
-  fun `arrays and collections should be returned as arrays`() {
-    listOf(
-            ShortArray(1) { 1 } to LongArray(1) { 1.toLong() },
-            IntArray(1) { 1 } to LongArray(1) { 1.toLong() },
-            LongArray(1) { 1 } to LongArray(1) { 1 },
-            FloatArray(1) { 1F } to DoubleArray(1) { 1.0 },
-            DoubleArray(1) { 1.0 } to DoubleArray(1) { 1.0 },
-            BooleanArray(1) { true } to BooleanArray(1) { true },
-            Array(1) { 1 } to Array(1) { 1L },
-            Array(1) { 1.toShort() } to Array(1) { 1L },
-            Array(1) { "string" } to Array(1) { "string" },
-            listOf(1, 2, 3) to arrayOf(1L, 2L, 3L),
-            listOf("a", "b", "c") to arrayOf("a", "b", "c"),
-            setOf(true, false) to arrayOf(true, false))
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.schemaFor(value, false)
-            val converted = DynamicTypes.valueFor(schema, value)
-
-            converted shouldBe expected
-          }
-        }
-  }
-
-  @Test
-  fun `maps should be returned as maps`() {
-    listOf(
-            mapOf("a" to "x", "b" to "y", "c" to "z") to mapOf("a" to "x", "b" to "y", "c" to "z"),
-            mapOf("a" to 1, "b" to 2, "c" to 3) to mapOf("a" to 1L, "b" to 2L, "c" to 3L))
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.schemaFor(value, false)
-            val converted = DynamicTypes.valueFor(schema, value)
-
-            converted shouldBe expected
-          }
-        }
-  }
-
-  @Test
-  fun `points should be returned as structs`() {
-    listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
-        .forEach { point ->
-          val schema = DynamicTypes.schemaFor(point, false)
-          val converted = DynamicTypes.valueFor(schema, point)
-
-          converted shouldBe
-              Struct(schema)
-                  .put("srid", point.srid())
-                  .put("x", point.x())
-                  .put("y", point.y())
-                  .put("z", point.z())
-        }
-  }
-
-  @Test
-  fun `nodes should be returned as structs`() {
-    val node =
-        TestNode(
-            0,
-            listOf("Person", "Employee"),
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
-    val schema = DynamicTypes.schemaFor(node, false)
-    val converted = DynamicTypes.valueFor(schema, node)
-
-    converted shouldBe
-        Struct(schema)
-            .put("<id>", 0L)
-            .put("<labels>", listOf("Person", "Employee"))
-            .put("name", "john")
-            .put("surname", "doe")
-  }
-
-  @Test
-  fun `relationships should be returned as structs`() {
-    val rel =
-        TestRelationship(
-            0,
-            1,
-            2,
-            "KNOWS",
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
-    val schema = DynamicTypes.schemaFor(rel, false)
-    val converted = DynamicTypes.valueFor(schema, rel)
-
-    converted shouldBe
-        Struct(schema)
-            .put("<id>", 0L)
-            .put("<start.id>", 1L)
-            .put("<end.id>", 2L)
-            .put("<type>", "KNOWS")
-            .put("name", "john")
-            .put("surname", "doe")
-  }
-
-  @Test
-  fun `maps with values of different types should be returned as structs`() {
-    val map =
-        mapOf(
-            "name" to "john",
-            "age" to 21,
-            "dob" to LocalDate.of(1999, 12, 31),
-            "employed" to true,
-            "nullable" to null)
-    val schema = DynamicTypes.schemaFor(map, false)
-    val converted = DynamicTypes.valueFor(schema, map)
-
-    converted shouldBe
-        Struct(schema)
-            .put("name", "john")
-            .put("age", 21L)
-            .put("dob", "1999-12-31")
-            .put("employed", true)
-            .put("nullable", null)
-  }
-
-  @Test
-  fun `collections with elements of different types should be returned as struct`() {
-    val coll = listOf("john", 21, LocalDate.of(1999, 12, 31), true, null)
-    val schema = DynamicTypes.schemaFor(coll, false)
-    val converted = DynamicTypes.valueFor(schema, coll)
-
-    converted shouldBe
-        Struct(schema)
-            .put("e0", "john")
-            .put("e1", 21L)
-            .put("e2", "1999-12-31")
-            .put("e3", true)
-            .put("e4", null)
-  }
-}
-
-private abstract class Entity(val props: Map<String, Value>) {
-  fun keys(): Iterable<String> = props.keys
-
-  fun containsKey(key: String?): Boolean = props.containsKey(key)
-
-  fun get(key: String?): Value? = props[key]
-
-  fun size(): Int = props.size
-
-  fun values(): Iterable<Value> = props.values
-
-  fun <T : Any?> values(mapFunction: Function<Value, T>): Iterable<T> =
-      props.values.map { mapFunction.apply(it) }
-
-  fun asMap(): Map<String, Any> = props
-
-  fun <T : Any?> asMap(mapFunction: Function<Value, T>): Map<String, T> =
-      props.mapValues { mapFunction.apply(it.value) }
-}
-
-private class TestNode(val id: Long, val labels: List<String>, props: Map<String, Value>) :
-    Entity(props), Node {
-
-  override fun id(): Long = id
-
-  override fun labels(): Iterable<String> = labels
-
-  override fun hasLabel(label: String?): Boolean = label in labels
-}
-
-private class TestRelationship(
-    val id: Long,
-    val startId: Long,
-    val endId: Long,
-    val type: String,
-    props: Map<String, Value>
-) : Entity(props), Relationship {
-  override fun id(): Long = id
-
-  override fun startNodeId(): Long = startId
-
-  override fun endNodeId(): Long = endId
-
-  override fun type(): String = type
-
-  override fun hasType(relationshipType: String?): Boolean = type == relationshipType
 }
