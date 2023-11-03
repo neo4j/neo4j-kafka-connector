@@ -193,6 +193,7 @@ class DynamicTypesSchemaTest {
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
         false) shouldBe
         SchemaBuilder.struct()
+            .name("org.neo4j.connectors.kafka.Node")
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .field("name", Schema.STRING_SCHEMA)
@@ -209,6 +210,7 @@ class DynamicTypesSchemaTest {
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
         false) shouldBe
         SchemaBuilder.struct()
+            .name("org.neo4j.connectors.kafka.Relationship")
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
             .field("<start.id>", Schema.INT64_SCHEMA)

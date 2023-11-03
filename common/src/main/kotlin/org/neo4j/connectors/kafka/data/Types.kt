@@ -238,6 +238,7 @@ object DynamicTypes {
         is Point -> if (optional) SimpleTypes.POINT_NULLABLE.schema else SimpleTypes.POINT.schema
         is Node ->
             SchemaBuilder.struct()
+                .namespaced("Node")
                 .apply {
                   field("<id>", SimpleTypes.LONG.schema)
                   field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema).build())
@@ -249,6 +250,7 @@ object DynamicTypes {
                 .build()
         is Relationship ->
             SchemaBuilder.struct()
+                .namespaced("Relationship")
                 .apply {
                   field("<id>", SimpleTypes.LONG.schema)
                   field("<type>", SimpleTypes.STRING.schema)
