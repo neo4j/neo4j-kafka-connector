@@ -51,7 +51,6 @@ class Neo4jCdcTaskTest {
     val neo4j: Neo4jContainer<*> =
         Neo4jContainer("neo4j:5-enterprise")
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withEnv("NEO4J_internal_dbms_change__data__capture", "true")
             .withoutAuthentication()
 
     private lateinit var driver: Driver
