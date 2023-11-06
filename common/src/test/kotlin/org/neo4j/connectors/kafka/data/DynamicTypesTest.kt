@@ -69,7 +69,17 @@ class DynamicTypesTest {
             "a string",
             "a char array".toCharArray(),
             StringBuilder("a string builder"),
-            StringBuffer("a string buffer"))
+            StringBuffer("a string buffer"),
+            object : CharSequence {
+              private val value = "a char sequence"
+              override val length: Int
+                get() = value.length
+
+              override fun get(index: Int): Char = value[index]
+
+              override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
+                  value.subSequence(startIndex, endIndex)
+            })
         .forEach { string ->
           withClue(string) {
             DynamicTypes.schemaFor(string, false) shouldBe SchemaBuilder.STRING_SCHEMA
