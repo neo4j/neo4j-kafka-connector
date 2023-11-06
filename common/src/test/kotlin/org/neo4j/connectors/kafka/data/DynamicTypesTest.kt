@@ -187,6 +187,13 @@ class DynamicTypesTest {
         }
 
     // Node
+    DynamicTypes.schemaFor(TestNode(0, emptyList(), emptyMap()), false) shouldBe
+        SchemaBuilder.struct()
+            .name("org.neo4j.connectors.kafka.Node")
+            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+            .build()
+
     DynamicTypes.schemaFor(
         TestNode(
             0,
@@ -202,6 +209,14 @@ class DynamicTypesTest {
             .build()
 
     // Relationship
+    DynamicTypes.schemaFor(TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
+        SchemaBuilder.struct()
+            .name("org.neo4j.connectors.kafka.Relationship")
+            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<type>", SchemaBuilder.STRING_SCHEMA)
+            .field("<start.id>", Schema.INT64_SCHEMA)
+            .field("<end.id>", Schema.INT64_SCHEMA)
+            .build()
     DynamicTypes.schemaFor(
         TestRelationship(
             0,
