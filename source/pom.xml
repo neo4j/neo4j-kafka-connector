@@ -11,9 +11,6 @@
     <packaging>jar</packaging>
     <name>source</name>
     <description>Neo4j Connector for Kafka - Source</description>
-    <properties>
-        <cdc.version>1.0.3</cdc.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
@@ -22,7 +19,6 @@
         <dependency>
             <groupId>org.neo4j.connectors</groupId>
             <artifactId>cdc</artifactId>
-            <version>${cdc.version}</version>
         </dependency>
         <dependency>
             <groupId>org.neo4j.connectors.kafka</groupId>

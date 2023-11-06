@@ -27,16 +27,14 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
-import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.cdc.client.CDCClient
 import org.neo4j.cdc.client.CDCService
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
-import org.neo4j.cdc.client.model.NodeEvent
-import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -119,18 +117,17 @@ class Neo4jCdcTask : SourceTask() {
       if (it.key.matches(changeEvent)) {
         result.addAll(
             it.value.map { topic ->
+              val transformed = it.key.applyProperties(changeEvent)
+              val transformedValue = transformed.toConnectValue()
+
               SourceRecord(
                   config.partition,
                   mapOf("value" to changeEvent.id.id),
                   topic,
-                  Schema.STRING_SCHEMA,
-                  when (val event = changeEvent.event) {
-                    is NodeEvent -> event.elementId
-                    is RelationshipEvent -> event.elementId
-                    else -> throw IllegalArgumentException("unknown event type: ${event.eventType}")
-                  },
-                  Schema.STRING_SCHEMA,
-                  it.key.applyProperties(changeEvent).toString())
+                  transformedValue.schema(),
+                  transformedValue.value(),
+                  transformedValue.schema(),
+                  transformedValue.value())
             })
       }
     }
