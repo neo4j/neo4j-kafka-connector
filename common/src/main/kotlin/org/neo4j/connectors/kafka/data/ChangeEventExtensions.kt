@@ -68,6 +68,7 @@ object ChangeEventExtensions {
           .field("captureMode", SimpleTypes.STRING.schema())
           .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema())
           .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
+          .field("txMetadata", DynamicTypes.schemaFor(this.txMetadata, true).schema())
           .also {
             this.additionalEntries.forEach { entry ->
               it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
@@ -86,6 +87,9 @@ object ChangeEventExtensions {
         it.put("captureMode", this.captureMode.name)
         it.put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txStartTime))
         it.put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txCommitTime))
+        it.put(
+            "txMetadata",
+            DynamicTypes.valueFor(schema.field("txMetadata").schema(), this.txMetadata))
 
         this.additionalEntries.forEach { entry ->
           it.put(entry.key, DynamicTypes.valueFor(schema.field(entry.key).schema(), entry.value))
