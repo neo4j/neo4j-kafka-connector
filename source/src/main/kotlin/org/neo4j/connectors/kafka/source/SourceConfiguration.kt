@@ -125,7 +125,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 configMap[it.second] = mutableListOf()
               }
 
-              nonPositionalConfigMode.put(it.second, true)
+              nonPositionalConfigMode[it.second] = true
 
               val list = configMap[it.second]!!
               list.add(it.first)
@@ -358,7 +358,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val ENFORCE_SCHEMA = "neo4j.enforce-schema"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
-    private val CDC_PATTERNS_REGEX = Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)+")
+    private val CDC_PATTERNS_REGEX = Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)$")
     private val CDC_PATTERN_ARRAY_REGEX =
         Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.pattern)$")
     private val CDC_PATTERN_ARRAY_OPERATION_REGEX =
