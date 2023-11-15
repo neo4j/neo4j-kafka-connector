@@ -156,12 +156,12 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
-                "neo4j.cdc.topic.topic-1" to ""))
+                "neo4j.cdc.topic.topic-1.patterns" to ""))
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.STRATEGY }
               .errorMessages() shouldContain
-              "Invalid value  for configuration neo4j.cdc.topic.topic-1: Must not be blank."
+              "Invalid value  for configuration neo4j.cdc.topic.topic-1.patterns: Must not be blank."
         }
 
     connector
@@ -170,13 +170,14 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
-                "neo4j.cdc.topic.topic-1" to "(;ABC]"))
+                "neo4j.cdc.topic.topic-1.patterns" to "(;ABC]"))
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.STRATEGY }
               .errorMessages() shouldHaveSingleElement
               {
-                it.startsWith("Invalid value (;ABC] for configuration neo4j.cdc.topic.topic-1:")
+                it.startsWith(
+                    "Invalid value (;ABC] for configuration neo4j.cdc.topic.topic-1.patterns:")
               }
         }
 
@@ -186,7 +187,7 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
-                "neo4j.cdc.topic.topic-1" to "(:Person),()-[:KNOWS]-()",
+                "neo4j.cdc.topic.topic-1.patterns" to "(:Person),()-[:KNOWS]-()",
                 "neo4j.cdc.topic.topic-2.patterns" to "(:Person),()-[:KNOWS]-(;Company)"))
         .apply {
           this.configValues()
@@ -222,7 +223,7 @@ class Neo4jConnectorTest {
             Neo4jConfiguration.URI to "neo4j://localhost",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to "CDC",
-            "neo4j.cdc.topic.topic-1" to "(:Person)"))
+            "neo4j.cdc.topic.topic-1.patterns" to "(:Person)"))
 
     connector.taskClass() shouldBe Neo4jCdcTask::class.java
   }

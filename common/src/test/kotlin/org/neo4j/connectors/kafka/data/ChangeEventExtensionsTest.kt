@@ -802,7 +802,8 @@ class ChangeEventExtensionsTest {
                 "127.0.0.1:7687",
                 ZonedDateTime.now().minusSeconds(1),
                 ZonedDateTime.now(),
-                mapOf("txMetadata" to mapOf("user" to "app_user", "app" to "hr"))),
+                mapOf("user" to "app_user", "app" to "hr"),
+                emptyMap()),
             event)
     val schemaAndValue = change.toConnectValue()
 

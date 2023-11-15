@@ -28,6 +28,8 @@ import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.ConfigException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.selector.EntitySelector
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
@@ -227,7 +229,7 @@ class SourceConfigurationTest {
                 SourceConfiguration.BATCH_SIZE to "10000",
                 SourceConfiguration.ENFORCE_SCHEMA to "true",
                 SourceConfiguration.CDC_POLL_INTERVAL to "5s",
-                "neo4j.cdc.topic.topic-1" to "(),()-[]-()"))
+                "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()"))
 
     config.strategy shouldBe SourceType.CDC
     config.startFrom shouldBe StartFrom.EARLIEST
@@ -236,13 +238,14 @@ class SourceConfigurationTest {
     config.enforceSchema shouldBe true
     config.cdcSelectorsToTopics shouldContainExactly
         mapOf(
-            NodeSelector(null, emptySet(), emptySet(), emptyMap()) to listOf("topic-1"),
+            NodeSelector(null, emptySet(), emptySet(), emptyMap(), emptyMap()) to listOf("topic-1"),
             RelationshipSelector(
                 null,
                 emptySet(),
                 null,
                 RelationshipNodeSelector(emptySet(), emptyMap()),
                 RelationshipNodeSelector(emptySet(), emptyMap()),
+                emptyMap(),
                 emptyMap()) to listOf("topic-1"))
   }
 
@@ -257,11 +260,18 @@ class SourceConfigurationTest {
                 SourceConfiguration.BATCH_SIZE to "10000",
                 SourceConfiguration.ENFORCE_SCHEMA to "true",
                 SourceConfiguration.CDC_POLL_INTERVAL to "5s",
-                "neo4j.cdc.topic.people" to "(:Person)",
-                "neo4j.cdc.topic.company" to "(:Company)",
-                "neo4j.cdc.topic.works_for" to "(:Person)-[:WORKS_FOR]->(:Company)",
-                "neo4j.cdc.topic.topic-1" to "(:Person)",
-                "neo4j.cdc.topic.topic-2" to "(:Person {id})"))
+                "neo4j.cdc.topic.people.patterns" to "(:Person)",
+                "neo4j.cdc.topic.company.patterns" to "(:Company)",
+                "neo4j.cdc.topic.works_for.patterns" to "(:Person)-[:WORKS_FOR]->(:Company)",
+                "neo4j.cdc.topic.topic-1.patterns" to "(:Person)",
+                "neo4j.cdc.topic.topic-2.patterns" to "(:Person {id})",
+                "neo4j.cdc.topic.topic-3.patterns.0.pattern" to "(:User)",
+                "neo4j.cdc.topic.topic-3.patterns.0.operation" to "create",
+                "neo4j.cdc.topic.topic-3.patterns.0.changesTo" to "name, age",
+                "neo4j.cdc.topic.topic-3.patterns.0.metadata.authenticatedUser" to "someone",
+                "neo4j.cdc.topic.topic-3.patterns.0.metadata.executingUser" to "someoneElse",
+                "neo4j.cdc.topic.topic-3.patterns.0.metadata.txMetadata.app" to "neo4j-browser",
+            ))
 
     config.strategy shouldBe SourceType.CDC
     config.startFrom shouldBe StartFrom.EARLIEST
@@ -270,17 +280,255 @@ class SourceConfigurationTest {
     config.enforceSchema shouldBe true
     config.cdcSelectorsToTopics shouldContainAll
         mapOf(
-            NodeSelector(null, emptySet(), setOf("Person"), emptyMap()) to
+            NodeSelector(null, emptySet(), setOf("Person"), emptyMap(), emptyMap()) to
                 listOf("people", "topic-1"),
             NodeSelector(null, emptySet(), setOf("Person"), emptyMap(), setOf("id"), emptySet()) to
                 listOf("topic-2"),
-            NodeSelector(null, emptySet(), setOf("Company"), emptyMap()) to listOf("company"),
+            NodeSelector(null, emptySet(), setOf("Company"), emptyMap(), emptyMap()) to
+                listOf("company"),
             RelationshipSelector(
                 null,
                 emptySet(),
                 "WORKS_FOR",
                 RelationshipNodeSelector(setOf("Person"), emptyMap()),
                 RelationshipNodeSelector(setOf("Company"), emptyMap()),
-                emptyMap()) to listOf("works_for"))
+                emptyMap(),
+                emptyMap()) to listOf("works_for"),
+            NodeSelector(
+                EntityOperation.CREATE,
+                setOf("name", "age"),
+                setOf("User"),
+                emptyMap(),
+                mapOf(
+                    EntitySelector.METADATA_KEY_AUTHENTICATED_USER to "someone",
+                    EntitySelector.METADATA_KEY_EXECUTING_USER to "someoneElse",
+                    EntitySelector.METADATA_KEY_TX_METADATA to mapOf("app" to "neo4j-browser"),
+                )) to listOf("topic-3"))
+  }
+
+  @Test
+  fun `fail on mixing old and new style (positional pattern)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns" to "(:Person)",
+                      "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "It's not allowed to mix positional and non-positional configuration for the same topic."
+        }
+  }
+
+  @Test
+  fun `fail on mixing old and new style (positional operation)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns" to "(:Person)",
+                      "neo4j.cdc.topic.people.patterns.0.operation" to "create",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "It's not allowed to mix positional and non-positional configuration for the same topic."
+        }
+  }
+
+  @Test
+  fun `fail on mixing old and new style (positional changesTo)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns" to "(:Person)",
+                      "neo4j.cdc.topic.people.patterns.0.changesTo" to "name",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "It's not allowed to mix positional and non-positional configuration for the same topic."
+        }
+  }
+
+  @Test
+  fun `fail on mixing old and new style (positional metadata)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns" to "(:Person)",
+                      "neo4j.cdc.topic.people.patterns.0.metadata.authenticatedUser" to "neo4j",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "It's not allowed to mix positional and non-positional configuration for the same topic."
+        }
+  }
+
+  @Test
+  fun `fail on multiple patterns in positional style`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)-[]-(),()",
+                      "neo4j.cdc.topic.people.patterns.0.operation" to "create",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Too many patterns. Only one pattern allowed for positional pattern configuration."
+        }
+  }
+
+  @Test
+  fun `fail on index out of bounds positional style (pattern)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.1.pattern" to "(:User)",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Index 1 out of bounds. Please ensure that you started the definition with a 0-based index."
+        }
+  }
+
+  @Test
+  fun `fail on non-existing pattern (changesTo)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.1.changesTo" to "name",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Cannot assign config value because pattern is not defined for index 1."
+        }
+  }
+
+  @Test
+  fun `fail on non-existing pattern (operation)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.1.operation" to "create",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Cannot assign config value because pattern is not defined for index 1."
+        }
+  }
+
+  @Test
+  fun `fail on non-existing pattern (metadata)`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.1.metadata.authenticatedUser" to "neo4j",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Cannot assign config value because pattern is not defined for index 1."
+        }
+  }
+
+  @Test
+  fun `fail on unkown operation parameter`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)",
+                      "neo4j.cdc.topic.people.patterns.0.operation" to "wurstsalat",
+                  ))
+              .cdcSelectors
+        }
+        .also {
+          it shouldHaveMessage
+              "Cannot parse wurstsalat as an operation. Allowed operations are create, delete or update."
+        }
   }
 }
