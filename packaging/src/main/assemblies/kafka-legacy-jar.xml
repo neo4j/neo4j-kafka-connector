@@ -1,0 +1,60 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>kc-oss-legacy-jar</id>
+
+    <formats>
+        <format>jar</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <fileSets>
+        <fileSet>
+            <directory>src/main/distributions/text/doc</directory>
+            <outputDirectory>META-INF</outputDirectory>
+            <lineEnding>keep</lineEnding>
+            <filtered>true</filtered>
+            <excludes>
+                <exclude>**/.keep</exclude>
+                <exclude>**/*.formatted</exclude>
+            </excludes>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
+    </fileSets>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <unpack>true</unpack>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <includes>
+                <include>
+                    org.neo4j.connectors.kafka:legacy-connectors
+                </include>
+                <include>
+                    org.neo4j.connectors.kafka:common
+                </include>
+                <include>
+                    org.neo4j.connectors.kafka:sink
+                </include>
+                <include>
+                    org.neo4j.connectors.kafka:source
+                </include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <unpack>true</unpack>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <excludes>
+                <exclude>
+                    org.neo4j.connectors.kafka:*
+                </exclude>
+            </excludes>
+        </dependencySet>
+    </dependencySets>
+</assembly>
