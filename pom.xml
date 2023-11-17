@@ -31,7 +31,10 @@
     <modules>
         <module>common</module>
         <module>source</module>
+        <module>source-connector</module>
         <module>sink</module>
+        <module>sink-connector</module>
+        <module>legacy-connectors</module>
         <module>packaging</module>
         <module>testing</module>
     </modules>
@@ -218,7 +221,7 @@
     <repositories>
         <repository>
             <id>github</id>
-            <url>https://maven.pkg.github.com/neo4j/connectors-build-resources</url>
+            <url>https://maven.pkg.github.com/neo4j/neo4j-cdc-client</url>
         </repository>
         <repository>
             <id>confluent</id>
@@ -243,7 +246,7 @@
                         <failIfMissing>true</failIfMissing>
                         <plainTextReport>true</plainTextReport>
                         <prependText>${licensing.prepend.text}</prependText>
-                        <excludedGroups>^((org.neo4j.connectors){1})$</excludedGroups>
+                        <excludedGroups>^org.neo4j</excludedGroups>
                         <includedScopes>compile,runtime</includedScopes>
                     </configuration>
                     <dependencies>

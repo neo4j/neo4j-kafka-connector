@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink
 import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
@@ -124,7 +125,7 @@ class SinkConfiguration(originals: Map<*, *>) :
       return migrated
     }
 
-    internal fun validate(config: org.apache.kafka.common.config.Config) {
+    fun validate(config: Config) {
       Neo4jConfiguration.validate(config)
     }
 

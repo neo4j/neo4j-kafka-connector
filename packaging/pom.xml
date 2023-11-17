@@ -19,12 +19,17 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sink</artifactId>
+            <artifactId>legacy-connectors</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>source</artifactId>
+            <artifactId>sink-connector</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>source-connector</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -42,9 +47,6 @@
                              parameter substitution pattern to not clash with those. -->
                         <delimiter>#{*}</delimiter>
                     </delimiters>
-                    <filters>
-                        <filter>src/main/assemblies/filter.properties</filter>
-                    </filters>
                     <archive>
                         <manifest>
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -53,33 +55,111 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>confluent</id>
+                        <id>confluent-source</id>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
                         <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/confluent.properties</filter>
+                            </filters>
                             <descriptors>
-                                <descriptor>src/main/assemblies/confluent-jar.xml</descriptor>
-                                <descriptor>src/main/assemblies/confluent-zip.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-source-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-source-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-neo4j-${project.version}</finalName>
+                            <finalName>neo4j-kafka-connect-neo4j-source-${project.version}</finalName>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>oss-kafka</id>
+                        <id>confluent-sink</id>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
                         <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/confluent.properties</filter>
+                            </filters>
                             <descriptors>
-                                <descriptor>src/main/assemblies/kafka-jar.xml</descriptor>
-                                <descriptor>src/main/assemblies/kafka-zip.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-sink-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-sink-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-neo4j-${project.version}-kc-oss</finalName>
+                            <finalName>neo4j-kafka-connect-neo4j-sink-${project.version}</finalName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>confluent-legacy</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/confluent.properties</filter>
+                            </filters>
+                            <descriptors>
+                                <descriptor>src/main/assemblies/confluent-legacy-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-legacy-zip.xml</descriptor>
+                            </descriptors>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>neo4j-kafka-connect-neo4j-legacy-${project.version}</finalName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>oss-kafka-source</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/kafka.properties</filter>
+                            </filters>
+                            <descriptors>
+                                <descriptor>src/main/assemblies/kafka-source-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/kafka-source-zip.xml</descriptor>
+                            </descriptors>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>neo4j-kafka-connect-neo4j-source-${project.version}-kc-oss</finalName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>oss-kafka-sink</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/kafka.properties</filter>
+                            </filters>
+                            <descriptors>
+                                <descriptor>src/main/assemblies/kafka-sink-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/kafka-sink-zip.xml</descriptor>
+                            </descriptors>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>neo4j-kafka-connect-neo4j-sink-${project.version}-kc-oss</finalName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>oss-kafka-legacy</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <filters>
+                                <filter>src/main/assemblies/kafka.properties</filter>
+                            </filters>
+                            <descriptors>
+                                <descriptor>src/main/assemblies/kafka-legacy-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/kafka-legacy-zip.xml</descriptor>
+                            </descriptors>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <finalName>neo4j-kafka-connect-neo4j-legacy-${project.version}-kc-oss</finalName>
                         </configuration>
                     </execution>
                 </executions>

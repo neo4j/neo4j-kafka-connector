@@ -412,7 +412,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       return migrated
     }
 
-    internal fun validate(config: Config, originals: Map<String, String>) {
+    fun validate(config: Config, originals: Map<String, String>) {
       Neo4jConfiguration.validate(config)
 
       // START_FROM user defined validation

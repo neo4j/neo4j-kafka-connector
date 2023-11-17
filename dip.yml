@@ -17,7 +17,7 @@ interaction:
     command: >
       sh -c "./mvnw clean package -DskipTests -pl :packaging -am &&
         find ./docker/plugins ! -name '.keep' -type f -exec rm -f {} + && 
-        cp ./packaging/target/*.jar ./docker/plugins"
+        cp ./packaging/target/*$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout).jar ./docker/plugins"
 
   stop-connect:
     description: stops connect container

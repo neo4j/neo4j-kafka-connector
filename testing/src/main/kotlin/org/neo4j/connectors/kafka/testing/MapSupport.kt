@@ -18,15 +18,34 @@ package org.neo4j.connectors.kafka.testing
 
 import java.lang.IllegalStateException
 
-internal object MapSupport {
+object MapSupport {
 
   @Suppress("UNCHECKED_CAST")
-  fun <K, Any> MutableMap<K, Any>.nestUnder(key: K, values: Map<K, Any>): MutableMap<K, Any> {
+  internal fun <K, Any> MutableMap<K, Any>.nestUnder(
+      key: K,
+      values: Map<K, Any>
+  ): MutableMap<K, Any> {
     val map = this[key]
     if (map !is Map<*, *>) {
       throw IllegalStateException("entry at key $key is not a mutable map")
     }
     (map as MutableMap<K, Any>).putAll(values)
     return this
+  }
+
+  /**
+   * Filters out all specified keys from map
+   *
+   * @throws IllegalArgumentException if any of the specified keys are not part of this map set of
+   *   keys
+   */
+  fun <K, V> Map<K, V>.excludingKeys(vararg keys: K): Map<K, V> {
+    val missing = keys.filter { !this.keys.contains(it) }
+    if (missing.isNotEmpty()) {
+      throw IllegalArgumentException(
+          "Cannot exclude keys ${missing.joinToString()}: they are missing from map $this")
+    }
+    val exclusions = setOf(*keys)
+    return this.filterKeys { !exclusions.contains(it) }
   }
 }
