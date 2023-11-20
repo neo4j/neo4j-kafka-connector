@@ -234,7 +234,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     val keyValue = matchGroup.groupValues[5]
     var value = configEntry.value
     val pattern = patterns.get(index)
-    if (keyValue.startsWith(EntitySelector.METADATA_KEY_TX_METADATA)) {
+    if (keyValue.startsWith(EntitySelector.METADATA_KEY_TX_METADATA + '.')) {
       value =
           mapOf(
               keyValue.removePrefix(EntitySelector.METADATA_KEY_TX_METADATA + '.') to value,

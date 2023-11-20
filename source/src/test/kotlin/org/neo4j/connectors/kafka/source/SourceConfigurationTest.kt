@@ -555,4 +555,35 @@ class SourceConfigurationTest {
       config.validate()
     }
   }
+
+  @Test
+  fun `strictly parses transaction metadata selector`() {
+    val config =
+        SourceConfiguration(
+            mapOf(
+                "neo4j.uri" to "neo4j://neo4j:7687",
+                "neo4j.authentication.type" to "BASIC",
+                "neo4j.authentication.basic.username" to "neo4j",
+                "neo4j.authentication.basic.password" to "password",
+                "neo4j.source-strategy" to "CDC",
+                "neo4j.start-from" to "NOW",
+                "neo4j.cdc.poll-interval" to "5s",
+                "neo4j.cdc.topic.myTopic.patterns.0.pattern" to "(:TestSource)",
+                "neo4j.cdc.topic.myTopic.patterns.0.operation" to "CREATE",
+                "neo4j.cdc.topic.myTopic.patterns.0.metadata.txMetadata.app" to
+                    "something-AI-something",
+                "neo4j.cdc.topic.myTopic.patterns.0.metadata.txMetadataButNotReally.key" to
+                    "value"))
+
+    config.cdcSelectors shouldBe
+        setOf(
+            NodeSelector(
+                EntityOperation.CREATE,
+                setOf(),
+                setOf("TestSource"),
+                mapOf(),
+                mapOf(
+                    "txMetadataButNotReally.key" to "value",
+                    "txMetadata" to mapOf("app" to "something-AI-something"))))
+  }
 }
