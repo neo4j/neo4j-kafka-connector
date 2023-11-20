@@ -49,4 +49,6 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
       }
 
       bts.buildTypes().last().triggers { vcs { this.branchFilter = branchFilter } }
+
+      buildType(Release("${name}-release", "release", packaging))
     })
