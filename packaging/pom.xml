@@ -218,6 +218,8 @@
                                             <enabled>true</enabled>
                                         </changelog>
                                         <files>true</files>
+                                        <tagName>{{projectVersion}}</tagName>
+                                        <releaseName>{{projectVersion}}</releaseName>
                                     </github>
                                 </release>
                                 <files>
