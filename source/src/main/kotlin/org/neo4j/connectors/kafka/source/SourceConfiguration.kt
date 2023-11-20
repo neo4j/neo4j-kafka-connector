@@ -130,6 +130,7 @@ class SourceConfiguration(originals: Map<*, *>) :
               val list = configMap[it.second]!!
               list.add(it.first)
             }
+
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) }
@@ -139,10 +140,12 @@ class SourceConfiguration(originals: Map<*, *>) :
             .entries
             .filter { CDC_PATTERN_ARRAY_OPERATION_REGEX.matches(it.key) }
             .forEach { mapOperation(it, nonPositionalConfigMode, configMap) }
+
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_CHANGES_TO_REGEX.matches(it.key) }
             .forEach { mapChangesTo(it, nonPositionalConfigMode, configMap) }
+
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) }
@@ -448,10 +451,12 @@ class SourceConfiguration(originals: Map<*, *>) :
             try {
               Validators.notBlankOrEmpty().ensureValid(it.key, it.value)
 
-              try {
-                Pattern.parse(it.value as String?)
-              } catch (e: PatternException) {
-                throw ConfigException(it.key, it.value, e.message)
+              if (CDC_PATTERNS_REGEX.matches(it.key) || CDC_PATTERN_ARRAY_REGEX.matches(it.key)) {
+                try {
+                  Pattern.parse(it.value as String?)
+                } catch (e: PatternException) {
+                  throw ConfigException(it.key, it.value, e.message)
+                }
               }
             } catch (e: ConfigException) {
               strategy.addErrorMessage(e.message)
