@@ -43,7 +43,7 @@ class Release(id: String, name: String, artifactSource: BuildType) : BuildType({
 
     maven {
       goals = "jreleaser:full-release"
-      runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease"
+      runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
 
       // this is the settings name we uploaded to Connectors project
       userSettingsSelection = "github"
