@@ -45,7 +45,7 @@
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.0</awaitility.version>
         <build-resources.version>1.0.0</build-resources.version>
-        <cdc.version>1.0.4</cdc.version>
+        <cdc.version>1.0.5</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.13.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
@@ -72,7 +72,7 @@
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <reactor.version>2022.0.11</reactor.version>
-        <slf4j.version>2.0.9</slf4j.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
         <testcontainers.version>1.19.0</testcontainers.version>

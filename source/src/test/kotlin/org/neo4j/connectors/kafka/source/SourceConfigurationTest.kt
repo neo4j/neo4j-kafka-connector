@@ -531,4 +531,28 @@ class SourceConfigurationTest {
               "Cannot parse wurstsalat as an operation. Allowed operations are create, delete or update."
         }
   }
+
+  @Test
+  fun `should validate a valid configuration successfully`() {
+    assertDoesNotThrow {
+      val config =
+          SourceConfiguration(
+              mapOf(
+                  "neo4j.uri" to "neo4j://neo4j:7687",
+                  "neo4j.authentication.type" to "BASIC",
+                  "neo4j.authentication.basic.username" to "neo4j",
+                  "neo4j.authentication.basic.password" to "password",
+                  "neo4j.source-strategy" to "CDC",
+                  "neo4j.start-from" to "NOW",
+                  "neo4j.cdc.poll-interval" to "5s",
+                  "neo4j.cdc.topic.creates.patterns.0.pattern" to "(:TestSource)",
+                  "neo4j.cdc.topic.creates.patterns.0.operation" to "CREATE",
+                  "neo4j.cdc.topic.updates.patterns.0.pattern" to "(:TestSource)",
+                  "neo4j.cdc.topic.updates.patterns.0.operation" to "UPDATE",
+                  "neo4j.cdc.topic.deletes.patterns.0.pattern" to "(:TestSource)",
+                  "neo4j.cdc.topic.deletes.patterns.0.operation" to "DELETE"))
+
+      config.validate()
+    }
+  }
 }
