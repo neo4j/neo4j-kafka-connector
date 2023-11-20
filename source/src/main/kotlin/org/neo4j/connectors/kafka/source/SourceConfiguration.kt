@@ -451,7 +451,7 @@ class SourceConfiguration(originals: Map<*, *>) :
             try {
               Validators.notBlankOrEmpty().ensureValid(it.key, it.value)
 
-              if (CDC_PATTERN_ARRAY_REGEX.matches(it.key)) {
+              if (CDC_PATTERNS_REGEX.matches(it.key) || CDC_PATTERN_ARRAY_REGEX.matches(it.key)) {
                 try {
                   Pattern.parse(it.value as String?)
                 } catch (e: PatternException) {
