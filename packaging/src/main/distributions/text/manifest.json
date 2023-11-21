@@ -1,5 +1,5 @@
 {
-  "name": "kafka-connect-neo4j",
+  "name": "kafka-connect-neo4j#{product.type-suffix}",
   "version": "#{project.version}",
   "title": "#{product.name}",
   "description": "#{product.description}",

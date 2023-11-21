@@ -63,6 +63,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/confluent.properties</filter>
+                                <filter>src/main/assemblies/source.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-source-jar.xml</descriptor>
@@ -81,6 +82,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/confluent.properties</filter>
+                                <filter>src/main/assemblies/sink.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-sink-jar.xml</descriptor>
@@ -99,6 +101,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/confluent.properties</filter>
+                                <filter>src/main/assemblies/legacy.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-legacy-jar.xml</descriptor>
@@ -117,6 +120,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/kafka.properties</filter>
+                                <filter>src/main/assemblies/source.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/kafka-source-jar.xml</descriptor>
@@ -135,6 +139,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/kafka.properties</filter>
+                                <filter>src/main/assemblies/sink.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/kafka-sink-jar.xml</descriptor>
@@ -153,6 +158,7 @@
                         <configuration>
                             <filters>
                                 <filter>src/main/assemblies/kafka.properties</filter>
+                                <filter>src/main/assemblies/legacy.properties</filter>
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/kafka-legacy-jar.xml</descriptor>

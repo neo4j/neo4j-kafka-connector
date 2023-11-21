@@ -607,7 +607,7 @@ class Neo4jQueryTaskTest {
       until(30.seconds) {
         task.poll()?.let { list.addAll(it) }
         val actualList = list.map { (it.value() as Struct).toMap() }
-        actualList.first() == expected
+        actualList.firstOrNull() == expected
       }
     }
   }
