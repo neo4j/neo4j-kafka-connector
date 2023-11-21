@@ -2,24 +2,12 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
-import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
-import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Release(id: String, name: String, artifactSource: BuildType) :
+class Release(id: String, name: String) :
   BuildType({
     this.id(id.toId())
     this.name = name
-
-    dependencies {
-      artifacts(artifactSource) {
-        artifactRules =
-            """
-              +:packages/target/*.jar => packaging/target/*.jar
-              +:packages/target/*.zip => packaging/target/*.zip
-            """.trimIndent()
-      }
-    }
 
     params {
       text("version", "", allowEmpty = false)
@@ -30,30 +18,19 @@ class Release(id: String, name: String, artifactSource: BuildType) :
     }
 
     steps {
-      maven {
+      commonMaven {
         goals = "versions:set"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%version%"
-
-        // this is the settings name we uploaded to Connectors project
-        userSettingsSelection = "github"
-        localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
-
-        dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:11-jdk"
-        dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 
-      maven {
+      commonMaven {
+        goals = "package"
+        runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipTests"
+      }
+
+      commonMaven {
         goals = "jreleaser:full-release"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
-
-        // this is the settings name we uploaded to Connectors project
-        userSettingsSelection = "github"
-        localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
-
-        dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:11-jdk"
-        dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
     }
 

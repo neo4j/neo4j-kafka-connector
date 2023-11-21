@@ -13,6 +13,8 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
       val packaging =
           Maven("${name}-package", "package", "package", "-pl :packaging -am -DskipTests")
 
+      val complete = Empty("${name}-complete", "complete")
+
       val bts = sequential {
         if (forPullRequests)
             buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
@@ -33,7 +35,8 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
                 }
               }
             })
-        dependentBuildType(Empty("${name}-complete", "complete"))
+        dependentBuildType(complete)
+        dependentBuildType(Release("${name}-release", "release"))
       }
 
       bts.buildTypes().forEach {
@@ -48,7 +51,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
         buildType(it)
       }
 
-      bts.buildTypes().last().triggers { vcs { this.branchFilter = branchFilter } }
-
-      buildType(Release("${name}-release", "release", packaging))
+      complete.triggers { vcs { this.branchFilter = branchFilter } }
     })
+
+
