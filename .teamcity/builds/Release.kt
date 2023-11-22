@@ -44,7 +44,7 @@ class Release(id: String, name: String) :
               git config --global --add safe.directory %teamcity.build.checkoutDir%
               
               git add .
-              git commit -m "Release version %version%"
+              git commit -m "build: release version %version%"
               git push 
             """.trimIndent()
       }
