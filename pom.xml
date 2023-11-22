@@ -9,6 +9,7 @@
     <name>parent</name>
     <description>Neo4j Connector for Kafka</description>
     <url>http://github.com/neo4j/neo4j-kafka-connector</url>
+    <inceptionYear>2023</inceptionYear>
     <organization>
         <name>Neo4j, Neo4j Sweden AB</name>
         <url>https://neo4j.com</url>
@@ -50,6 +51,7 @@
         <hamcrest.version>2.2</hamcrest.version>
         <jackson.version>2.15.2</jackson.version>
         <java.version>11</java.version>
+        <jreleaser-maven-plugin.version>1.9.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
@@ -237,6 +239,11 @@
     <build>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.jreleaser</groupId>
+                    <artifactId>jreleaser-maven-plugin</artifactId>
+                    <version>${jreleaser-maven-plugin.version}</version>
+                </plugin>
                 <plugin>
                     <groupId>org.neo4j.build.plugins</groupId>
                     <artifactId>licensing-maven-plugin</artifactId>

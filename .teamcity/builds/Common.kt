@@ -1,6 +1,7 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildFeatures
+import jetbrains.buildServer.configs.kotlin.BuildSteps
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.CompoundStage
 import jetbrains.buildServer.configs.kotlin.FailureAction
@@ -9,6 +10,8 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
 import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
 import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
 import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
+import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 const val GITHUB_OWNER = "neo4j"
@@ -78,4 +81,19 @@ fun collectArtifacts(buildType: BuildType): BuildType {
           .trimIndent()
 
   return buildType
+}
+
+fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
+  val maven = this.maven {
+    // this is the settings name we uploaded to Connectors project
+    userSettingsSelection = "github"
+    localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
+
+    dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
+    dockerImage = "eclipse-temurin:11-jdk"
+    dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+  }
+
+  init(maven)
+  return maven
 }
