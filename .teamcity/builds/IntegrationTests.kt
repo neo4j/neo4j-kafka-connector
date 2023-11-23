@@ -104,7 +104,10 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
       }
 
-      features { dockerSupport {} }
+      features {
+        dockerSupport {}
+        mavenBuildCache {}
+      }
 
       requirements { runOnLinux(LinuxSize.LARGE) }
     })

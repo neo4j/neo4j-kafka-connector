@@ -6,7 +6,9 @@ import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.CompoundStage
 import jetbrains.buildServer.configs.kotlin.FailureAction
 import jetbrains.buildServer.configs.kotlin.Requirements
+import jetbrains.buildServer.configs.kotlin.buildFeatures.BuildCacheFeature
 import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
+import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
 import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
 import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
@@ -16,7 +18,7 @@ import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
-const val MAVEN_DEFAULT_ARGS = "--no-transfer-progress --batch-mode"
+const val MAVEN_DEFAULT_ARGS = "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
@@ -96,4 +98,16 @@ fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
 
   init(maven)
   return maven
+}
+
+fun BuildFeatures.mavenBuildCache(init: BuildCacheFeature.() -> Unit): BuildCacheFeature {
+  val mavenCache = this.buildCache {
+    name = "neo4j-kafka-connector-maven-cache"
+    publish = true
+    use = true
+    rules = ".m2"
+  }
+
+  init(mavenCache)
+  return mavenCache
 }

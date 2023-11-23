@@ -83,6 +83,7 @@ class Release(id: String, name: String) :
     features {
       dockerSupport {}
       requireDiskSpace("5gb")
+      mavenBuildCache {}
     }
 
     requirements { runOnLinux(LinuxSize.SMALL) }

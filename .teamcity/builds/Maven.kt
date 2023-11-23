@@ -2,6 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
+import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
 class Maven(id: String, name: String, goals: String, args: String? = null) :
@@ -33,13 +34,39 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
       }
 
       steps {
+        script {
+          this.name = "Ensure maven settings"
+          scriptContent =
+              """
+                 #!/bin/bash -eu
+                 mkdir -p .m2
+                 settings.xml < EOF
+                  <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                        xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                                            http://maven.apache.org/xsd/settings-1.0.0.xsd">
+                      <servers>
+                        <server>
+                          <id>github</id>
+                          <username>${'$'}{env.PACKAGES_USERNAME}</username>
+                          <password>${'$'}{env.PACKAGES_PASSWORD}</password>
+                        </server>
+                      </servers>
+                  </settings>
+                 EOF              
+              """.trimIndent()
+        }
+
         commonMaven {
           this.goals = goals
           this.runnerArgs = "$MAVEN_DEFAULT_ARGS ${args ?: ""}"
         }
       }
 
-      features { dockerSupport {} }
+      features {
+        dockerSupport {}
+        mavenBuildCache {}
+      }
 
       requirements { runOnLinux(LinuxSize.SMALL) }
     })
