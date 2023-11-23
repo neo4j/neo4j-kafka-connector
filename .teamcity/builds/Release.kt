@@ -1,6 +1,7 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.ParameterDisplay
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
@@ -12,7 +13,7 @@ class Release(id: String, name: String) :
     this.name = name
 
     params {
-      text("version", "", allowEmpty = false)
+      text("version", "", allowEmpty = false, display = ParameterDisplay.PROMPT, label = "Version to release")
 
       text("env.PACKAGES_USERNAME", "%github-packages-user%")
       password("env.PACKAGES_PASSWORD", "%github-packages-token%")
@@ -60,7 +61,7 @@ class Release(id: String, name: String) :
               git config --global user.name "${'$'}USER_NAME"
               git config --global --add safe.directory %teamcity.build.checkoutDir%
               
-              git add .
+              git add **/pom.xml
               git commit -m "build: release version %version%"
               git push 
             """.trimIndent()
