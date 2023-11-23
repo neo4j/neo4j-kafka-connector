@@ -2,6 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
+import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -19,17 +20,33 @@ class Release(id: String, name: String) :
     }
 
     steps {
+      script {
+        this.name = "Validate version"
+        scriptContent =
+            """
+              #!/bin/bash -eu
+               
+              if [ -z "%version%" ]; then
+                echo "Version is not set. Please run as a custom build and specify 'version' parameter."
+                exit 1 
+              fi 
+            """.trimIndent()
+      }
+
       commonMaven {
+        this.name = "Set version"
         goals = "versions:set"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%version% -DgenerateBackupPoms=false"
       }
 
       commonMaven {
+        this.name = "Build versionalised package"
         goals = "package"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipTests"
       }
 
       script {
+        this.name = "Push version"
         scriptContent =
             """
               #!/bin/bash -eu
@@ -47,9 +64,16 @@ class Release(id: String, name: String) :
               git commit -m "build: release version %version%"
               git push 
             """.trimIndent()
+
+        formatStderrAsError = true
+
+        dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+        dockerImage = "eclipse-temurin:11-jdk"
+        dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 
       commonMaven {
+        this.name = "Release to Github"
         goals = "jreleaser:full-release"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
       }
