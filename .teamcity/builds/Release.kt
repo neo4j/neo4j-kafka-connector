@@ -21,19 +21,6 @@ class Release(id: String, name: String) :
     }
 
     steps {
-      script {
-        this.name = "Validate version"
-        scriptContent =
-            """
-              #!/bin/bash -eu
-               
-              if [ -z "%version%" ]; then
-                echo "Version is not set. Please run as a custom build and specify 'version' parameter."
-                exit 1 
-              fi 
-            """.trimIndent()
-      }
-
       commonMaven {
         this.name = "Set version"
         goals = "versions:set"
@@ -50,27 +37,12 @@ class Release(id: String, name: String) :
         this.name = "Push version"
         scriptContent =
             """
-              #!/bin/bash -eu
-              
-              apt-get update
-              apt-get install --yes git 
-              
-              USER_NAME=`echo %teamcity.build.triggeredBy.username% | sed 's/@.*//g' | sed 's/\./ /g' |  sed 's/\w\+/\L\u&/g'`
-      
-              git config --global user.email %teamcity.build.triggeredBy.username%
-              git config --global user.name "${'$'}USER_NAME"
-              git config --global --add safe.directory %teamcity.build.checkoutDir%
-              
+              #!/bin/bash -eu              
+             
               git add **/pom.xml
               git commit -m "build: release version %version%"
-              git push 
+              git push
             """.trimIndent()
-
-        formatStderrAsError = true
-
-        dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:11-jdk"
-        dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 
       commonMaven {
@@ -82,7 +54,6 @@ class Release(id: String, name: String) :
 
     features {
       dockerSupport {}
-      requireDiskSpace("5gb")
     }
 
     requirements { runOnLinux(LinuxSize.SMALL) }
