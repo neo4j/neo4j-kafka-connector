@@ -40,7 +40,7 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
               """
                  #!/bin/bash -eu
                  mkdir -p .m2
-                 settings.xml < EOF
+                 cat << EOF > .m2/settings.xml 
                   <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
                         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                         xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
