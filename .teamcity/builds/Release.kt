@@ -41,7 +41,7 @@ class Release(id: String, name: String) :
              
               git add **/pom.xml
               git commit -m "build: release version %version%"
-              git push
+              git push origin HEAD:test-releases
             """.trimIndent()
       }
 

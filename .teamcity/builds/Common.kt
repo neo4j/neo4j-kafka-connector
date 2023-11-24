@@ -16,7 +16,7 @@ import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
-const val MAVEN_DEFAULT_ARGS = "--no-transfer-progress --batch-mode"
+const val MAVEN_DEFAULT_ARGS = "--no-transfer-progress --batch-mode -DskipTests"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
