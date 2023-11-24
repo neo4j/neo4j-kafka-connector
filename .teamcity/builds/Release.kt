@@ -48,7 +48,7 @@ class Release(id: String, name: String) :
       commonMaven {
         this.name = "Release to Github"
         goals = "jreleaser:full-release"
-        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
+        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -Djreleaser.dry.run=true -pl :packaging"
       }
     }
 
