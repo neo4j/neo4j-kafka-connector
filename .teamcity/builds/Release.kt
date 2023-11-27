@@ -39,7 +39,7 @@ class Release(id: String, name: String) :
             """
               #!/bin/bash -eu              
              
-              git add **/pom.xml
+              git add \*pom.xml
               git commit -m "build: release version %version%"
               git push
             """.trimIndent()
