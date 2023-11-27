@@ -39,16 +39,16 @@ class Release(id: String, name: String) :
             """
               #!/bin/bash -eu              
              
-              git add **/pom.xml
-              git commit -m "build: release version %version%"
-              git push
+              git status
+              git add \*pom.xml
+              git status
             """.trimIndent()
       }
 
       commonMaven {
         this.name = "Release to Github"
         goals = "jreleaser:full-release"
-        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
+        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -Djreleaser.dry.run=true  -pl :packaging"
       }
     }
 
