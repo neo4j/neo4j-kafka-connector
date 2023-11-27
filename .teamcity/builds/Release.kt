@@ -42,6 +42,7 @@ class Release(id: String, name: String) :
               git status
               git add \*pom.xml
               git status
+              git push origin HEAD:test-releases
             """.trimIndent()
       }
 
