@@ -60,7 +60,7 @@ fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
   return this.commonMaven {
     this.name = name
     goals = "versions:set"
-    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%$version% -D -DgenerateBackupPoms=false"
+    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%$version% -DgenerateBackupPoms=false"
   }
 }
 
