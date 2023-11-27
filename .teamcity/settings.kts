@@ -21,7 +21,7 @@ project {
           """
                 +:main
                 -:comment=^build.*release version.*:**
-                -:comment=^build.*set next snapshot.*:**
+                -:comment=^build.*update version.*:**
             """
               .trimIndent(),
           false))

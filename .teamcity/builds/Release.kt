@@ -36,16 +36,15 @@ class Release(id: String, name: String) :
 
       commitAndPush("Push release version", "build: release version %releaseVersion%")
 
-      // TODO dry run will be removed after the testing
       commonMaven {
         this.name = "Release to Github"
         goals = "jreleaser:full-release"
-        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -Djreleaser.dry.run=true -pl :packaging"
+        runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
       }
 
       setVersion("Set next snapshot version", "nextSnapshotVersion")
 
-      commitAndPush("Push next snapshot version", "build: set next snapshot %nextSnapshotVersion%")
+      commitAndPush("Push next snapshot version", "build: update version to %nextSnapshotVersion%")
     }
 
     features {
@@ -64,7 +63,6 @@ fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
   }
 }
 
-// TODO push to the test branch will be removed after testing
 fun BuildSteps.commitAndPush(name: String, commitMessage: String, includeFiles: String = "\\*pom.xml"): ScriptBuildStep {
   return this.script {
     this.name = name
@@ -74,7 +72,7 @@ fun BuildSteps.commitAndPush(name: String, commitMessage: String, includeFiles: 
          
           git add $includeFiles
           git commit -m "$commitMessage"
-          git push origin HEAD:test-releases
+          git push
         """.trimIndent()
   }
 }
