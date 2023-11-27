@@ -1,8 +1,10 @@
 package builds
 
+import jetbrains.buildServer.configs.kotlin.BuildSteps
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.ParameterDisplay
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
+import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
@@ -13,7 +15,10 @@ class Release(id: String, name: String) :
     this.name = name
 
     params {
-      text("version", "", allowEmpty = false, display = ParameterDisplay.PROMPT, label = "Version to release")
+      text("releaseVersion", "", allowEmpty = false,
+          display = ParameterDisplay.PROMPT, label = "Version to release")
+      text("nextSnapshotVersion", "", allowEmpty = false,
+          display = ParameterDisplay.PROMPT, label = "Version on the next snapshot after the release")
 
       text("env.PACKAGES_USERNAME", "%github-packages-user%")
       password("env.PACKAGES_PASSWORD", "%github-packages-token%")
@@ -21,11 +26,7 @@ class Release(id: String, name: String) :
     }
 
     steps {
-      commonMaven {
-        this.name = "Set version"
-        goals = "versions:set"
-        runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%version% -DgenerateBackupPoms=false"
-      }
+      setVersion("Set release version", "releaseVersion")
 
       commonMaven {
         this.name = "Build versionalised package"
@@ -33,23 +34,17 @@ class Release(id: String, name: String) :
         runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipTests"
       }
 
-      script {
-        this.name = "Push version"
-        scriptContent =
-            """
-              #!/bin/bash -eu              
-             
-              git add \*pom.xml
-              git commit -m "build: release version %version%"
-              git push
-            """.trimIndent()
-      }
+      commitAndPush("Push release version", "build: release version %releaseVersion%")
 
       commonMaven {
         this.name = "Release to Github"
         goals = "jreleaser:full-release"
         runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
       }
+
+      setVersion("Set next snapshot version", "nextSnapshotVersion")
+
+      commitAndPush("Push next snapshot version", "build: set next snapshot %nextSnapshotVersion%")
     }
 
     features {
@@ -59,4 +54,26 @@ class Release(id: String, name: String) :
     requirements { runOnLinux(LinuxSize.SMALL) }
 
 })
+
+fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
+  return this.commonMaven {
+    this.name = name
+    goals = "versions:set"
+    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%$version% -DgenerateBackupPoms=false"
+  }
+}
+
+fun BuildSteps.commitAndPush(name: String, commitMessage: String, includeFiles: String = "\\*pom.xml"): ScriptBuildStep {
+  return this.script {
+    this.name = name
+    scriptContent =
+        """
+          #!/bin/bash -eu              
+         
+          git add $includeFiles
+          git commit -m "$commitMessage"
+          git push
+        """.trimIndent()
+  }
+}
 
