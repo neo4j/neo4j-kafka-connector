@@ -19,7 +19,8 @@ project {
       Build(
           "main",
           """
-                +:main -:comment=^build.*release version.*:**
+                +:main
+                -:comment=^build.*release version.*:**
             """
               .trimIndent(),
           false))
