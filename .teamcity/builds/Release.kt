@@ -26,7 +26,7 @@ class Release(id: String, name: String) :
     }
 
     steps {
-      setVersion("Set release version", "releaseVersion")
+      setVersion("Set release version", "%releaseVersion%")
 
       commonMaven {
         this.name = "Build versionalised package"
@@ -42,7 +42,7 @@ class Release(id: String, name: String) :
         runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
       }
 
-      setVersion("Set next snapshot version", "nextSnapshotVersion")
+      setVersion("Set next snapshot version", "%nextSnapshotVersion%")
 
       commitAndPush("Push next snapshot version", "build: update version to %nextSnapshotVersion%")
     }
@@ -59,7 +59,7 @@ fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
   return this.commonMaven {
     this.name = name
     goals = "versions:set"
-    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=%$version% -DgenerateBackupPoms=false"
+    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=$version -DgenerateBackupPoms=false"
   }
 }
 
