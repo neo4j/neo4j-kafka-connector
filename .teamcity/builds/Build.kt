@@ -5,7 +5,7 @@ import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
-class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
+class Build(name: String, branchFilter: String, forPullRequests: Boolean, triggerRules: String? = null) :
     Project({
       this.id(name.toId())
       this.name = name
@@ -51,7 +51,10 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean) :
         buildType(it)
       }
 
-      complete.triggers { vcs { this.branchFilter = branchFilter } }
+      complete.triggers { vcs {
+        this.branchFilter = branchFilter
+        this.triggerRules = triggerRules
+      } }
     })
 
 
