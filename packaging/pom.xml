@@ -67,7 +67,6 @@
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-source-jar.xml</descriptor>
-                                <descriptor>src/main/assemblies/confluent-source-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
                             <finalName>neo4j-kafka-connect-neo4j-source-${project.version}</finalName>
@@ -86,7 +85,6 @@
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-sink-jar.xml</descriptor>
-                                <descriptor>src/main/assemblies/confluent-sink-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
                             <finalName>neo4j-kafka-connect-neo4j-sink-${project.version}</finalName>
@@ -105,7 +103,6 @@
                             </filters>
                             <descriptors>
                                 <descriptor>src/main/assemblies/confluent-legacy-jar.xml</descriptor>
-                                <descriptor>src/main/assemblies/confluent-legacy-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
                             <finalName>neo4j-kafka-connect-neo4j-legacy-${project.version}</finalName>
@@ -231,19 +228,10 @@
                                 <files>
                                     <artifacts>
                                         <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-neo4j-legacy-${project.version}.zip</path>
-                                        </artifact>
-                                        <artifact>
                                             <path>${packaging.directory}/neo4j-kafka-connect-neo4j-legacy-${project.version}.jar</path>
                                         </artifact>
                                         <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-neo4j-source-${project.version}.zip</path>
-                                        </artifact>
-                                        <artifact>
                                             <path>${packaging.directory}/neo4j-kafka-connect-neo4j-source-${project.version}.jar</path>
-                                        </artifact>
-                                        <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-neo4j-sink-${project.version}.zip</path>
                                         </artifact>
                                         <artifact>
                                             <path>${packaging.directory}/neo4j-kafka-connect-neo4j-sink-${project.version}.jar</path>
