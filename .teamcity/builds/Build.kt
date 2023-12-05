@@ -36,7 +36,7 @@ class Build(name: String, branchFilter: String, forPullRequests: Boolean, trigge
               }
             })
         dependentBuildType(complete)
-        dependentBuildType(Release("${name}-release", "release"))
+        if (!forPullRequests) dependentBuildType(Release("${name}-release", "release"))
       }
 
       bts.buildTypes().forEach {
