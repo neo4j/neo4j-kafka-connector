@@ -24,7 +24,9 @@ import kotlin.time.measureTime
 import org.apache.kafka.connect.source.SourceTask
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -34,17 +36,50 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-abstract class Neo4jCdcTaskTest {
+class Neo4jCdcTaskTest {
+  companion object {
+    @Container
+    val neo4j: Neo4jContainer<*> =
+        Neo4jContainer("neo4j:5-enterprise")
+            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withoutAuthentication()
+
+    private lateinit var driver: Driver
+    private lateinit var session: Session
+
+    @BeforeAll
+    @JvmStatic
+    fun setUpContainer() {
+      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
+      session = driver.session()
+    }
+
+    @AfterAll
+    @JvmStatic
+    fun tearDownContainer() {
+      session.close()
+      driver.close()
+    }
+
+    fun currentChangeId(): String {
+      return session.run("CALL cdc.current").single().get(0).asString()
+    }
+
+    fun earliestChangeId(): String {
+      return session.run("CALL cdc.earliest").single().get(0).asString()
+    }
+  }
 
   private lateinit var task: SourceTask
-
-  abstract var session: Session
-  abstract var neo4j: Neo4jContainer<*>
 
   @AfterEach
   fun after() {
@@ -387,13 +422,5 @@ abstract class Neo4jCdcTaskTest {
         }
 
     return mock<SourceTaskContext> { on { offsetStorageReader() } doReturn offsetStorageReader }
-  }
-
-  private fun currentChangeId(): String {
-    return session.run("CALL cdc.current").single().get(0).asString()
-  }
-
-  private fun earliestChangeId(): String {
-    return session.run("CALL cdc.earliest").single().get(0).asString()
   }
 }
