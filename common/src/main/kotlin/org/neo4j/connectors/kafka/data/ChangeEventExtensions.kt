@@ -119,7 +119,7 @@ object ChangeEventExtensions {
           .field("eventType", SimpleTypes.STRING.schema())
           .field("operation", SimpleTypes.STRING.schema())
           .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-          .field("keys", schemaForKeys(this.keys))
+          .field("keys", schemaForKeysByLabel(this.keys))
           .field(
               "state",
               SchemaBuilder.struct()
@@ -154,7 +154,7 @@ object ChangeEventExtensions {
           .field("type", SimpleTypes.STRING.schema())
           .field("start", this.start.toConnectSchema())
           .field("end", this.end.toConnectSchema())
-          .field("key", schemaForKey(this.key))
+          .field("keys", schemaForKeys(this.keys))
           .field(
               "state",
               SchemaBuilder.struct()
@@ -172,7 +172,7 @@ object ChangeEventExtensions {
         it.put("type", this.type)
         it.put("start", this.start.toConnectValue(schema.field("start").schema()))
         it.put("end", this.end.toConnectValue(schema.field("end").schema()))
-        it.put("key", DynamicTypes.valueFor(schema.field("key").schema(), this.key))
+        it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
         it.put(
             "state",
             schema.field("state").schema().let { stateSchema ->
@@ -271,16 +271,23 @@ object ChangeEventExtensions {
         }
       }
 
-  private fun schemaForKeys(keys: Map<String, Map<String, Any>>): Schema {
+  private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>): Schema {
     return SchemaBuilder.struct()
-        .apply { keys.forEach { field(it.key, schemaForKey(it.value)) } }
+        .apply { keys.forEach { field(it.key, schemaForKeys(it.value)) } }
         .optional()
         .build()
   }
 
-  private fun schemaForKey(key: Map<String, Any>): Schema {
-    return SchemaBuilder.struct()
-        .apply { key.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) } }
+  private fun schemaForKeys(keys: List<Map<String, Any>>): Schema {
+    return SchemaBuilder.array(
+            SchemaBuilder.struct()
+                .apply {
+                  keys.forEach { key ->
+                    key.forEach { field(it.key, DynamicTypes.schemaFor(it.value, true)) }
+                  }
+                }
+                .optional()
+                .build())
         .optional()
         .build()
   }
