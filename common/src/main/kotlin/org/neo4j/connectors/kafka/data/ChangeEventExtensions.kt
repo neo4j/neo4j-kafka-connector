@@ -225,7 +225,7 @@ object ChangeEventExtensions {
         .namespaced("cdc.Node")
         .field("elementId", SimpleTypes.STRING.schema())
         .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-        .field("keys", DynamicTypes.schemaFor(this.keys, true))
+        .field("keys", schemaForKeysByLabel(this.keys))
         .build()
   }
 
@@ -280,6 +280,8 @@ object ChangeEventExtensions {
 
   private fun schemaForKeys(keys: List<Map<String, Any>>): Schema {
     return SchemaBuilder.array(
+            // We need to define a uniform structure of key array elements. Because all elements
+            // must have identical structure, we list all available keys as optional fields.
             SchemaBuilder.struct()
                 .apply {
                   keys.forEach { key ->
