@@ -1247,7 +1247,7 @@ class Neo4jSinkTaskTest {
   }
 
   @Test
-  fun `should not insert data into Neo4j`() {
+  fun `should not insert data into Neo4j when cypher is specified for different label`() {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
@@ -1960,6 +1960,54 @@ class Neo4jSinkTaskTest {
           it.run("MATCH (p:PersonExt) RETURN COUNT(p) as COUNT").single()["COUNT"].asLong()
       val expectedPersonExtCount = input.filter { it.topic() == firstTopic }.size
       assertEquals(expectedPersonExtCount, personExtCount.toInt())
+    }
+  }
+
+  @Test
+  fun `should use individual strategy for each topic`() {
+    val topicA = "topicA"
+    val topicB = "topicB"
+
+    val props = mutableMapOf<String, String>()
+    props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topicA"] =
+        "CREATE (n:Place {name: event.name, latitude: event.latitude, longitude: event.longitude})"
+    props["${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}$topicB"] =
+        "User{!userId,name,surname,address.city}"
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[SinkConfiguration.BATCH_SIZE] = "2"
+    props[SinkTask.TOPICS_CONFIG] = "$topicA,$topicB"
+
+    val place =
+        mapOf("name" to "London", "latitude" to 51.5072.toFloat(), "longitude" to 0.1276.toFloat())
+    val user =
+        mapOf(
+            "userId" to 42,
+            "name" to "John",
+            "surname" to "Smith",
+            "address" to mapOf("city" to "London"))
+
+    task.start(props)
+    val input =
+        listOf(
+            SinkRecord(topicA, 1, null, null, null, place, 1),
+            SinkRecord(topicB, 1, null, null, null, user, 1))
+    task.put(input)
+
+    session.beginTransaction().use {
+      val actualPlace = it.run("MATCH (p:Place) RETURN p").single().get("p")
+      assertEquals(place["name"], actualPlace.get("name").asString())
+      assertEquals(
+          place["latitude"] as Float, actualPlace.get("latitude").asFloat(), 0.0001.toFloat())
+      assertEquals(
+          place["longitude"] as Float, actualPlace.get("longitude").asFloat(), 0.0001.toFloat())
+
+      val actualUser = it.run("MATCH (u:User) RETURN u").single().get("u")
+      assertEquals(user["name"], actualUser.get("name").asString())
+      assertEquals(user["surname"], actualUser.get("surname").asString())
+      assertEquals(
+          (user["address"] as Map<*, *>)["city"], actualUser.get("address.city").asString())
+      assertEquals(user["userId"], actualUser.get("userId").asInt())
     }
   }
 
