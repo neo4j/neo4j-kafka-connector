@@ -116,15 +116,13 @@ data class Topics(
                       SinkConfiguration.CDC_SOURCE_ID_ID_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
-      val t =
-          Topics(
+      return Topics(
               cypherTopics,
               (cdcSourceIdTopics to sourceIdStrategyConfig),
               cdcSchemaTopics,
               cudTopics,
               nodePatternTopics,
               relPatternTopics)
-      return t
     }
   }
 }
