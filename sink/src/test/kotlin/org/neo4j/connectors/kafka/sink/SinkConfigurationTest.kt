@@ -24,6 +24,7 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 
 class SinkConfigurationTest {
 
@@ -109,5 +110,53 @@ class SinkConfigurationTest {
         originals["${SinkConfiguration.CYPHER_TOPIC_PREFIX}bar"], config.topics.cypherTopics["bar"])
     assertEquals(10, config.batchSize)
     assertEquals(SinkConfiguration.DEFAULT_BATCH_TIMEOUT, config.batchTimeout)
+  }
+
+  @Test
+  fun `should return specified CDC sourceId label and id names`() {
+    val testLabel = "TestCdcLabel"
+    val testId = "test_id"
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
+            SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
+            SinkConfiguration.CDC_SOURCE_ID_ID_NAME to testId)
+    val config = SinkConfiguration(originals)
+
+    assertEquals(
+        setOf("bar", "foo") to
+            SourceIdIngestionStrategyConfig(labelName = testLabel, idName = testId),
+        config.topics.cdcSourceIdTopics)
+  }
+
+  @Test
+  fun `should return multiple CDC schema topics`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
+        )
+    val config = SinkConfiguration(originals)
+
+    assertEquals(setOf("foo", "bar"), config.topics.cdcSchemaTopics)
+  }
+
+  @Test
+  fun `should return multiple CUD topics`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.CUD_TOPICS to "bar,foo",
+        )
+    val config = SinkConfiguration(originals)
+
+    assertEquals(setOf("foo", "bar"), config.topics.cudTopics)
   }
 }

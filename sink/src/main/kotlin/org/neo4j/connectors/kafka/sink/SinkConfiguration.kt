@@ -90,8 +90,8 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
     const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
     const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
-    const val PATTERN_MERGE_NODE_PROPERTIES = "neo4j.pattern.merge-node-properties"
-    const val PATTERN_MERGE_RELATIONSHIP_PROPERTIES = "neo4j.pattern.merge-relationship-properties"
+    const val PATTERN_NODE_MERGE_PROPERTIES = "neo4j.pattern.node.merge-properties"
+    const val PATTERN_RELATIONSHIP_MERGE_PROPERTIES = "neo4j.pattern.relationship.merge-properties"
     const val CUD_TOPICS = "neo4j.cud.topics"
 
     const val LEGACY_STREAMS_PREFIX = "streams.sink"
@@ -123,9 +123,9 @@ class SinkConfiguration(originals: Map<*, *>) :
           DeprecatedNeo4jSinkConfiguration.BATCH_PARALLELIZE ->
               migrated[BATCH_PARALLELIZE] = it.value.toString()
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED ->
-              migrated[PATTERN_MERGE_NODE_PROPERTIES] = it.value.toString()
+              migrated[PATTERN_NODE_MERGE_PROPERTIES] = it.value.toString()
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED ->
-              migrated[PATTERN_MERGE_RELATIONSHIP_PROPERTIES] = it.value.toString()
+              migrated[PATTERN_RELATIONSHIP_MERGE_PROPERTIES] = it.value.toString()
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID ->
               migrated[CDC_SOURCE_ID_TOPICS] = it.value.toString().replaceLegacyDelimiter()
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME ->
@@ -189,7 +189,7 @@ class SinkConfiguration(originals: Map<*, *>) :
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
-                ConfigKeyBuilder.of(PATTERN_MERGE_NODE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
+                ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
@@ -200,8 +200,8 @@ class SinkConfiguration(originals: Map<*, *>) :
                       }
                 })
             .define(
-                ConfigKeyBuilder.of(PATTERN_MERGE_RELATIONSHIP_PROPERTIES, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(PATTERN_MERGE_RELATIONSHIP_PROPERTIES)
+                ConfigKeyBuilder.of(PATTERN_RELATIONSHIP_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING

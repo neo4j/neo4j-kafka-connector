@@ -28,7 +28,6 @@ import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternInges
 import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
-import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 
 @Suppress("UNCHECKED_CAST")
@@ -85,9 +84,9 @@ data class Topics(
               }
       val cypherTopics = TopicUtils.filterByPrefix(config, TopicType.CYPHER.key)
       val mergeNodeProperties =
-          originalConfig[SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES].toString().toBoolean()
+          originalConfig[SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES].toString().toBoolean()
       val mergeRelProperties =
-          originalConfig[SinkConfiguration.PATTERN_MERGE_RELATIONSHIP_PROPERTIES]
+          originalConfig[SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES]
               .toString()
               .toBoolean()
       val nodePatternTopics =
@@ -109,12 +108,12 @@ data class Topics(
           SourceIdIngestionStrategyConfig(
               originalConfig
                   .getOrDefault(
-                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME,
+                      SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.labelName)
                   .toString(),
               originalConfig
                   .getOrDefault(
-                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME,
+                      SinkConfiguration.CDC_SOURCE_ID_ID_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
       val t =
@@ -132,7 +131,7 @@ data class Topics(
 
 object TopicUtils {
 
-  @JvmStatic val TOPIC_SEPARATOR = ";"
+  @JvmStatic val TOPIC_SEPARATOR = ","
 
   fun filterByPrefix(
       config: Map<*, *>,
