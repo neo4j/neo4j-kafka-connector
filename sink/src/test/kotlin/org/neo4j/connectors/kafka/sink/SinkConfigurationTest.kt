@@ -23,6 +23,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 
@@ -158,5 +159,70 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals)
 
     assertEquals(setOf("foo", "bar"), config.topics.cudTopics)
+  }
+
+  @Test
+  fun `migrateSettings should replace deprecated settings with up-to-date equivalent`() {
+    val originals =
+        mapOf(
+            DeprecatedNeo4jConfiguration.SERVER_URI to "bolt://neo4j:7687",
+            DeprecatedNeo4jConfiguration.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS to "456",
+            DeprecatedNeo4jConfiguration.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS to "678",
+            DeprecatedNeo4jConfiguration.CONNECTION_POOL_MAX_SIZE to 2,
+            DeprecatedNeo4jConfiguration.RETRY_MAX_ATTEMPTS to 5,
+            DeprecatedNeo4jConfiguration.RETRY_BACKOFF_MSECS to "890",
+            DeprecatedNeo4jConfiguration.CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS to
+                "234",
+            DeprecatedNeo4jConfiguration.ENCRYPTION_ENABLED to true,
+            DeprecatedNeo4jConfiguration.ENCRYPTION_CA_CERTIFICATE_PATH to "/path/to/cert",
+            DeprecatedNeo4jConfiguration.ENCRYPTION_TRUST_STRATEGY to
+                "TRUST_CUSTOM_CA_SIGNED_CERTIFICATES",
+            DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            DeprecatedNeo4jConfiguration.BATCH_SIZE to 20,
+            DeprecatedNeo4jConfiguration.BATCH_TIMEOUT_MSECS to 468,
+            DeprecatedNeo4jSinkConfiguration.BATCH_PARALLELIZE to false,
+            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED to true,
+            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED to
+                false,
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID to "foo;bar",
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME to "Custom",
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME to "c_id",
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SCHEMA to "foo; bar",
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CUD to "foo;bar",
+            "${DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX}foo" to "MERGE (c: Source)",
+            "${DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}bar" to "Source(!id)",
+            "${DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX}bar" to "TYPED",
+            SinkConnector.TOPICS_CONFIG to "bar,foo")
+    val actual = SinkConfiguration.migrateSettings(originals)
+
+    val expected =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "456ms",
+            Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "678ms",
+            Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to "2",
+            Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to "5",
+            Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "890ms",
+            Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "234ms",
+            Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
+            Neo4jConfiguration.SECURITY_CERT_FILES to "/path/to/cert",
+            Neo4jConfiguration.SECURITY_TRUST_STRATEGY to "TRUST_CUSTOM_CA_SIGNED_CERTIFICATES",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConfiguration.BATCH_SIZE to "20",
+            SinkConfiguration.BATCH_TIMEOUT to "468ms",
+            SinkConfiguration.BATCH_PARALLELIZE to "false",
+            SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES to "true",
+            SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES to "false",
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo,bar",
+            SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to "Custom",
+            SinkConfiguration.CDC_SOURCE_ID_ID_NAME to "c_id",
+            SinkConfiguration.CDC_SCHEMA_TOPICS to "foo, bar",
+            SinkConfiguration.CUD_TOPICS to "foo,bar",
+            "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to "MERGE (c: Source)",
+            "${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}bar" to "Source(!id)",
+            "${SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX}bar" to "TYPED",
+            SinkConnector.TOPICS_CONFIG to "bar,foo")
+
+    assertEquals(expected, actual)
   }
 }

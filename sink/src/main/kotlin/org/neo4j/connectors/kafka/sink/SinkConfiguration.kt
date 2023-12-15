@@ -94,9 +94,6 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val PATTERN_RELATIONSHIP_MERGE_PROPERTIES = "neo4j.pattern.relationship.merge-properties"
     const val CUD_TOPICS = "neo4j.cud.topics"
 
-    const val LEGACY_STREAMS_PREFIX = "streams.sink"
-    const val NEO4J_PREFIX = "neo4j"
-
     const val DEFAULT_BATCH_SIZE = 1000
     val DEFAULT_BATCH_TIMEOUT = 0.seconds
     const val DEFAULT_BATCH_PARALLELIZE = true
@@ -109,37 +106,37 @@ class SinkConfiguration(originals: Map<*, *>) :
             DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX to CYPHER_TOPIC_PREFIX,
             DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_NODE_PREFIX to PATTERN_NODE_TOPIC_PREFIX,
             DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX to
-                PATTERN_RELATIONSHIP_TOPIC_PREFIX,
-            LEGACY_STREAMS_PREFIX to NEO4J_PREFIX)
+                PATTERN_RELATIONSHIP_TOPIC_PREFIX)
 
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migrated = Neo4jConfiguration.migrateSettings(oldSettings, true).toMutableMap()
+      val migratedBase = Neo4jConfiguration.migrateSettings(oldSettings, false)
+      val migrated = HashMap<String, String>(migratedBase.size)
 
-      oldSettings.forEach {
+      migratedBase.forEach {
         when (it.key) {
-          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value.toString()
+          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value
           DeprecatedNeo4jConfiguration.BATCH_TIMEOUT_MSECS ->
               migrated[BATCH_TIMEOUT] = "${it.value}ms"
           DeprecatedNeo4jSinkConfiguration.BATCH_PARALLELIZE ->
-              migrated[BATCH_PARALLELIZE] = it.value.toString()
+              migrated[BATCH_PARALLELIZE] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED ->
-              migrated[PATTERN_NODE_MERGE_PROPERTIES] = it.value.toString()
+              migrated[PATTERN_NODE_MERGE_PROPERTIES] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED ->
-              migrated[PATTERN_RELATIONSHIP_MERGE_PROPERTIES] = it.value.toString()
+              migrated[PATTERN_RELATIONSHIP_MERGE_PROPERTIES] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID ->
-              migrated[CDC_SOURCE_ID_TOPICS] = it.value.toString().replaceLegacyDelimiter()
+              migrated[CDC_SOURCE_ID_TOPICS] = it.value.replaceLegacyDelimiter()
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME ->
-              migrated[CDC_SOURCE_ID_LABEL_NAME] = it.value.toString()
+              migrated[CDC_SOURCE_ID_LABEL_NAME] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME ->
-              migrated[CDC_SOURCE_ID_ID_NAME] = it.value.toString()
+              migrated[CDC_SOURCE_ID_ID_NAME] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SCHEMA ->
-              migrated[CDC_SCHEMA_TOPICS] = it.value.toString().replaceLegacyDelimiter()
+              migrated[CDC_SCHEMA_TOPICS] = it.value.replaceLegacyDelimiter()
           DeprecatedNeo4jSinkConfiguration.TOPIC_CUD ->
-              migrated[CUD_TOPICS] = it.value.toString().replaceLegacyDelimiter()
+              migrated[CUD_TOPICS] = it.value.replaceLegacyDelimiter()
           else -> {
             val migratedKey = replaceLegacyPropertyKeys(it.key)
             if (!migrated.containsKey(migratedKey)) {
-              migrated[migratedKey] = it.value.toString()
+              migrated[migratedKey] = it.value
             }
           }
         }
