@@ -36,7 +36,7 @@ class SinkConfigurationTest {
                   Neo4jConfiguration.URI to "bolt://neo4j:7687",
                   Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                   SinkConnector.TOPICS_CONFIG to "foo, bar",
-                  "${SinkConfiguration.TOPIC_CYPHER_PREFIX}foo" to
+                  "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                       "CREATE (p:Person{name: event.firstName})")
           SinkConfiguration(originals)
         }
@@ -55,11 +55,11 @@ class SinkConfigurationTest {
                   Neo4jConfiguration.URI to "bolt://neo4j:7687",
                   Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                   SinkConnector.TOPICS_CONFIG to "foo, bar",
-                  "${SinkConfiguration.TOPIC_CYPHER_PREFIX}foo" to
+                  "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                       "CREATE (p:Person{name: event.firstName})",
-                  "${SinkConfiguration.TOPIC_CYPHER_PREFIX}bar" to
+                  "${SinkConfiguration.CYPHER_TOPIC_PREFIX}bar" to
                       "CREATE (p:Person{name: event.firstName})",
-                  SinkConfiguration.TOPIC_CDC_SOURCE_ID to "foo")
+                  SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo")
           SinkConfiguration(originals)
         }
 
@@ -73,7 +73,7 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "foo",
-            "${DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX}foo" to
+            "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                 "CREATE (p:Person{name: event.firstName})",
             SinkConfiguration.BATCH_SIZE to 10,
             "kafka.${CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG}" to "broker:9093",
@@ -87,7 +87,7 @@ class SinkConfigurationTest {
             ProducerConfig.ACKS_CONFIG to 1),
         config.kafkaBrokerProperties)
     assertEquals(
-        originals["${SinkConfiguration.TOPIC_CYPHER_PREFIX}foo"], config.topics.cypherTopics["foo"])
+        originals["${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo"], config.topics.cypherTopics["foo"])
     assertEquals(10, config.batchSize)
   }
 
@@ -98,15 +98,15 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar,foo",
-            "${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}foo" to "(:Foo{!fooId,fooName})",
-            "${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}bar" to "(:Bar{!barId,barName})",
+            "${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}foo" to "(:Foo{!fooId,fooName})",
+            "${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
             SinkConfiguration.BATCH_SIZE to 10)
     val config = SinkConfiguration(originals)
 
     assertEquals(
-        originals["${SinkConfiguration.TOPIC_CYPHER_PREFIX}foo"], config.topics.cypherTopics["foo"])
+        originals["${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo"], config.topics.cypherTopics["foo"])
     assertEquals(
-        originals["${SinkConfiguration.TOPIC_CYPHER_PREFIX}bar"], config.topics.cypherTopics["bar"])
+        originals["${SinkConfiguration.CYPHER_TOPIC_PREFIX}bar"], config.topics.cypherTopics["bar"])
     assertEquals(10, config.batchSize)
     assertEquals(SinkConfiguration.DEFAULT_BATCH_TIMEOUT, config.batchTimeout)
   }

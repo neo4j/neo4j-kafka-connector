@@ -33,20 +33,28 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     @Deprecated("deprecated in favour of ${SinkConfiguration.BATCH_PARALLELIZE}")
     const val BATCH_PARALLELIZE = "neo4j.batch.parallelize"
 
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CYPHER_TOPIC_PREFIX}")
     const val TOPIC_CYPHER_PREFIX = "neo4j.topic.cypher."
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_TOPICS}")
     const val TOPIC_CDC_SOURCE_ID = "neo4j.topic.cdc.sourceId"
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME}")
     const val TOPIC_CDC_SOURCE_ID_LABEL_NAME = "neo4j.topic.cdc.sourceId.labelName"
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_ID_NAME}")
     const val TOPIC_CDC_SOURCE_ID_ID_NAME = "neo4j.topic.cdc.sourceId.idName"
+    @Deprecated("deprecated in favour of ${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}")
     const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."
+    @Deprecated("deprecated in favour of ${SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX}")
     const val TOPIC_PATTERN_RELATIONSHIP_PREFIX = "neo4j.topic.pattern.relationship."
-    @Deprecated("deprecated in favour of ${SinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES}")
+    @Deprecated("deprecated in favour of ${SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.node.properties.enabled"
     @Deprecated(
-        "deprecated in favour of ${SinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES}")
+        "deprecated in favour of ${SinkConfiguration.PATTERN_MERGE_RELATIONSHIP_PROPERTIES}")
     const val TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED =
         "neo4j.topic.pattern.merge.relationship.properties.enabled"
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SCHEMA_TOPICS}")
     const val TOPIC_CDC_SCHEMA = "neo4j.topic.cdc.schema"
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CUD_TOPICS}")
     const val TOPIC_CUD = "neo4j.topic.cud"
 
     const val DEFAULT_BATCH_PARALLELIZE = true

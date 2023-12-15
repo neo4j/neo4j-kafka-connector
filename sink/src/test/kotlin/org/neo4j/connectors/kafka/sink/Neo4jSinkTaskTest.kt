@@ -142,7 +142,7 @@ class Neo4jSinkTaskTest {
     val firstTopic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$firstTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$firstTopic"] =
         """
             CREATE (b:BODY)
             WITH event.p AS paragraphList, event.ul AS ulList, b
@@ -209,9 +209,9 @@ class Neo4jSinkTaskTest {
     val secondTopic = "foo"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$firstTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$firstTopic"] =
         "CREATE (n:PersonExt {name: event.firstName, surname: event.lastName})"
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$secondTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$secondTopic"] =
         "CREATE (n:Person {name: event.firstName})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkConfiguration.BATCH_SIZE] = 2.toString()
@@ -258,7 +258,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SOURCE_ID to firstTopic,
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to firstTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to firstTopic)
 
@@ -363,7 +363,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SOURCE_ID to firstTopic,
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to firstTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to firstTopic)
 
@@ -445,7 +445,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SCHEMA to firstTopic,
+            SinkConfiguration.CDC_SCHEMA_TOPICS to firstTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to firstTopic)
 
@@ -633,7 +633,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SCHEMA to myTopic,
+            SinkConfiguration.CDC_SCHEMA_TOPICS to myTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to myTopic)
 
@@ -847,7 +847,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SCHEMA to myTopic,
+            SinkConfiguration.CDC_SCHEMA_TOPICS to myTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to myTopic)
 
@@ -1052,7 +1052,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SCHEMA to myTopic,
+            SinkConfiguration.CDC_SCHEMA_TOPICS to myTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to myTopic)
 
@@ -1205,7 +1205,7 @@ class Neo4jSinkTaskTest {
     val props =
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
-            SinkConfiguration.TOPIC_CDC_SOURCE_ID to firstTopic,
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to firstTopic,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SinkTask.TOPICS_CONFIG to firstTopic)
 
@@ -1251,7 +1251,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topic"] =
         "CREATE (n:Person {name: event.firstName, surname: event.lastName})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1275,7 +1275,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topic"] =
         "CREATE (n:Person {name: event.firstName, surname: event.lastName})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1295,7 +1295,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topic"] =
         "CREATE (n:Person {name: event.firstName, surname: event.lastName})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[ErrorService.ErrorConfig.TOLERANCE] = "all"
@@ -1315,7 +1315,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topic"] = " No Valid Cypher "
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topic"] = " No Valid Cypher "
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
     props[ErrorService.ErrorConfig.TOLERANCE] = "all"
@@ -1334,7 +1334,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}$topic"] =
+    props["${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}$topic"] =
         "User{!userId,name,surname,address.city}"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1365,7 +1365,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$topic"] =
+    props["${SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX}$topic"] =
         "(:User{!sourceId,sourceName,sourceSurname})-[:KNOWS]->(:User{!targetId,targetName,targetSurname})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1412,7 +1412,7 @@ class Neo4jSinkTaskTest {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}$topic"] =
+    props["${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}$topic"] =
         "User{!userId,name,surname,address.city}"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1452,7 +1452,7 @@ class Neo4jSinkTaskTest {
 
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SinkConfiguration.TOPIC_CUD] = topic
+    props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
 
@@ -1497,7 +1497,7 @@ class Neo4jSinkTaskTest {
         }
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SinkConfiguration.TOPIC_CUD] = topic
+    props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
 
@@ -1537,7 +1537,7 @@ class Neo4jSinkTaskTest {
         }
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SinkConfiguration.TOPIC_CUD] = topic
+    props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
     session.beginTransaction().use {
@@ -1598,7 +1598,7 @@ class Neo4jSinkTaskTest {
         }
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SinkConfiguration.TOPIC_CUD] = topic
+    props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
 
@@ -1757,7 +1757,7 @@ class Neo4jSinkTaskTest {
 
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SinkConfiguration.TOPIC_CUD] = topic
+    props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
 
@@ -1791,7 +1791,7 @@ class Neo4jSinkTaskTest {
 
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX}$topic"] =
+    props["${SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX}$topic"] =
         "(:User{!sourceId,sourceName,sourceSurname})-[:KNOWS]->(:User{!targetId,targetName,targetSurname})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
@@ -1854,7 +1854,7 @@ class Neo4jSinkTaskTest {
     val myTopic = "foo"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$myTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$myTopic"] =
         "CREATE (n:Person {name: event.name})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkConfiguration.BATCH_PARALLELIZE] = true.toString()
@@ -1913,9 +1913,9 @@ class Neo4jSinkTaskTest {
     val secondTopic = "foo"
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$firstTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$firstTopic"] =
         "CREATE (n:PersonExt {modified: event.place.modified})"
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$secondTopic"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$secondTopic"] =
         "CREATE (n:Person {modified: event.place.modified})"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkConfiguration.BATCH_SIZE] = 2.toString()
@@ -1970,9 +1970,9 @@ class Neo4jSinkTaskTest {
 
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.TOPIC_CYPHER_PREFIX}$topicA"] =
+    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topicA"] =
         "CREATE (n:Place {name: event.name, latitude: event.latitude, longitude: event.longitude})"
-    props["${SinkConfiguration.TOPIC_PATTERN_NODE_PREFIX}$topicB"] =
+    props["${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}$topicB"] =
         "User{!userId,name,surname,address.city}"
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkConfiguration.BATCH_SIZE] = "2"

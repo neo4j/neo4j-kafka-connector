@@ -18,8 +18,8 @@ package org.neo4j.connectors.kafka.service
 
 import org.neo4j.connectors.kafka.service.sink.strategy.IngestionStrategy
 
-const val STREAMS_TOPIC_KEY: String = "streams.sink.topic"
-const val STREAMS_TOPIC_CDC_KEY: String = "streams.sink.topic.cdc"
+const val NEO4J_PREFIX: String = "neo4j"
+const val CDC_PREFIX: String = "$NEO4J_PREFIX.cdc"
 
 enum class TopicTypeGroup {
   CYPHER,
@@ -29,13 +29,13 @@ enum class TopicTypeGroup {
 }
 
 enum class TopicType(val group: TopicTypeGroup, val key: String) {
-  CDC_SOURCE_ID(group = TopicTypeGroup.CDC, key = "$STREAMS_TOPIC_CDC_KEY.sourceId"),
-  CYPHER(group = TopicTypeGroup.CYPHER, key = "$STREAMS_TOPIC_KEY.cypher"),
-  PATTERN_NODE(group = TopicTypeGroup.PATTERN, key = "$STREAMS_TOPIC_KEY.pattern.node"),
+  CDC_SOURCE_ID(group = TopicTypeGroup.CDC, key = "$CDC_PREFIX.sourceId.topics"),
+  CYPHER(group = TopicTypeGroup.CYPHER, key = "$NEO4J_PREFIX.cypher.topic"),
+  PATTERN_NODE(group = TopicTypeGroup.PATTERN, key = "$NEO4J_PREFIX.pattern.node.topic"),
   PATTERN_RELATIONSHIP(
-      group = TopicTypeGroup.PATTERN, key = "$STREAMS_TOPIC_KEY.pattern.relationship"),
-  CDC_SCHEMA(group = TopicTypeGroup.CDC, key = "$STREAMS_TOPIC_CDC_KEY.schema"),
-  CUD(group = TopicTypeGroup.CUD, key = "$STREAMS_TOPIC_KEY.cud")
+      group = TopicTypeGroup.PATTERN, key = "$NEO4J_PREFIX.pattern.relationship.topic"),
+  CDC_SCHEMA(group = TopicTypeGroup.CDC, key = "$CDC_PREFIX.schema.topics"),
+  CUD(group = TopicTypeGroup.CUD, key = "$NEO4J_PREFIX.cud.topics")
 }
 
 data class StreamsSinkEntity(val key: Any?, val value: Any?)
