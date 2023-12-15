@@ -117,12 +117,12 @@ data class Topics(
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
       return Topics(
-              cypherTopics,
-              (cdcSourceIdTopics to sourceIdStrategyConfig),
-              cdcSchemaTopics,
-              cudTopics,
-              nodePatternTopics,
-              relPatternTopics)
+          cypherTopics,
+          (cdcSourceIdTopics to sourceIdStrategyConfig),
+          cdcSchemaTopics,
+          cudTopics,
+          nodePatternTopics,
+          relPatternTopics)
     }
   }
 }
