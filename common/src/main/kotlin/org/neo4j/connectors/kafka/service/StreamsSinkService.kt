@@ -18,9 +18,6 @@ package org.neo4j.connectors.kafka.service
 
 import org.neo4j.connectors.kafka.service.sink.strategy.IngestionStrategy
 
-const val NEO4J_PREFIX: String = "neo4j"
-const val CDC_PREFIX: String = "$NEO4J_PREFIX.cdc"
-
 enum class TopicTypeGroup {
   CYPHER,
   CDC,
@@ -28,14 +25,13 @@ enum class TopicTypeGroup {
   CUD
 }
 
-enum class TopicType(val group: TopicTypeGroup, val key: String) {
-  CDC_SOURCE_ID(group = TopicTypeGroup.CDC, key = "$CDC_PREFIX.sourceId.topics"),
-  CYPHER(group = TopicTypeGroup.CYPHER, key = "$NEO4J_PREFIX.cypher.topic"),
-  PATTERN_NODE(group = TopicTypeGroup.PATTERN, key = "$NEO4J_PREFIX.pattern.node.topic"),
-  PATTERN_RELATIONSHIP(
-      group = TopicTypeGroup.PATTERN, key = "$NEO4J_PREFIX.pattern.relationship.topic"),
-  CDC_SCHEMA(group = TopicTypeGroup.CDC, key = "$CDC_PREFIX.schema.topics"),
-  CUD(group = TopicTypeGroup.CUD, key = "$NEO4J_PREFIX.cud.topics")
+enum class TopicType(val group: TopicTypeGroup) {
+  CDC_SOURCE_ID(group = TopicTypeGroup.CDC),
+  CYPHER(group = TopicTypeGroup.CYPHER),
+  PATTERN_NODE(group = TopicTypeGroup.PATTERN),
+  PATTERN_RELATIONSHIP(group = TopicTypeGroup.PATTERN),
+  CDC_SCHEMA(group = TopicTypeGroup.CDC),
+  CUD(group = TopicTypeGroup.CUD)
 }
 
 data class StreamsSinkEntity(val key: Any?, val value: Any?)

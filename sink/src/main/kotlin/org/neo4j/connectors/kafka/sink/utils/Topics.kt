@@ -82,7 +82,7 @@ data class Topics(
               .mapKeys {
                 if (dbName.isNotBlank()) it.key.replace(".to.$dbName", "", true) else it.key
               }
-      val cypherTopics = TopicUtils.filterByPrefix(config, TopicType.CYPHER.key)
+      val cypherTopics = TopicUtils.filterByPrefix(config, SinkConfiguration.CYPHER_TOPIC_PREFIX)
       val mergeNodeProperties =
           originalConfig[SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES].toString().toBoolean()
       val mergeRelProperties =
@@ -90,20 +90,24 @@ data class Topics(
               .toString()
               .toBoolean()
       val nodePatternTopics =
-          TopicUtils.filterByPrefix(config, TopicType.PATTERN_NODE.key, invalidTopics).mapValues {
-            NodePatternConfiguration.parse(it.value, mergeNodeProperties)
-          }
+          TopicUtils.filterByPrefix(
+                  config, SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX, invalidTopics)
+              .mapValues { NodePatternConfiguration.parse(it.value, mergeNodeProperties) }
       val relPatternTopics =
-          TopicUtils.filterByPrefix(config, TopicType.PATTERN_RELATIONSHIP.key, invalidTopics)
+          TopicUtils.filterByPrefix(
+                  config, SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX, invalidTopics)
               .mapValues {
                 RelationshipPatternConfiguration.parse(
                     it.value, mergeNodeProperties, mergeRelProperties)
               }
       val cdcSourceIdTopics =
-          TopicUtils.splitTopics(config[TopicType.CDC_SOURCE_ID.key] as? String, invalidTopics)
+          TopicUtils.splitTopics(
+              config[SinkConfiguration.CDC_SOURCE_ID_TOPICS] as? String, invalidTopics)
       val cdcSchemaTopics =
-          TopicUtils.splitTopics(config[TopicType.CDC_SCHEMA.key] as? String, invalidTopics)
-      val cudTopics = TopicUtils.splitTopics(config[TopicType.CUD.key] as? String, invalidTopics)
+          TopicUtils.splitTopics(
+              config[SinkConfiguration.CDC_SCHEMA_TOPICS] as? String, invalidTopics)
+      val cudTopics =
+          TopicUtils.splitTopics(config[SinkConfiguration.CUD_TOPICS] as? String, invalidTopics)
       val sourceIdStrategyConfig =
           SourceIdIngestionStrategyConfig(
               originalConfig
@@ -136,10 +140,9 @@ object TopicUtils {
       prefix: String,
       invalidTopics: List<String> = emptyList()
   ): Map<String, String> {
-    val fullPrefix = "$prefix."
     return config
-        .filterKeys { it.toString().startsWith(fullPrefix) }
-        .mapKeys { it.key.toString().replace(fullPrefix, "") }
+        .filterKeys { it.toString().startsWith(prefix) }
+        .mapKeys { it.key.toString().replace(prefix, "") }
         .filterKeys { !invalidTopics.contains(it) }
         .mapValues { it.value.toString() }
   }
