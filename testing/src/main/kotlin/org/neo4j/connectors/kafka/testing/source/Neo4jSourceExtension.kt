@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.testing.source
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
+import kotlin.reflect.KProperty1
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -127,7 +128,12 @@ internal class Neo4jSourceExtension(
             streamingProperty = sourceAnnotation.streamingProperty,
             startFrom = sourceAnnotation.startFrom,
             query = sourceAnnotation.query,
-        )
+            strategy = sourceAnnotation.strategy,
+            cdcPatternsIndexed = sourceAnnotation.cdc.patternsIndexed,
+            cdcPatterns = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::patterns),
+            cdcOperations = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::operations),
+            cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
+            cdcMetadata = sourceAnnotation.cdc.metadataAsMap())
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
   }
 
@@ -189,6 +195,31 @@ internal class Neo4jSourceExtension(
       val consumer = KafkaConsumer<String, GenericRecord>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
+    }
+
+    private fun CdcSource.paramAsMap(
+        property: KProperty1<CdcSourceTopic, Array<CdcSourceParam>>
+    ): Map<String, List<String>> {
+      val result = mutableMapOf<String, MutableList<String>>()
+      this.topics.forEach { topic ->
+        property.get(topic).forEach { param ->
+          result.computeIfAbsent(topic.topic) { mutableListOf() }.add(param.index, param.value)
+        }
+      }
+      return result
+    }
+
+    private fun CdcSource.metadataAsMap(): Map<String, List<Map<String, String>>> {
+      val result = mutableMapOf<String, MutableList<MutableMap<String, String>>>()
+      this.topics.forEach { topic ->
+        topic.metadata.forEach { metadata ->
+          result
+              .computeIfAbsent(topic.topic) { mutableListOf() }
+              .getOrElse(metadata.index) { mutableMapOf() }
+              .put(metadata.key, metadata.key)
+        }
+      }
+      return result
     }
   }
 
