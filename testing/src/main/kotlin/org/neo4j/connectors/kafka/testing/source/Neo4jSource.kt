@@ -35,9 +35,9 @@ annotation class Neo4jSource(
     val strategy: SourceStrategy = SourceStrategy.QUERY,
 
     // QUERY strategy
-    val topic: String,
-    val streamingProperty: String,
-    val query: String,
+    val topic: String = "",
+    val streamingProperty: String = "",
+    val query: String = "",
 
     // CDC strategy
     val cdc: CdcSource = CdcSource(),

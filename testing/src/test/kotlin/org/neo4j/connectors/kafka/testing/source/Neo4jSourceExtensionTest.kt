@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.source
 
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.reflect.KFunction
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -31,6 +32,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.ParameterizedTest.DISPLAY_NAME_PLACEHOLDER
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
@@ -140,12 +144,13 @@ class Neo4jSourceExtensionTest {
     )
   }
 
-  @Test
-  fun `resolves Session parameter`() {
+  @ParameterizedTest(name = "$DISPLAY_NAME_PLACEHOLDER [{0}]")
+  @MethodSource("validMethods")
+  fun `resolves Session parameter`(name: String, method: KFunction<Unit>) {
     val session = mock<Session>()
     val driver = mock<Driver> { on { session() } doReturn session }
     val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
-    val extensionContext = extensionContextFor(::validMethod)
+    val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)
 
     val sessionParam =
@@ -155,11 +160,12 @@ class Neo4jSourceExtensionTest {
     assertSame(session, sessionParam)
   }
 
-  @Test
-  fun `resolves consumer parameter`() {
+  @ParameterizedTest(name = "$DISPLAY_NAME_PLACEHOLDER [{0}]")
+  @MethodSource("validMethods")
+  fun `resolves consumer parameter`(name: String, method: KFunction<Unit>) {
     val consumer = mock<KafkaConsumer<String, GenericRecord>>()
     val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
-    val extensionContext = extensionContextFor(::validMethod)
+    val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
 
@@ -365,6 +371,30 @@ class Neo4jSourceExtensionTest {
       brokerExternalHost = "example.com",
       schemaControlRegistryUri = "http://example.com",
       schemaControlRegistryExternalUri = "http://example.com",
+      kafkaConnectExternalUri = "http://example.com",
+      neo4jExternalUri = "neo4j://example.com",
+      neo4jUri = "neo4j://example.com",
+      neo4jUser = "user",
+      neo4jPassword = "password",
+      startFrom = "ALL",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "topic",
+                          patterns =
+                              arrayOf(
+                                  CdcSourceParam("(:Person {+name})"),
+                                  CdcSourceParam("(:Person)-[:WORKS_FOR]→(:Company)"))))))
+  @Suppress("UNUSED")
+  fun validCdcMethod() {}
+
+  @Neo4jSource(
+      brokerExternalHost = "example.com",
+      schemaControlRegistryUri = "http://example.com",
+      schemaControlRegistryExternalUri = "http://example.com",
       neo4jExternalUri = "neo4j://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
@@ -382,4 +412,12 @@ class Neo4jSourceExtensionTest {
   fun envBackedMethod() {}
 
   @Suppress("UNUSED") fun missingAnnotationMethod() {}
+
+  companion object {
+    @JvmStatic
+    fun validMethods(): Array<Array<Any>> =
+        arrayOf(
+            arrayOf("valid query settings", Neo4jSourceExtensionTest::validMethod),
+            arrayOf("valid cdc settings", Neo4jSourceExtensionTest::validCdcMethod))
+  }
 }
