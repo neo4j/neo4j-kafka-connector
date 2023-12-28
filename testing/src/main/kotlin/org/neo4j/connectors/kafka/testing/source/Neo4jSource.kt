@@ -48,13 +48,11 @@ enum class SourceStrategy {
   CDC
 }
 
-@Retention(AnnotationRetention.RUNTIME)
 annotation class CdcSource(
     val patternsIndexed: Boolean = false,
     val topics: Array<CdcSourceTopic> = []
 )
 
-@Retention(AnnotationRetention.RUNTIME)
 annotation class CdcSourceTopic(
     val topic: String,
     val patterns: Array<CdcSourceParam> = [],
@@ -63,8 +61,6 @@ annotation class CdcSourceTopic(
     val metadata: Array<CdcMetadata> = []
 )
 
-@Retention(AnnotationRetention.RUNTIME)
 annotation class CdcSourceParam(val value: String, val index: Int = 0)
 
-@Retention(AnnotationRetention.RUNTIME)
 annotation class CdcMetadata(val key: String, val value: String, val index: Int = 0)

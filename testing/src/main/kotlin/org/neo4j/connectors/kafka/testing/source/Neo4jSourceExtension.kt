@@ -118,6 +118,12 @@ internal class Neo4jSourceExtension(
     if (this::driver.isInitialized) {
       driver.verifyConnectivity()
     }
+    if (sourceAnnotation.strategy == SourceStrategy.CDC) {
+      createDriver().use { driver ->
+        driver.session().use { it.run("ALTER DATABASE neo4j SET OPTION txLogEnrichment \"FULL\";") }
+      }
+    }
+
     source =
         Neo4jSourceRegistration(
             schemaControlRegistryUri = schemaRegistryUri.resolve(sourceAnnotation),
@@ -179,12 +185,16 @@ internal class Neo4jSourceExtension(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
       @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
   ): Any {
+    driver = createDriver()
+    session = driver.session()
+    return session
+  }
+
+  private fun createDriver(): Driver {
     val uri = neo4jExternalUri.resolve(sourceAnnotation)
     val username = neo4jUser.resolve(sourceAnnotation)
     val password = neo4jPassword.resolve(sourceAnnotation)
-    driver = driverFactory(uri, AuthTokens.basic(username, password))
-    session = driver.session()
-    return session
+    return driverFactory(uri, AuthTokens.basic(username, password))
   }
 
   companion object {

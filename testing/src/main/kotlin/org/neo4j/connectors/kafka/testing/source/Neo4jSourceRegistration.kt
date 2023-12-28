@@ -135,9 +135,11 @@ internal class Neo4jSourceRegistration(
       if (indexed) {
         putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.pattern", patterns)
       } else {
-        patterns.forEach { (topic, params) ->
-          this["neo4j.cdc.topic.$topic.patterns"] = params.joinToString(",")
-        }
+        patterns
+            .filterValues { it.isNotEmpty() }
+            .forEach { (topic, params) ->
+              this["neo4j.cdc.topic.$topic.patterns"] = params.joinToString(",")
+            }
       }
       return this
     }
