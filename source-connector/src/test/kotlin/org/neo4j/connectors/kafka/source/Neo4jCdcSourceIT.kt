@@ -38,9 +38,8 @@ import org.neo4j.driver.Session
 
 class Neo4jCdcSourceIT {
 
-  @Disabled
+  @Disabled // TODO This test fail because of incompatible schema changes error
   @Neo4jSource(
-      streamingProperty = "timestamp",
       startFrom = "EARLIEST",
       strategy = SourceStrategy.CDC,
       cdc =
@@ -101,6 +100,91 @@ class Neo4jCdcSourceIT {
                 .hasBeforeStateProperties(
                     mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
                 .hasNoAfterState()
+          }
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              patternsIndexed = true,
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-update-topic",
+                          patterns =
+                              arrayOf(
+                                  CdcSourceParam(
+                                      value = "(:TestSource{name,+surname,+execId,-age,email})",
+                                      index = 0)),
+                          operations = arrayOf(CdcSourceParam(value = "UPDATE", index = 0)),
+                          changesTo =
+                              arrayOf(CdcSourceParam(value = "surname,email", index = 0))))))
+  @Test
+  fun `reads only specified field changes on creation`(
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE (:TestSource {name: 'Jane', surname: 'Doe', age: 42, email: 'janedoe@example.com', execId: \$execId})",
+            mapOf("execId" to executionId))
+        .consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
+    session
+        .run(
+            "MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Cook', ts.email = 'janecook@example.com'")
+        .consume()
+    session
+        .run(
+            "MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Johansson', ts.email = 'janejoh@example.com'")
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .expectMessageValueMatching { value ->
+          AssertionUtils.assertionValid {
+            AvroCdcRecordAssert.assertThat(value)
+                .hasEventType(EventType.NODE)
+                .hasOperation(Operation.UPDATE)
+                .labelledAs("TestSource")
+                .hasBeforeStateProperties(
+                    mapOf(
+                        "name" to "Jane",
+                        "surname" to "Smith",
+                        "execId" to executionId,
+                        "email" to "janedoe@example.com"))
+                .hasAfterStateProperties(
+                    mapOf(
+                        "name" to "Jane",
+                        "surname" to "Cook",
+                        "execId" to executionId,
+                        "email" to "janecook@example.com"))
+          }
+        }
+        .expectMessageValueMatching { value ->
+          AssertionUtils.assertionValid {
+            AvroCdcRecordAssert.assertThat(value)
+                .hasEventType(EventType.NODE)
+                .hasOperation(Operation.UPDATE)
+                .labelledAs("TestSource")
+                .hasBeforeStateProperties(
+                    mapOf(
+                        "name" to "Jane",
+                        "surname" to "Cook",
+                        "execId" to executionId,
+                        "email" to "janecook@example.com"))
+                .hasAfterStateProperties(
+                    mapOf(
+                        "name" to "Jane",
+                        "surname" to "Johansson",
+                        "execId" to executionId,
+                        "email" to "janejoh@example.com"))
           }
         }
         .verifyWithin(Duration.ofSeconds(30))
