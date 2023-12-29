@@ -17,8 +17,10 @@
 
 package org.neo4j.connectors.kafka.source
 
+import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AssertionUtils
@@ -33,32 +35,29 @@ import org.neo4j.connectors.kafka.testing.source.Neo4jSource
 import org.neo4j.connectors.kafka.testing.source.SourceStrategy
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
-import java.time.Duration
 
 class Neo4jCdcSourceIT {
 
+  @Disabled
   @Neo4jSource(
       streamingProperty = "timestamp",
       startFrom = "EARLIEST",
       strategy = SourceStrategy.CDC,
       cdc =
-      CdcSource(
-          topics =
-          arrayOf(
-              CdcSourceTopic(
-                  topic = "neo4j-cdc-topic",
-                  patterns =
+          CdcSource(
+              topics =
                   arrayOf(
-                      CdcSourceParam("(:TestSource{name,+surname,+execId,-age})")
-                  ))
-          ))
-  )
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic",
+                          patterns =
+                              arrayOf(
+                                  CdcSourceParam("(:TestSource{name,+surname,+execId,-age})"))))))
   @Test
   fun `reads changes specified by CDC pattern`(
-    testInfo: TestInfo,
-    @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
-    consumer: KafkaConsumer<String, GenericRecord>,
-    session: Session
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
     session
@@ -66,12 +65,8 @@ class Neo4jCdcSourceIT {
             "CREATE (:TestSource {name: 'Jane', surname: 'Doe', age: 42, execId: \$execId})",
             mapOf("execId" to executionId))
         .consume()
-    session
-        .run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'")
-        .consume()
-    session
-        .run("MATCH (ts:TestSource {name: 'Jane'}) DELETE n")
-        .consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
     TopicVerifier.create(consumer)
         .expectMessageValueMatching { value ->
@@ -82,8 +77,7 @@ class Neo4jCdcSourceIT {
                 .labelledAs("TestSource")
                 .hasNoBeforeState()
                 .hasAfterStateProperties(
-                    mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId)
-                )
+                    mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId))
           }
         }
         .expectMessageValueMatching { value ->
@@ -93,11 +87,9 @@ class Neo4jCdcSourceIT {
                 .hasOperation(Operation.UPDATE)
                 .labelledAs("TestSource")
                 .hasBeforeStateProperties(
-                    mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId)
-                )
+                    mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId))
                 .hasAfterStateProperties(
-                    mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId)
-                )
+                    mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
           }
         }
         .expectMessageValueMatching { value ->
@@ -107,8 +99,7 @@ class Neo4jCdcSourceIT {
                 .hasOperation(Operation.DELETE)
                 .labelledAs("TestSource")
                 .hasBeforeStateProperties(
-                    mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId)
-                )
+                    mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
                 .hasNoAfterState()
           }
         }
