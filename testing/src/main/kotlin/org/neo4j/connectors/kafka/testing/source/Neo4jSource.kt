@@ -31,6 +31,7 @@ annotation class Neo4jSource(
     val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
+    val neo4jDatabase: String = "",
     val startFrom: String,
     val strategy: SourceStrategy = SourceStrategy.QUERY,
 
@@ -40,7 +41,7 @@ annotation class Neo4jSource(
     val query: String = "",
 
     // CDC strategy
-    val cdc: CdcSource = CdcSource(),
+    val cdc: CdcSource = CdcSource()
 )
 
 enum class SourceStrategy {

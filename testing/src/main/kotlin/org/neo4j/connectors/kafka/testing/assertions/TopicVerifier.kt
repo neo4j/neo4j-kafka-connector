@@ -22,15 +22,10 @@ import kotlin.math.min
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.awaitility.Awaitility.await
 import org.awaitility.core.ConditionTimeoutException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
 
-  private val log: Logger = LoggerFactory.getLogger(TopicVerifier::class.java)
-
   private var messageValuePredicates = mutableListOf<Predicate<V>>()
-  private var logMessages = System.getenv("TOPIC_VERIFIER_LOG_MESSAGES")?.toBoolean() ?: false
 
   fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
     messageValuePredicates.add(predicate)
@@ -62,9 +57,6 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
             }
       }
     } catch (e: ConditionTimeoutException) {
-      if (logMessages) {
-        log.debug("Messages received:\n ${receivedMessages.toList().joinToString("\n")}")
-      }
       throw AssertionError(
           "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
     }

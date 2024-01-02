@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
+import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
@@ -29,6 +30,7 @@ internal class Neo4jSourceRegistration(
     neo4jUri: String,
     neo4jUser: String = "neo4j",
     neo4jPassword: String,
+    neo4jDatabase: String,
     pollInterval: Duration = Duration.ofMillis(5000),
     pollDuration: Duration = Duration.ofMillis(1000),
     enforceSchema: Boolean = true,
@@ -59,6 +61,7 @@ internal class Neo4jSourceRegistration(
                 "neo4j.authentication.type" to "BASIC",
                 "neo4j.authentication.basic.username" to neo4jUser,
                 "neo4j.authentication.basic.password" to neo4jPassword,
+                "neo4j.database" to neo4jDatabase,
                 "neo4j.start-from" to startFrom,
                 "neo4j.source-strategy" to strategy.name.uppercase())
             .putConditionally("topic", topic, String::isNotEmpty)
@@ -79,6 +82,7 @@ internal class Neo4jSourceRegistration(
             .putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.changesTo", cdcChangesTo)
             .putCdcPatterns(cdcPatterns, cdcPatternsIndexed)
             .putCdcMetadata(cdcMetadata)
+            .toMap()
 
     payload = mapOf("name" to name, "config" to config)
   }
@@ -95,18 +99,6 @@ internal class Neo4jSourceRegistration(
   }
 
   companion object {
-
-    fun <T : Any> MutableMap<String, Any>.putConditionally(
-        key: String,
-        value: T,
-        condition: (T) -> Boolean
-    ): MutableMap<String, Any> {
-      if (!condition(value)) {
-        return this
-      }
-      this[key] = value
-      return this
-    }
 
     fun MutableMap<String, Any>.putCdcParameters(
         keyPattern: String,

@@ -17,11 +17,14 @@
 
 package org.neo4j.connectors.kafka.testing.assertions
 
-import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
 import org.assertj.core.api.AbstractAssert
 import org.neo4j.connectors.kafka.testing.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getArray
+import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getMap
+import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getRecord
+import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getString
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 
 class AvroCdcRecordAssert(actual: GenericRecord) :
@@ -70,18 +73,18 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
   }
 
   fun hasBeforeStateProperties(
-      properties: Map<String, String>,
+      properties: Map<String, Any>,
       vararg excludingKeys: String
   ): AvroCdcRecordAssert = hasStateProperties("before", properties, *excludingKeys)
 
   fun hasAfterStateProperties(
-      properties: Map<String, String>,
+      properties: Map<String, Any>,
       vararg excludingKeys: String
   ): AvroCdcRecordAssert = hasStateProperties("after", properties, *excludingKeys)
 
   private fun hasStateProperties(
       state: String,
-      props: Map<String, String>,
+      props: Map<String, Any>,
       vararg excludingKeys: String
   ): AvroCdcRecordAssert {
     isNotNull
@@ -98,8 +101,21 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
     return this
   }
 
+  fun hasTxMetadata(txMetadata: Map<String, Any>): AvroCdcRecordAssert {
+    isNotNull
+    val actualTxMetadata = actualMetadata().getMap("txMetadata") ?: emptyMap()
+    if (txMetadata != actualTxMetadata) {
+      failWithMessage("Expect txMetadata to be <$txMetadata> but was <$actualTxMetadata>")
+    }
+    return this
+  }
+
   private fun actualEvent(): GenericRecord =
       actual.getRecord("event") ?: throw this.objects.failures.failure("Field 'event' is missing")
+
+  private fun actualMetadata(): GenericRecord =
+      actual.getRecord("metadata")
+          ?: throw this.objects.failures.failure("Field 'metadata' is missing")
 
   private fun actualState(): GenericRecord =
       actualEvent().getRecord("state")
@@ -107,13 +123,6 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
 
   companion object {
     fun assertThat(actual: GenericRecord): AvroCdcRecordAssert = AvroCdcRecordAssert(actual)
-
-    fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord
-
-    fun GenericRecord.getString(k: String): String? = (this.get(k) as? Utf8)?.toString()
-
-    @Suppress("UNCHECKED_CAST")
-    fun <T> GenericRecord.getArray(k: String): GenericArray<T>? = this.get(k) as? GenericArray<T>
   }
 }
 

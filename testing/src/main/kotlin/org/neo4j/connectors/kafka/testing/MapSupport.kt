@@ -48,4 +48,16 @@ object MapSupport {
     val exclusions = setOf(*keys)
     return this.filterKeys { !exclusions.contains(it) }
   }
+
+  fun <T : Any> MutableMap<String, Any>.putConditionally(
+      key: String,
+      value: T,
+      condition: (T) -> Boolean
+  ): MutableMap<String, Any> {
+    if (!condition(value)) {
+      return this
+    }
+    this[key] = value
+    return this
+  }
 }
