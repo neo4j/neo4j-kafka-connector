@@ -210,7 +210,7 @@ internal class Neo4jSourceExtension(
     log.debug(
         "Using database {} for test {}",
         neo4jDatabase,
-        "${context?.testClass?.get()}#${context?.displayName}")
+        "${context?.testClass?.get()?.simpleName}#${context?.displayName}")
     createDriver().use { driver ->
       driver.verifyConnectivity()
       driver.session().use { session ->

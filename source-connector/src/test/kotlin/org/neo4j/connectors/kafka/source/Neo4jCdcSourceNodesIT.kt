@@ -124,7 +124,7 @@ class Neo4jCdcSourceIT {
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
                           changesTo = arrayOf(CdcSourceParam(value = "surname,email"))))))
   @Test
-  fun `reads only specified field changes on creation`(
+  fun `reads only specified field changes on update`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,

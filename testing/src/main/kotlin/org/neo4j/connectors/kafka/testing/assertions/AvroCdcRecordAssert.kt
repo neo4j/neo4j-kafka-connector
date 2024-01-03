@@ -110,6 +110,41 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
     return this
   }
 
+  fun hasType(type: String): AvroCdcRecordAssert {
+    isNotNull
+    val actualType = actualEvent().getString("type")
+    if (actualType != type) {
+      failWithMessage("Expected type to be <$type> but was <$$actualType>")
+    }
+    return this
+  }
+
+  fun startLabelledAs(label: String): AvroCdcRecordAssert {
+    return hasEdgeLabels("start", setOf(label))
+  }
+
+  fun hasStartLabels(labels: Set<String>): AvroCdcRecordAssert {
+    return hasEdgeLabels("start", labels)
+  }
+
+  fun endLabelledAs(label: String): AvroCdcRecordAssert {
+    return hasEdgeLabels("end", setOf(label))
+  }
+
+  fun hasEndLabels(labels: Set<String>): AvroCdcRecordAssert {
+    return hasEdgeLabels("end", labels)
+  }
+
+  private fun hasEdgeLabels(side: String, labels: Set<String>): AvroCdcRecordAssert {
+    isNotNull
+    val actualLabels =
+        actualEvent().getRecord(side)?.getArray<Utf8>("labels")?.map { it.toString() }?.toSet()
+    if (actualLabels != labels) {
+      failWithMessage("Expected <$side> labels to be <${labels}> but was <$actualLabels>")
+    }
+    return this
+  }
+
   private fun actualEvent(): GenericRecord =
       actual.getRecord("event") ?: throw this.objects.failures.failure("Field 'event' is missing")
 
