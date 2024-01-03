@@ -40,7 +40,7 @@ internal class Neo4jSinkRegistration(
   private val payload: Map<String, Any>
 
   init {
-    val queries = topicQuerys.mapKeys { "neo4j.topic.cypher.${it.key}" }
+    val queries = topicQuerys.mapKeys { "neo4j.cypher.topic.${it.key}" }
     payload =
         mutableMapOf(
                 "name" to name,

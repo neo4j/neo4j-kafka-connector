@@ -28,14 +28,7 @@ import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternInges
 import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
-import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-
-class TopicValidationException(message: String) : RuntimeException(message)
-
-private fun TopicType.replaceKeyBy(replacePrefix: Pair<String, String>) =
-    if (replacePrefix.first.isNullOrBlank()) this.key
-    else this.key.replace(replacePrefix.first, replacePrefix.second)
 
 @Suppress("UNCHECKED_CAST")
 data class Topics(
@@ -76,50 +69,55 @@ data class Topics(
 
   companion object {
     fun from(
-        map: Map<String, Any?>,
-        replacePrefix: Pair<String, String> = ("" to ""),
+        originalConfig: Map<String, Any?>,
         dbName: String = "",
         invalidTopics: List<String> = emptyList()
     ): Topics {
       val config =
-          map.filterKeys {
+          originalConfig
+              .filterKeys {
                 if (dbName.isNotBlank()) it.lowercase(Locale.ROOT).endsWith(".to.$dbName")
                 else !it.contains(".to.")
               }
               .mapKeys {
                 if (dbName.isNotBlank()) it.key.replace(".to.$dbName", "", true) else it.key
               }
-      val cypherTopicPrefix = TopicType.CYPHER.replaceKeyBy(replacePrefix)
-      val sourceIdKey = TopicType.CDC_SOURCE_ID.replaceKeyBy(replacePrefix)
-      val schemaKey = TopicType.CDC_SCHEMA.replaceKeyBy(replacePrefix)
-      val cudKey = TopicType.CUD.replaceKeyBy(replacePrefix)
-      val nodePatterKey = TopicType.PATTERN_NODE.replaceKeyBy(replacePrefix)
-      val relPatterKey = TopicType.PATTERN_RELATIONSHIP.replaceKeyBy(replacePrefix)
-      val cypherTopics = TopicUtils.filterByPrefix(config, cypherTopicPrefix)
+      val cypherTopics = TopicUtils.filterByPrefix(config, SinkConfiguration.CYPHER_TOPIC_PREFIX)
       val mergeNodeProperties =
-          map[SinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES].toString().toBoolean()
+          originalConfig[SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES].toString().toBoolean()
       val mergeRelProperties =
-          map[SinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES].toString().toBoolean()
+          originalConfig[SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES]
+              .toString()
+              .toBoolean()
       val nodePatternTopics =
-          TopicUtils.filterByPrefix(config, nodePatterKey, invalidTopics).mapValues {
-            NodePatternConfiguration.parse(it.value, mergeNodeProperties)
-          }
+          TopicUtils.filterByPrefix(
+                  config, SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX, invalidTopics)
+              .mapValues { NodePatternConfiguration.parse(it.value, mergeNodeProperties) }
       val relPatternTopics =
-          TopicUtils.filterByPrefix(config, relPatterKey, invalidTopics).mapValues {
-            RelationshipPatternConfiguration.parse(
-                it.value, mergeNodeProperties, mergeRelProperties)
-          }
-      val cdcSourceIdTopics = TopicUtils.splitTopics(config[sourceIdKey] as? String, invalidTopics)
-      val cdcSchemaTopics = TopicUtils.splitTopics(config[schemaKey] as? String, invalidTopics)
-      val cudTopics = TopicUtils.splitTopics(config[cudKey] as? String, invalidTopics)
+          TopicUtils.filterByPrefix(
+                  config, SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX, invalidTopics)
+              .mapValues {
+                RelationshipPatternConfiguration.parse(
+                    it.value, mergeNodeProperties, mergeRelProperties)
+              }
+      val cdcSourceIdTopics =
+          TopicUtils.splitTopics(
+              config[SinkConfiguration.CDC_SOURCE_ID_TOPICS] as? String, invalidTopics)
+      val cdcSchemaTopics =
+          TopicUtils.splitTopics(
+              config[SinkConfiguration.CDC_SCHEMA_TOPICS] as? String, invalidTopics)
+      val cudTopics =
+          TopicUtils.splitTopics(config[SinkConfiguration.CUD_TOPICS] as? String, invalidTopics)
       val sourceIdStrategyConfig =
           SourceIdIngestionStrategyConfig(
-              map.getOrDefault(
-                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME,
+              originalConfig
+                  .getOrDefault(
+                      SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.labelName)
                   .toString(),
-              map.getOrDefault(
-                      DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME,
+              originalConfig
+                  .getOrDefault(
+                      SinkConfiguration.CDC_SOURCE_ID_ID_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
       return Topics(
@@ -135,17 +133,16 @@ data class Topics(
 
 object TopicUtils {
 
-  @JvmStatic val TOPIC_SEPARATOR = ";"
+  @JvmStatic val TOPIC_SEPARATOR = ","
 
   fun filterByPrefix(
       config: Map<*, *>,
       prefix: String,
       invalidTopics: List<String> = emptyList()
   ): Map<String, String> {
-    val fullPrefix = "$prefix."
     return config
-        .filterKeys { it.toString().startsWith(fullPrefix) }
-        .mapKeys { it.key.toString().replace(fullPrefix, "") }
+        .filterKeys { it.toString().startsWith(prefix) }
+        .mapKeys { it.key.toString().replace(prefix, "") }
         .filterKeys { !invalidTopics.contains(it) }
         .mapValues { it.value.toString() }
   }

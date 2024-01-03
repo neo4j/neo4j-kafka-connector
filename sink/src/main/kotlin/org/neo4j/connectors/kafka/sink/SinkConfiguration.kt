@@ -51,7 +51,7 @@ class SinkConfiguration(originals: Map<*, *>) :
   val batchTimeout
     get(): Duration = Duration.parseSimpleString(getString(BATCH_TIMEOUT))
 
-  val topics: Topics by lazy { Topics.from(originals(), "streams.sink." to "neo4j.") }
+  val topics: Topics by lazy { Topics.from(originals()) }
 
   val strategyMap: Map<TopicType, Any> by lazy { TopicUtils.toStrategyMap(topics) }
 
@@ -83,17 +83,16 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val BATCH_TIMEOUT = "neo4j.batch-timeout"
     const val BATCH_PARALLELIZE = "neo4j.batch-parallelize"
 
-    const val TOPIC_CYPHER_PREFIX = "neo4j.topic.cypher."
-    const val TOPIC_CDC_SOURCE_ID = "neo4j.topic.cdc.sourceId"
-    const val TOPIC_CDC_SOURCE_ID_LABEL_NAME = "neo4j.topic.cdc.sourceId.labelName"
-    const val TOPIC_CDC_SOURCE_ID_ID_NAME = "neo4j.topic.cdc.sourceId.idName"
-    const val TOPIC_CDC_SCHEMA = "neo4j.topic.cdc.schema"
-    const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."
-    const val TOPIC_PATTERN_RELATIONSHIP_PREFIX = "neo4j.topic.pattern.relationship."
-    const val TOPIC_PATTERN_MERGE_NODE_PROPERTIES = "neo4j.topic.pattern.merge-node-properties"
-    const val TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES =
-        "neo4j.topic.pattern.merge-relationship-properties"
-    const val TOPIC_CUD = "neo4j.topic.cud"
+    const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
+    const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.sourceId.topics"
+    const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.sourceId.labelName"
+    const val CDC_SOURCE_ID_ID_NAME = "neo4j.cdc.sourceId.idName"
+    const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
+    const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
+    const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
+    const val PATTERN_NODE_MERGE_PROPERTIES = "neo4j.pattern.node.merge-properties"
+    const val PATTERN_RELATIONSHIP_MERGE_PROPERTIES = "neo4j.pattern.relationship.merge-properties"
+    const val CUD_TOPICS = "neo4j.cud.topics"
 
     const val DEFAULT_BATCH_SIZE = 1000
     val DEFAULT_BATCH_TIMEOUT = 0.seconds
@@ -101,24 +100,45 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
 
-    fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migrated = Neo4jConfiguration.migrateSettings(oldSettings, true).toMutableMap()
+    @JvmStatic
+    val KEY_REPLACEMENTS =
+        mapOf(
+            DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX to CYPHER_TOPIC_PREFIX,
+            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_NODE_PREFIX to PATTERN_NODE_TOPIC_PREFIX,
+            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX to
+                PATTERN_RELATIONSHIP_TOPIC_PREFIX)
 
-      oldSettings.forEach {
+    fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
+      val migratedBase = Neo4jConfiguration.migrateSettings(oldSettings, false)
+      val migrated = HashMap<String, String>(migratedBase.size)
+
+      migratedBase.forEach {
         when (it.key) {
-          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value.toString()
+          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value
           DeprecatedNeo4jConfiguration.BATCH_TIMEOUT_MSECS ->
               migrated[BATCH_TIMEOUT] = "${it.value}ms"
           DeprecatedNeo4jSinkConfiguration.BATCH_PARALLELIZE ->
-              migrated[BATCH_PARALLELIZE] = it.value.toString()
+              migrated[BATCH_PARALLELIZE] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED ->
-              migrated[TOPIC_PATTERN_MERGE_NODE_PROPERTIES] = it.value.toString()
+              migrated[PATTERN_NODE_MERGE_PROPERTIES] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED ->
-              migrated[TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES] = it.value.toString()
-          else ->
-              if (!migrated.containsKey(it.key)) {
-                migrated[it.key] = it.value.toString()
-              }
+              migrated[PATTERN_RELATIONSHIP_MERGE_PROPERTIES] = it.value
+          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID ->
+              migrated[CDC_SOURCE_ID_TOPICS] = it.value.replaceLegacyDelimiter()
+          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME ->
+              migrated[CDC_SOURCE_ID_LABEL_NAME] = it.value
+          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME ->
+              migrated[CDC_SOURCE_ID_ID_NAME] = it.value
+          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SCHEMA ->
+              migrated[CDC_SCHEMA_TOPICS] = it.value.replaceLegacyDelimiter()
+          DeprecatedNeo4jSinkConfiguration.TOPIC_CUD ->
+              migrated[CUD_TOPICS] = it.value.replaceLegacyDelimiter()
+          else -> {
+            val migratedKey = replaceLegacyPropertyKeys(it.key)
+            if (!migrated.containsKey(migratedKey)) {
+              migrated[migratedKey] = it.value
+            }
+          }
         }
       }
 
@@ -132,64 +152,62 @@ class SinkConfiguration(originals: Map<*, *>) :
     fun config(): ConfigDef =
         Neo4jConfiguration.config()
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.LIST) {
+                ConfigKeyBuilder.of(CDC_SOURCE_ID_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                   recommender =
-                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(TOPIC_CDC_SOURCE_ID))
+                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                   recommender =
-                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(TOPIC_CDC_SOURCE_ID))
+                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.LIST) {
+                ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
-                ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.LIST) {
+                ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                 })
             .define(
-                ConfigKeyBuilder.of(TOPIC_PATTERN_MERGE_NODE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
+                ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(TOPIC_PATTERN_NODE_PREFIX) ||
-                            k.startsWith(TOPIC_PATTERN_RELATIONSHIP_PREFIX)
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
                       }
                 })
             .define(
-                ConfigKeyBuilder.of(
-                    TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES, ConfigDef.Type.BOOLEAN) {
-                      documentation =
-                          PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES)
-                      importance = ConfigDef.Importance.MEDIUM
-                      defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
-                      group = ConfigGroup.TOPIC_CYPHER_MAPPING
-                      recommender =
-                          Recommenders.visibleIfNotEmpty { k ->
-                            k.startsWith(TOPIC_PATTERN_NODE_PREFIX) ||
-                                k.startsWith(TOPIC_PATTERN_RELATIONSHIP_PREFIX)
-                          }
-                    })
+                ConfigKeyBuilder.of(PATTERN_RELATIONSHIP_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
+                  documentation = PropertiesUtil.getProperty(PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
+                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k ->
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
+                      }
+                })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
                   importance = ConfigDef.Importance.HIGH
@@ -208,5 +226,12 @@ class SinkConfiguration(originals: Map<*, *>) :
                   defaultValue = DEFAULT_BATCH_PARALLELIZE
                   group = ConfigGroup.BATCH
                 })
+
+    private fun replaceLegacyPropertyKeys(key: String) =
+        KEY_REPLACEMENTS.entries.fold(key) { k, replacement ->
+          k.replace(replacement.key, replacement.value)
+        }
+
+    private fun String.replaceLegacyDelimiter() = this.replace(';', ',')
   }
 }

@@ -41,7 +41,7 @@ class Neo4jSinkRegistrationTest {
             "neo4j.authentication.type" to "BASIC",
             "neo4j.authentication.basic.username" to "user",
             "neo4j.authentication.basic.password" to "password",
-            "neo4j.topic.cypher.my-topic" to "MERGE ()")
+            "neo4j.cypher.topic.my-topic" to "MERGE ()")
     val registration =
         Neo4jSinkRegistration(
             topicQuerys = mapOf("my-topic" to "MERGE ()"),
@@ -70,7 +70,7 @@ class Neo4jSinkRegistrationTest {
 
     val config = payload["config"]
     assertIs<Map<*, *>>(config)
-    assertEquals("MERGE ()", config["neo4j.topic.cypher.topic1"])
-    assertEquals("CREATE ()", config["neo4j.topic.cypher.topic2"])
+    assertEquals("MERGE ()", config["neo4j.cypher.topic.topic1"])
+    assertEquals("CREATE ()", config["neo4j.cypher.topic.topic2"])
   }
 }

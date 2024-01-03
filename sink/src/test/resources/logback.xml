@@ -7,5 +7,5 @@
     <root level="INFO">
         <appender-ref ref="STDOUT" />
     </root>
-    <logger name="streams.kafka" level="TRACE" />
+    <logger name="org.neo4j" level="TRACE" />
 </configuration>
