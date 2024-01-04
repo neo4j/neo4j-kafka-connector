@@ -40,7 +40,7 @@ import org.neo4j.driver.TransactionConfig
 
 class Neo4jCdcSourceNodesIT {
 
-  @Disabled // TODO This test fail because of incompatible schema changes error
+  @Disabled // TODO This test fails because of incompatible schema changes error
   @Neo4jSource(
       startFrom = "EARLIEST",
       strategy = CDC,
@@ -54,7 +54,7 @@ class Neo4jCdcSourceNodesIT {
                               arrayOf(
                                   CdcSourceParam("(:TestSource{name,+surname,+execId,-age})"))))))
   @Test
-  fun `reads changes specified by CDC pattern`(
+  fun `should read changes caught by patterns`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
@@ -124,7 +124,7 @@ class Neo4jCdcSourceNodesIT {
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
                           changesTo = arrayOf(CdcSourceParam(value = "surname,email"))))))
   @Test
-  fun `reads only specified field changes on update`(
+  fun `should read only specified field changes on update`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
@@ -201,7 +201,7 @@ class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-create-inc",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `reads changes with different properties with the default compatibility mode`(
+  fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
@@ -263,7 +263,7 @@ class Neo4jCdcSourceNodesIT {
                           patterns = arrayOf(CdcSourceParam("(:TestSource)")),
                           operations = arrayOf(CdcSourceParam("DELETE"))))))
   @Test
-  fun `reads each operation in specific topic`(
+  fun `should read each operation to a separate topic`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "cdc-creates", offset = "earliest")
       createsConsumer: KafkaConsumer<String, GenericRecord>,
@@ -356,7 +356,7 @@ class Neo4jCdcSourceNodesIT {
                           metadata =
                               arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B"))))))
   @Test
-  fun `reads changes marked with specific metadata attribute`(
+  fun `should read changes marked with specific transaction metadata attribute`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-metadata", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
@@ -408,7 +408,7 @@ class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `reads changes containing node keys`(
+  fun `should read changes containing node keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
