@@ -7,10 +7,10 @@ version = "2023.05"
 
 project {
   params {
-    password("github-commit-status-token", "credentialsJSON:be6ac011-ba27-4f2e-a628-edce6708504e")
-    password("github-pull-request-token", "credentialsJSON:be6ac011-ba27-4f2e-a628-edce6708504e")
+    password("github-commit-status-token", "credentialsJSON:23b1c78f-22be-4c3e-9efc-3e7ead3238ed")
+    password("github-pull-request-token", "credentialsJSON:23b1c78f-22be-4c3e-9efc-3e7ead3238ed")
     text("github-packages-user", "neo4j-build-service")
-    password("github-packages-token", "credentialsJSON:d5ea2df2-7a81-41d4-98bf-cb7ebd607493")
+    password("github-packages-token", "credentialsJSON:b43ccf66-3394-496f-8c22-be161097c2df")
   }
 
   vcsRoot(Neo4jKafkaConnectorVcs)
