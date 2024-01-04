@@ -3,7 +3,7 @@ import builds.Neo4jKafkaConnectorVcs
 import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.version
 
-version = "2023.05"
+version = "2023.11"
 
 project {
   params {
