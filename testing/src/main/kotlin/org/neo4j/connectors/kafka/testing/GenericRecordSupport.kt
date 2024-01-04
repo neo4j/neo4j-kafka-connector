@@ -23,9 +23,9 @@ object GenericRecordSupport {
 
   fun GenericRecord.asMap(): Map<String, Any> {
     // FIXME: properly convert values
-    return this.schema.fields.associate { field ->
-      field.name() to castMapValue(this.get(field.name()))
-    }
+    return this.schema.fields
+        .filter { field -> this.get(field.name()) != null }
+        .associate { field -> field.name() to castMapValue(this.get(field.name())) }
   }
 
   fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord

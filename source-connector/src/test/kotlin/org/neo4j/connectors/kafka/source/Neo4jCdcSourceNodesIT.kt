@@ -38,7 +38,7 @@ import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 import org.neo4j.driver.TransactionConfig
 
-class Neo4jCdcSourceIT {
+class Neo4jCdcSourceNodesIT {
 
   @Disabled // TODO This test fail because of incompatible schema changes error
   @Neo4jSource(
@@ -392,6 +392,63 @@ class Neo4jCdcSourceIT {
                 .hasNoBeforeState()
                 .hasAfterStateProperties(mapOf("name" to "Alice", "execId" to executionId))
                 .hasTxMetadata(mapOf("testLabel" to "B"))
+          }
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-keys",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `reads changes containing node keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run("CREATE CONSTRAINT testSourceId FOR (n:TestSource) REQUIRE n.id IS NODE KEY")
+        .consume()
+    session
+        .run("CREATE CONSTRAINT testSourceName FOR (n:TestSource) REQUIRE n.name IS NODE KEY")
+        .consume()
+    session
+        .run("CREATE CONSTRAINT employedId FOR (n:Employee) REQUIRE n.employeeId IS NODE KEY")
+        .consume()
+
+    session
+        .run(
+            "CREATE (:TestSource:Employee {id: 1, name: 'John', employeeId: 456, execId: \$execId})",
+            mapOf("execId" to executionId))
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .expectMessageValueMatching { value ->
+          assertionValid {
+            assertThat(value)
+                .hasEventType(EventType.NODE)
+                .hasOperation(Operation.CREATE)
+                .hasLabels(setOf("TestSource", "Employee"))
+                .hasNoBeforeState()
+                .hasAfterStateProperties(
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "John",
+                        "employeeId" to 456L,
+                        "execId" to executionId))
+                .hasNodeKeys(
+                    mapOf(
+                        "TestSource" to listOf(mapOf("id" to 1L), mapOf("name" to "John")),
+                        "Employee" to listOf(mapOf("employeeId" to 456L))))
           }
         }
         .verifyWithin(Duration.ofSeconds(30))

@@ -17,6 +17,7 @@
 
 package org.neo4j.connectors.kafka.testing.assertions
 
+import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
 import org.assertj.core.api.AbstractAssert
@@ -141,6 +142,27 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
         actualEvent().getRecord(side)?.getArray<Utf8>("labels")?.map { it.toString() }?.toSet()
     if (actualLabels != labels) {
       failWithMessage("Expected <$side> labels to be <${labels}> but was <$actualLabels>")
+    }
+    return this
+  }
+
+  fun hasNodeKeys(keys: Map<String, List<Map<String, Any>>>): AvroCdcRecordAssert {
+    isNotNull
+    val actualKeys =
+        actualEvent().getRecord("keys")?.asMap()?.mapValues { array ->
+          (array.value as GenericArray<*>).toList().map { (it as GenericRecord).asMap() }
+        }
+    if (actualKeys != keys) {
+      failWithMessage("Expected nodes keys to be <$keys> but was <$actualKeys>")
+    }
+    return this
+  }
+
+  fun hasRelationshipKeys(keys: List<Map<String, Any>>): AvroCdcRecordAssert {
+    isNotNull
+    val actualKeys = actualEvent().getArray<GenericRecord>("keys")?.map { it.asMap() }
+    if (actualKeys != keys) {
+      failWithMessage("Expected relationship keys to be <$keys> but was <$actualKeys>")
     }
     return this
   }

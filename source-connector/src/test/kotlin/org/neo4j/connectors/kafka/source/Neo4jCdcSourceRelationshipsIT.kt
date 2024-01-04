@@ -388,4 +388,56 @@ class Neo4jCdcSourceRelationshipsIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-keys-rel",
+                          patterns =
+                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+  @Test
+  fun `reads changes containing relationship keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE CONSTRAINT employedId FOR ()-[r:EMPLOYED]->() REQUIRE r.id IS RELATIONSHIP KEY")
+        .consume()
+    session
+        .run(
+            "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.role IS RELATIONSHIP KEY")
+        .consume()
+
+    session
+        .run(
+            "CREATE (:Person)-[:EMPLOYED {execId: \$execId, id: 1, role: 'SWE'}]->(:Company)",
+            mapOf("execId" to executionId))
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .expectMessageValueMatching { value ->
+          assertionValid {
+            assertThat(value)
+                .hasEventType(EventType.RELATIONSHIP)
+                .hasOperation(Operation.CREATE)
+                .hasType("EMPLOYED")
+                .startLabelledAs("Person")
+                .endLabelledAs("Company")
+                .hasNoBeforeState()
+                .hasAfterStateProperties(
+                    mapOf("id" to 1L, "role" to "SWE", "execId" to executionId))
+                .hasRelationshipKeys(listOf(mapOf("id" to 1L), mapOf("role" to "SWE")))
+          }
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }

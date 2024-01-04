@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.testing.source
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.KProperty1
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -125,7 +126,7 @@ internal class Neo4jSourceExtension(
   }
 
   override fun beforeEach(context: ExtensionContext?) {
-    prepareDatabase(context)
+    ensureDatabase(context)
 
     source =
         Neo4jSourceRegistration(
@@ -192,6 +193,7 @@ internal class Neo4jSourceExtension(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
       @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
   ): Any {
+    ensureDatabase(extensionContext)
     driver = createDriver()
     session = driver.session(SessionConfig.forDatabase(neo4jDatabase))
     return session
@@ -204,13 +206,16 @@ internal class Neo4jSourceExtension(
     return driverFactory(uri, AuthTokens.basic(username, password))
   }
 
-  private fun prepareDatabase(context: ExtensionContext?) {
+  private fun ensureDatabase(context: ExtensionContext?) {
+    if (this::neo4jDatabase.isInitialized) {
+      return
+    }
     neo4jDatabase =
         sourceAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
     log.debug(
         "Using database {} for test {}",
         neo4jDatabase,
-        "${context?.testClass?.get()?.simpleName}#${context?.displayName}")
+        "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}")
     createDriver().use { driver ->
       driver.verifyConnectivity()
       driver.session().use { session ->
