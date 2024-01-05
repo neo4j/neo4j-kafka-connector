@@ -20,14 +20,14 @@ project {
           name = "main",
           branchFilter =
               """
-                +:main               
-            """
+                +:main
+              """
                   .trimIndent(),
           triggerRules =
               """
                 -:comment=^build.*release version.*:**
                 -:comment=^build.*update version.*:**
-            """
+              """
                   .trimIndent(),
           forPullRequests = false))
   subProject(
