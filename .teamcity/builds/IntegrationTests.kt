@@ -2,6 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildStep
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
@@ -104,7 +105,17 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
         }
       }
 
-      features { dockerSupport {} }
+      features {
+        dockerSupport {}
+
+        buildCache {
+          this.name = "neo4j-kafka-connector"
+          publish = true
+          use = true
+          publishOnlyChanged = true
+          rules = ".m2/repository"
+        }
+      }
 
       requirements { runOnLinux(LinuxSize.LARGE) }
     })
