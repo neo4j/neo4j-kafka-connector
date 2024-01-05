@@ -23,7 +23,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.assertions.AssertionUtils.assertionValid
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.EventType
 import org.neo4j.connectors.kafka.testing.assertions.Operation
@@ -82,41 +81,35 @@ class Neo4jCdcSourceRelationshipsIT {
         .consume()
 
     TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.CREATE)
-                .hasType("RELIES_TO")
-                .startLabelledAs("TestSource")
-                .endLabelledAs("TestSource")
-                .hasNoBeforeState()
-                .hasAfterStateProperties(mapOf("weight" to 1L, "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("weight" to 1L, "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.UPDATE)
-                .hasType("RELIES_TO")
-                .startLabelledAs("TestSource")
-                .endLabelledAs("TestSource")
-                .hasBeforeStateProperties(mapOf("weight" to 1L, "execId" to executionId))
-                .hasAfterStateProperties(mapOf("weight" to 2L, "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasBeforeStateProperties(mapOf("weight" to 1L, "execId" to executionId))
+              .hasAfterStateProperties(mapOf("weight" to 2L, "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.DELETE)
-                .hasType("RELIES_TO")
-                .startLabelledAs("TestSource")
-                .endLabelledAs("TestSource")
-                .hasBeforeStateProperties(mapOf("weight" to 1L, "execId" to executionId))
-                .hasNoAfterState()
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.DELETE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasBeforeStateProperties(mapOf("weight" to 1L, "execId" to executionId))
+              .hasNoAfterState()
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -154,33 +147,29 @@ class Neo4jCdcSourceRelationshipsIT {
     session.run("MATCH (:A)-[r:R {a: 'eni'}]->(:B) SET r.a = 'obi', r.c = 'bobi'").consume()
 
     TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.UPDATE)
-                .hasType("R")
-                .startLabelledAs("A")
-                .endLabelledAs("B")
-                .hasBeforeStateProperties(
-                    mapOf("a" to "mini", "b" to "midi", "c" to "abra", "execId" to executionId))
-                .hasAfterStateProperties(
-                    mapOf("a" to "eni", "b" to "midi", "c" to "beni", "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("R")
+              .startLabelledAs("A")
+              .endLabelledAs("B")
+              .hasBeforeStateProperties(
+                  mapOf("a" to "mini", "b" to "midi", "c" to "abra", "execId" to executionId))
+              .hasAfterStateProperties(
+                  mapOf("a" to "eni", "b" to "midi", "c" to "beni", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.UPDATE)
-                .hasType("R")
-                .startLabelledAs("A")
-                .endLabelledAs("B")
-                .hasBeforeStateProperties(
-                    mapOf("a" to "eni", "b" to "midi", "c" to "beni", "execId" to executionId))
-                .hasAfterStateProperties(
-                    mapOf("a" to "obi", "b" to "midi", "c" to "bobi", "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("R")
+              .startLabelledAs("A")
+              .endLabelledAs("B")
+              .hasBeforeStateProperties(
+                  mapOf("a" to "eni", "b" to "midi", "c" to "beni", "execId" to executionId))
+              .hasAfterStateProperties(
+                  mapOf("a" to "obi", "b" to "midi", "c" to "bobi", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -215,29 +204,25 @@ class Neo4jCdcSourceRelationshipsIT {
         .consume()
 
     TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.CREATE)
-                .hasType("IS_EMPLOYEE")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasNoBeforeState()
-                .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("IS_EMPLOYEE")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.CREATE)
-                .hasType("IS_EMPLOYEE")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasNoBeforeState()
-                .hasAfterStateProperties(mapOf("tribe" to "engineering", "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("IS_EMPLOYEE")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("tribe" to "engineering", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -289,47 +274,39 @@ class Neo4jCdcSourceRelationshipsIT {
         .consume()
 
     TopicVerifier.create(createsConsumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertionValid {
-              assertThat(value)
-                  .hasEventType(EventType.RELATIONSHIP)
-                  .hasOperation(Operation.CREATE)
-                  .hasType("EMPLOYED")
-                  .startLabelledAs("Person")
-                  .endLabelledAs("Company")
-                  .hasNoBeforeState()
-                  .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
-            }
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(updatesConsumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.UPDATE)
-                .hasType("EMPLOYED")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasBeforeStateProperties(mapOf("role" to "SWE", "execId" to executionId))
-                .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(mapOf("role" to "SWE", "execId" to executionId))
+              .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(deletesConsumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.DELETE)
-                .hasType("EMPLOYED")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasBeforeStateProperties(mapOf("role" to "EM", "execId" to executionId))
-                .hasNoAfterState()
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.DELETE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(mapOf("role" to "EM", "execId" to executionId))
+              .hasNoAfterState()
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -373,18 +350,16 @@ class Neo4jCdcSourceRelationshipsIT {
     transaction2.commit()
 
     TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.CREATE)
-                .hasType("EMPLOYED")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasNoBeforeState()
-                .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
-                .hasTxMetadata(mapOf("testLabel" to "B"))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
+              .hasTxMetadata(mapOf("testLabel" to "B"))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -424,19 +399,16 @@ class Neo4jCdcSourceRelationshipsIT {
         .consume()
 
     TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          assertionValid {
-            assertThat(value)
-                .hasEventType(EventType.RELATIONSHIP)
-                .hasOperation(Operation.CREATE)
-                .hasType("EMPLOYED")
-                .startLabelledAs("Person")
-                .endLabelledAs("Company")
-                .hasNoBeforeState()
-                .hasAfterStateProperties(
-                    mapOf("id" to 1L, "role" to "SWE", "execId" to executionId))
-                .hasRelationshipKeys(listOf(mapOf("id" to 1L), mapOf("role" to "SWE")))
-          }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("id" to 1L, "role" to "SWE", "execId" to executionId))
+              .hasRelationshipKeys(listOf(mapOf("id" to 1L), mapOf("role" to "SWE")))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
