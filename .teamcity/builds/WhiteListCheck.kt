@@ -5,21 +5,23 @@ import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class WhiteListCheck(id: String, name: String) : BuildType({
-    this.id(id.toId())
-    this.name = name
+class WhiteListCheck(id: String, name: String) :
+    BuildType({
+      this.id(id.toId())
+      this.name = name
 
-    dependencies {
+      dependencies {
         artifacts(AbsoluteId("Tools_WhitelistCheck")) {
-            buildRule = lastSuccessful()
-            cleanDestination = true
-            artifactRules = "whitelist-check.tar.gz!** => whitelist-check/"
+          buildRule = lastSuccessful()
+          cleanDestination = true
+          artifactRules = "whitelist-check.tar.gz!** => whitelist-check/"
         }
-    }
+      }
 
-    steps {
+      steps {
         script {
-            scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash -eu
                 
                 token="%github-pull-request-token%"
@@ -28,12 +30,11 @@ class WhiteListCheck(id: String, name: String) : BuildType({
                 
                 # process pull request
                 ./whitelist-check/bin/examine-pull-request $GITHUB_OWNER $GITHUB_REPOSITORY "${'$'}{token}" %teamcity.build.branch% whitelist-check/cla-database.csv
-            """.trimIndent()
-            formatStderrAsError = true
+            """
+                  .trimIndent()
+          formatStderrAsError = true
         }
-    }
+      }
 
-    requirements {
-        runOnLinux(LinuxSize.SMALL)
-    }
-})
+      requirements { runOnLinux(LinuxSize.SMALL) }
+    })

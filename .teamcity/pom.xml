@@ -13,6 +13,10 @@
         <relativePath></relativePath>
     </parent>
 
+    <properties>
+        <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
+    </properties>
+
     <repositories>
         <repository>
             <id>jetbrains-all</id>
@@ -71,6 +75,36 @@
                     <format>kotlin</format>
                     <dstDir>target/generated-configs</dstDir>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless-maven-plugin.version}</version>
+                <configuration>
+                    <kotlin>
+                        <!-- These are the defaults, you can override if you want -->
+                        <includes>
+                            <include>**/*.kt</include>
+                            <include>**/*.kts</include>
+                        </includes>
+                        <ktfmt>
+                            <version>0.46</version>
+                            <style>DEFAULT</style>
+                            <blockIndent>2</blockIndent>
+                            <continuationIndent>4</continuationIndent>
+                            <removeUnusedImport>true</removeUnusedImport>
+                            <maxWidth>100</maxWidth>
+                        </ktfmt>
+                    </kotlin>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>compile</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
