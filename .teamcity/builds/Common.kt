@@ -16,7 +16,8 @@ import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
-const val MAVEN_DEFAULT_ARGS = "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2"
+const val MAVEN_DEFAULT_ARGS =
+    "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
@@ -84,15 +85,16 @@ fun collectArtifacts(buildType: BuildType): BuildType {
 }
 
 fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
-  val maven = this.maven {
-    // this is the settings name we uploaded to Connectors project
-    userSettingsSelection = "github"
-    localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
+  val maven =
+      this.maven {
+        // this is the settings name we uploaded to Connectors project
+        userSettingsSelection = "github"
+        localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
-    dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-    dockerImage = "eclipse-temurin:11-jdk"
-    dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
-  }
+        dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
+        dockerImage = "eclipse-temurin:11-jdk"
+        dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+      }
 
   init(maven)
   return maven
