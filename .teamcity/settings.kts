@@ -18,21 +18,25 @@ project {
   subProject(
       Build(
           name = "main",
-          branchFilter = """
-                +:main               
-            """
-              .trimIndent(),
-          triggerRules = """
+          branchFilter =
+              """
+                +:main
+              """
+                  .trimIndent(),
+          triggerRules =
+              """
                 -:comment=^build.*release version.*:**
                 -:comment=^build.*update version.*:**
-            """.trimIndent(),
+              """
+                  .trimIndent(),
           forPullRequests = false))
   subProject(
       Build(
           name = "pull-request",
-          branchFilter = """
+          branchFilter =
+              """
                 +:pull/*
-            """
-              .trimIndent(),
+              """
+                  .trimIndent(),
           forPullRequests = true))
 }
