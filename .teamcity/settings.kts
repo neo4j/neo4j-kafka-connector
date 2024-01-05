@@ -36,7 +36,7 @@ project {
           branchFilter =
               """
                 +:pull/*
-            """
+              """
                   .trimIndent(),
           forPullRequests = true))
 }
