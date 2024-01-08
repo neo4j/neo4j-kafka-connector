@@ -22,14 +22,30 @@ import kotlin.math.min
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.awaitility.Awaitility.await
 import org.awaitility.core.ConditionTimeoutException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
+
+  private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
   private var messageValuePredicates = mutableListOf<Predicate<V>>()
 
   fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
     messageValuePredicates.add(predicate)
     return this
+  }
+
+  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
+    return expectMessageValueMatching { value ->
+      try {
+        assertion(value)
+        true
+      } catch (e: java.lang.AssertionError) {
+        log.debug("Assertion has failed", e)
+        false
+      }
+    }
   }
 
   /**

@@ -16,14 +16,34 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 
 object GenericRecordSupport {
 
-  fun GenericRecord.asMap(): Map<String, String> {
+  fun GenericRecord.asMap(): Map<String, Any> {
     // FIXME: properly convert values
-    return this.schema.fields.associate { field ->
-      field.name() to this.get(field.name()).toString()
-    }
+    return this.schema.fields
+        .filter { field -> this.get(field.name()) != null }
+        .associate { field -> field.name() to castMapValue(this.get(field.name())) }
   }
+
+  fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord
+
+  fun GenericRecord.getString(k: String): String? = this.get(k)?.toString()
+
+  @Suppress("UNCHECKED_CAST")
+  fun GenericRecord.getMap(k: String): Map<String, Any>? =
+      (this.get(k) as? Map<Any, Any>)?.map { it.key.toString() to castMapValue(it.value) }?.toMap()
+
+  @Suppress("UNCHECKED_CAST")
+  fun <T> GenericRecord.getArray(k: String): GenericArray<T>? = this.get(k) as? GenericArray<T>
+
+  private fun castMapValue(value: Any): Any =
+      when (value) {
+        is Long,
+        is GenericArray<*>,
+        is GenericRecord -> value
+        else -> value.toString()
+      }
 }
