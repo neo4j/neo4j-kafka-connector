@@ -31,8 +31,37 @@ annotation class Neo4jSource(
     val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
-    val topic: String,
-    val streamingProperty: String,
+    val neo4jDatabase: String = "",
     val startFrom: String,
-    val query: String
+    val strategy: SourceStrategy = SourceStrategy.QUERY,
+
+    // QUERY strategy
+    val topic: String = "",
+    val streamingProperty: String = "",
+    val query: String = "",
+
+    // CDC strategy
+    val cdc: CdcSource = CdcSource()
 )
+
+enum class SourceStrategy {
+  QUERY,
+  CDC
+}
+
+annotation class CdcSource(
+    val patternsIndexed: Boolean = false,
+    val topics: Array<CdcSourceTopic> = []
+)
+
+annotation class CdcSourceTopic(
+    val topic: String,
+    val patterns: Array<CdcSourceParam> = [],
+    val operations: Array<CdcSourceParam> = [],
+    val changesTo: Array<CdcSourceParam> = [],
+    val metadata: Array<CdcMetadata> = []
+)
+
+annotation class CdcSourceParam(val value: String, val index: Int = 0)
+
+annotation class CdcMetadata(val key: String, val value: String, val index: Int = 0)

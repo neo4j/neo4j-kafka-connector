@@ -6,13 +6,15 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class PRCheck(id: String, name: String) : BuildType({
-    this.id(id.toId())
-    this.name = name
+class PRCheck(id: String, name: String) :
+    BuildType({
+      this.id(id.toId())
+      this.name = name
 
-    steps {
+      steps {
         script {
-            scriptContent = """
+          scriptContent =
+              """
                 #!/bin/bash
                 
                 set -eu
@@ -23,19 +25,15 @@ class PRCheck(id: String, name: String) : BuildType({
                 # process pull request
                 npm ci
                 npx danger ci --verbose --failOnErrors
-            """.trimIndent()
+            """
+                  .trimIndent()
 
-            dockerImage = "node:18.4"
-            dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+          dockerImage = "node:18.4"
+          dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
         }
-    }
+      }
 
-    features {
-        dockerSupport {
-        }
-    }
+      features { dockerSupport {} }
 
-    requirements {
-        runOnLinux(LinuxSize.SMALL)
-    }
-})
+      requirements { runOnLinux(LinuxSize.SMALL) }
+    })
