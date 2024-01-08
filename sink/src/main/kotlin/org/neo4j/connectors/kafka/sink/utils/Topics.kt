@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink.utils
 
-import java.util.Locale
 import kotlin.reflect.jvm.javaType
 import org.neo4j.connectors.kafka.service.TopicType
 import org.neo4j.connectors.kafka.service.TopicTypeGroup
@@ -68,27 +67,12 @@ data class Topics(
           TopicType.PATTERN_RELATIONSHIP to relPatternTopics)
 
   companion object {
-    fun from(
-        originalConfig: Map<String, Any?>,
-        dbName: String = "",
-        invalidTopics: List<String> = emptyList()
-    ): Topics {
-      val config =
-          originalConfig
-              .filterKeys {
-                if (dbName.isNotBlank()) it.lowercase(Locale.ROOT).endsWith(".to.$dbName")
-                else !it.contains(".to.")
-              }
-              .mapKeys {
-                if (dbName.isNotBlank()) it.key.replace(".to.$dbName", "", true) else it.key
-              }
+    fun from(config: Map<String, Any?>, invalidTopics: List<String> = emptyList()): Topics {
       val cypherTopics = TopicUtils.filterByPrefix(config, SinkConfiguration.CYPHER_TOPIC_PREFIX)
       val mergeNodeProperties =
-          originalConfig[SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES].toString().toBoolean()
+          config[SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES].toString().toBoolean()
       val mergeRelProperties =
-          originalConfig[SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES]
-              .toString()
-              .toBoolean()
+          config[SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES].toString().toBoolean()
       val nodePatternTopics =
           TopicUtils.filterByPrefix(
                   config, SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX, invalidTopics)
@@ -110,12 +94,12 @@ data class Topics(
           TopicUtils.splitTopics(config[SinkConfiguration.CUD_TOPICS] as? String, invalidTopics)
       val sourceIdStrategyConfig =
           SourceIdIngestionStrategyConfig(
-              originalConfig
+              config
                   .getOrDefault(
                       SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.labelName)
                   .toString(),
-              originalConfig
+              config
                   .getOrDefault(
                       SinkConfiguration.CDC_SOURCE_ID_ID_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
