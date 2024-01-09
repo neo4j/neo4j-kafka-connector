@@ -16,6 +16,12 @@
  */
 package org.neo4j.connectors.kafka.testing.source
 
+import kotlin.reflect.KClass
+
 @Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class TopicConsumer(val topic: String, val offset: String)
+annotation class TopicConsumer(
+    val topic: String,
+    val offset: String,
+    val keyDeserializer: KClass<*>
+)

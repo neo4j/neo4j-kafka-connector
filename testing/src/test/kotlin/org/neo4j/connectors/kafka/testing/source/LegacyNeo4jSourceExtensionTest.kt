@@ -26,6 +26,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -161,7 +162,9 @@ class LegacyNeo4jSourceExtensionTest {
     val extension = LegacyNeo4jSourceExtension(consumerFactory = { _, _ -> consumer })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
-    val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
+    val consumerAnnotation =
+        TopicConsumer(
+            topic = "topic", offset = "earliest", keyDeserializer = StringDeserializer::class)
 
     val consumerParam =
         extension.resolveParameter(

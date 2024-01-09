@@ -19,6 +19,7 @@ package streams.kafka.connect.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.GenericRecordSupport.asMap
@@ -43,7 +44,8 @@ class LegacyNeo4jSourceIT {
   @Test
   fun `reads latest changes from legacy Neo4j source`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = TOPIC, offset = "earliest")
+      @TopicConsumer(
+          topic = TOPIC, offset = "earliest", keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {

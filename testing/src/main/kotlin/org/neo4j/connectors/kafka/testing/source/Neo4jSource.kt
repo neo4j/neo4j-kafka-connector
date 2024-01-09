@@ -59,7 +59,8 @@ annotation class CdcSourceTopic(
     val patterns: Array<CdcSourceParam> = [],
     val operations: Array<CdcSourceParam> = [],
     val changesTo: Array<CdcSourceParam> = [],
-    val metadata: Array<CdcMetadata> = []
+    val metadata: Array<CdcMetadata> = [],
+    val keySerialization: String = "WHOLE_VALUE",
 )
 
 annotation class CdcSourceParam(val value: String, val index: Int = 0)

@@ -481,7 +481,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                 originals.entries.filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_OPERATION_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_CHANGES_TO_REGEX.matches(it.key) } +
-                originals.entries.filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) }
+                originals.entries.filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) } +
+                originals.entries.filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
         if (cdcTopics.isEmpty()) {
           strategy.addErrorMessage(
               "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.",
@@ -498,6 +499,10 @@ class SourceConfiguration(originals: Map<*, *>) :
                 } catch (e: PatternException) {
                   throw ConfigException(it.key, it.value, e.message)
                 }
+              }
+              if (CDC_KEY_STRATEGY_REGEX.matches(it.key)) {
+                Validators.enum(Neo4jCdcKeySerializationStrategy::class.java)
+                    .ensureValid(it.key, it.value)
               }
             } catch (e: ConfigException) {
               strategy.addErrorMessage(e.message)

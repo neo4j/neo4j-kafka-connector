@@ -20,6 +20,7 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
@@ -54,7 +55,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read changes caught by patterns`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-rels", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-rels",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -125,7 +129,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read property removal and additions`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-rels-prop-remove-add",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -219,7 +226,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read only specified field changes on update`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-update-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-update-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -276,7 +286,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-create-inc-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-create-inc-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -338,11 +351,20 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read each operation to a separate topic`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "cdc-creates-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "cdc-creates-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       createsConsumer: KafkaConsumer<String, GenericRecord>,
-      @TopicConsumer(topic = "cdc-updates-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "cdc-updates-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       updatesConsumer: KafkaConsumer<String, GenericRecord>,
-      @TopicConsumer(topic = "cdc-deletes-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "cdc-deletes-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       deletesConsumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -415,7 +437,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read changes marked with specific transaction metadata attribute`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-metadata-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-metadata-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -466,7 +491,10 @@ class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read changes containing relationship keys`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
+      @TopicConsumer(
+          topic = "neo4j-cdc-keys-rel",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
