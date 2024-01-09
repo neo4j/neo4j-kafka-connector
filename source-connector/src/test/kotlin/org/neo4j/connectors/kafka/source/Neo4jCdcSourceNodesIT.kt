@@ -103,6 +103,87 @@ class Neo4jCdcSourceNodesIT {
       strategy = CDC,
       cdc =
           CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-prop-remove-add",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should read property removal and additions`(
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE (:TestSource {name: 'Jane', surname: 'Doe', age: 42, execId: \$execId})",
+            mapOf("execId" to executionId))
+        .consume()
+    session
+        .run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith', ts.age = NULL")
+        .consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.age = 50").consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.NODE)
+              .hasOperation(Operation.CREATE)
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(
+                  mapOf(
+                      "name" to "Jane", "surname" to "Doe", "age" to 42L, "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.NODE)
+              .hasOperation(Operation.UPDATE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf(
+                      "name" to "Jane", "surname" to "Doe", "age" to 42L, "execId" to executionId))
+              .hasAfterStateProperties(
+                  mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.NODE)
+              .hasOperation(Operation.UPDATE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
+              .hasAfterStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to 50L,
+                      "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.NODE)
+              .hasOperation(Operation.DELETE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to 50L,
+                      "execId" to executionId))
+              .hasNoAfterState()
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
               patternsIndexed = true,
               topics =
                   arrayOf(
