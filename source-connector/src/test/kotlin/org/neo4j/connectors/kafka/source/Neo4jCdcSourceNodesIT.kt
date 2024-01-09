@@ -20,7 +20,6 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
@@ -39,7 +38,6 @@ import org.neo4j.driver.TransactionConfig
 
 class Neo4jCdcSourceNodesIT {
 
-  @Disabled // TODO This test fails because of incompatible schema changes error
   @Neo4jSource(
       startFrom = "EARLIEST",
       strategy = CDC,

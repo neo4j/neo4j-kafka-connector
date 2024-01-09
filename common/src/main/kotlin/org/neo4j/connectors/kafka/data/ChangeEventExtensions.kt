@@ -120,13 +120,7 @@ object ChangeEventExtensions {
           .field("operation", SimpleTypes.STRING.schema())
           .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
           .field("keys", schemaForKeysByLabel(this.keys))
-          .field(
-              "state",
-              SchemaBuilder.struct()
-                  .namespaced("cdc.NodeStates")
-                  .field("before", this.before.toConnectSchema())
-                  .field("after", this.after.toConnectSchema())
-                  .build())
+          .field("state", nodeStateSchema(before, after))
           .build()
 
   private fun NodeEvent.toConnectValue(schema: Schema): Struct =
@@ -136,13 +130,67 @@ object ChangeEventExtensions {
         it.put("operation", this.operation.name)
         it.put("labels", this.labels)
         it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
-        it.put(
-            "state",
-            schema.field("state").schema().let { stateSchema ->
-              Struct(stateSchema)
-                  .put("before", this.before.toConnectValue(stateSchema.field("before").schema()))
-                  .put("after", this.after.toConnectValue(stateSchema.field("after").schema()))
-            })
+        it.put("state", nodeStateValue(schema.field("state").schema(), this.before, this.after))
+      }
+
+  private fun nodeStateSchema(before: NodeState?, after: NodeState?): Schema {
+    val stateSchema =
+        SchemaBuilder.struct()
+            .namespaced("cdc.NodeState")
+            .apply {
+              this.field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
+              this.field(
+                  "properties",
+                  SchemaBuilder.struct()
+                      .also {
+                        before?.properties?.forEach { entry ->
+                          it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                        }
+                        after?.properties?.forEach { entry ->
+                          // TODO: should we check for incompatible types for the existing value,
+                          // and what happens in that case?
+                          if (it.field(entry.key) == null) {
+                            it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                          }
+                        }
+                      }
+                      .build())
+            }
+            .optional()
+            .build()
+
+    return SchemaBuilder.struct()
+        .namespaced("cdc.NodeStates")
+        .field("before", stateSchema)
+        .field("after", stateSchema)
+        .build()
+  }
+
+  private fun nodeStateValue(schema: Schema, before: NodeState?, after: NodeState?): Struct =
+      Struct(schema).apply {
+        if (before != null) {
+          this.put(
+              "before",
+              Struct(this.schema().field("before").schema()).also {
+                it.put("labels", before.labels)
+                it.put(
+                    "properties",
+                    DynamicTypes.valueFor(
+                        it.schema().field("properties").schema(), before.properties))
+              })
+        }
+
+        if (after != null) {
+          this.put(
+              "after",
+              Struct(this.schema().field("after").schema()).also {
+                it.put("labels", after.labels)
+                it.put(
+                    "properties",
+                    DynamicTypes.valueFor(
+                        it.schema().field("properties").schema(), after.properties))
+              })
+        }
       }
 
   private fun RelationshipEvent.toConnectSchema(): Schema =
@@ -155,13 +203,7 @@ object ChangeEventExtensions {
           .field("start", this.start.toConnectSchema())
           .field("end", this.end.toConnectSchema())
           .field("keys", schemaForKeys(this.keys))
-          .field(
-              "state",
-              SchemaBuilder.struct()
-                  .namespaced("cdc.RelationshipStates")
-                  .field("before", this.before.toConnectSchema())
-                  .field("after", this.after.toConnectSchema())
-                  .build())
+          .field("state", relationshipStateSchema(this.before, this.after))
           .build()
 
   private fun RelationshipEvent.toConnectValue(schema: Schema): Struct =
@@ -175,49 +217,7 @@ object ChangeEventExtensions {
         it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
         it.put(
             "state",
-            schema.field("state").schema().let { stateSchema ->
-              Struct(stateSchema)
-                  .put("before", this.before.toConnectValue(stateSchema.field("before").schema()))
-                  .put("after", this.after.toConnectValue(stateSchema.field("after").schema()))
-            })
-      }
-
-  private fun NodeState?.toConnectSchema(): Schema {
-    if (this == null) {
-      return SchemaBuilder.struct()
-          .namespaced("cdc.EmptyNodeState")
-          .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-          .field("properties", SchemaBuilder.struct().build())
-          .optional()
-          .build()
-    }
-
-    return SchemaBuilder.struct()
-        .namespaced("cdc.NodeState")
-        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-        .field(
-            "properties",
-            SchemaBuilder.struct()
-                .also {
-                  this.properties.forEach { entry ->
-                    it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
-                  }
-                }
-                .build())
-        .optional()
-        .build()
-  }
-
-  private fun NodeState?.toConnectValue(schema: Schema): Struct? =
-      if (this == null) {
-        null
-      } else {
-        Struct(schema).also {
-          it.put("labels", this.labels)
-          it.put(
-              "properties",
-              DynamicTypes.valueFor(schema.field("properties").schema(), this.properties))
-        }
+            relationshipStateValue(schema.field("state").schema(), this.before, this.after))
       }
 
   private fun Node.toConnectSchema(): Schema {
@@ -236,38 +236,67 @@ object ChangeEventExtensions {
         it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
       }
 
-  private fun RelationshipState?.toConnectSchema(): Schema {
-    if (this == null) {
-      return SchemaBuilder.struct()
-          .namespaced("cdc.EmptyRelationshipState")
-          .field("properties", SchemaBuilder.struct().build())
-          .optional()
-          .build()
-    }
+  private fun relationshipStateSchema(
+      before: RelationshipState?,
+      after: RelationshipState?
+  ): Schema {
+    val stateSchema =
+        SchemaBuilder.struct()
+            .namespaced("cdc.RelationshipState")
+            .apply {
+              this.field(
+                  "properties",
+                  SchemaBuilder.struct()
+                      .also {
+                        before?.properties?.forEach { entry ->
+                          it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                        }
+                        after?.properties?.forEach { entry ->
+                          // TODO: should we check for incompatible types for the existing value,
+                          // and what happens in that case?
+                          if (it.field(entry.key) == null) {
+                            it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
+                          }
+                        }
+                      }
+                      .build())
+            }
+            .optional()
+            .build()
 
     return SchemaBuilder.struct()
-        .namespaced("cdc.RelationshipState")
-        .field(
-            "properties",
-            SchemaBuilder.struct()
-                .also {
-                  this.properties.forEach { entry ->
-                    it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
-                  }
-                }
-                .build())
-        .optional()
+        .namespaced("cdc.RelationshipStates")
+        .field("before", stateSchema)
+        .field("after", stateSchema)
         .build()
   }
 
-  private fun RelationshipState?.toConnectValue(schema: Schema): Struct? =
-      if (this == null) {
-        null
-      } else {
-        Struct(schema).also {
-          it.put(
-              "properties",
-              DynamicTypes.valueFor(schema.field("properties").schema(), this.properties))
+  private fun relationshipStateValue(
+      schema: Schema,
+      before: RelationshipState?,
+      after: RelationshipState?
+  ): Struct =
+      Struct(schema).apply {
+        if (before != null) {
+          this.put(
+              "before",
+              Struct(this.schema().field("before").schema()).also {
+                it.put(
+                    "properties",
+                    DynamicTypes.valueFor(
+                        it.schema().field("properties").schema(), before.properties))
+              })
+        }
+
+        if (after != null) {
+          this.put(
+              "after",
+              Struct(this.schema().field("after").schema()).also {
+                it.put(
+                    "properties",
+                    DynamicTypes.valueFor(
+                        it.schema().field("properties").schema(), after.properties))
+              })
         }
       }
 

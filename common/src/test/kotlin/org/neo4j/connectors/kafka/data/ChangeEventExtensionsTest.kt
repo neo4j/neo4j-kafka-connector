@@ -150,9 +150,15 @@ class ChangeEventExtensionsTest {
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.EmptyNodeState")
+                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field("properties", SchemaBuilder.struct().build())
+                            .field(
+                                "properties",
+                                SchemaBuilder.struct()
+                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
+                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
+                                    .build())
                             .optional()
                             .build())
                     .field(
@@ -270,6 +276,7 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .build())
                             .optional()
                             .build())
@@ -405,9 +412,16 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.EmptyNodeState")
+                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field("properties", SchemaBuilder.struct().build())
+                            .field(
+                                "properties",
+                                SchemaBuilder.struct()
+                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
+                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+                                    .build())
                             .optional()
                             .build())
                     .build())
@@ -531,8 +545,13 @@ class ChangeEventExtensionsTest {
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.EmptyRelationshipState")
-                            .field("properties", SchemaBuilder.struct().build())
+                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
+                            .field(
+                                "properties",
+                                SchemaBuilder.struct()
+                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .build())
                             .optional()
                             .build())
                     .field(
@@ -852,8 +871,13 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.EmptyRelationshipState")
-                            .field("properties", SchemaBuilder.struct().build())
+                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
+                            .field(
+                                "properties",
+                                SchemaBuilder.struct()
+                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
+                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .build())
                             .optional()
                             .build())
                     .build())
