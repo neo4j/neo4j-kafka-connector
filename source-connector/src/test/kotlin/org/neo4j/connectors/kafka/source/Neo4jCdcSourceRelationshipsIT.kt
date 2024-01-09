@@ -20,7 +20,6 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
@@ -39,7 +38,6 @@ import org.neo4j.driver.TransactionConfig
 
 class Neo4jCdcSourceRelationshipsIT {
 
-  @Disabled // TODO This test fails because of incompatible schema changes error
   @Neo4jSource(
       startFrom = "EARLIEST",
       strategy = CDC,
@@ -108,7 +106,97 @@ class Neo4jCdcSourceRelationshipsIT {
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
-              .hasBeforeStateProperties(mapOf("weight" to 1L, "execId" to executionId))
+              .hasBeforeStateProperties(mapOf("weight" to 2L, "execId" to executionId))
+              .hasNoAfterState()
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-rels-prop-remove-add",
+                          patterns = arrayOf(CdcSourceParam("()-[:RELIES_TO {}]->()"))))))
+  @Test
+  fun `should read property removal and additions`(
+      testInfo: TestInfo,
+      @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    val params = mapOf("execId" to executionId)
+    session
+        .run(
+            """CREATE (s:TestSource {name: 'Bob', execId: ${'$'}execId})
+            |CREATE (t:TestSource {name: 'Alice', execId: ${'$'}execId})
+            |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42, execId: ${'$'}execId}]->(t)
+    """
+                .trimMargin(),
+            params)
+        .consume()
+    session
+        .run(
+            "MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) SET r.weight = 2, r.rate = NULL",
+            params)
+        .consume()
+    session
+        .run(
+            "MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) SET r.rate = 50",
+            params)
+        .consume()
+    session
+        .run("MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) DELETE r", params)
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.CREATE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(
+                  mapOf("weight" to 1L, "rate" to 42L, "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf("weight" to 1L, "rate" to 42L, "execId" to executionId))
+              .hasAfterStateProperties(mapOf("weight" to 2L, "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.UPDATE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasBeforeStateProperties(mapOf("weight" to 2L, "execId" to executionId))
+              .hasAfterStateProperties(
+                  mapOf("weight" to 2L, "rate" to 50L, "execId" to executionId))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(EventType.RELATIONSHIP)
+              .hasOperation(Operation.DELETE)
+              .hasType("RELIES_TO")
+              .startLabelledAs("TestSource")
+              .endLabelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf("weight" to 2L, "rate" to 50L, "execId" to executionId))
               .hasNoAfterState()
         }
         .verifyWithin(Duration.ofSeconds(30))
