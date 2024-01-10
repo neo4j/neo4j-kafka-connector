@@ -21,6 +21,7 @@ import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert
@@ -113,6 +114,43 @@ class Neo4jCdcSourceKeySerializationIT {
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane", "execId" to executionId))
         }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-key-serialization-element-ids",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
+                          keySerialization = "ELEMENT_ID"),
+                  ),
+          ),
+  )
+  @Test
+  fun `supports serialization of keys as element IDs`(
+      testInfo: TestInfo,
+      @TopicConsumer(
+          topic = "neo4j-cdc-topic-key-serialization-element-ids",
+          offset = "earliest",
+          keyDeserializer = StringDeserializer::class)
+      consumer: KafkaConsumer<String, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageKey { key -> assertTrue(key.isNotEmpty()) }
         .verifyWithin(Duration.ofSeconds(30))
   }
 }
