@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.ELEMENT_ID
+import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.ENTITY_KEYS
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.SKIP
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.WHOLE_VALUE
 
@@ -60,43 +61,132 @@ class Neo4jCdcKeySerializationStrategyTest {
 
 class KeySchemaSerializationArgument : ArgumentsProvider {
   override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
-    val schema =
-        SchemaBuilder.struct()
-            .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
-            .field("bar", Schema.OPTIONAL_INT32_SCHEMA)
-            .build()
-
-    val value =
-        SchemaAndValue(
-            schema,
-            with(Struct(schema)) {
-              put("foo", "fighters")
-              put("bar", 16)
-            },
-        )
     return Stream.of(
-        Arguments.of(value, SKIP, null),
-        Arguments.of(value, WHOLE_VALUE, schema),
-        Arguments.of(value, ELEMENT_ID, Schema.OPTIONAL_STRING_SCHEMA),
+        Arguments.of(TestData.nodeChange, SKIP, null),
+        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeSchema),
+        Arguments.of(TestData.nodeChange, ELEMENT_ID, TestData.elementIdSchema),
+        Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.nodeKeysSchema),
+        Arguments.of(TestData.relChange, SKIP, null),
+        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relSchema),
+        Arguments.of(TestData.relChange, ELEMENT_ID, TestData.elementIdSchema),
+        Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.relKeysSchema),
     )
   }
 }
 
 class KeyValueSerializationArgument : ArgumentsProvider {
   override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
-    val elementIdSchema = SchemaBuilder.struct().field("elementId", Schema.OPTIONAL_STRING_SCHEMA).build()
-    val schema = SchemaBuilder.struct().field("event", elementIdSchema)
-    val value = Struct(schema)
-        .put("event", Struct(elementIdSchema).put("elementId", "some-element-id"))
-    val message =
-        SchemaAndValue(
-            schema,
-            value,
-        )
     return Stream.of(
-        Arguments.of(message, SKIP, null),
-        Arguments.of(message, WHOLE_VALUE, value),
-        Arguments.of(message, ELEMENT_ID, "some-element-id"),
+        Arguments.of(TestData.nodeChange, SKIP, null),
+        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeValue),
+        Arguments.of(TestData.nodeChange, ELEMENT_ID, TestData.NODE_ELEMENT_ID),
+        Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.nodeKeys),
+        Arguments.of(TestData.relChange, SKIP, null),
+        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relValue),
+        Arguments.of(TestData.relChange, ELEMENT_ID, TestData.REL_ELEMENT_ID),
+        Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.relKeys),
     )
   }
+}
+
+object TestData {
+
+  const val NODE_ELEMENT_ID: String = "node-element-id"
+
+  const val REL_ELEMENT_ID: String = "rel-element-id"
+
+  val elementIdSchema: Schema = Schema.OPTIONAL_STRING_SCHEMA
+
+  private val fooBarKeySchema: Schema =
+      SchemaBuilder.struct()
+          .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
+          .field("bar", Schema.OPTIONAL_INT64_SCHEMA)
+          .optional()
+          .build()
+
+  val nodeKeysSchema: Schema =
+      SchemaBuilder.struct()
+          .field("Label1", SchemaBuilder.array(fooBarKeySchema))
+          .optional()
+          .build()
+
+  val nodeKeys: Struct =
+      Struct(nodeKeysSchema)
+          .put(
+              "Label1",
+              listOf(
+                  Struct(fooBarKeySchema).put("foo", "fighters").put("bar", 42L),
+              ),
+          )
+
+  private val propertiesSchema: Schema =
+      SchemaBuilder.struct()
+          .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
+          .field("bar", Schema.OPTIONAL_INT64_SCHEMA)
+          .build()
+
+  private val properties: Struct = Struct(propertiesSchema).put("foo", "fighters").put("bar", 42L)
+
+  private val stateSchema: Schema =
+      SchemaBuilder.struct().field("properties", propertiesSchema).build()
+
+  private val nodeEventSchema: Schema =
+      SchemaBuilder.struct()
+          .field("keys", nodeKeysSchema)
+          .field("eventType", Schema.STRING_SCHEMA)
+          .field("elementId", elementIdSchema)
+          .field("state", stateSchema)
+          .build()
+
+  val nodeSchema: Schema =
+      SchemaBuilder.struct()
+          .field("event", nodeEventSchema)
+          .field("properties", propertiesSchema)
+          .build()
+
+  val nodeValue: Struct =
+      with(Struct(nodeSchema)) {
+        put(
+            "event",
+            Struct(nodeEventSchema)
+                .put("elementId", NODE_ELEMENT_ID)
+                .put("eventType", "n")
+                .put("keys", nodeKeys)
+                .put("state", Struct(stateSchema).put("properties", properties)))
+      }
+
+  val nodeChange = SchemaAndValue(nodeSchema, nodeValue)
+
+  val relKeysSchema: Schema = SchemaBuilder.array(fooBarKeySchema).build()
+
+  val relKeys: Any =
+      listOf(
+          Struct(fooBarKeySchema).put("foo", "fighters").put("bar", 42L),
+      )
+
+  private val relEventSchema: Schema =
+      SchemaBuilder.struct()
+          .field("keys", relKeysSchema)
+          .field("eventType", Schema.STRING_SCHEMA)
+          .field("elementId", elementIdSchema)
+          .field("state", stateSchema)
+          .build()
+
+  val relSchema: Schema =
+      SchemaBuilder.struct()
+          .field("event", relEventSchema)
+          .field("properties", propertiesSchema)
+          .build()
+
+  val relValue: Struct =
+      with(Struct(relSchema)) {
+        put(
+            "event",
+            Struct(relEventSchema)
+                .put("elementId", REL_ELEMENT_ID)
+                .put("eventType", "r")
+                .put("keys", relKeys)
+                .put("state", Struct(stateSchema).put("properties", properties)))
+      }
+  val relChange = SchemaAndValue(relSchema, relValue)
 }

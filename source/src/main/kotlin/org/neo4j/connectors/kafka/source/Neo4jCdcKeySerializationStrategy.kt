@@ -32,30 +32,20 @@ enum class Neo4jCdcKeySerializationStrategy {
   },
   ELEMENT_ID {
     override fun schema(message: SchemaAndValue): Schema? {
-      return Schema.OPTIONAL_STRING_SCHEMA
+      return extractEventSchema(message).field("elementId").schema()
     }
 
     override fun value(message: SchemaAndValue): Any? {
-      val value = message.value()
-      if (value !is Struct) {
-        throw IllegalArgumentException(
-            "expected value to be a struct, but got: ${value?.javaClass}")
-      }
-      val eventData = value.get("event")
-      if (eventData !is Struct) {
-        throw IllegalArgumentException(
-            "expected value to be a struct, but got: ${value?.javaClass}")
-      }
-      return eventData.get("elementId")
+      return extractEventValue(message).get("elementId")
     }
   },
   ENTITY_KEYS {
     override fun schema(message: SchemaAndValue): Schema? {
-      TODO("Not yet implemented")
+      return extractEventSchema(message).field("keys").schema()
     }
 
     override fun value(message: SchemaAndValue): Any? {
-      TODO("Not yet implemented")
+      return extractEventValue(message).get("keys")
     }
   },
   WHOLE_VALUE {
@@ -71,4 +61,26 @@ enum class Neo4jCdcKeySerializationStrategy {
   abstract fun schema(message: SchemaAndValue): Schema?
 
   abstract fun value(message: SchemaAndValue): Any?
+
+  companion object {
+    fun extractEventSchema(message: SchemaAndValue): Schema {
+      return message.schema().field("event").schema()
+    }
+
+    fun extractEventValue(message: SchemaAndValue): Struct {
+      val value = message.value()
+      if (value !is Struct) {
+        throw IllegalArgumentException(
+            "expected value to be a struct, but got: ${value?.javaClass}",
+        )
+      }
+      val eventData = value.get("event")
+      if (eventData !is Struct) {
+        throw IllegalArgumentException(
+            "expected event attribute to be a struct, but got: ${value?.javaClass}",
+        )
+      }
+      return eventData
+    }
+  }
 }
