@@ -95,11 +95,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       return when (strategy) {
         SourceType.QUERY ->
             mapOf(
-                "database" to this.database,
-                "type" to "query",
-                "query" to query,
-                "partition" to 1,
-            )
+                "database" to this.database, "type" to "query", "query" to query, "partition" to 1)
         SourceType.CDC -> mapOf("database" to this.database, "type" to "cdc", "partition" to 1)
       }
     }
@@ -219,8 +215,7 @@ class SourceConfiguration(originals: Map<*, *>) :
           "delete" -> EntityOperation.DELETE
           else -> {
             throw ConfigException(
-                "Cannot parse $value as an operation. Allowed operations are create, delete or update.",
-            )
+                "Cannot parse $value as an operation. Allowed operations are create, delete or update.")
           }
         }
     val pattern = patterns.get(index)
@@ -334,14 +329,7 @@ class SourceConfiguration(originals: Map<*, *>) :
             is NodeSelector -> NodeSelector(it.change, it.changesTo, it.labels, it.key, it.metadata)
             is RelationshipSelector ->
                 RelationshipSelector(
-                    it.change,
-                    it.changesTo,
-                    it.type,
-                    it.start,
-                    it.end,
-                    it.key,
-                    it.metadata,
-                )
+                    it.change, it.changesTo, it.type, it.start, it.end, it.key, it.metadata)
             is EntitySelector -> EntitySelector(it.change, it.changesTo, it.metadata)
             else -> throw IllegalStateException("unexpected pattern type ${it.javaClass.name}")
           }
@@ -407,8 +395,7 @@ class SourceConfiguration(originals: Map<*, *>) :
         Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.changesTo)$")
     private val CDC_PATTERN_ARRAY_METADATA_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.metadata)\\.([a-zA-Z0-9._-]+)$",
-        )
+            "^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.metadata)\\.([a-zA-Z0-9._-]+)$")
 
     private val DEFAULT_POLL_INTERVAL = 10.seconds
     private const val DEFAULT_BATCH_SIZE = 1000
@@ -425,8 +412,7 @@ class SourceConfiguration(originals: Map<*, *>) :
           DeprecatedNeo4jSourceConfiguration.STREAMING_FROM ->
               migrated[START_FROM] =
                   when (DeprecatedNeo4jSourceConfiguration.StreamingFrom.valueOf(
-                      it.value.toString(),
-                  )) {
+                      it.value.toString())) {
                     DeprecatedNeo4jSourceConfiguration.StreamingFrom.ALL -> StartFrom.EARLIEST.name
                     DeprecatedNeo4jSourceConfiguration.StreamingFrom.NOW -> StartFrom.NOW.name
                     DeprecatedNeo4jSourceConfiguration.StreamingFrom.LAST_COMMITTED ->
@@ -485,8 +471,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 originals.entries.filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
         if (cdcTopics.isEmpty()) {
           strategy.addErrorMessage(
-              "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.",
-          )
+              "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.")
         } else {
           cdcTopics.forEach {
             // parse & validate CDC patterns
@@ -519,57 +504,48 @@ class SourceConfiguration(originals: Map<*, *>) :
                   defaultValue = SourceType.QUERY.name
                   validator = Validators.enum(SourceType::class.java)
                   recommender = Recommenders.enum(SourceType::class.java)
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(START_FROM, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = StartFrom.NOW.toString()
                   validator = Validators.enum(StartFrom::class.java)
                   recommender = Recommenders.enum(StartFrom::class.java)
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(START_FROM_VALUE, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   recommender =
                       Recommenders.visibleIf(
-                          START_FROM,
-                          Predicate.isEqual(StartFrom.USER_PROVIDED.name),
-                      )
-                },
-            )
+                          START_FROM, Predicate.isEqual(StartFrom.USER_PROVIDED.name))
+                })
             .define(
                 ConfigKeyBuilder.of(IGNORE_STORED_OFFSET, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = false
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   defaultValue = ""
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -577,8 +553,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_POLL_INTERVAL.toSimpleString()
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
                   importance = ConfigDef.Importance.HIGH
@@ -586,8 +561,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Range.atLeast(1)
                   defaultValue = DEFAULT_BATCH_SIZE
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -595,8 +569,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_QUERY_TIMEOUT.toSimpleString()
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_INTERVAL, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -604,8 +577,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_CDC_POLL_INTERVAL.toSimpleString()
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_DURATION, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -613,14 +585,12 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_CDC_POLL_DURATION.toSimpleString()
-                },
-            )
+                })
             .define(
                 ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = false
                   validator = ConfigDef.NonNullValidator()
-                },
-            )
+                })
   }
 }
