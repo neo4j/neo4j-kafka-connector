@@ -18,9 +18,11 @@ package org.neo4j.connectors.kafka.source
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import java.time.Duration
+import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
@@ -151,6 +153,175 @@ class Neo4jCdcSourceKeySerializationIT {
 
     TopicVerifier.create(consumer)
         .assertMessageKey { key -> assertTrue(key.isNotEmpty()) }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
+                          keySerialization = "ENTITY_KEYS"),
+                  ),
+          ),
+  )
+  @Test
+  fun `supports serialization of keys as (missing) node keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(
+          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
+          offset = "earliest",
+          keyDeserializer = KafkaAvroDeserializer::class)
+      consumer: KafkaConsumer<GenericRecord, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageKey { key -> assertTrue(key.schema.fields.isEmpty()) }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-key-serialization-node-keys",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
+                          keySerialization = "ENTITY_KEYS"),
+                  ),
+          ),
+  )
+  @Test
+  fun `supports serialization of keys as node keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(
+          topic = "neo4j-cdc-topic-key-serialization-node-keys",
+          offset = "earliest",
+          keyDeserializer = KafkaAvroDeserializer::class)
+      consumer: KafkaConsumer<GenericRecord, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+    session
+        .run(
+            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageKey { key ->
+          assertTrue(key.hasField("TestSource"))
+          @Suppress("UNCHECKED_CAST")
+          val entityKeys = key.get("TestSource") as GenericData.Array<GenericRecord>
+          assertEquals(1, entityKeys.size)
+          assertEquals("Jane", entityKeys[0].get("name").toString())
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
+                          patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
+                          keySerialization = "ENTITY_KEYS"),
+                  ),
+          ),
+  )
+  @Test
+  fun `supports serialization of keys as (missing) rel keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(
+          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
+          offset = "earliest",
+          keyDeserializer = KafkaAvroDeserializer::class)
+      consumer: KafkaConsumer<GenericData.Array<GenericRecord>, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE (:Source)-[:TO {name: 'somewhere', execId: \$execId}]->(:Destination)",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageKey { key -> assertEquals(0, key.size) }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = SourceStrategy.CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-topic-key-serialization-rel-keys",
+                          patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
+                          keySerialization = "ENTITY_KEYS"),
+                  ),
+          ),
+  )
+  @Test
+  fun `supports serialization of keys as rel keys`(
+      testInfo: TestInfo,
+      @TopicConsumer(
+          topic = "neo4j-cdc-topic-key-serialization-rel-keys",
+          offset = "earliest",
+          keyDeserializer = KafkaAvroDeserializer::class)
+      consumer: KafkaConsumer<GenericData.Array<GenericRecord>, GenericRecord>,
+      session: Session
+  ) {
+    val executionId = testInfo.displayName + System.currentTimeMillis()
+    session
+        .run(
+            "CREATE CONSTRAINT FOR ()-[to:TO]-() REQUIRE to.name IS RELATIONSHIP KEY",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+    session
+        .run(
+            "CREATE (:Source)-[:TO {name: 'somewhere', execId: \$execId}]->(:Destination)",
+            mapOf("execId" to executionId),
+        )
+        .consume()
+
+    TopicVerifier.create(consumer)
+        .assertMessageKey { key ->
+          assertEquals(1, key.size)
+          assertEquals("somewhere", key[0].get("name").toString())
+        }
         .verifyWithin(Duration.ofSeconds(30))
   }
 }
