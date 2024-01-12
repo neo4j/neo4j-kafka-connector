@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import java.time.ZonedDateTime
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 import org.apache.kafka.connect.data.Schema
@@ -27,6 +28,17 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.neo4j.cdc.client.model.CaptureMode
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.Metadata
+import org.neo4j.cdc.client.model.Node
+import org.neo4j.cdc.client.model.NodeEvent
+import org.neo4j.cdc.client.model.NodeState
+import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ELEMENT_ID
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ENTITY_KEYS
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.SKIP
@@ -63,11 +75,11 @@ class KeySchemaSerializationArgument : ArgumentsProvider {
   override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
-        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeSchema),
+        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.schema()),
         Arguments.of(TestData.nodeChange, ELEMENT_ID, TestData.elementIdSchema),
         Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.nodeKeysSchema),
         Arguments.of(TestData.relChange, SKIP, null),
-        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relSchema),
+        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relChange.schema()),
         Arguments.of(TestData.relChange, ELEMENT_ID, TestData.elementIdSchema),
         Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.relKeysSchema),
     )
@@ -78,11 +90,11 @@ class KeyValueSerializationArgument : ArgumentsProvider {
   override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
-        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeValue),
+        Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.value()),
         Arguments.of(TestData.nodeChange, ELEMENT_ID, TestData.NODE_ELEMENT_ID),
         Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.nodeKeys),
         Arguments.of(TestData.relChange, SKIP, null),
-        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relValue),
+        Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relChange.value()),
         Arguments.of(TestData.relChange, ELEMENT_ID, TestData.REL_ELEMENT_ID),
         Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.relKeys),
     )
@@ -91,13 +103,15 @@ class KeyValueSerializationArgument : ArgumentsProvider {
 
 object TestData {
 
+  private const val LABEL = "Label1"
+
   const val NODE_ELEMENT_ID: String = "node-element-id"
 
   const val REL_ELEMENT_ID: String = "rel-element-id"
 
-  val elementIdSchema: Schema = Schema.OPTIONAL_STRING_SCHEMA
+  val elementIdSchema: Schema = Schema.STRING_SCHEMA
 
-  private val fooBarKeySchema: Schema =
+  private val propertySchema: Schema =
       SchemaBuilder.struct()
           .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
           .field("bar", Schema.OPTIONAL_INT64_SCHEMA)
@@ -106,87 +120,86 @@ object TestData {
 
   val nodeKeysSchema: Schema =
       SchemaBuilder.struct()
-          .field("Label1", SchemaBuilder.array(fooBarKeySchema))
+          .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
           .optional()
           .build()
 
   val nodeKeys: Struct =
       Struct(nodeKeysSchema)
           .put(
-              "Label1",
+              LABEL,
               listOf(
-                  Struct(fooBarKeySchema).put("foo", "fighters").put("bar", 42L),
+                  Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
               ),
           )
 
-  private val propertiesSchema: Schema =
-      SchemaBuilder.struct()
-          .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
-          .field("bar", Schema.OPTIONAL_INT64_SCHEMA)
-          .build()
+  val relKeysSchema: Schema = SchemaBuilder.array(propertySchema).optional().build()
 
-  private val properties: Struct = Struct(propertiesSchema).put("foo", "fighters").put("bar", 42L)
-
-  private val stateSchema: Schema =
-      SchemaBuilder.struct().field("properties", propertiesSchema).build()
-
-  private val nodeEventSchema: Schema =
-      SchemaBuilder.struct()
-          .field("keys", nodeKeysSchema)
-          .field("eventType", Schema.STRING_SCHEMA)
-          .field("elementId", elementIdSchema)
-          .field("state", stateSchema)
-          .build()
-
-  val nodeSchema: Schema =
-      SchemaBuilder.struct()
-          .field("event", nodeEventSchema)
-          .field("properties", propertiesSchema)
-          .build()
-
-  val nodeValue: Struct =
-      with(Struct(nodeSchema)) {
-        put(
-            "event",
-            Struct(nodeEventSchema)
-                .put("elementId", NODE_ELEMENT_ID)
-                .put("eventType", "n")
-                .put("keys", nodeKeys)
-                .put("state", Struct(stateSchema).put("properties", properties)))
-      }
-
-  val nodeChange = SchemaAndValue(nodeSchema, nodeValue)
-
-  val relKeysSchema: Schema = SchemaBuilder.array(fooBarKeySchema).build()
-
-  val relKeys: Any =
+  val relKeys: List<Struct> =
       listOf(
-          Struct(fooBarKeySchema).put("foo", "fighters").put("bar", 42L),
+          Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
       )
 
-  private val relEventSchema: Schema =
-      SchemaBuilder.struct()
-          .field("keys", relKeysSchema)
-          .field("eventType", Schema.STRING_SCHEMA)
-          .field("elementId", elementIdSchema)
-          .field("state", stateSchema)
-          .build()
+  val nodeChange =
+      ChangeEvent(
+              ChangeIdentifier("a-node-change-id"),
+              aTransactionId(),
+              aSequenceNumber(),
+              someMetadata(),
+              NodeEvent(
+                  NODE_ELEMENT_ID,
+                  EntityOperation.CREATE,
+                  listOf(LABEL),
+                  mapOf(LABEL to listOf(mapOf("foo" to "fighters", "bar" to 42L))),
+                  NodeState(listOf(LABEL), mapOf()),
+                  NodeState(listOf(LABEL), mapOf("foo" to "fighters", "bar" to 42L))))
+          .toConnectValue()
 
-  val relSchema: Schema =
-      SchemaBuilder.struct()
-          .field("event", relEventSchema)
-          .field("properties", propertiesSchema)
-          .build()
+  val relChange =
+      ChangeEvent(
+              ChangeIdentifier("a-rel-change-id"),
+              aTransactionId(),
+              aSequenceNumber(),
+              someMetadata(),
+              RelationshipEvent(
+                  REL_ELEMENT_ID,
+                  aRelationshipType(),
+                  aStartNode(),
+                  anEndNode(),
+                  listOf(mapOf("foo" to "fighters", "bar" to 42L)),
+                  EntityOperation.CREATE,
+                  RelationshipState(mapOf()),
+                  RelationshipState(mapOf("foo" to "fighters", "bar" to 42L))))
+          .toConnectValue()
 
-  val relValue: Struct =
-      with(Struct(relSchema)) {
-        put(
-            "event",
-            Struct(relEventSchema)
-                .put("elementId", REL_ELEMENT_ID)
-                .put("eventType", "r")
-                .put("keys", relKeys)
-                .put("state", Struct(stateSchema).put("properties", properties)))
-      }
-  val relChange = SchemaAndValue(relSchema, relValue)
+  private fun aTransactionId(): Long {
+    return 42
+  }
+
+  private fun aSequenceNumber(): Int {
+    return 4242
+  }
+
+  private fun someMetadata(): Metadata {
+    val txStartTime = ZonedDateTime.now()
+    val txCommitTime = txStartTime.plusSeconds(5)
+    return Metadata(
+        "authenticated-user",
+        "executing-user",
+        "server-id",
+        CaptureMode.FULL,
+        "connection-type",
+        "connection-client",
+        "connection-server",
+        txStartTime,
+        txCommitTime,
+        mapOf("tx" to "metadata"),
+        mapOf("additional" to "entries"))
+  }
+
+  private fun aRelationshipType() = "A_RELATION_TO"
+
+  private fun aStartNode() = Node("start-element-id", listOf("Start"), mapOf())
+
+  private fun anEndNode() = Node("end-element-id", listOf("End"), mapOf())
 }
