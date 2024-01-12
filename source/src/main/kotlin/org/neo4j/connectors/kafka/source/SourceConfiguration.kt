@@ -161,7 +161,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
   }
 
-  val cdcTopicsToKeyStrategy: Map<String, Neo4jCdcKeySerializationStrategy> by lazy {
+  val cdcTopicsToKeyStrategy: Map<String, Neo4jCdcKeyStrategy> by lazy {
     when (strategy) {
       SourceType.CDC -> {
         originals()
@@ -272,11 +272,11 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   private fun mapKeyStrategy(
       configEntry: MutableMap.MutableEntry<String, Any>
-  ): Pair<String, Neo4jCdcKeySerializationStrategy> {
+  ): Pair<String, Neo4jCdcKeyStrategy> {
     val matchGroup = retrieveGroupsFromConfigKey(configEntry.key, CDC_KEY_STRATEGY_REGEX)
     val topicName = matchGroup.groupValues[1]
     val value = configEntry.value
-    return topicName to Neo4jCdcKeySerializationStrategy.valueOf(value as String)
+    return topicName to Neo4jCdcKeyStrategy.valueOf(value as String)
   }
 
   private fun retrieveIndexAndPattern(
@@ -501,8 +501,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 }
               }
               if (CDC_KEY_STRATEGY_REGEX.matches(it.key)) {
-                Validators.enum(Neo4jCdcKeySerializationStrategy::class.java)
-                    .ensureValid(it.key, it.value)
+                Validators.enum(Neo4jCdcKeyStrategy::class.java).ensureValid(it.key, it.value)
               }
             } catch (e: ConfigException) {
               strategy.addErrorMessage(e.message)

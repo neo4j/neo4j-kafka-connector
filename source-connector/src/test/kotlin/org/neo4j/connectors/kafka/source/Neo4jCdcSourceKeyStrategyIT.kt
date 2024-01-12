@@ -38,7 +38,7 @@ import org.neo4j.connectors.kafka.testing.source.SourceStrategy
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
-class Neo4jCdcSourceKeySerializationIT {
+class Neo4jCdcSourceKeyStrategyIT {
 
   @Neo4jSource(
       startFrom = "EARLIEST",

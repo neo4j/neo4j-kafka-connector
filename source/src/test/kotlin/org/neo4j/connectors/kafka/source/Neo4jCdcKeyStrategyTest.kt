@@ -27,18 +27,18 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
-import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.ELEMENT_ID
-import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.ENTITY_KEYS
-import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.SKIP
-import org.neo4j.connectors.kafka.source.Neo4jCdcKeySerializationStrategy.WHOLE_VALUE
+import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ELEMENT_ID
+import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ENTITY_KEYS
+import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.SKIP
+import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.WHOLE_VALUE
 
-class Neo4jCdcKeySerializationStrategyTest {
+class Neo4jCdcKeyStrategyTest {
 
   @ParameterizedTest
   @ArgumentsSource(KeySchemaSerializationArgument::class)
   fun `serializes key schema`(
       message: SchemaAndValue,
-      strategy: Neo4jCdcKeySerializationStrategy,
+      strategy: Neo4jCdcKeyStrategy,
       expectedKeySchema: Schema?
   ) {
     val actualKeySchema = strategy.schema(message)
@@ -50,7 +50,7 @@ class Neo4jCdcKeySerializationStrategyTest {
   @ArgumentsSource(KeyValueSerializationArgument::class)
   fun `serializes key value`(
       message: SchemaAndValue,
-      strategy: Neo4jCdcKeySerializationStrategy,
+      strategy: Neo4jCdcKeyStrategy,
       expectedKeyValue: Any?
   ) {
     val actualKeyValue = strategy.value(message)

@@ -20,7 +20,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
 import org.apache.kafka.connect.data.Struct
 
-enum class Neo4jCdcKeySerializationStrategy {
+enum class Neo4jCdcKeyStrategy {
   SKIP {
     override fun schema(message: SchemaAndValue): Schema? {
       return null

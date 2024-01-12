@@ -120,8 +120,7 @@ class Neo4jCdcTask : SourceTask() {
               val transformed = it.key.applyProperties(changeEvent)
               val transformedValue = transformed.toConnectValue()
               val keySerializer =
-                  config.cdcTopicsToKeyStrategy.getOrDefault(
-                      topic, Neo4jCdcKeySerializationStrategy.WHOLE_VALUE)
+                  config.cdcTopicsToKeyStrategy.getOrDefault(topic, Neo4jCdcKeyStrategy.WHOLE_VALUE)
               SourceRecord(
                   config.partition,
                   mapOf("value" to changeEvent.id.id),
