@@ -51,7 +51,7 @@ internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<String, GenericRecord> =
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<*, GenericRecord> =
         ::getSubscribedConsumer,
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
@@ -162,7 +162,7 @@ internal class Neo4jSourceExtension(
   private fun resolveConsumer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
-  ): KafkaConsumer<String, GenericRecord> {
+  ): KafkaConsumer<*, GenericRecord> {
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val properties = Properties()
     properties.setProperty(
@@ -175,7 +175,7 @@ internal class Neo4jSourceExtension(
     )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        consumerAnnotation.keyDeserializer.qualifiedName,
+        KafkaAvroDeserializer::class.java.getName(),
     )
     properties.setProperty(
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -232,8 +232,8 @@ internal class Neo4jSourceExtension(
     private fun getSubscribedConsumer(
         properties: Properties,
         topic: String
-    ): KafkaConsumer<String, GenericRecord> {
-      val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    ): KafkaConsumer<*, GenericRecord> {
+      val consumer = KafkaConsumer<Any, GenericRecord>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
     }

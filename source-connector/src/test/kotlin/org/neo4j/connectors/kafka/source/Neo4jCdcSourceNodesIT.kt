@@ -20,7 +20,6 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
@@ -54,10 +53,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read changes caught by patterns`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -115,10 +111,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read property removal and additions`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-prop-remove-add",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -205,10 +198,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read only specified field changes on update`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-update-topic",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -281,10 +271,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-create-inc",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -342,14 +329,11 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read each operation to a separate topic`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "cdc-creates", offset = "earliest", keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "cdc-creates", offset = "earliest")
       createsConsumer: KafkaConsumer<String, GenericRecord>,
-      @TopicConsumer(
-          topic = "cdc-updates", offset = "earliest", keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "cdc-updates", offset = "earliest")
       updatesConsumer: KafkaConsumer<String, GenericRecord>,
-      @TopicConsumer(
-          topic = "cdc-deletes", offset = "earliest", keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "cdc-deletes", offset = "earliest")
       deletesConsumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -424,10 +408,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read changes marked with specific transaction metadata attribute`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-metadata",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-metadata", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -477,10 +458,7 @@ class Neo4jCdcSourceNodesIT {
   @Test
   fun `should read changes containing node keys`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-keys",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {

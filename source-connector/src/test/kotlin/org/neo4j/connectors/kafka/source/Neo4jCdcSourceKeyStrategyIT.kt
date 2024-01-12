@@ -16,12 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import java.time.Duration
 import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -57,10 +55,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   @Test
   fun `supports skipping serialization of keys`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-none",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-none", offset = "earliest")
       consumer: KafkaConsumer<Any, GenericRecord>,
       session: Session
   ) {
@@ -92,10 +87,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   @Test
   fun `supports serialization of keys as whole values`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-whole",
-          offset = "earliest",
-          keyDeserializer = KafkaAvroDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-whole", offset = "earliest")
       consumer: KafkaConsumer<GenericRecord, GenericRecord>,
       session: Session
   ) {
@@ -136,10 +128,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   @Test
   fun `supports serialization of keys as element IDs`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-element-ids",
-          offset = "earliest",
-          keyDeserializer = StringDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-element-ids", offset = "earliest")
       consumer: KafkaConsumer<String, GenericRecord>,
       session: Session
   ) {
@@ -174,9 +163,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as (missing) node keys`(
       testInfo: TestInfo,
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
-          offset = "earliest",
-          keyDeserializer = KafkaAvroDeserializer::class)
+          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys", offset = "earliest")
       consumer: KafkaConsumer<GenericRecord, GenericRecord>,
       session: Session
   ) {
@@ -210,10 +197,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   @Test
   fun `supports serialization of keys as node keys`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-node-keys",
-          offset = "earliest",
-          keyDeserializer = KafkaAvroDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-node-keys", offset = "earliest")
       consumer: KafkaConsumer<GenericRecord, GenericRecord>,
       session: Session
   ) {
@@ -260,9 +244,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as (missing) rel keys`(
       testInfo: TestInfo,
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
-          offset = "earliest",
-          keyDeserializer = KafkaAvroDeserializer::class)
+          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
       consumer: KafkaConsumer<GenericData.Array<GenericRecord>, GenericRecord>,
       session: Session
   ) {
@@ -296,10 +278,7 @@ class Neo4jCdcSourceKeyStrategyIT {
   @Test
   fun `supports serialization of keys as rel keys`(
       testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-rel-keys",
-          offset = "earliest",
-          keyDeserializer = KafkaAvroDeserializer::class)
+      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
       consumer: KafkaConsumer<GenericData.Array<GenericRecord>, GenericRecord>,
       session: Session
   ) {
