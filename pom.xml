@@ -295,6 +295,7 @@
                     <artifactId>kotlin-maven-plugin</artifactId>
                     <version>${kotlin.version}</version>
                     <configuration>
+                        <args>-Werror</args>
                         <jvmTarget>${java.version}</jvmTarget>
                     </configuration>
                     <executions>
