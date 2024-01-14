@@ -175,9 +175,7 @@ class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer)
-        .assertMessageKey { key -> assertTrue(key.schema.fields.isEmpty()) }
-        .verifyWithin(Duration.ofSeconds(30))
+    TopicVerifier.create(consumer).assertNoMessageKey().verifyWithin(Duration.ofSeconds(30))
   }
 
   @Neo4jSource(
@@ -256,9 +254,7 @@ class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer)
-        .assertMessageKey { key -> assertEquals(0, key.size) }
-        .verifyWithin(Duration.ofSeconds(30))
+    TopicVerifier.create(consumer).assertNoMessageKey().verifyWithin(Duration.ofSeconds(30))
   }
 
   @Neo4jSource(

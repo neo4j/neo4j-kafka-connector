@@ -125,11 +125,17 @@ object ChangeEventExtensions {
 
   private fun NodeEvent.toConnectValue(schema: Schema): Struct =
       Struct(schema).also {
+        val keys =
+            if (this.keys.isEmpty()) {
+              null
+            } else {
+              DynamicTypes.valueFor(schema.field("keys").schema(), this.keys)
+            }
         it.put("elementId", this.elementId)
         it.put("eventType", this.eventType.name)
         it.put("operation", this.operation.name)
         it.put("labels", this.labels)
-        it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
+        it.put("keys", keys)
         it.put("state", nodeStateValue(schema.field("state").schema(), this.before, this.after))
       }
 
@@ -208,13 +214,19 @@ object ChangeEventExtensions {
 
   private fun RelationshipEvent.toConnectValue(schema: Schema): Struct =
       Struct(schema).also {
+        val keys =
+            if (this.keys.isEmpty()) {
+              null
+            } else {
+              DynamicTypes.valueFor(schema.field("keys").schema(), this.keys)
+            }
         it.put("elementId", this.elementId)
         it.put("eventType", this.eventType.name)
         it.put("operation", this.operation.name)
         it.put("type", this.type)
         it.put("start", this.start.toConnectValue(schema.field("start").schema()))
         it.put("end", this.end.toConnectValue(schema.field("end").schema()))
-        it.put("keys", DynamicTypes.valueFor(schema.field("keys").schema(), this.keys))
+        it.put("keys", keys)
         it.put(
             "state",
             relationshipStateValue(schema.field("state").schema(), this.before, this.after))
