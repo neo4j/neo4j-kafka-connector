@@ -378,8 +378,9 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
 
+    @Suppress("DEPRECATION")
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migrated = Neo4jConfiguration.migrateSettings(oldSettings, true).toMutableMap()
+      val migrated = migrateSettings(oldSettings, true).toMutableMap()
 
       oldSettings.forEach {
         when (it.key) {
@@ -416,7 +417,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
 
     fun validate(config: Config, originals: Map<String, String>) {
-      Neo4jConfiguration.validate(config)
+      validate(config)
 
       // START_FROM user defined validation
       config.validateNonEmptyIfVisible(START_FROM_VALUE)

@@ -47,6 +47,7 @@ class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
     @Deprecated("deprecated in favour of ${SourceConfiguration.QUERY}")
     const val SOURCE_TYPE_QUERY = "neo4j.source.query"
 
+    @Suppress("DEPRECATION")
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(
