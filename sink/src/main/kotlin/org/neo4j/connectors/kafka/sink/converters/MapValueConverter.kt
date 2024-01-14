@@ -85,10 +85,10 @@ open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
       result: MutableMap<String, T?>?,
       fieldName: String,
       schema: Schema?,
-      value: MutableMap<Any?, Any?>?
+      map: MutableMap<Any?, Any?>?
   ) {
-    if (value != null) {
-      val converted = convert(value) as MutableMap<Any?, Any?>
+    if (map != null) {
+      val converted = convert(map) as MutableMap<Any?, Any?>
       setValue(result, fieldName, converted)
     } else {
       setNullField(result, fieldName)
