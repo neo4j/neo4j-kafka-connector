@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package streams.kafka.connect.sink
 
 import org.apache.kafka.common.config.ConfigDef
