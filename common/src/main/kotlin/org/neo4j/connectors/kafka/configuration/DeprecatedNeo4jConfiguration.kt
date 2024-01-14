@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-import com.fasterxml.jackson.databind.util.ClassUtil.defaultValue
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
@@ -37,17 +36,12 @@ object ConfigGroup {
   const val CONNECTION = "Connection"
   const val AUTHENTICATION = "Authentication"
   const val TOPIC_CYPHER_MAPPING = "Topic Cypher Mapping"
-  const val ERROR_REPORTING = "Error Reporting"
   const val BATCH = "Batch Management"
   const val RETRY = "Retry Strategy"
-  const val DEPRECATED = "Deprecated Properties (please check the documentation)"
 }
 
-open class DeprecatedNeo4jConfiguration(
-    configDef: ConfigDef,
-    originals: Map<*, *>,
-    private val type: ConnectorType
-) : AbstractConfig(configDef, originals) {
+open class DeprecatedNeo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>) :
+    AbstractConfig(configDef, originals) {
 
   companion object {
     @Deprecated("deprecated in favour of ${Neo4jConfiguration.URI}")
@@ -99,6 +93,7 @@ open class DeprecatedNeo4jConfiguration(
     val CONNECTION_MAX_CONNECTION_LIFETIME_MSECS_DEFAULT = Duration.ofMinutes(8).toMillis()
     val CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS_DEFAULT = Duration.ofMinutes(2).toMillis()
 
+    @Suppress("DEPRECATION")
     fun config(): ConfigDef =
         ConfigDef()
             .define(

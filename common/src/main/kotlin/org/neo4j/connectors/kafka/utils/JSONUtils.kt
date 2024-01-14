@@ -237,7 +237,7 @@ abstract class StreamsTransactionEventDeserializer<EVENT, PAYLOAD : Payload> :
   private fun convertPoints(recordChange: RecordChange?, points: Set<String>) =
       recordChange?.properties?.mapValues {
         if (points.contains(it.key)) {
-          val pointMap = it.value as Map<String, Any>
+          val pointMap = it.value as Map<*, *>
           when (pointMap["crs"]) {
             "cartesian" ->
                 Values.point(
@@ -301,14 +301,6 @@ object JSONUtils {
     return OBJECT_MAPPER.writeValueAsString(any)
   }
 
-  fun writeValueAsBytes(any: Any): ByteArray {
-    return OBJECT_MAPPER.writeValueAsBytes(any)
-  }
-
-  inline fun <reified T> readValue(value: ByteArray): T {
-    return getObjectMapper().readValue(value, T::class.java)
-  }
-
   inline fun <reified T> readValue(
       value: Any,
       stringWhenFailure: Boolean = false,
@@ -325,7 +317,6 @@ object JSONUtils {
         val strValue =
             when (value) {
               is ByteArray -> String(value)
-              null -> ""
               else -> value.toString()
             }
         strValue.trimStart().let { if (it[0] == '{' || it[0] == '[') throw e else it as T }

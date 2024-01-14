@@ -21,8 +21,12 @@ import org.apache.kafka.common.config.ConfigDef
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 object ConfigUtils {
-  inline fun <reified E : Enum<E>> getEnum(config: AbstractConfig, key: String): E {
-    return enumValueOf<E>(config.getString(key))
+  inline fun <reified E : Enum<E>> getEnum(config: AbstractConfig, key: String): E? {
+    return try {
+      enumValueOf<E>(config.getString(key))
+    } catch (e: IllegalArgumentException) {
+      null
+    }
   }
 }
 

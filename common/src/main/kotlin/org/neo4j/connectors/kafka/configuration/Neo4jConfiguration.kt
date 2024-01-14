@@ -24,7 +24,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
 import org.apache.kafka.common.config.ConfigDef
-import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
@@ -108,7 +107,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   internal val authenticationToken
     get(): AuthToken =
         when (ConfigUtils.getEnum<AuthenticationType>(this, AUTHENTICATION_TYPE)) {
-          null -> throw ConnectException("Configuration '$AUTHENTICATION_TYPE' is not provided")
+          null -> AuthTokens.none()
           AuthenticationType.NONE -> AuthTokens.none()
           AuthenticationType.BASIC ->
               AuthTokens.basic(
@@ -241,6 +240,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       val migrated = mutableMapOf<String, String>()
 
       oldSettings.forEach {
+        @Suppress("DEPRECATION")
         when (it.key) {
           DeprecatedNeo4jConfiguration.SERVER_URI -> migrated[URI] = it.value.toString()
           DeprecatedNeo4jConfiguration.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS ->
