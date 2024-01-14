@@ -1001,9 +1001,7 @@ class ChangeEventExtensionsTest {
   private fun Schema.nestedSchema(path: String): Schema {
     require(path.isNotBlank())
 
-    var current = this
-    path.split('.').forEach { current = current.field(it).schema() }
-    return current
+    return path.split('.').fold(this) { schema, field -> schema.field(field).schema() }
   }
 
   private fun Schema.nestedValueSchema(path: String): Schema {
