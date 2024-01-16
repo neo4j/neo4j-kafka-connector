@@ -24,6 +24,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
 import org.apache.kafka.common.config.ConfigDef
+import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
@@ -107,7 +108,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   internal val authenticationToken
     get(): AuthToken =
         when (ConfigUtils.getEnum<AuthenticationType>(this, AUTHENTICATION_TYPE)) {
-          null -> AuthTokens.none()
+          null -> throw ConnectException("Configuration '$AUTHENTICATION_TYPE' is not provided")
           AuthenticationType.NONE -> AuthTokens.none()
           AuthenticationType.BASIC ->
               AuthTokens.basic(
