@@ -17,7 +17,6 @@
 package org.neo4j.connectors.kafka.source
 
 import org.apache.kafka.common.config.ConfigDef
-import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
@@ -25,7 +24,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 
 @Deprecated("use org.neo4j.connectors.kafka.source.SourceConfiguration")
 class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
-    DeprecatedNeo4jConfiguration(config(), originals, ConnectorType.SOURCE) {
+    DeprecatedNeo4jConfiguration(config(), originals) {
 
   enum class StreamingFrom {
     ALL,
@@ -48,6 +47,7 @@ class DeprecatedNeo4jSourceConfiguration(originals: Map<*, *>) :
     @Deprecated("deprecated in favour of ${SourceConfiguration.QUERY}")
     const val SOURCE_TYPE_QUERY = "neo4j.source.query"
 
+    @Suppress("DEPRECATION")
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(

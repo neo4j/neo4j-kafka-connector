@@ -94,12 +94,13 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val PATTERN_RELATIONSHIP_MERGE_PROPERTIES = "neo4j.pattern.relationship.merge-properties"
     const val CUD_TOPICS = "neo4j.cud.topics"
 
-    const val DEFAULT_BATCH_SIZE = 1000
+    private const val DEFAULT_BATCH_SIZE = 1000
     val DEFAULT_BATCH_TIMEOUT = 0.seconds
-    const val DEFAULT_BATCH_PARALLELIZE = true
-    const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
-    const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
+    private const val DEFAULT_BATCH_PARALLELIZE = true
+    private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
+    private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
 
+    @Suppress("DEPRECATION")
     @JvmStatic
     val KEY_REPLACEMENTS =
         mapOf(
@@ -108,8 +109,9 @@ class SinkConfiguration(originals: Map<*, *>) :
             DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX to
                 PATTERN_RELATIONSHIP_TOPIC_PREFIX)
 
+    @Suppress("DEPRECATION")
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migratedBase = Neo4jConfiguration.migrateSettings(oldSettings, false)
+      val migratedBase = migrateSettings(oldSettings, false)
       val migrated = HashMap<String, String>(migratedBase.size)
 
       migratedBase.forEach {

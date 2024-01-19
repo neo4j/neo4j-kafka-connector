@@ -241,6 +241,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       val migrated = mutableMapOf<String, String>()
 
       oldSettings.forEach {
+        @Suppress("DEPRECATION")
         when (it.key) {
           DeprecatedNeo4jConfiguration.SERVER_URI -> migrated[URI] = it.value.toString()
           DeprecatedNeo4jConfiguration.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS ->

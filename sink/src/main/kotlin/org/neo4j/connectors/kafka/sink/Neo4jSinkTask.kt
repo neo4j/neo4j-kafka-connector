@@ -16,6 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
@@ -47,6 +49,7 @@ class Neo4jSinkTask : SinkTask() {
             log::error)
   }
 
+  @OptIn(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
   override fun put(collection: Collection<SinkRecord>) {
     if (collection.isEmpty()) {
       return

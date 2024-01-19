@@ -36,7 +36,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.ParameterizedTest.DISPLAY_NAME_PLACEHOLDER
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.any
-import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
@@ -161,6 +160,7 @@ class Neo4jSourceExtensionTest {
 
   @ParameterizedTest(name = "$DISPLAY_NAME_PLACEHOLDER [{0}]")
   @MethodSource("validMethods")
+  @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
   fun `resolves Session parameter`(name: String, method: KFunction<Unit>) {
     val session = mock<Session>()
     val driver =
@@ -181,6 +181,7 @@ class Neo4jSourceExtensionTest {
 
   @ParameterizedTest(name = "$DISPLAY_NAME_PLACEHOLDER [{0}]")
   @MethodSource("validMethods")
+  @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
   fun `resolves consumer parameter`(name: String, method: KFunction<Unit>) {
     val consumer = mock<KafkaConsumer<String, GenericRecord>>()
     val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })

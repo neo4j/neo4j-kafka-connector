@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 
 class DeprecatedNeo4jSourceConfigurationTest {
+
+  @Suppress("DEPRECATION")
   @Test
   fun `should not allow cdc as source type`() {
     assertFailsWith(ConfigException::class) {

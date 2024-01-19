@@ -161,6 +161,7 @@ class SinkConfigurationTest {
     assertEquals(setOf("foo", "bar"), config.topics.cudTopics)
   }
 
+  @Suppress("DEPRECATION")
   @Test
   fun `migrateSettings should replace deprecated settings with up-to-date equivalent`() {
     val originals =

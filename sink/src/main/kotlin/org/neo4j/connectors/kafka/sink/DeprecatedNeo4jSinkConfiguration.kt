@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.sink
 
 import org.apache.kafka.common.config.ConfigDef
 import org.neo4j.connectors.kafka.configuration.ConfigGroup
-import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
@@ -26,7 +25,7 @@ import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 @Deprecated("use org.neo4j.connectors.kafka.sink.SinkConfiguration")
 class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
-    DeprecatedNeo4jConfiguration(config(), originals, ConnectorType.SINK) {
+    DeprecatedNeo4jConfiguration(config(), originals) {
 
   companion object {
 
@@ -57,10 +56,11 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     @Deprecated("deprecated in favour of ${SinkConfiguration.CUD_TOPICS}")
     const val TOPIC_CUD = "neo4j.topic.cud"
 
-    const val DEFAULT_BATCH_PARALLELIZE = true
-    const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED = false
-    const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED = false
+    private const val DEFAULT_BATCH_PARALLELIZE = true
+    private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED = false
+    private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED = false
 
+    @Suppress("DEPRECATION")
     fun config(): ConfigDef =
         DeprecatedNeo4jConfiguration.config()
             .define(
