@@ -33,6 +33,7 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
   private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<K, V>>>()
 
   fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
+    @Suppress("DEPRECATION")
     return expectMessageValueMatching { value ->
       try {
         assertion(value)

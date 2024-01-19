@@ -77,7 +77,7 @@ enum class Neo4jCdcKeyStrategy {
       val eventData = value.get("event")
       if (eventData !is Struct) {
         throw IllegalArgumentException(
-            "expected event attribute to be a struct, but got: ${value?.javaClass}",
+            "expected event attribute to be a struct, but got: ${value.javaClass}",
         )
       }
       return eventData
