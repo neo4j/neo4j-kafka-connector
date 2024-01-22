@@ -366,7 +366,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <argLine>-javaagent:${net.bytebuddy:byte-buddy-agent:jar}</argLine>
                     <includes>
                         <include>**/*Test.*</include>
                     </includes>
