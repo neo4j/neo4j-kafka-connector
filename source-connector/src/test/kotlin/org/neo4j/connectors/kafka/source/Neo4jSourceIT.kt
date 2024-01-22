@@ -65,6 +65,7 @@ class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
+    @Suppress("DEPRECATION")
     TopicVerifier.create(consumer)
         .expectMessageValueMatching { value ->
           value.asMap().excludingKeys("timestamp") ==

@@ -43,7 +43,8 @@ internal class Neo4jSourceRegistration(
     cdcPatternsIndexed: Boolean = false,
     cdcOperations: Map<String, List<String>>,
     cdcChangesTo: Map<String, List<String>>,
-    cdcMetadata: Map<String, List<Map<String, String>>>
+    cdcMetadata: Map<String, List<Map<String, String>>>,
+    cdcKeySerializations: Map<String, String>
 ) {
 
   private val name: String = randomizedName("Neo4jSourceConnector")
@@ -82,6 +83,7 @@ internal class Neo4jSourceRegistration(
             .putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.changesTo", cdcChangesTo)
             .putCdcPatterns(cdcPatterns, cdcPatternsIndexed)
             .putCdcMetadata(cdcMetadata)
+            .putCdcKeySerializations("neo4j.cdc.topic.%s.key-strategy", cdcKeySerializations)
             .toMap()
 
     payload = mapOf("name" to name, "config" to config)
@@ -149,6 +151,14 @@ internal class Neo4jSourceRegistration(
           }
         }
       }
+      return this
+    }
+
+    fun MutableMap<String, Any>.putCdcKeySerializations(
+        keyPattern: String,
+        strategies: Map<String, String>
+    ): MutableMap<String, Any> {
+      strategies.forEach { (topic, strategy) -> this[keyPattern.format(topic)] = strategy }
       return this
     }
   }

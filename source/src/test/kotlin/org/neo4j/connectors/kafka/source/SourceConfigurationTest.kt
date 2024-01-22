@@ -33,6 +33,7 @@ import org.neo4j.cdc.client.selector.EntitySelector
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
+import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 
 class SourceConfigurationTest {
@@ -510,7 +511,7 @@ class SourceConfigurationTest {
   }
 
   @Test
-  fun `fail on unkown operation parameter`() {
+  fun `fail on unknown operation parameter`() {
 
     assertFailsWith(ConfigException::class) {
           SourceConfiguration(
@@ -585,5 +586,27 @@ class SourceConfigurationTest {
                 mapOf(
                     "txMetadataButNotReally.key" to "value",
                     "txMetadata" to mapOf("app" to "something-AI-something"))))
+  }
+
+  @Test
+  fun `fail validation on invalid CDC key serialization strategy`() {
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.ENFORCE_SCHEMA to "true",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
+                      "neo4j.cdc.topic.topic-1.key-strategy" to "INVALID"))
+              .validate()
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value INVALID for configuration neo4j.cdc.topic.topic-1.key-strategy: Must be one of: 'SKIP', 'ELEMENT_ID', 'ENTITY_KEYS', 'WHOLE_VALUE'."
+        }
   }
 }

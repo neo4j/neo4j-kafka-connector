@@ -929,6 +929,43 @@ class ChangeEventExtensionsTest {
                                     .put("since", "2000-01-01"))))
   }
 
+  @Test
+  fun `node event keys should be nullified when node keys are not defined`() {
+    val (_, _, schema, value) =
+        newChangeEvent(
+            NodeEvent(
+                "element-0",
+                EntityOperation.CREATE,
+                listOf("Label1", "Label2"),
+                mapOf(),
+                null,
+                NodeState(listOf("Label1"), mapOf("id" to 5L))))
+
+    val expectedKeySchema = SchemaBuilder.struct().optional().build()
+    schema.nestedSchema("event.keys") shouldBe expectedKeySchema
+    value.nestedValue("event.keys") shouldBe null
+  }
+
+  @Test
+  fun `relationship event keys should be nullified when rel keys are not defined`() {
+    val (_, _, schema, value) =
+        newChangeEvent(
+            RelationshipEvent(
+                "rel-0",
+                "WORKS_FOR",
+                Node("node-0", listOf("Person"), mapOf()),
+                Node("node-1", listOf("Company"), mapOf()),
+                listOf(),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("id" to 5L)),
+                null))
+
+    val expectedKeySchema =
+        SchemaBuilder.array(SchemaBuilder.struct().optional().build()).optional().build()
+    schema.nestedSchema("event.keys") shouldBe expectedKeySchema
+    value.nestedValue("event.keys") shouldBe null
+  }
+
   data class ChangeEventResult<T : Event>(
       val event: T,
       val change: ChangeEvent,
@@ -964,12 +1001,20 @@ class ChangeEventExtensionsTest {
   private fun Schema.nestedSchema(path: String): Schema {
     require(path.isNotBlank())
 
-    var current = this
-    path.split('.').forEach { current = current.field(it).schema() }
-    return current
+    return path.split('.').fold(this) { schema, field -> schema.field(field).schema() }
   }
 
   private fun Schema.nestedValueSchema(path: String): Schema {
     return nestedSchema(path).valueSchema()
+  }
+
+  private fun Struct.nestedValue(path: String): Any? {
+    require(path.isNotBlank())
+
+    val fields = path.split('.')
+    return fields
+        .dropLast(1)
+        .fold(this) { struct, field -> struct[field] as Struct }
+        .get(fields.last())
   }
 }

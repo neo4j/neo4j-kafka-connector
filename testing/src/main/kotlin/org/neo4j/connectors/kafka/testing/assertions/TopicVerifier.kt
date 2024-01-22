@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.testing.assertions
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.awaitility.Awaitility.await
 import org.awaitility.core.ConditionTimeoutException
@@ -29,14 +30,10 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
-  private var messageValuePredicates = mutableListOf<Predicate<V>>()
-
-  fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
-    messageValuePredicates.add(predicate)
-    return this
-  }
+  private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<K, V>>>()
 
   fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
+    @Suppress("DEPRECATION")
     return expectMessageValueMatching { value ->
       try {
         assertion(value)
@@ -46,6 +43,30 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
         false
       }
     }
+  }
+
+  fun assertMessageKey(assertion: (K) -> Unit): TopicVerifier<K, V> {
+    messagePredicates.add { record ->
+      try {
+        assertion(record.key())
+        true
+      } catch (e: java.lang.AssertionError) {
+        log.debug("Assertion has failed", e)
+        false
+      }
+    }
+    return this
+  }
+
+  fun assertNoMessageKey(): TopicVerifier<K, V> {
+    messagePredicates.add { record -> record.key() == null }
+    return this
+  }
+
+  @Deprecated(message = "redundant API", replaceWith = ReplaceWith("assertMessageValue"))
+  fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
+    messagePredicates.add { record -> predicate.test(record.value()) }
+    return this
   }
 
   /**
@@ -58,14 +79,14 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
    *   until it succeeds or the provided (or default) timeout is reached.
    */
   fun verifyWithin(timeout: Duration): Unit {
-    val predicates = messageValuePredicates.toList()
+    val predicates = messagePredicates.toList()
     if (predicates.isEmpty()) {
       throw AssertionError("expected at least 1 expected message predicate but got none")
     }
-    val receivedMessages = RingBuffer<V>(predicates.size)
+    val receivedMessages = RingBuffer<ConsumerRecord<K, V>>(predicates.size)
     try {
       await().atMost(timeout).until {
-        consumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it.value()) }
+        consumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
         val messages = receivedMessages.toList()
         messages.size == predicates.size &&
             predicates.foldIndexed(true) { i, prev, predicate ->
@@ -88,10 +109,9 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
 class RingBuffer<E>(capacity: Int) {
   private var index: Int
   private var size: Int
-  private val data: Array<Any?>
+  private val data: Array<Any?> = Array(capacity) { null }
 
   init {
-    this.data = Array(capacity) { null }
     this.index = 0
     this.size = 0
   }

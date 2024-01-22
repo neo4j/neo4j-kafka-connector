@@ -24,7 +24,6 @@ import kotlin.reflect.KProperty1
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -52,7 +51,7 @@ internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<String, GenericRecord> =
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<*, GenericRecord> =
         ::getSubscribedConsumer,
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
@@ -144,7 +143,9 @@ internal class Neo4jSourceExtension(
             cdcPatterns = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::patterns),
             cdcOperations = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::operations),
             cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
-            cdcMetadata = sourceAnnotation.cdc.metadataAsMap())
+            cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
+            cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
+        )
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
   }
 
@@ -161,7 +162,7 @@ internal class Neo4jSourceExtension(
   private fun resolveConsumer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
-  ): KafkaConsumer<String, GenericRecord> {
+  ): KafkaConsumer<*, GenericRecord> {
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val properties = Properties()
     properties.setProperty(
@@ -174,7 +175,7 @@ internal class Neo4jSourceExtension(
     )
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        StringDeserializer::class.java.getName(),
+        KafkaAvroDeserializer::class.java.getName(),
     )
     properties.setProperty(
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -191,7 +192,7 @@ internal class Neo4jSourceExtension(
 
   private fun resolveSession(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?
   ): Any {
     ensureDatabase(extensionContext)
     driver = createDriver()
@@ -231,8 +232,8 @@ internal class Neo4jSourceExtension(
     private fun getSubscribedConsumer(
         properties: Properties,
         topic: String
-    ): KafkaConsumer<String, GenericRecord> {
-      val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    ): KafkaConsumer<*, GenericRecord> {
+      val consumer = KafkaConsumer<Any, GenericRecord>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
     }
@@ -262,6 +263,12 @@ internal class Neo4jSourceExtension(
         }
       }
       return result
+    }
+
+    private fun CdcSource.keySerializationsAsMap(): Map<String, String> {
+      return this.topics
+          .groupBy { it.topic }
+          .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
     }
   }
 

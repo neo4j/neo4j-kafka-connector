@@ -157,6 +157,18 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
   }
 
+  val cdcTopicsToKeyStrategy: Map<String, Neo4jCdcKeyStrategy> by lazy {
+    when (strategy) {
+      SourceType.CDC -> {
+        originals()
+            .entries
+            .filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
+            .associate { mapKeyStrategy(it) }
+      }
+      else -> emptyMap()
+    }
+  }
+
   private fun mapPositionalPattern(
       configEntry: MutableMap.MutableEntry<String, Any>,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
@@ -251,6 +263,15 @@ class SourceConfiguration(originals: Map<*, *>) :
           )
       pattern.withMetadata(metadata)
     }
+  }
+
+  private fun mapKeyStrategy(
+      configEntry: MutableMap.MutableEntry<String, Any>
+  ): Pair<String, Neo4jCdcKeyStrategy> {
+    val matchGroup = retrieveGroupsFromConfigKey(configEntry.key, CDC_KEY_STRATEGY_REGEX)
+    val topicName = matchGroup.groupValues[1]
+    val value = configEntry.value
+    return topicName to Neo4jCdcKeyStrategy.valueOf(value as String)
   }
 
   private fun retrieveIndexAndPattern(
@@ -362,6 +383,10 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
     private val CDC_PATTERNS_REGEX = Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)$")
+    private val CDC_KEY_STRATEGY_REGEX =
+        Regex(
+            "^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.key-strategy)$",
+        )
     private val CDC_PATTERN_ARRAY_REGEX =
         Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.pattern)$")
     private val CDC_PATTERN_ARRAY_OPERATION_REGEX =
@@ -442,7 +467,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                 originals.entries.filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_OPERATION_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_CHANGES_TO_REGEX.matches(it.key) } +
-                originals.entries.filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) }
+                originals.entries.filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) } +
+                originals.entries.filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
         if (cdcTopics.isEmpty()) {
           strategy.addErrorMessage(
               "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.")
@@ -458,6 +484,9 @@ class SourceConfiguration(originals: Map<*, *>) :
                 } catch (e: PatternException) {
                   throw ConfigException(it.key, it.value, e.message)
                 }
+              }
+              if (CDC_KEY_STRATEGY_REGEX.matches(it.key)) {
+                Validators.enum(Neo4jCdcKeyStrategy::class.java).ensureValid(it.key, it.value)
               }
             } catch (e: ConfigException) {
               strategy.addErrorMessage(e.message)
