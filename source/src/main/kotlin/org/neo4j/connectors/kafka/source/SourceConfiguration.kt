@@ -115,11 +115,8 @@ class SourceConfiguration(originals: Map<*, *>) :
         originals()
             .entries
             .filter { CDC_PATTERNS_REGEX.matches(it.key) }
-            .flatMap {
-              Pattern.parse(it.value as String?).map { key ->
-                key to retrieveGroupsFromConfigKey(it.key, CDC_PATTERNS_REGEX).groupValues[1]
-              }
-            }
+            .map { CdcPatternConfigItem(it, CDC_PATTERNS_REGEX) }
+            .flatMap { Pattern.parse(it.value as String?).map { key -> key to it.topic } }
             .forEach {
               if (!configMap.containsKey(it.second)) {
                 configMap[it.second] = mutableListOf()
@@ -127,28 +124,33 @@ class SourceConfiguration(originals: Map<*, *>) :
 
               nonPositionalConfigMode[it.second] = true
 
-              val list = configMap[it.second]!!
+              val list = configMap.getValue(it.second)
               list.add(it.first)
             }
 
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_PATTERN_ARRAY_REGEX) }
+            .sorted()
             .forEach { mapPositionalPattern(it, nonPositionalConfigMode, configMap) }
 
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_OPERATION_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_PATTERN_ARRAY_OPERATION_REGEX) }
             .forEach { mapOperation(it, nonPositionalConfigMode, configMap) }
 
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_CHANGES_TO_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_PATTERN_ARRAY_CHANGES_TO_REGEX) }
             .forEach { mapChangesTo(it, nonPositionalConfigMode, configMap) }
 
         originals()
             .entries
             .filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_PATTERN_ARRAY_METADATA_REGEX) }
             .forEach { mapMetadata(it, nonPositionalConfigMode, configMap) }
 
         pivotMapCdcSelectorMap(configMap)
@@ -163,6 +165,7 @@ class SourceConfiguration(originals: Map<*, *>) :
         originals()
             .entries
             .filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_KEY_STRATEGY_REGEX) }
             .associate { mapKeyStrategy(it) }
       }
       else -> emptyMap()
@@ -170,44 +173,44 @@ class SourceConfiguration(originals: Map<*, *>) :
   }
 
   private fun mapPositionalPattern(
-      configEntry: MutableMap.MutableEntry<String, Any>,
+      configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>
   ) {
-    val matchGroups = retrieveGroupsFromConfigKey(configEntry.key, CDC_PATTERN_ARRAY_REGEX)
-    val topicName = matchGroups.groupValues[1]
+    val topicName = configEntry.topic
     if (nonPositionalConfigMode.getOrDefault(topicName, false)) {
       throw ConfigException(
           "It's not allowed to mix positional and non-positional configuration for the same topic.",
       )
     }
-    val index = Integer.parseInt(matchGroups.groupValues[3])
     val patterns = Pattern.parse(configEntry.value as String?)
-    if (index > patterns.size - 1) {
-      throw ConfigException(
-          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
-      )
-    }
     if (patterns.size > 1) {
       throw ConfigException(
           "Too many patterns. Only one pattern allowed for positional pattern configuration.",
       )
     }
-    val pattern = patterns.get(0)
+
+    val index = configEntry.index!!
+    val pattern = patterns[0]
     if (!configMap.containsKey(topicName)) {
       configMap[topicName] = mutableListOf()
     }
-    val list = configMap[topicName]!!
+
+    val list = configMap.getValue(topicName)
+    if (index > list.size) {
+      throw ConfigException(
+          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
+      )
+    }
     list.add(pattern)
   }
 
   private fun mapOperation(
-      configEntry: MutableMap.MutableEntry<String, Any>,
+      configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>
   ) {
-    val matchGroup = retrieveGroupsFromConfigKey(configEntry.key, CDC_PATTERN_ARRAY_OPERATION_REGEX)
-    val (index, patterns) = retrieveIndexAndPattern(matchGroup, nonPositionalConfigMode, configMap)
+    val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val operation =
         when (val value = (configEntry.value as String).lowercase()) {
           "create" -> EntityOperation.CREATE
@@ -218,18 +221,16 @@ class SourceConfiguration(originals: Map<*, *>) :
                 "Cannot parse $value as an operation. Allowed operations are create, delete or update.")
           }
         }
-    val pattern = patterns.get(index)
+    val pattern = patterns[index]
     pattern.withOperation(operation)
   }
 
   private fun mapChangesTo(
-      configEntry: MutableMap.MutableEntry<String, Any>,
+      configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>
   ) {
-    val matchGroup =
-        retrieveGroupsFromConfigKey(configEntry.key, CDC_PATTERN_ARRAY_CHANGES_TO_REGEX)
-    val (index, patterns) = retrieveIndexAndPattern(matchGroup, nonPositionalConfigMode, configMap)
+    val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val value = configEntry.value as String
     val changesTo = value.splitToSequence(",").map { term -> term.trim() }.toSet()
     val pattern = patterns.get(index)
@@ -237,15 +238,14 @@ class SourceConfiguration(originals: Map<*, *>) :
   }
 
   private fun mapMetadata(
-      configEntry: MutableMap.MutableEntry<String, Any>,
+      configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>
   ) {
-    val matchGroup = retrieveGroupsFromConfigKey(configEntry.key, CDC_PATTERN_ARRAY_METADATA_REGEX)
-    val (index, patterns) = retrieveIndexAndPattern(matchGroup, nonPositionalConfigMode, configMap)
-    val keyValue = matchGroup.groupValues[5]
+    val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
+    val keyValue = configEntry.metadata!!
     var value = configEntry.value
-    val pattern = patterns.get(index)
+    val pattern = patterns[index]
     if (keyValue.startsWith(EntitySelector.METADATA_KEY_TX_METADATA + '.')) {
       value =
           mapOf(
@@ -266,32 +266,31 @@ class SourceConfiguration(originals: Map<*, *>) :
   }
 
   private fun mapKeyStrategy(
-      configEntry: MutableMap.MutableEntry<String, Any>
+      configEntry: CdcPatternConfigItem,
   ): Pair<String, Neo4jCdcKeyStrategy> {
-    val matchGroup = retrieveGroupsFromConfigKey(configEntry.key, CDC_KEY_STRATEGY_REGEX)
-    val topicName = matchGroup.groupValues[1]
+    val topicName = configEntry.topic
     val value = configEntry.value
     return topicName to Neo4jCdcKeyStrategy.valueOf(value as String)
   }
 
   private fun retrieveIndexAndPattern(
-      matchGroup: MatchResult,
+      configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>
   ): Pair<Int, MutableList<Pattern>> {
-    val topicName = matchGroup.groupValues[1]
+    val topicName = configEntry.topic
     if (nonPositionalConfigMode.getOrDefault(topicName, false)) {
       throw ConfigException(
           "It's not allowed to mix positional and non-positional configuration for the same topic.",
       )
     }
-    val index = Integer.parseInt(matchGroup.groupValues[3])
+    val index = configEntry.index!!
     if (!configMap.containsKey(topicName)) {
       throw ConfigException(
           "Cannot assign config value because pattern is not defined for index $index.",
       )
     }
-    val patterns = configMap.get(topicName)!!
+    val patterns = configMap.getValue(topicName)
     if (index > patterns.size - 1) {
       throw ConfigException(
           "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
@@ -299,9 +298,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
     return Pair(index, patterns)
   }
-
-  private fun retrieveGroupsFromConfigKey(configKey: String, regex: Regex) =
-      regex.matchEntire(configKey)!!
 
   private fun pivotMapCdcSelectorMap(
       patternMap: Map<String, List<Pattern>>
@@ -313,8 +309,10 @@ class SourceConfiguration(originals: Map<*, *>) :
           if (!selectorBasedMap.containsKey(selector)) {
             selectorBasedMap[selector] = mutableListOf()
           }
-          selectorBasedMap[selector]!!.add(it.key)
-          selectorBasedMap[selector]!!.sort()
+
+          val topics = selectorBasedMap.getValue(selector)
+          topics.add(it.key)
+          topics.sort()
         }
       }
     }
@@ -368,6 +366,28 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
   }
 
+  data class CdcPatternConfigItem(val entry: Map.Entry<String, Any>, private val pattern: Regex) :
+      Comparable<CdcPatternConfigItem> {
+    private val match = pattern.matchEntire(entry.key)!!
+
+    val key = entry.key
+    val value = entry.value
+    val topic = match.groups[GROUP_NAME_TOPIC]!!.value
+
+    val index
+      get(): Int? = match.groups[GROUP_NAME_INDEX]?.value?.toInt()
+
+    val metadata
+      get(): String? = match.groups[GROUP_NAME_METADATA]?.value
+
+    override fun compareTo(other: CdcPatternConfigItem): Int {
+      return when (val result = this.topic.compareTo(other.topic)) {
+        0 -> (this.index ?: -1).compareTo(other.index ?: -1)
+        else -> result
+      }
+    }
+  }
+
   companion object {
     const val START_FROM = "neo4j.start-from"
     const val START_FROM_VALUE = "neo4j.start-from.value"
@@ -382,20 +402,27 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val ENFORCE_SCHEMA = "neo4j.enforce-schema"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
-    private val CDC_PATTERNS_REGEX = Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)$")
+    private const val GROUP_NAME_TOPIC = "topic"
+    private const val GROUP_NAME_INDEX = "index"
+    private const val GROUP_NAME_METADATA = "metadata"
+    private val CDC_PATTERNS_REGEX =
+        Regex("^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)$")
     private val CDC_KEY_STRATEGY_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.key-strategy)$",
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.key-strategy)$",
         )
     private val CDC_PATTERN_ARRAY_REGEX =
-        Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.pattern)$")
+        Regex(
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.pattern)$")
     private val CDC_PATTERN_ARRAY_OPERATION_REGEX =
-        Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.operation)$")
+        Regex(
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.operation)$")
     private val CDC_PATTERN_ARRAY_CHANGES_TO_REGEX =
-        Regex("^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.changesTo)$")
+        Regex(
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.changesTo)$")
     private val CDC_PATTERN_ARRAY_METADATA_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.([a-zA-Z0-9._-]+)(\\.patterns)\\.([0-9]+)(\\.metadata)\\.([a-zA-Z0-9._-]+)$")
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$")
 
     private val DEFAULT_POLL_INTERVAL = 10.seconds
     private const val DEFAULT_BATCH_SIZE = 1000

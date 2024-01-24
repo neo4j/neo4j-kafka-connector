@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.maps.shouldContainAll
 import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -554,6 +555,83 @@ class SourceConfigurationTest {
                   "neo4j.cdc.topic.deletes.patterns.0.operation" to "DELETE"))
 
       config.validate()
+    }
+  }
+
+  @Test
+  fun `should extract selectors correctly with indexed patterns`() {
+    assertDoesNotThrow {
+      val configuration =
+          SourceConfiguration(
+              mapOf(
+                  "neo4j.uri" to "neo4j://neo4j:7687",
+                  "neo4j.authentication.type" to "BASIC",
+                  "neo4j.authentication.basic.username" to "neo4j",
+                  "neo4j.authentication.basic.password" to "password",
+                  "neo4j.source-strategy" to "CDC",
+                  "neo4j.start-from" to "NOW",
+                  "neo4j.cdc.poll-interval" to "5s",
+                  "neo4j.cdc.topic.my-topic.patterns.0.pattern" to "(:Person)",
+                  "neo4j.cdc.topic.my-topic.patterns.0.operation" to "create",
+                  "neo4j.cdc.topic.my-topic.patterns.0.changesTo" to "name,surname",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.authenticatedUser" to "neo4j",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.executingUser" to "neo4j",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.txMetadata.app" to "sales",
+                  "neo4j.cdc.topic.my-topic.patterns.1.pattern" to "(:Person)-[:KNOWS]->(:Person)",
+                  "neo4j.cdc.topic.my-topic.patterns.1.operation" to "update",
+                  "neo4j.cdc.topic.my-topic.patterns.1.changesTo" to "since",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.authenticatedUser" to "neo4j",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.executingUser" to "neo4j",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.txMetadata.app" to "sales",
+              ))
+
+      configuration.validate()
+      configuration.cdcSelectors shouldHaveSize 2
+      configuration.cdcSelectors shouldBe
+          setOf(
+              NodeSelector(
+                  EntityOperation.CREATE,
+                  setOf("name", "surname"),
+                  setOf("Person"),
+                  emptyMap(),
+                  mapOf(
+                      "authenticatedUser" to "neo4j",
+                      "executingUser" to "neo4j",
+                      "txMetadata" to mapOf("app" to "sales"))),
+              RelationshipSelector(
+                  EntityOperation.UPDATE,
+                  setOf("since"),
+                  "KNOWS",
+                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
+                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
+                  emptyMap(),
+                  mapOf(
+                      "authenticatedUser" to "neo4j",
+                      "executingUser" to "neo4j",
+                      "txMetadata" to mapOf("app" to "sales"))),
+          )
+      configuration.cdcSelectorsToTopics shouldBe
+          mapOf(
+              NodeSelector(
+                  EntityOperation.CREATE,
+                  setOf("name", "surname"),
+                  setOf("Person"),
+                  emptyMap(),
+                  mapOf(
+                      "authenticatedUser" to "neo4j",
+                      "executingUser" to "neo4j",
+                      "txMetadata" to mapOf("app" to "sales"))) to listOf("my-topic"),
+              RelationshipSelector(
+                  EntityOperation.UPDATE,
+                  setOf("since"),
+                  "KNOWS",
+                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
+                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
+                  emptyMap(),
+                  mapOf(
+                      "authenticatedUser" to "neo4j",
+                      "executingUser" to "neo4j",
+                      "txMetadata" to mapOf("app" to "sales"))) to listOf("my-topic"))
     }
   }
 
