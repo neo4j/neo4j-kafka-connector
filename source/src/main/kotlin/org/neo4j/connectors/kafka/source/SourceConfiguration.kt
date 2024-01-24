@@ -124,7 +124,7 @@ class SourceConfiguration(originals: Map<*, *>) :
 
               nonPositionalConfigMode[it.second] = true
 
-              val list = configMap[it.second]!!
+              val list = configMap.getValue(it.second)
               list.add(it.first)
             }
 
@@ -196,7 +196,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       configMap[topicName] = mutableListOf()
     }
 
-    val list = configMap[topicName]!!
+    val list = configMap.getValue(topicName)
     if (index > list.size) {
       throw ConfigException(
           "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
@@ -290,7 +290,7 @@ class SourceConfiguration(originals: Map<*, *>) :
           "Cannot assign config value because pattern is not defined for index $index.",
       )
     }
-    val patterns = configMap[topicName]!!
+    val patterns = configMap.getValue(topicName)
     if (index > patterns.size - 1) {
       throw ConfigException(
           "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
@@ -309,8 +309,10 @@ class SourceConfiguration(originals: Map<*, *>) :
           if (!selectorBasedMap.containsKey(selector)) {
             selectorBasedMap[selector] = mutableListOf()
           }
-          selectorBasedMap[selector]!!.add(it.key)
-          selectorBasedMap[selector]!!.sort()
+
+          val topics = selectorBasedMap.getValue(selector)
+          topics.add(it.key)
+          topics.sort()
         }
       }
     }
@@ -400,9 +402,9 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val ENFORCE_SCHEMA = "neo4j.enforce-schema"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
-    private val GROUP_NAME_TOPIC = "topic"
-    private val GROUP_NAME_INDEX = "index"
-    private val GROUP_NAME_METADATA = "metadata"
+    private const val GROUP_NAME_TOPIC = "topic"
+    private const val GROUP_NAME_INDEX = "index"
+    private const val GROUP_NAME_METADATA = "metadata"
     private val CDC_PATTERNS_REGEX =
         Regex("^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)$")
     private val CDC_KEY_STRATEGY_REGEX =
