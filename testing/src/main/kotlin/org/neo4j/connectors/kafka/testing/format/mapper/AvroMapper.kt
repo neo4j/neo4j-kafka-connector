@@ -17,11 +17,10 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
-import org.apache.avro.generic.GenericRecord
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.asMap
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 import java.security.InvalidParameterException
-
+import org.apache.avro.generic.GenericRecord
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object AvroMapper : KafkaRecordMapper {
 

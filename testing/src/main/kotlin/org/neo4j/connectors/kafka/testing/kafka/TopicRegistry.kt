@@ -17,5 +17,25 @@
 
 package org.neo4j.connectors.kafka.testing.kafka
 
-// TODO
-class TopicRegistry {}
+import java.util.UUID
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+class TopicRegistry {
+
+  private val log: Logger = LoggerFactory.getLogger(this::class.java)
+
+  private val aliases: MutableMap<String, String> = mutableMapOf()
+
+  fun resolveTopic(alias: String?): String {
+    if (alias.isNullOrBlank()) {
+      return ""
+    }
+    return aliases.computeIfAbsent(alias) { UUID.randomUUID().toString() }
+  }
+
+  fun log() {
+    log.debug(
+        "Using the following topic mapping: ${aliases.entries.joinToString("\n") { " * '${it.key}' -> '${it.value}'" }}")
+  }
+}

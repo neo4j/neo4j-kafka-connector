@@ -24,6 +24,8 @@ import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.neo4j.connectors.kafka.testing.format.mapper.AvroMapper
 import org.neo4j.connectors.kafka.testing.format.mapper.JsonMapper
+import org.neo4j.connectors.kafka.testing.format.mapper.ProtobufMapper
+import org.neo4j.connectors.kafka.testing.format.mapper.StringMapper
 
 enum class KafkaConverter(
     val className: String,
@@ -42,11 +44,11 @@ enum class KafkaConverter(
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       deserializerClass = KafkaProtobufDeserializer::class.java,
-      mapper = AvroMapper),
+      mapper = ProtobufMapper),
   STRING(
       className = "org.apache.kafka.connect.storage.StringConverter",
       deserializerClass = StringDeserializer::class.java,
-      mapper = AvroMapper,
+      mapper = StringMapper,
       supportsSchemaRegistry = false)
 }
 

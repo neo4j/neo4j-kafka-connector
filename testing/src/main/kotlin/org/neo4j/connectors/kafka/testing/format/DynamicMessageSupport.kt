@@ -15,12 +15,21 @@
  * limitations under the License.
  */
 
-package org.neo4j.connectors.kafka.testing.format.mapper
+package org.neo4j.connectors.kafka.testing.format
 
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
+import com.google.protobuf.DynamicMessage
 
-object StringMapper : KafkaRecordMapper {
-  override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
-    throw NotImplementedError()
+object DynamicMessageSupport {
+
+  fun DynamicMessage.asMap(): Map<String, Any> {
+    return this.allFields.entries
+        .filter { field -> field.value != null }
+        .associate { field -> field.key.name to castMapValue(field.value) }
   }
+
+  private fun castMapValue(value: Any): Any =
+      when (value) {
+        is Long -> value
+        else -> value.toString()
+      }
 }

@@ -17,10 +17,30 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
+import com.google.protobuf.DynamicMessage
+import java.security.InvalidParameterException
+import org.neo4j.connectors.kafka.testing.format.DynamicMessageSupport.asMap
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
-object ProtobufMapper: KafkaRecordMapper {
+object ProtobufMapper : KafkaRecordMapper {
+
+  @Suppress("UNCHECKED_CAST")
   override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
-    throw NotImplementedError("")
+    if (sourceValue == null) {
+      return null
+    }
+    if (sourceValue !is DynamicMessage) {
+      throw InvalidParameterException(
+          "JsonMapper expects source value to be DynamicMessage, but it was ${sourceValue::class.java}",
+      )
+    }
+    val resultValue =
+        when (targetClass) {
+          Map::class.java -> sourceValue.asMap()
+          // TODO CDC event
+          else -> null
+        }
+
+    return resultValue as K?
   }
 }

@@ -40,6 +40,7 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -110,6 +111,8 @@ internal class Neo4jSourceExtension(
           neo4jPassword,
       )
 
+  private val topicRegistry = TopicRegistry()
+
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
         AnnotationSupport.findAnnotation<Neo4jSource>(context)
@@ -142,7 +145,7 @@ internal class Neo4jSourceExtension(
             neo4jUser = neo4jUser.resolve(sourceAnnotation),
             neo4jPassword = neo4jPassword.resolve(sourceAnnotation),
             neo4jDatabase = neo4jDatabase,
-            topic = sourceAnnotation.topic,
+            topic = topicRegistry.resolveTopic(sourceAnnotation.topic),
             streamingProperty = sourceAnnotation.streamingProperty,
             startFrom = sourceAnnotation.startFrom,
             query = sourceAnnotation.query,
@@ -157,6 +160,7 @@ internal class Neo4jSourceExtension(
             cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
         )
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
+    topicRegistry.log()
   }
 
   override fun afterEach(context: ExtensionContext?) {
@@ -173,7 +177,9 @@ internal class Neo4jSourceExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): KafkaConsumer<*, *> {
+    initialiseKeyValueConverter(extensionContext)
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
+    val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
     val properties = Properties()
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
@@ -196,11 +202,11 @@ internal class Neo4jSourceExtension(
     properties.setProperty(
         ConsumerConfig.GROUP_ID_CONFIG,
         // note: ExtensionContext#getUniqueId() returns null in the CLI
-        "${consumerAnnotation.topic}@${extensionContext?.testClass ?: ""}#${extensionContext?.displayName}",
+        "${topic}@${extensionContext?.testClass ?: ""}#${extensionContext?.displayName}",
     )
 
     properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
-    return consumerFactory(properties, consumerAnnotation.topic)
+    return consumerFactory(properties, topic)
   }
 
   private fun resolveSession(
@@ -265,44 +271,47 @@ internal class Neo4jSourceExtension(
     return GenericKafkaConsumer(keyConverter, valueConverter, kafkaConsumer)
   }
 
+  private fun CdcSource.paramAsMap(
+      property: KProperty1<CdcSourceTopic, Array<CdcSourceParam>>
+  ): Map<String, List<String>> {
+    val result = mutableMapOf<String, MutableList<String>>()
+    this.topics.forEach { topic ->
+      property.get(topic).forEach { param ->
+        val actualTopic = topicRegistry.resolveTopic(topic.topic)
+        result.computeIfAbsent(actualTopic) { mutableListOf() }.add(param.index, param.value)
+      }
+    }
+    return result
+  }
+
+  private fun CdcSource.metadataAsMap(): Map<String, List<Map<String, String>>> {
+    val result = mutableMapOf<String, MutableList<MutableMap<String, String>>>()
+    this.topics.forEach { topic ->
+      topic.metadata.forEach { metadata ->
+        val actualTopic = topicRegistry.resolveTopic(topic.topic)
+        val metadataForIndex = result.computeIfAbsent(actualTopic) { mutableListOf() }
+        val metadataByKey = metadataForIndex.getOrElse(metadata.index) { mutableMapOf() }
+        if (metadataByKey.isEmpty()) {
+          metadataForIndex.add(metadata.index, metadataByKey)
+        }
+        metadataByKey[metadata.key] = metadata.value
+      }
+    }
+    return result
+  }
+
+  private fun CdcSource.keySerializationsAsMap(): Map<String, String> {
+    return this.topics
+        .groupBy { it.topic }
+        .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
+        .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
+  }
+
   companion object {
     private fun getSubscribedConsumer(properties: Properties, topic: String): KafkaConsumer<*, *> {
       val consumer = KafkaConsumer<Any, Any>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
-    }
-
-    private fun CdcSource.paramAsMap(
-        property: KProperty1<CdcSourceTopic, Array<CdcSourceParam>>
-    ): Map<String, List<String>> {
-      val result = mutableMapOf<String, MutableList<String>>()
-      this.topics.forEach { topic ->
-        property.get(topic).forEach { param ->
-          result.computeIfAbsent(topic.topic) { mutableListOf() }.add(param.index, param.value)
-        }
-      }
-      return result
-    }
-
-    private fun CdcSource.metadataAsMap(): Map<String, List<Map<String, String>>> {
-      val result = mutableMapOf<String, MutableList<MutableMap<String, String>>>()
-      this.topics.forEach { topic ->
-        topic.metadata.forEach { metadata ->
-          val metadataForIndex = result.computeIfAbsent(topic.topic) { mutableListOf() }
-          val metadataByKey = metadataForIndex.getOrElse(metadata.index) { mutableMapOf() }
-          if (metadataByKey.isEmpty()) {
-            metadataForIndex.add(metadata.index, metadataByKey)
-          }
-          metadataByKey[metadata.key] = metadata.value
-        }
-      }
-      return result
-    }
-
-    private fun CdcSource.keySerializationsAsMap(): Map<String, String> {
-      return this.topics
-          .groupBy { it.topic }
-          .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
     }
   }
 

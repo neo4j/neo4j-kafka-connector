@@ -17,8 +17,8 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 import java.security.InvalidParameterException
+import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object JsonMapper : KafkaRecordMapper {
 
@@ -29,7 +29,7 @@ object JsonMapper : KafkaRecordMapper {
     }
     if (sourceValue !is Map<*, *>) {
       throw InvalidParameterException(
-              "JsonMapper expects source value to be Map, but it was ${sourceValue::class.java}",
+          "JsonMapper expects source value to be Map, but it was ${sourceValue::class.java}",
       )
     }
     val resultValue =

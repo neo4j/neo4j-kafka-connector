@@ -21,12 +21,12 @@ import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
 import org.assertj.core.api.AbstractAssert
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.asMap
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getArray
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getMap
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getRecord
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.getString
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.getArray
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.getMap
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.getRecord
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.getString
 
 class AvroCdcRecordAssert(actual: GenericRecord) :
     AbstractAssert<AvroCdcRecordAssert, GenericRecord>(actual, AvroCdcRecordAssert::class.java) {

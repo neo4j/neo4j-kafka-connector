@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing
 
 import java.lang.reflect.Parameter
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
@@ -46,6 +47,7 @@ internal object JUnitSupport {
 
   fun extensionContextFor(method: KFunction<Unit>) =
       mock<ExtensionContext> {
+        on { testMethod } doReturn Optional.ofNullable(method.javaMethod)
         on { requiredTestMethod } doReturn method.javaMethod
         on { displayName } doReturn method.name
       }
