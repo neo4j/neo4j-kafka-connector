@@ -49,6 +49,8 @@ object MapSupport {
     return this.filterKeys { !exclusions.contains(it) }
   }
 
+  @Suppress("UNCHECKED_CAST") fun Map<*, *>.asGeneric() = this as Map<String, Any>
+
   fun <T : Any> MutableMap<String, Any>.putConditionally(
       key: String,
       value: T,

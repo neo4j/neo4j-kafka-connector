@@ -17,18 +17,21 @@
 package org.neo4j.connectors.kafka.source
 
 import java.time.Duration
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.Neo4jSource
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
-class Neo4jSourceIT {
+abstract class Neo4jSourceIT {
 
   companion object {
     const val TOPIC = "neo4j-source-topic"
@@ -43,8 +46,7 @@ class Neo4jSourceIT {
   @Test
   fun `reads latest changes from Neo4j source`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = TOPIC, offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: GenericKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -65,20 +67,24 @@ class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    @Suppress("DEPRECATION")
-    TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "jane", "surname" to "doe", "execId" to executionId)
+    TopicVerifier2.create(consumer, String::class.java, Map::class.java)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "jane", "surname" to "doe", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "john", "surname" to "doe", "execId" to executionId)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "john", "surname" to "doe", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "mary", "surname" to "doe", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
 }
+
+@KeyValueConverter(key = AVRO, value = AVRO) class Neo4jAvroSourceIT : Neo4jSourceIT()
+
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+class Neo4jJsonSourceIT : Neo4jSourceIT()

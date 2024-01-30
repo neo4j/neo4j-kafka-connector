@@ -22,6 +22,7 @@ import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.source.SourceStrategy.CDC
 import org.neo4j.connectors.kafka.testing.source.SourceStrategy.QUERY
 
@@ -37,6 +38,8 @@ internal class Neo4jSourceRegistration(
     streamingProperty: String,
     startFrom: String,
     query: String,
+    keyConverter: KafkaConverter,
+    valueConverter: KafkaConverter,
     schemaControlRegistryUri: String,
     strategy: SourceStrategy,
     cdcPatterns: Map<String, List<String>>,
@@ -54,10 +57,8 @@ internal class Neo4jSourceRegistration(
     val config =
         mutableMapOf<String, Any>(
                 "connector.class" to "org.neo4j.connectors.kafka.source.Neo4jConnector",
-                "key.converter" to "io.confluent.connect.avro.AvroConverter",
-                "key.converter.schema.registry.url" to schemaControlRegistryUri,
-                "value.converter" to "io.confluent.connect.avro.AvroConverter",
-                "value.converter.schema.registry.url" to schemaControlRegistryUri,
+                "key.converter" to keyConverter.className,
+                "value.converter" to valueConverter.className,
                 "neo4j.uri" to neo4jUri,
                 "neo4j.authentication.type" to "BASIC",
                 "neo4j.authentication.basic.username" to neo4jUser,
@@ -65,6 +66,12 @@ internal class Neo4jSourceRegistration(
                 "neo4j.database" to neo4jDatabase,
                 "neo4j.start-from" to startFrom,
                 "neo4j.source-strategy" to strategy.name.uppercase())
+            .putConditionally("key.converter.schema.registry.url", schemaControlRegistryUri) {
+              keyConverter.supportsSchemaRegistry
+            }
+            .putConditionally("value.converter.schema.registry.url", schemaControlRegistryUri) {
+              valueConverter.supportsSchemaRegistry
+            }
             .putConditionally("topic", topic, String::isNotEmpty)
             .putConditionally("neo4j.query", query, String::isNotEmpty)
             .putConditionally(

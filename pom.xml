@@ -51,8 +51,10 @@
         <hamcrest.version>2.2</hamcrest.version>
         <jackson.version>2.15.2</jackson.version>
         <java.version>11</java.version>
+        <joda-time.version>2.10.14</joda-time.version>
         <jreleaser-maven-plugin.version>1.9.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
+        <!-- dependency of confluent serializers -->
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <kafka-schema-registry.version>6.1.13</kafka-schema-registry.version>
@@ -150,9 +152,25 @@
                 <version>${kafka-schema-registry.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-json-schema-serializer</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-protobuf-serializer</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.kotest</groupId>
                 <artifactId>kotest-assertions-core-jvm</artifactId>
                 <version>${kotest-assertions-core-jvm.version}</version>
+            </dependency>
+            <dependency>
+                <!-- dependency of confluent serializers -->
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${joda-time.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.bytebuddy</groupId>
@@ -198,6 +216,12 @@
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
                 <version>${annotations.version}</version>
+            </dependency>
+            <dependency>
+                <!-- dependency of confluent serializers -->
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-scripting-compiler-embeddable</artifactId>
+                <version>${kotlin.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.mockito.kotlin</groupId>

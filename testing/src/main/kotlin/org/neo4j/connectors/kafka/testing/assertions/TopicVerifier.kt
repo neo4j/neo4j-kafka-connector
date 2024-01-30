@@ -78,7 +78,7 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
    * - the number of predicates exceeds the number of actual messages The verification is retried
    *   until it succeeds or the provided (or default) timeout is reached.
    */
-  fun verifyWithin(timeout: Duration): Unit {
+  fun verifyWithin(timeout: Duration) {
     val predicates = messagePredicates.toList()
     if (predicates.isEmpty()) {
       throw AssertionError("expected at least 1 expected message predicate but got none")
