@@ -21,6 +21,7 @@ import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
 import org.assertj.core.api.AbstractAssert
+import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
 import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.getArray
@@ -181,11 +182,6 @@ class AvroCdcRecordAssert(actual: GenericRecord) :
   companion object {
     fun assertThat(actual: GenericRecord): AvroCdcRecordAssert = AvroCdcRecordAssert(actual)
   }
-}
-
-enum class EventType {
-  NODE,
-  RELATIONSHIP
 }
 
 enum class Operation {

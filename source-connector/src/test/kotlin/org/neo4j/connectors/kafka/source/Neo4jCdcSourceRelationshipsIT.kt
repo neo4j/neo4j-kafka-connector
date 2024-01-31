@@ -22,8 +22,8 @@ import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
-import org.neo4j.connectors.kafka.testing.assertions.EventType
 import org.neo4j.connectors.kafka.testing.assertions.Operation
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.source.CdcMetadata

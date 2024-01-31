@@ -19,12 +19,14 @@ package org.neo4j.connectors.kafka.testing.format.mapper
 
 import java.security.InvalidParameterException
 import org.apache.avro.generic.GenericRecord
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asChangeEvent
 import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object AvroMapper : KafkaRecordMapper {
 
-  @Suppress("UNCHECKED_CAST")
+  @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
   override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
     if (sourceValue == null) {
       return null
@@ -36,7 +38,7 @@ object AvroMapper : KafkaRecordMapper {
     val resultValue =
         when (targetClass) {
           Map::class.java -> sourceValue.asMap()
-          // TODO CDC Events
+          ChangeEvent::class.java -> sourceValue.asChangeEvent()
           else -> null
         }
     return resultValue as K?

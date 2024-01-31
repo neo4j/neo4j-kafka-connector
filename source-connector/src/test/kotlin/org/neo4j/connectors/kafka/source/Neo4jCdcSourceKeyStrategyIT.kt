@@ -24,8 +24,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert
-import org.neo4j.connectors.kafka.testing.assertions.EventType
 import org.neo4j.connectors.kafka.testing.assertions.Operation
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.source.CdcSource

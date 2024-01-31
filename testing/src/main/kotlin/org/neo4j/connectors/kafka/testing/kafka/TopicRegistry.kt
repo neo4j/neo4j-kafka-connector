@@ -36,6 +36,6 @@ class TopicRegistry {
 
   fun log() {
     log.debug(
-        "Using the following topic mapping: ${aliases.entries.joinToString("\n") { " * '${it.key}' -> '${it.value}'" }}")
+        "Using the following topic mapping:\n${aliases.entries.joinToString("\n") { " * '${it.key}' -> '${it.value}'" }}")
   }
 }
