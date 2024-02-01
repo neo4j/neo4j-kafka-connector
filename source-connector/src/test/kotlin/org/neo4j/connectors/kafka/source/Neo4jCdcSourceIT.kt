@@ -36,7 +36,6 @@ import org.neo4j.connectors.kafka.testing.source.Neo4jSource
 import org.neo4j.connectors.kafka.testing.source.SourceStrategy.CDC
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
-import kotlin.random.Random
 
 class Neo4jCdcSourceIT {
 
