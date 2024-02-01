@@ -20,7 +20,7 @@ package org.neo4j.connectors.kafka.testing.format.mapper
 import java.security.InvalidParameterException
 import org.apache.avro.generic.GenericRecord
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asChangeEvent
+import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
 import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
@@ -38,7 +38,7 @@ object AvroMapper : KafkaRecordMapper {
     val resultValue =
         when (targetClass) {
           Map::class.java -> sourceValue.asMap()
-          ChangeEvent::class.java -> sourceValue.asChangeEvent()
+          ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
           else -> null
         }
     return resultValue as K?

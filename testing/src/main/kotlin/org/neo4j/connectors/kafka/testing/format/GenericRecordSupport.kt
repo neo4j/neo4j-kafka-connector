@@ -54,6 +54,4 @@ object GenericRecordSupport {
   private fun castArray(array: GenericArray<*>): List<Any> {
     return array.map { castValue(it) }.toList()
   }
-
-  fun GenericRecord.asChangeEvent() = ChangeEventSupport.mapToChangeEvent(this.asMap())
 }

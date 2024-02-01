@@ -24,12 +24,36 @@ object DynamicMessageSupport {
   fun DynamicMessage.asMap(): Map<String, Any> {
     return this.allFields.entries
         .filter { field -> field.value != null }
-        .associate { field -> field.key.name to castMapValue(field.value) }
+        .associate { field -> field.key.name to castValue(field.value) }
   }
 
-  private fun castMapValue(value: Any): Any =
+  private fun castValue(value: Any): Any =
       when (value) {
         is Long -> value
+        is DynamicMessage -> value.asMap()
+        is List<*> -> castList(value)
         else -> value.toString()
       }
+
+  private fun castList(list: List<*>): Any {
+    if (list.isEmpty()) {
+      return list
+    }
+    return when (val firstValue = list.first()) {
+      // This is the workaround to restore Map object. According to our schema protobuf
+      is DynamicMessage -> {
+        if (firstValue.allFields.entries.map { it.key.name }.toSet() == setOf("key", "value")) {
+          list.associate { v ->
+            val dm = v as DynamicMessage
+            val key = castValue(dm.allFields.entries.first { it.key.name == "key" }.value)
+            val value = castValue(dm.allFields.entries.first { it.key.name == "value" }.value)
+            key to value
+          }
+        } else {
+          list.mapNotNull { castValue(it!!) }
+        }
+      }
+      else -> list.mapNotNull { castValue(it!!) }
+    }
+  }
 }

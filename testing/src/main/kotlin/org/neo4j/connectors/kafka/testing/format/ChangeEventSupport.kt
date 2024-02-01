@@ -41,7 +41,7 @@ object ChangeEventSupport {
     return ChangeEvent(
         ChangeIdentifier(map.getString("id") ?: ""),
         map.getLong("txId"),
-        map.getLong("seq")?.toInt(),
+        map.getLong("seq")?.toInt() ?: 0,
         mapToMetadata(map.getMap("metadata")),
         mapToEvent(map.getMap("event")))
   }
