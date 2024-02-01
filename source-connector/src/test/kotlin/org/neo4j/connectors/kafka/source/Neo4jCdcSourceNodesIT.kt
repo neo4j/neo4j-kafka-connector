@@ -480,8 +480,8 @@ class Neo4jCdcSourceNodesIT {
         .consume()
 
     TopicVerifier.create(consumer)
-        .assertMessageValue { value ->
-          assertThat(value)
+        .assertMessage { msg ->
+          assertThat(msg.value())
               .hasEventType(EventType.NODE)
               .hasOperation(Operation.CREATE)
               .hasLabels(setOf("TestSource", "Employee"))

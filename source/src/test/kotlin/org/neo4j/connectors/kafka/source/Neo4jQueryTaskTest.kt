@@ -16,7 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.kotest.assertions.until.until
+import io.kotest.assertions.nondeterministic.until
 import io.kotest.matchers.collections.shouldContainExactly
 import java.time.Clock
 import java.time.Duration
