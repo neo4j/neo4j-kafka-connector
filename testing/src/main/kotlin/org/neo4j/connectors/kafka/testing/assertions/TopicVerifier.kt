@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing.assertions
 
+import io.kotest.matchers.nulls.shouldBeNull
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
@@ -32,35 +33,29 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
 
   private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<K, V>>>()
 
-  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
-    @Suppress("DEPRECATION")
-    return expectMessageValueMatching { value ->
+  fun assertMessage(assertion: (ConsumerRecord<K, V>) -> Unit): TopicVerifier<K, V> {
+    messagePredicates.add { record ->
       try {
-        assertion(value)
+        assertion(record)
         true
       } catch (e: java.lang.AssertionError) {
         log.debug("Assertion has failed", e)
         false
       }
     }
+    return this
+  }
+
+  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
+    return assertMessage { msg -> assertion(msg.value()) }
   }
 
   fun assertMessageKey(assertion: (K) -> Unit): TopicVerifier<K, V> {
-    messagePredicates.add { record ->
-      try {
-        assertion(record.key())
-        true
-      } catch (e: java.lang.AssertionError) {
-        log.debug("Assertion has failed", e)
-        false
-      }
-    }
-    return this
+    return assertMessage { msg -> assertion(msg.key()) }
   }
 
   fun assertNoMessageKey(): TopicVerifier<K, V> {
-    messagePredicates.add { record -> record.key() == null }
-    return this
+    return assertMessage { msg -> msg.key().shouldBeNull() }
   }
 
   @Deprecated(message = "redundant API", replaceWith = ReplaceWith("assertMessageValue"))

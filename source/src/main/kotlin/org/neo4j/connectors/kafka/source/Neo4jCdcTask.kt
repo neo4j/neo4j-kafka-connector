@@ -35,6 +35,7 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -125,10 +126,13 @@ class Neo4jCdcTask : SourceTask() {
                   config.partition,
                   mapOf("value" to changeEvent.id.id),
                   topic,
+                  null,
                   keyStrategy.schema(transformedValue),
                   keyStrategy.value(transformedValue),
                   transformedValue.schema(),
-                  transformedValue.value())
+                  transformedValue.value(),
+                  changeEvent.metadata.txCommitTime.toInstant().toEpochMilli(),
+                  Headers.from(changeEvent))
             })
       }
     }

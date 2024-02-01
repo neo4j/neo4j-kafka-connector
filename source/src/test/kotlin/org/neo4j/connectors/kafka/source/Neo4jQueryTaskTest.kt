@@ -16,7 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.kotest.assertions.until.until
+import io.kotest.assertions.nondeterministic.until
 import io.kotest.matchers.collections.shouldContainExactly
 import java.time.Clock
 import java.time.Duration
@@ -444,6 +444,7 @@ class Neo4jQueryTaskTest {
       longToInt: Boolean = false
   ): List<Map<String, Any>> =
       session.beginTransaction().use { tx ->
+        val ts = clock.millis()
         val elements =
             (1..totalRecords).map {
               val result =
@@ -469,7 +470,7 @@ class Neo4jQueryTaskTest {
                                 |   n AS node
                             """
                           .trimMargin(),
-                      mapOf("timestamp" to clock.millis()))
+                      mapOf("timestamp" to ts + it))
               val next = result.next()
               val map = next.asMap().toMutableMap()
               map["array"] =
