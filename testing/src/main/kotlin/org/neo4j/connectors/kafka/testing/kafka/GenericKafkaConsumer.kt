@@ -17,6 +17,7 @@
 
 package org.neo4j.connectors.kafka.testing.kafka
 
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
@@ -26,4 +27,4 @@ data class GenericKafkaConsumer(
     val kafkaConsumer: KafkaConsumer<*, *>
 )
 
-data class GenericRecord<K, V>(val key: K?, val value: V?)
+data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)

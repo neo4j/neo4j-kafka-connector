@@ -36,10 +36,18 @@ class TopicVerifier2<K, V>(
 
   private var messagePredicates = mutableListOf<Predicate<GenericRecord<K, V>>>()
 
+  fun assertMessageKey(assertion: (K?) -> Unit): TopicVerifier2<K, V> {
+    return assertMessage { assertion(it.key) }
+  }
+
   fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier2<K, V> {
+    return assertMessage { assertion(it.value) }
+  }
+
+  fun assertMessage(assertion: (GenericRecord<K, V>) -> Unit): TopicVerifier2<K, V> {
     messagePredicates.add { record ->
       try {
-        assertion(record.value!!)
+        assertion(record)
         true
       } catch (e: java.lang.AssertionError) {
         log.debug("Assertion has failed", e)
@@ -60,9 +68,11 @@ class TopicVerifier2<K, V>(
         consumer.kafkaConsumer
             .poll(Duration.ofMillis(500))
             .map {
+              val value: V = consumer.valueConverter.mapper.map(it.value(), valueAssertionClass)!!
               GenericRecord(
+                  raw = it,
                   key = consumer.keyConverter.mapper.map(it.key(), keyAssertionClass),
-                  value = consumer.valueConverter.mapper.map(it.value(), valueAssertionClass))
+                  value = value)
             }
             .forEach { receivedMessages.add(it) }
         val messages = receivedMessages.toList()

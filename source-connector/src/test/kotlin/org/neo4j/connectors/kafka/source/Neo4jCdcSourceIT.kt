@@ -20,15 +20,19 @@ package org.neo4j.connectors.kafka.source
 import io.kotest.matchers.collections.shouldHaveSingleElement
 import io.kotest.matchers.collections.shouldHaveSize
 import java.time.Duration
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.Headers
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.CdcSource
 import org.neo4j.connectors.kafka.testing.source.CdcSourceParam
 import org.neo4j.connectors.kafka.testing.source.CdcSourceTopic
@@ -37,7 +41,7 @@ import org.neo4j.connectors.kafka.testing.source.SourceStrategy.CDC
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
-class Neo4jCdcSourceIT {
+abstract class Neo4jCdcSourceIT {
 
   @Neo4jSource(
       startFrom = "EARLIEST",
@@ -56,9 +60,9 @@ class Neo4jCdcSourceIT {
   fun `should place cdc related information into headers`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-nodes-topic", offset = "earliest")
-      nodesConsumer: KafkaConsumer<String, GenericRecord>,
+      nodesConsumer: GenericKafkaConsumer,
       @TopicConsumer(topic = "neo4j-cdc-rels-topic", offset = "earliest")
-      relsConsumer: KafkaConsumer<String, GenericRecord>,
+      relsConsumer: GenericKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -79,9 +83,10 @@ class Neo4jCdcSourceIT {
                         "id" to 2L, "name" to "John", "surname" to "Doe", "execId" to executionId)))
         .consume()
 
-    TopicVerifier.create(nodesConsumer)
+    TopicVerifier2.create(nodesConsumer, String::class.java, ChangeEvent::class.java)
         .assertMessage { msg ->
-          msg.headers()
+          msg.raw
+              .headers()
               .map {
                 ConnectHeader(
                     it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
@@ -111,7 +116,8 @@ class Neo4jCdcSourceIT {
               }
         }
         .assertMessage { msg ->
-          msg.headers()
+          msg.raw
+              .headers()
               .map {
                 ConnectHeader(
                     it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
@@ -142,9 +148,10 @@ class Neo4jCdcSourceIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
 
-    TopicVerifier.create(relsConsumer)
+    TopicVerifier2.create(relsConsumer, String::class.java, ChangeEvent::class.java)
         .assertMessage { msg ->
-          msg.headers()
+          msg.raw
+              .headers()
               .map {
                 ConnectHeader(
                     it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
@@ -176,3 +183,11 @@ class Neo4jCdcSourceIT {
         .verifyWithin(Duration.ofSeconds(30))
   }
 }
+
+@KeyValueConverter(key = AVRO, value = AVRO) class Neo4jCdcSourceAvroIT : Neo4jCdcSourceIT()
+
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+class Neo4jCdcSourceJsonIT : Neo4jCdcSourceIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
+class Neo4jCdcSourceProtobufIT : Neo4jCdcSourceIT()

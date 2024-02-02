@@ -68,7 +68,7 @@ object ChangeEventSupport {
               elementId,
               eventMap.getString("type"),
               mapToNode(eventMap.getMap("start")),
-              mapToNode(eventMap.getMap("emd")),
+              mapToNode(eventMap.getMap("end")),
               eventMap.getRelationshipKeys(),
               operation,
               mapToRelationshipState(state?.getMap("before")),
