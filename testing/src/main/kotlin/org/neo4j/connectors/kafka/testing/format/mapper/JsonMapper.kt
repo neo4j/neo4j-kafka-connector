@@ -18,6 +18,8 @@
 package org.neo4j.connectors.kafka.testing.format.mapper
 
 import java.security.InvalidParameterException
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object JsonMapper : KafkaRecordMapper {
@@ -35,9 +37,25 @@ object JsonMapper : KafkaRecordMapper {
     val resultValue =
         when (targetClass) {
           Map::class.java -> sourceValue
-          // TODO CDC Events
+          ChangeEvent::class.java ->
+              mapToChangeEvent((sourceValue as Map<String, Any?>).normalize())
           else -> null
         }
     return resultValue as K?
+  }
+
+  private fun Map<String, Any?>.normalize(): Map<String, Any?> {
+    return this.filter { it.value != null }.mapValues { it.value?.normalizeValue() }
+  }
+
+  @Suppress("UNCHECKED_CAST")
+  private fun Any.normalizeValue(): Any {
+    return when (this) {
+      is Long -> this
+      is Int -> this.toLong()
+      is Map<*, *> -> (this as Map<String, Any?>).normalize()
+      is List<*> -> this.map { it?.normalizeValue() }
+      else -> this
+    }
   }
 }

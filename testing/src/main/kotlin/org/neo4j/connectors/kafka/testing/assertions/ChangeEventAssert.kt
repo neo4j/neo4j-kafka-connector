@@ -25,6 +25,8 @@ import org.neo4j.cdc.client.model.EventType
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class ChangeEventAssert(actual: ChangeEvent) :
     AbstractAssert<ChangeEventAssert, ChangeEvent>(actual, ChangeEventAssert::class.java) {
@@ -92,12 +94,16 @@ class ChangeEventAssert(actual: ChangeEvent) :
 
     isNotNull
     val actualProperties = event().after?.properties?.excludingKeys(*excludingKeys) ?: emptyMap()
+    log.error("${actualProperties::class.java} vs ${properties::class.java}")
     if (actualProperties != properties) {
       failWithMessage(
           "Expected after state's properties to be <$properties> but was <$actualProperties>")
     }
     return this
   }
+
+  // TODO
+  private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
   fun hasTxMetadata(txMetadata: Map<String, Any>): ChangeEventAssert {
     isNotNull

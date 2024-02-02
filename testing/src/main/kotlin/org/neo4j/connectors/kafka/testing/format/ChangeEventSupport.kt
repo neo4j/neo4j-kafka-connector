@@ -150,7 +150,7 @@ object ChangeEventSupport {
               "Value for key $key is not found or doesn't have String type")
 
   private fun Map<String, Any?>.getLong(key: String): Long? =
-      this.getValueAs(key, java.lang.Long::class.java)?.toLong()
+      this.getValueAs(key, java.lang.Number::class.java)?.longValue()
 
   @Suppress("UNCHECKED_CAST")
   private fun Map<String, Any?>.getMap(key: String): Map<String, Any?>? {

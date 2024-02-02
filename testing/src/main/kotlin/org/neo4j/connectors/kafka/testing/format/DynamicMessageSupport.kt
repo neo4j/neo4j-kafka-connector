@@ -30,6 +30,7 @@ object DynamicMessageSupport {
   private fun castValue(value: Any): Any =
       when (value) {
         is Long -> value
+        is Int -> value.toLong()
         is DynamicMessage -> value.asMap()
         is List<*> -> castList(value)
         else -> value.toString()

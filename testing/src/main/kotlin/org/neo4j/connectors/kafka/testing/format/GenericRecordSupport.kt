@@ -40,6 +40,7 @@ object GenericRecordSupport {
 
   private fun castValue(value: Any): Any =
       when (value) {
+        is Int -> value.toLong()
         is Long -> value
         is Map<*, *> ->
             value

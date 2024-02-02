@@ -20,7 +20,15 @@ package org.neo4j.connectors.kafka.testing.format.mapper
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object StringMapper : KafkaRecordMapper {
+
+  @Suppress("UNCHECKED_CAST")
   override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
-    throw NotImplementedError()
+    if (sourceValue == null) {
+      return null
+    }
+    if (targetClass != String::class.java) {
+      return null
+    }
+    return sourceValue.toString() as K?
   }
 }
