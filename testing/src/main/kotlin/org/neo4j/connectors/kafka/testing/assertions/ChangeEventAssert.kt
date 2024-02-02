@@ -25,8 +25,6 @@ import org.neo4j.cdc.client.model.EventType
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 class ChangeEventAssert(actual: ChangeEvent) :
     AbstractAssert<ChangeEventAssert, ChangeEvent>(actual, ChangeEventAssert::class.java) {
@@ -94,7 +92,6 @@ class ChangeEventAssert(actual: ChangeEvent) :
 
     isNotNull
     val actualProperties = event().after?.properties?.excludingKeys(*excludingKeys) ?: emptyMap()
-    log.error("${actualProperties::class.java} vs ${properties::class.java}")
     if (actualProperties != properties) {
       failWithMessage(
           "Expected after state's properties to be <$properties> but was <$actualProperties>")
@@ -102,14 +99,12 @@ class ChangeEventAssert(actual: ChangeEvent) :
     return this
   }
 
-  // TODO
-  private val log: Logger = LoggerFactory.getLogger(this::class.java)
-
   fun hasTxMetadata(txMetadata: Map<String, Any>): ChangeEventAssert {
     isNotNull
     if (actual.metadata.txMetadata != txMetadata) {
       failWithMessage(
-          "Expect txMetadata to be <$txMetadata> but was <${actual.metadata.txMetadata}>")
+          "Expect txMetadata to be <$txMetadata> but was <${actual.metadata.txMetadata}>",
+      )
     }
     return this
   }
@@ -128,7 +123,7 @@ class ChangeEventAssert(actual: ChangeEvent) :
 
   fun hasStartLabels(labels: Set<String>): ChangeEventAssert {
     isNotNull
-    if (relationshipEvent().start.labels != labels) {
+    if (relationshipEvent().start.labels.toSet() != labels) {
       failWithMessage(
           "Expected start labels to be <${labels}> but was <${relationshipEvent().start.labels}>")
     }
@@ -141,7 +136,7 @@ class ChangeEventAssert(actual: ChangeEvent) :
 
   fun hasEndLabels(labels: Set<String>): ChangeEventAssert {
     isNotNull
-    if (relationshipEvent().end.labels != labels) {
+    if (relationshipEvent().end.labels.toSet() != labels) {
       failWithMessage(
           "Expected end labels to be <${labels}> but was <${relationshipEvent().end.labels}>")
     }

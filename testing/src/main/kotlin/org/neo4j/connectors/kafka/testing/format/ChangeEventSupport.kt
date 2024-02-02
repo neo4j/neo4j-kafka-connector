@@ -162,8 +162,8 @@ object ChangeEventSupport {
       this.getString(key)?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) }
 
   @Suppress("UNCHECKED_CAST")
-  private fun Map<String, Any?>.getList(key: String): List<String> =
-      this.getValueAs(key, List::class.java) as List<String>
+  private fun Map<String, Any?>.getList(key: String): List<String>? =
+      this.getValueAs(key, List::class.java) as List<String>?
 
   @Suppress("UNCHECKED_CAST")
   private fun Map<String, Any?>.getNodeKeys(): Map<String, List<Map<String, Any>>>? {
@@ -173,7 +173,7 @@ object ChangeEventSupport {
 
   @Suppress("UNCHECKED_CAST")
   private fun Map<String, Any?>.getRelationshipKeys(): List<Map<String, Any>>? {
-    val keys = this.getMap("keys") ?: return null
+    val keys = this.getList("keys") ?: return null
     return keys as List<Map<String, Any>>
   }
 }

@@ -95,5 +95,13 @@ class TopicVerifier2<K, V>(
     ): TopicVerifier2<K, V> {
       return TopicVerifier2(consumer, keyAssertionClass, valueAssertionClass)
     }
+
+    fun <T> create(consumer: GenericKafkaConsumer, assertionClass: Class<T>): TopicVerifier2<T, T> {
+      return TopicVerifier2(consumer, assertionClass, assertionClass)
+    }
+
+    fun create(consumer: GenericKafkaConsumer): TopicVerifier2<Map<*, *>, Map<*, *>> {
+      return TopicVerifier2(consumer, Map::class.java, Map::class.java)
+    }
   }
 }
