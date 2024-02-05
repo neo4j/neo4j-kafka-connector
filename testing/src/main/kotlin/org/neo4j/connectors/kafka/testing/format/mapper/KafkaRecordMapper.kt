@@ -17,18 +17,18 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
+import java.security.InvalidParameterException
 
-object StringMapper : KafkaRecordMapper {
+interface KafkaRecordMapper {
+  fun <K> map(sourceValue: Any?, targetClass: Class<K>): K?
+}
 
-  @Suppress("UNCHECKED_CAST")
-  override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
-    if (sourceValue == null) {
-      return null
-    }
-    if (targetClass != String::class.java) {
-      return null
-    }
-    return sourceValue.toString() as K?
-  }
+class MappingException(msg: String) : InvalidParameterException(msg) {
+
+  constructor(sourceObject: Any) : this("Unexpected ${sourceObject::class.java}")
+
+  constructor(
+      sourceObject: Any,
+      targetClass: Class<*>
+  ) : this("Cannot convert ${sourceObject::class.java} to $targetClass")
 }

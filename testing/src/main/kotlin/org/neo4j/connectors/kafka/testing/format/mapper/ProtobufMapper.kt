@@ -18,11 +18,9 @@
 package org.neo4j.connectors.kafka.testing.format.mapper
 
 import com.google.protobuf.DynamicMessage
-import java.security.InvalidParameterException
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
 import org.neo4j.connectors.kafka.testing.format.DynamicMessageSupport.asMap
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object ProtobufMapper : KafkaRecordMapper {
 
@@ -31,16 +29,17 @@ object ProtobufMapper : KafkaRecordMapper {
     if (sourceValue == null) {
       return null
     }
-    if (sourceValue !is DynamicMessage) {
-      throw InvalidParameterException(
-          "JsonMapper expects source value to be DynamicMessage, but it was ${sourceValue::class.java}",
-      )
-    }
+
     val resultValue =
-        when (targetClass) {
-          Map::class.java -> sourceValue.asMap()
-          ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
-          else -> null
+        when (sourceValue) {
+          is DynamicMessage ->
+              when (targetClass) {
+                Map::class.java -> sourceValue.asMap()
+                ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
+                String::class.java -> sourceValue.allFields.entries.first().value.toString()
+                else -> throw MappingException(sourceValue, targetClass)
+              }
+          else -> throw MappingException(sourceValue)
         }
 
     return resultValue as K?

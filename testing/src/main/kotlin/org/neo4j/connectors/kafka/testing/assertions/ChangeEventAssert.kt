@@ -26,7 +26,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 
-class ChangeEventAssert(actual: ChangeEvent) :
+class ChangeEventAssert(actual: ChangeEvent?) :
     AbstractAssert<ChangeEventAssert, ChangeEvent>(actual, ChangeEventAssert::class.java) {
 
   fun hasEventType(eventType: EventType): ChangeEventAssert {
@@ -182,6 +182,6 @@ class ChangeEventAssert(actual: ChangeEvent) :
   }
 
   companion object {
-    fun assertThat(actual: ChangeEvent): ChangeEventAssert = ChangeEventAssert(actual)
+    fun assertThat(actual: ChangeEvent?): ChangeEventAssert = ChangeEventAssert(actual)
   }
 }

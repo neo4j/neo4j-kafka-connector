@@ -68,7 +68,7 @@ abstract class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier2.create(consumer, String::class.java, Map::class.java)
+    TopicVerifier2.create(consumer, Map::class.java)
         .assertMessageValue { value ->
           assertThat(value.asGeneric().excludingKeys("timestamp"))
               .isEqualTo(mapOf("name" to "jane", "surname" to "doe", "execId" to executionId))

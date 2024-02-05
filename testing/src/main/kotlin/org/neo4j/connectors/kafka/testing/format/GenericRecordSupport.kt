@@ -27,6 +27,10 @@ object GenericRecordSupport {
         .associate { field -> field.name() to castValue(this.get(field.name())) }
   }
 
+  fun GenericArray<*>.asList(): List<Any> {
+    return this.map { castValue(it) }.toList()
+  }
+
   fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord
 
   fun GenericRecord.getString(k: String): String? = this.get(k)?.toString()
@@ -47,12 +51,8 @@ object GenericRecordSupport {
                 .filter { it.key != null && it.value != null }
                 .mapKeys { castValue(it.key!!) }
                 .mapValues { castValue(it.value!!) }
-        is GenericArray<*> -> castArray(value)
+        is GenericArray<*> -> value.asList()
         is GenericRecord -> value.asMap()
         else -> value.toString()
       }
-
-  private fun castArray(array: GenericArray<*>): List<Any> {
-    return array.map { castValue(it) }.toList()
-  }
 }

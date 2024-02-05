@@ -17,30 +17,37 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
-import java.security.InvalidParameterException
+import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
+import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asList
 import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object AvroMapper : KafkaRecordMapper {
 
-  @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+  @Suppress("UNCHECKED_CAST")
   override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
     if (sourceValue == null) {
       return null
     }
-    if (sourceValue !is GenericRecord) {
-      throw InvalidParameterException(
-          "AvroMapper expects source value to be GenericRecord, but it was ${sourceValue::class.java}")
-    }
     val resultValue =
-        when (targetClass) {
-          Map::class.java -> sourceValue.asMap()
-          ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
-          else -> null
+        when (sourceValue) {
+          is GenericRecord ->
+              when (targetClass) {
+                Map::class.java -> sourceValue.asMap()
+                ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
+                else -> throw MappingException(sourceValue, targetClass)
+              }
+          is GenericArray<*> ->
+              when (targetClass) {
+                List::class.java -> sourceValue.asList()
+                else -> throw MappingException(sourceValue, targetClass)
+              }
+          is String -> sourceValue
+          else -> throw MappingException(sourceValue)
         }
+
     return resultValue as K?
   }
 }

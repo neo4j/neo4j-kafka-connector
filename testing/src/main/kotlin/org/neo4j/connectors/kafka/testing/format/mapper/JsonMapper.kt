@@ -17,10 +17,8 @@
 
 package org.neo4j.connectors.kafka.testing.format.mapper
 
-import java.security.InvalidParameterException
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
-import org.neo4j.connectors.kafka.testing.format.KafkaRecordMapper
 
 object JsonMapper : KafkaRecordMapper {
 
@@ -29,17 +27,23 @@ object JsonMapper : KafkaRecordMapper {
     if (sourceValue == null) {
       return null
     }
-    if (sourceValue !is Map<*, *>) {
-      throw InvalidParameterException(
-          "JsonMapper expects source value to be Map, but it was ${sourceValue::class.java}",
-      )
-    }
+
     val resultValue =
-        when (targetClass) {
-          Map::class.java -> sourceValue
-          ChangeEvent::class.java ->
-              mapToChangeEvent((sourceValue as Map<String, Any?>).normalize())
-          else -> null
+        when (sourceValue) {
+          is Map<*, *> ->
+              when (targetClass) {
+                Map::class.java -> (sourceValue as Map<String, Any?>).normalize()
+                ChangeEvent::class.java ->
+                    mapToChangeEvent((sourceValue as Map<String, Any?>).normalize())
+                else -> throw MappingException(sourceValue, targetClass)
+              }
+          is List<*> ->
+              when (targetClass) {
+                List::class.java -> sourceValue.map { it?.normalizeValue() }
+                else -> throw MappingException(sourceValue, targetClass)
+              }
+          is String -> sourceValue
+          else -> throw MappingException(sourceValue)
         }
     return resultValue as K?
   }

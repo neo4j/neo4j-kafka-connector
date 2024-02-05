@@ -24,7 +24,6 @@ import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
-import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO

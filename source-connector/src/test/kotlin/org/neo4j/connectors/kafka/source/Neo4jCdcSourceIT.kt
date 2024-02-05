@@ -83,7 +83,7 @@ abstract class Neo4jCdcSourceIT {
                         "id" to 2L, "name" to "John", "surname" to "Doe", "execId" to executionId)))
         .consume()
 
-    TopicVerifier2.create(nodesConsumer, String::class.java, ChangeEvent::class.java)
+    TopicVerifier2.create(nodesConsumer, ChangeEvent::class.java)
         .assertMessage { msg ->
           msg.raw
               .headers()
@@ -148,7 +148,7 @@ abstract class Neo4jCdcSourceIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
 
-    TopicVerifier2.create(relsConsumer, String::class.java, ChangeEvent::class.java)
+    TopicVerifier2.create(relsConsumer, ChangeEvent::class.java)
         .assertMessage { msg ->
           msg.raw
               .headers()

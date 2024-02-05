@@ -21,11 +21,10 @@ import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
 import org.apache.kafka.common.serialization.Deserializer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.neo4j.connectors.kafka.testing.format.mapper.AvroMapper
 import org.neo4j.connectors.kafka.testing.format.mapper.JsonMapper
+import org.neo4j.connectors.kafka.testing.format.mapper.KafkaRecordMapper
 import org.neo4j.connectors.kafka.testing.format.mapper.ProtobufMapper
-import org.neo4j.connectors.kafka.testing.format.mapper.StringMapper
 
 enum class KafkaConverter(
     val className: String,
@@ -44,18 +43,9 @@ enum class KafkaConverter(
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       deserializerClass = KafkaProtobufDeserializer::class.java,
-      mapper = ProtobufMapper),
-  STRING(
-      className = "org.apache.kafka.connect.storage.StringConverter",
-      deserializerClass = StringDeserializer::class.java,
-      mapper = StringMapper,
-      supportsSchemaRegistry = false)
+      mapper = ProtobufMapper)
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class KeyValueConverter(val key: KafkaConverter, val value: KafkaConverter)
-
-interface KafkaRecordMapper {
-  fun <K> map(sourceValue: Any?, targetClass: Class<K>): K?
-}
