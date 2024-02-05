@@ -16,23 +16,24 @@
  */
 package streams.kafka.connect.sink
 
-import io.confluent.connect.avro.AvroData
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
-import org.apache.avro.generic.GenericData
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
+import org.apache.kafka.connect.data.Struct
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaProducer
 import org.neo4j.connectors.kafka.testing.sink.LegacyNeo4jSink
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
-class LegacyNeo4jSinkIT {
+abstract class LegacyNeo4jSinkIT {
 
   companion object {
     const val TOPIC = "persons"
@@ -45,26 +46,22 @@ class LegacyNeo4jSinkIT {
               "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})"])
   @Test
   fun `writes messages to Neo4j via legacy sink connector`(
-      @TopicProducer producer: KafkaProducer<String, GenericRecord>,
+      @TopicProducer producer: GenericKafkaProducer,
       session: Session,
       testInfo: TestInfo
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
-    val avroRecord =
-        GenericData.Record(
-            AvroData(20)
-                .fromConnectSchema(
-                    SchemaBuilder.struct()
-                        .field("name", Schema.STRING_SCHEMA)
-                        .field("surname", Schema.STRING_SCHEMA)
-                        .field("executionId", Schema.STRING_SCHEMA)
-                        .build()))
-    avroRecord.put("name", "Jane")
-    avroRecord.put("surname", "Doe")
-    avroRecord.put("executionId", executionId)
-    val record = ProducerRecord<String, GenericRecord>(TOPIC, avroRecord)
+    val value = mapOf("name" to "Jane", "surname" to "Doe", "executionId" to executionId)
+    val schema =
+        SchemaBuilder.struct()
+            .field("name", Schema.STRING_SCHEMA)
+            .field("surname", Schema.STRING_SCHEMA)
+            .field("executionId", Schema.STRING_SCHEMA)
+            .build()
+    val struct = Struct(schema)
+    schema.fields().forEach { struct.put(it, value[it.name()]) }
 
-    producer.send(record)
+    producer.publish(TOPIC, struct, schema)
 
     await().atMost(30.seconds.toJavaDuration()).until {
       session
@@ -76,3 +73,11 @@ class LegacyNeo4jSinkIT {
     }
   }
 }
+
+@KeyValueConverter(key = AVRO, value = AVRO) class LegacyNeo4jSinkAvroIT : LegacyNeo4jSinkIT()
+
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+class LegacyNeo4jSinkJsonIT : LegacyNeo4jSinkIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
+class LegacyNeo4jSinkProtobufIT : LegacyNeo4jSinkIT()

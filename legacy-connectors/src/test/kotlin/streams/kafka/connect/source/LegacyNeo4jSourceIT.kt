@@ -16,14 +16,13 @@
  */
 package streams.kafka.connect.source
 
-import org.assertj.core.api.Assertions.assertThat
 import java.time.Duration
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -48,8 +47,7 @@ abstract class LegacyNeo4jSourceIT {
   @Test
   fun `reads latest changes from legacy Neo4j source`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = TOPIC, offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: GenericKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -87,11 +85,11 @@ abstract class LegacyNeo4jSourceIT {
   }
 
   @KeyValueConverter(key = AVRO, value = AVRO)
-  class LegacyNeo4jSourceAvroIT: LegacyNeo4jSourceIT()
+  class LegacyNeo4jSourceAvroIT : LegacyNeo4jSourceIT()
 
   @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-  class LegacyNeo4jSourceJsonIT: LegacyNeo4jSourceIT()
+  class LegacyNeo4jSourceJsonIT : LegacyNeo4jSourceIT()
 
   @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-  class LegacyNeo4jSourceProtobufIT: LegacyNeo4jSourceIT()
+  class LegacyNeo4jSourceProtobufIT : LegacyNeo4jSourceIT()
 }

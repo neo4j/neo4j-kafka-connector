@@ -15,17 +15,19 @@
  * limitations under the License.
  */
 
-package org.neo4j.connectors.kafka.testing.format.mapper
+package org.neo4j.connectors.kafka.testing.format.protobuf
 
 import com.google.protobuf.DynamicMessage
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
-import org.neo4j.connectors.kafka.testing.format.DynamicMessageSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.KafkaRecordDeserializer
+import org.neo4j.connectors.kafka.testing.format.MappingException
+import org.neo4j.connectors.kafka.testing.format.protobuf.DynamicMessageSupport.asMap
 
-object ProtobufMapper : KafkaRecordMapper {
+object ProtobufDeserializer : KafkaRecordDeserializer {
 
   @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
-  override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
+  override fun <K> deserialize(sourceValue: Any?, targetClass: Class<K>): K? {
     if (sourceValue == null) {
       return null
     }

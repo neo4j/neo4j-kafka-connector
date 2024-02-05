@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.neo4j.connectors.kafka.testing.format
+package org.neo4j.connectors.kafka.testing.format.protobuf
 
 import com.google.protobuf.DynamicMessage
 

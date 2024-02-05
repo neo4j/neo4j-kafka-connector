@@ -68,10 +68,14 @@ class TopicVerifier2<K, V>(
         consumer.kafkaConsumer
             .poll(Duration.ofMillis(500))
             .map {
-              val value: V = consumer.valueConverter.mapper.map(it.value(), valueAssertionClass)!!
+              val value: V =
+                  consumer.valueConverter.testShimDeserializer.deserialize(
+                      it.value(), valueAssertionClass)!!
               GenericRecord(
                   raw = it,
-                  key = consumer.keyConverter.mapper.map(it.key(), keyAssertionClass),
+                  key =
+                      consumer.keyConverter.testShimDeserializer.deserialize(
+                          it.key(), keyAssertionClass),
                   value = value)
             }
             .forEach { receivedMessages.add(it) }

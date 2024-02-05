@@ -153,6 +153,26 @@
             </dependency>
             <dependency>
                 <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-avro-data</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-json-schema-converter</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-jsonschema-data</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-protobuf-converter</artifactId>
+                <version>${kafka-schema-registry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
                 <artifactId>kafka-json-schema-serializer</artifactId>
                 <version>${kafka-schema-registry.version}</version>
             </dependency>
@@ -191,6 +211,16 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons-lang3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>connect-api</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>connect-json</artifactId>
+                <version>${kafka.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>

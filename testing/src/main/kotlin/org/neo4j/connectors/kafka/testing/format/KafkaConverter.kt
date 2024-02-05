@@ -18,32 +18,46 @@
 package org.neo4j.connectors.kafka.testing.format
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import io.confluent.kafka.serializers.KafkaAvroSerializer
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer
+import io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
+import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
 import org.apache.kafka.common.serialization.Deserializer
-import org.neo4j.connectors.kafka.testing.format.mapper.AvroMapper
-import org.neo4j.connectors.kafka.testing.format.mapper.JsonMapper
-import org.neo4j.connectors.kafka.testing.format.mapper.KafkaRecordMapper
-import org.neo4j.connectors.kafka.testing.format.mapper.ProtobufMapper
+import org.apache.kafka.common.serialization.Serializer
+import org.neo4j.connectors.kafka.testing.format.avro.AvroDeserializer
+import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonDeserializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonSerializer
+import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufDeserializer
+import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
 
 enum class KafkaConverter(
     val className: String,
     val deserializerClass: Class<out Deserializer<*>>,
-    val mapper: KafkaRecordMapper,
+    val serializerClass: Class<out Serializer<*>>,
+    val testShimDeserializer: KafkaRecordDeserializer,
+    val testShimSerializer: KafkaRecordSerializer,
     val supportsSchemaRegistry: Boolean = true
 ) {
   AVRO(
       className = "io.confluent.connect.avro.AvroConverter",
       deserializerClass = KafkaAvroDeserializer::class.java,
-      mapper = AvroMapper),
+      serializerClass = KafkaAvroSerializer::class.java,
+      testShimDeserializer = AvroDeserializer,
+      testShimSerializer = AvroSerializer),
   JSON_SCHEMA(
       className = "io.confluent.connect.json.JsonSchemaConverter",
       deserializerClass = KafkaJsonSchemaDeserializer::class.java,
-      mapper = JsonMapper),
+      serializerClass = KafkaJsonSchemaSerializer::class.java,
+      testShimDeserializer = JsonDeserializer,
+      testShimSerializer = JsonSerializer),
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       deserializerClass = KafkaProtobufDeserializer::class.java,
-      mapper = ProtobufMapper)
+      serializerClass = KafkaProtobufSerializer::class.java,
+      testShimDeserializer = ProtobufDeserializer,
+      testShimSerializer = ProtobufSerializer)
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)

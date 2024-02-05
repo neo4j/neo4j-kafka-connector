@@ -15,12 +15,17 @@
  * limitations under the License.
  */
 
-package org.neo4j.connectors.kafka.testing.format.mapper
+package org.neo4j.connectors.kafka.testing.format
 
 import java.security.InvalidParameterException
+import org.apache.kafka.connect.data.Schema
 
-interface KafkaRecordMapper {
-  fun <K> map(sourceValue: Any?, targetClass: Class<K>): K?
+interface KafkaRecordDeserializer {
+  fun <K> deserialize(sourceValue: Any?, targetClass: Class<K>): K?
+}
+
+interface KafkaRecordSerializer {
+  fun serialise(value: Any, schema: Schema): Any
 }
 
 class MappingException(msg: String) : InvalidParameterException(msg) {

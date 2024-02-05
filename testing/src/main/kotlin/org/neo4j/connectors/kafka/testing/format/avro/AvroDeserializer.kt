@@ -15,19 +15,21 @@
  * limitations under the License.
  */
 
-package org.neo4j.connectors.kafka.testing.format.mapper
+package org.neo4j.connectors.kafka.testing.format.avro
 
 import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
-import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asList
-import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.KafkaRecordDeserializer
+import org.neo4j.connectors.kafka.testing.format.MappingException
+import org.neo4j.connectors.kafka.testing.format.avro.GenericRecordSupport.asList
+import org.neo4j.connectors.kafka.testing.format.avro.GenericRecordSupport.asMap
 
-object AvroMapper : KafkaRecordMapper {
+object AvroDeserializer : KafkaRecordDeserializer {
 
   @Suppress("UNCHECKED_CAST")
-  override fun <K> map(sourceValue: Any?, targetClass: Class<K>): K? {
+  override fun <K> deserialize(sourceValue: Any?, targetClass: Class<K>): K? {
     if (sourceValue == null) {
       return null
     }

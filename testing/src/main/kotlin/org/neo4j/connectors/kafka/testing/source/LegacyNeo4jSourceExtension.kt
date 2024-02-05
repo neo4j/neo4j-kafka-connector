@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.testing.source
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
-import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.extension.AfterEachCallback
@@ -46,7 +45,7 @@ internal class LegacyNeo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<String, GenericRecord> =
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<*, *> =
         ::getSubscribedConsumer,
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
@@ -139,8 +138,7 @@ internal class LegacyNeo4jSourceExtension(
             streamingFrom = sourceAnnotation.streamingFrom,
             streamingQuery = sourceAnnotation.streamingQuery,
             keyConverter = keyConverter,
-            valueConverter = valueConverter
-        )
+            valueConverter = valueConverter)
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     topicRegistry.log()
   }
@@ -215,8 +213,8 @@ internal class LegacyNeo4jSourceExtension(
   }
 
   private fun resolveTopicConsumer(
-    parameterContext: ParameterContext?,
-    context: ExtensionContext?
+      parameterContext: ParameterContext?,
+      context: ExtensionContext?
   ): GenericKafkaConsumer {
     val kafkaConsumer = resolveConsumer(parameterContext, context)
     return GenericKafkaConsumer(keyConverter, valueConverter, kafkaConsumer)
@@ -226,8 +224,8 @@ internal class LegacyNeo4jSourceExtension(
     private fun getSubscribedConsumer(
         properties: Properties,
         topic: String
-    ): KafkaConsumer<String, GenericRecord> {
-      val consumer = KafkaConsumer<String, GenericRecord>(properties)
+    ): KafkaConsumer<Any, Any> {
+      val consumer = KafkaConsumer<Any, Any>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
     }
