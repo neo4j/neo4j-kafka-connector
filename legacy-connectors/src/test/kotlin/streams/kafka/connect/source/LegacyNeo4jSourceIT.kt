@@ -16,19 +16,24 @@
  */
 package streams.kafka.connect.source
 
+import org.assertj.core.api.Assertions.assertThat
 import java.time.Duration
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
+import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
-import org.neo4j.connectors.kafka.testing.format.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.LegacyNeo4jSource
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
-class LegacyNeo4jSourceIT {
+abstract class LegacyNeo4jSourceIT {
 
   companion object {
     const val TOPIC = "neo4j-source-topic"
@@ -44,7 +49,7 @@ class LegacyNeo4jSourceIT {
   fun `reads latest changes from legacy Neo4j source`(
       testInfo: TestInfo,
       @TopicConsumer(topic = TOPIC, offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: GenericKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -65,20 +70,28 @@ class LegacyNeo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    @Suppress("DEPRECATION")
-    TopicVerifier.create(consumer)
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "jane", "surname" to "doe", "execId" to executionId)
+    TopicVerifier2.create(consumer, Map::class.java)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "jane", "surname" to "doe", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "john", "surname" to "doe", "execId" to executionId)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "john", "surname" to "doe", "execId" to executionId))
         }
-        .expectMessageValueMatching { value ->
-          value.asMap().excludingKeys("timestamp") ==
-              mapOf("name" to "mary", "surname" to "doe", "execId" to executionId)
+        .assertMessageValue { value ->
+          assertThat(value.asGeneric().excludingKeys("timestamp"))
+              .isEqualTo(mapOf("name" to "mary", "surname" to "doe", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @KeyValueConverter(key = AVRO, value = AVRO)
+  class LegacyNeo4jSourceAvroIT: LegacyNeo4jSourceIT()
+
+  @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+  class LegacyNeo4jSourceJsonIT: LegacyNeo4jSourceIT()
+
+  @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
+  class LegacyNeo4jSourceProtobufIT: LegacyNeo4jSourceIT()
 }
