@@ -74,11 +74,8 @@ abstract class Neo4jSinkIT {
   }
 }
 
-@KeyValueConverter(key = AVRO, value = AVRO)
-class Neo4jSinkAvroIT: Neo4jSinkIT()
+@KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSinkAvroIT : Neo4jSinkIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jSinkJsonIT: Neo4jSinkIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA) class Neo4jSinkJsonIT : Neo4jSinkIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jSinkProtobufIT: Neo4jSinkIT()
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF) class Neo4jSinkProtobufIT : Neo4jSinkIT()

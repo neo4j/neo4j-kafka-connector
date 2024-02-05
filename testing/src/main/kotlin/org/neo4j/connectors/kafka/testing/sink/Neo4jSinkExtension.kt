@@ -133,9 +133,10 @@ internal class Neo4jSinkExtension(
 
     sink =
         Neo4jSinkRegistration(
-            topicQuerys = sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap().mapKeys {
-              topicRegistry.resolveTopic(it.key)
-            },
+            topicQuerys =
+                sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap().mapKeys {
+                  topicRegistry.resolveTopic(it.key)
+                },
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
@@ -223,8 +224,8 @@ internal class Neo4jSinkExtension(
   }
 
   private fun resolveGenericProducer(
-    parameterContext: ParameterContext?,
-    extensionContext: ExtensionContext?
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
   ): Any {
     return GenericKafkaProducer(
         keyConverter = keyConverter,

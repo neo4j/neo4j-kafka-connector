@@ -26,18 +26,18 @@ import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
 internal class Neo4jSinkRegistration(
-  topicQuerys: Map<String, String>,
-  neo4jUri: String,
-  neo4jUser: String,
-  neo4jPassword: String,
-  retryTimeout: Duration = (-1).milliseconds,
-  retryMaxDelay: Duration = 1000.milliseconds,
-  errorTolerance: String = "all",
-  enableErrorLog: Boolean = true,
-  includeMessagesInErrorLog: Boolean = true,
-  schemaControlRegistryUri: String,
-  keyConverter: KafkaConverter,
-  valueConverter: KafkaConverter
+    topicQuerys: Map<String, String>,
+    neo4jUri: String,
+    neo4jUser: String,
+    neo4jPassword: String,
+    retryTimeout: Duration = (-1).milliseconds,
+    retryMaxDelay: Duration = 1000.milliseconds,
+    errorTolerance: String = "all",
+    enableErrorLog: Boolean = true,
+    includeMessagesInErrorLog: Boolean = true,
+    schemaControlRegistryUri: String,
+    keyConverter: KafkaConverter,
+    valueConverter: KafkaConverter
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
@@ -50,28 +50,28 @@ internal class Neo4jSinkRegistration(
                 "name" to name,
                 "config" to
                     mutableMapOf<String, Any>(
-                        "topics" to topicQuerys.keys.joinToString(","),
-                        "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
-                        "key.converter" to keyConverter.className,
-                        "value.converter" to valueConverter.className,
-                        "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
-                        "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
-                        "errors.tolerance" to errorTolerance,
-                        "errors.log.enable" to enableErrorLog,
-                        "errors.log.include.messages" to includeMessagesInErrorLog,
-                        "neo4j.uri" to neo4jUri,
-                        "neo4j.authentication.type" to "BASIC",
-                        "neo4j.authentication.basic.username" to neo4jUser,
-                        "neo4j.authentication.basic.password" to neo4jPassword,
-                    )
+                            "topics" to topicQuerys.keys.joinToString(","),
+                            "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+                            "key.converter" to keyConverter.className,
+                            "value.converter" to valueConverter.className,
+                            "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
+                            "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
+                            "errors.tolerance" to errorTolerance,
+                            "errors.log.enable" to enableErrorLog,
+                            "errors.log.include.messages" to includeMessagesInErrorLog,
+                            "neo4j.uri" to neo4jUri,
+                            "neo4j.authentication.type" to "BASIC",
+                            "neo4j.authentication.basic.username" to neo4jUser,
+                            "neo4j.authentication.basic.password" to neo4jPassword,
+                        )
                         .putConditionally(
-                        "key.converter.schema.registry.url", schemaControlRegistryUri) {
-                      keyConverter.supportsSchemaRegistry
-                    }
+                            "key.converter.schema.registry.url", schemaControlRegistryUri) {
+                              keyConverter.supportsSchemaRegistry
+                            }
                         .putConditionally(
                             "value.converter.schema.registry.url", schemaControlRegistryUri) {
-                          valueConverter.supportsSchemaRegistry
-                        })
+                              valueConverter.supportsSchemaRegistry
+                            })
             .nestUnder("config", queries)
             .toMap()
   }
