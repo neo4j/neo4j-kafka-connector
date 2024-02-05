@@ -37,7 +37,7 @@ internal class LegacyNeo4jSinkRegistration(
     includeMessagesInErrorLog: Boolean = true,
     schemaControlRegistryUri: String,
     keyConverter: KafkaConverter,
-    valueConverter: KafkaConverter,
+    valueConverter: KafkaConverter
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
