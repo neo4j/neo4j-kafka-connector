@@ -25,7 +25,7 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -82,7 +82,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) DELETE r", params)
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -158,7 +158,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) DELETE r", params)
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -238,7 +238,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
     session.run("MATCH (:A)-[r:R {a: 'mini'}]->(:B) SET r.a = 'eni', r.c = 'beni'").consume()
     session.run("MATCH (:A)-[r:R {a: 'eni'}]->(:B) SET r.a = 'obi', r.c = 'bobi'").consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -295,7 +295,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             params)
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -365,7 +365,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:Person)-[r:EMPLOYED {execId: \$execId}]->(:Company) DELETE r", params)
         .consume()
 
-    TopicVerifier2.create(createsConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(createsConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -377,7 +377,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier2.create(updatesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(updatesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -389,7 +389,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier2.create(deletesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(deletesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -441,7 +441,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .consume()
     transaction2.commit()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)
@@ -490,7 +490,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.RELATIONSHIP)

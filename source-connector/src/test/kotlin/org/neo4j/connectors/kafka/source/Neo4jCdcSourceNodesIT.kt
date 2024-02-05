@@ -25,7 +25,7 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -70,7 +70,7 @@ abstract class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -131,7 +131,7 @@ abstract class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.age = 50").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -222,7 +222,7 @@ abstract class Neo4jCdcSourceNodesIT {
             "MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Johansson', ts.email = 'janejoh@example.com'")
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -290,7 +290,7 @@ abstract class Neo4jCdcSourceNodesIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -350,7 +350,7 @@ abstract class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier2.create(createsConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(createsConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -362,7 +362,7 @@ abstract class Neo4jCdcSourceNodesIT {
                       "name" to "Jane", "surname" to "Doe", "age" to 42L, "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier2.create(updatesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(updatesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -379,7 +379,7 @@ abstract class Neo4jCdcSourceNodesIT {
                       "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier2.create(deletesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(deletesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -436,7 +436,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .consume()
     transaction2.commit()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)
@@ -482,7 +482,7 @@ abstract class Neo4jCdcSourceNodesIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
           ChangeEventAssert.assertThat(value)
               .hasEventType(EventType.NODE)

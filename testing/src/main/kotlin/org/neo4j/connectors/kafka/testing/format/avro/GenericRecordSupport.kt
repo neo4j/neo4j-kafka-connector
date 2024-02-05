@@ -31,17 +31,6 @@ object GenericRecordSupport {
     return this.map { castValue(it) }.toList()
   }
 
-  fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord
-
-  fun GenericRecord.getString(k: String): String? = this.get(k)?.toString()
-
-  @Suppress("UNCHECKED_CAST")
-  fun GenericRecord.getMap(k: String): Map<String, Any>? =
-      (this.get(k) as? Map<Any, Any>)?.map { it.key.toString() to castValue(it.value) }?.toMap()
-
-  @Suppress("UNCHECKED_CAST")
-  fun <T> GenericRecord.getArray(k: String): GenericArray<T>? = this.get(k) as? GenericArray<T>
-
   private fun castValue(value: Any): Any =
       when (value) {
         is Int -> value.toLong()

@@ -28,7 +28,7 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -73,7 +73,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer)
+    TopicVerifier.create(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -107,7 +107,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageKey { key ->
           ChangeEventAssert.assertThat(key)
               .isNotNull()
@@ -149,7 +149,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer, String::class.java, Map::class.java)
+    TopicVerifier.create(consumer, String::class.java, Map::class.java)
         .assertMessageKey { it.shouldNotBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -184,7 +184,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer)
+    TopicVerifier.create(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -224,7 +224,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer, Map::class.java)
+    TopicVerifier.create(consumer, Map::class.java)
         .assertMessageKey {
           assertThat(it?.asGeneric())
               .isNotNull
@@ -263,7 +263,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer)
+    TopicVerifier.create(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -303,7 +303,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier2.create(consumer, List::class.java, Map::class.java)
+    TopicVerifier.create(consumer, List::class.java, Map::class.java)
         .assertMessageKey { key ->
           assertThat(key).isNotNull().isEqualTo(listOf(mapOf("name" to "somewhere")))
         }

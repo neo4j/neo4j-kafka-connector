@@ -27,7 +27,7 @@ import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.Headers
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -83,7 +83,7 @@ abstract class Neo4jCdcSourceIT {
                         "id" to 2L, "name" to "John", "surname" to "Doe", "execId" to executionId)))
         .consume()
 
-    TopicVerifier2.create(nodesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(nodesConsumer, ChangeEvent::class.java)
         .assertMessage { msg ->
           msg.raw
               .headers()
@@ -148,7 +148,7 @@ abstract class Neo4jCdcSourceIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
 
-    TopicVerifier2.create(relsConsumer, ChangeEvent::class.java)
+    TopicVerifier.create(relsConsumer, ChangeEvent::class.java)
         .assertMessage { msg ->
           msg.raw
               .headers()

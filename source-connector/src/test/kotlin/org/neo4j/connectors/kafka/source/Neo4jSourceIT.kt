@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
-import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier2
+import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
@@ -68,7 +68,7 @@ abstract class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier2.create(consumer, Map::class.java)
+    TopicVerifier.create(consumer, Map::class.java)
         .assertMessageValue { value ->
           assertThat(value.asGeneric().excludingKeys("timestamp"))
               .isEqualTo(mapOf("name" to "jane", "surname" to "doe", "execId" to executionId))

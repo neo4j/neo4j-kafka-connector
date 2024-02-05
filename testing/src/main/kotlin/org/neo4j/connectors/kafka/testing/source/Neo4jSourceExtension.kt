@@ -64,7 +64,6 @@ internal class Neo4jSourceExtension(
       ParameterResolvers(
           mapOf(
               Session::class.java to ::resolveSession,
-              KafkaConsumer::class.java to ::resolveConsumer,
               GenericKafkaConsumer::class.java to ::resolveTopicConsumer,
           ),
       )

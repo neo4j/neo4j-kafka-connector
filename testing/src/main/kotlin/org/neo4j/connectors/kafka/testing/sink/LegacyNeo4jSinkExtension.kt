@@ -53,7 +53,6 @@ internal class LegacyNeo4jSinkExtension(
       ParameterResolvers(
           mapOf(
               Session::class.java to ::resolveSession,
-              KafkaProducer::class.java to ::resolveProducer,
               GenericKafkaProducer::class.java to ::resolveGenericProducer,
           ))
 
