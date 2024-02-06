@@ -149,12 +149,11 @@ object ChangeEventExtensions {
                   "properties",
                   SchemaBuilder.struct()
                       .also {
-                        before?.properties?.forEach { entry ->
-                          it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
-                        }
-                        after?.properties?.forEach { entry ->
-                          // TODO: should we check for incompatible types for the existing value,
-                          // and what happens in that case?
+                        val combinedProperties =
+                            (before?.properties?.toMutableMap() ?: mutableMapOf()).also {
+                              it.putAll(after?.properties ?: emptyMap())
+                            }
+                        combinedProperties.toSortedMap().forEach { entry ->
                           if (it.field(entry.key) == null) {
                             it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
                           }
@@ -260,12 +259,11 @@ object ChangeEventExtensions {
                   "properties",
                   SchemaBuilder.struct()
                       .also {
-                        before?.properties?.forEach { entry ->
-                          it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
-                        }
-                        after?.properties?.forEach { entry ->
-                          // TODO: should we check for incompatible types for the existing value,
-                          // and what happens in that case?
+                        val combinedProperties =
+                            (before?.properties?.toMutableMap() ?: mutableMapOf()).also {
+                              it.putAll(after?.properties ?: emptyMap())
+                            }
+                        combinedProperties.toSortedMap().forEach { entry ->
                           if (it.field(entry.key) == null) {
                             it.field(entry.key, DynamicTypes.schemaFor(entry.value, true))
                           }

@@ -526,14 +526,4 @@ class Neo4jCdcSourceRelationshipsJsonIT : Neo4jCdcSourceRelationshipsIT() {
 }
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceRelationshipsProtobufIT : Neo4jCdcSourceRelationshipsIT() {
-  @Disabled // TODO
-  override fun `should read property removal and additions`(
-      testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
-      consumer: GenericKafkaConsumer,
-      session: Session
-  ) {
-    super.`should read property removal and additions`(testInfo, consumer, session)
-  }
-}
+class Neo4jCdcSourceRelationshipsProtobufIT : Neo4jCdcSourceRelationshipsIT()

@@ -273,10 +273,10 @@ class ChangeEventExtensionsTest {
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .build())
                             .optional()
                             .build())
@@ -288,10 +288,10 @@ class ChangeEventExtensionsTest {
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .build())
                             .optional()
                             .build())
@@ -402,10 +402,10 @@ class ChangeEventExtensionsTest {
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .build())
                             .optional()
                             .build())
@@ -417,10 +417,10 @@ class ChangeEventExtensionsTest {
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
+                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
                                     .build())
                             .optional()
                             .build())

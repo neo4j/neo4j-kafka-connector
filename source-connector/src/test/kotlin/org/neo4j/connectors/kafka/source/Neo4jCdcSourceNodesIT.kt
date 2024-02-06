@@ -504,20 +504,6 @@ abstract class Neo4jCdcSourceNodesIT {
 @KeyValueConverter(key = AVRO, value = AVRO)
 class Neo4jCdcSourceNodesAvroIT : Neo4jCdcSourceNodesIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT() {
-
-  @Disabled("Doesn't work with protobuf") // todo investigate
-  override fun `should read property removal and additions`(
-      testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
-      consumer: GenericKafkaConsumer,
-      session: Session
-  ) {
-    super.`should read property removal and additions`(testInfo, consumer, session)
-  }
-}
-
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
 class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT() {
   @Disabled("Doesn't work with json") // todo investigate
@@ -532,3 +518,6 @@ class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT() {
             testInfo, consumer, session)
   }
 }
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
+class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT()
