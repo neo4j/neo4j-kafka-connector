@@ -512,10 +512,9 @@ class Neo4jCdcSourceRelationshipsAvroIT : Neo4jCdcSourceRelationshipsIT()
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
 class Neo4jCdcSourceRelationshipsJsonIT : Neo4jCdcSourceRelationshipsIT() {
 
-  @Disabled // TODO
+  @Disabled("Json schema doesn't tolerate when an optional field changes the name")
   override fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-create-inc-rel", offset = "earliest")
       consumer: GenericKafkaConsumer,
       session: Session
   ) {

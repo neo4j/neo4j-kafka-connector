@@ -20,7 +20,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
@@ -228,7 +227,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .assertMessageKey {
           assertThat(it?.asGeneric())
               .isNotNull
-              .isEqualTo(mapOf("TestSource" to listOf(mapOf("name" to "Jane"))))
+              .isEqualTo(mapOf("keys" to mapOf("TestSource" to listOf(mapOf("name" to "Jane")))))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -303,9 +302,11 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer, List::class.java, Map::class.java)
+    TopicVerifier.create(consumer, Map::class.java, Map::class.java)
         .assertMessageKey { key ->
-          assertThat(key).isNotNull().isEqualTo(listOf(mapOf("name" to "somewhere")))
+          assertThat(key)
+              .isNotNull()
+              .isEqualTo(mapOf("keys" to listOf(mapOf("name" to "somewhere"))))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -317,32 +318,5 @@ class Neo4jCdcSourceKeyStrategyAvroIT : Neo4jCdcSourceKeyStrategyIT()
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
 class Neo4jCdcSourceKeyStrategyJsonIT : Neo4jCdcSourceKeyStrategyIT()
 
-// TODO
-/**
- * rels tests - not supported - Caused by: java.lang.IllegalArgumentException: Unsupported root
- * schema of type ARRAY elementID - fails with Cannot convert class
- */
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceKeyStrategyProtobufIT : Neo4jCdcSourceKeyStrategyIT() {
-
-  @Disabled
-  override fun `supports serialization of keys as rel keys`(
-      testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
-      session: Session
-  ) {
-    super.`supports serialization of keys as rel keys`(testInfo, consumer, session)
-  }
-
-  @Disabled
-  override fun `supports serialization of keys as (missing) rel keys`(
-      testInfo: TestInfo,
-      @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
-      session: Session
-  ) {
-    super.`supports serialization of keys as (missing) rel keys`(testInfo, consumer, session)
-  }
-}
+class Neo4jCdcSourceKeyStrategyProtobufIT : Neo4jCdcSourceKeyStrategyIT()
