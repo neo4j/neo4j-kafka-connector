@@ -126,6 +126,7 @@ object TestData {
                   .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
                   .optional()
                   .build())
+          .optional()
           .build()
 
   val nodeKeys: Struct =
@@ -143,6 +144,7 @@ object TestData {
   val relKeysSchema: Schema =
       SchemaBuilder.struct()
           .field("keys", SchemaBuilder.array(propertySchema).optional().build())
+          .optional()
           .build()
 
   val relKeys: Struct =

@@ -23,8 +23,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.EventType
-import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
+import org.neo4j.cdc.client.model.EntityOperation.UPDATE
+import org.neo4j.cdc.client.model.EventType.NODE
+import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -72,8 +73,8 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
@@ -81,9 +82,9 @@ abstract class Neo4jCdcSourceNodesIT {
                   mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId))
@@ -91,8 +92,8 @@ abstract class Neo4jCdcSourceNodesIT {
                   mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
@@ -113,7 +114,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-topic-prop-remove-add",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  open fun `should read property removal and additions`(
+  fun `should read property removal and additions`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
       consumer: GenericKafkaConsumer,
@@ -133,8 +134,8 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
@@ -143,9 +144,9 @@ abstract class Neo4jCdcSourceNodesIT {
                       "name" to "Jane", "surname" to "Doe", "age" to 42L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -154,9 +155,9 @@ abstract class Neo4jCdcSourceNodesIT {
                   mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
@@ -168,8 +169,8 @@ abstract class Neo4jCdcSourceNodesIT {
                       "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
@@ -224,9 +225,9 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -242,9 +243,9 @@ abstract class Neo4jCdcSourceNodesIT {
                       "email" to "janecook@example.com"))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -292,16 +293,16 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "John", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
@@ -352,8 +353,8 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(createsConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
@@ -364,9 +365,9 @@ abstract class Neo4jCdcSourceNodesIT {
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(updatesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(EntityOperation.UPDATE)
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -381,8 +382,8 @@ abstract class Neo4jCdcSourceNodesIT {
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(deletesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
@@ -438,8 +439,8 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
@@ -484,8 +485,8 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.NODE)
+          assertThat(value)
+              .hasEventType(NODE)
               .hasOperation(EntityOperation.CREATE)
               .hasLabels(setOf("TestSource", "Employee"))
               .hasNoBeforeState()

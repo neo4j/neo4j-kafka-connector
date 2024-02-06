@@ -23,8 +23,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.EventType
-import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
+import org.neo4j.cdc.client.model.EntityOperation.DELETE
+import org.neo4j.cdc.client.model.EventType.RELATIONSHIP
+import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -84,8 +85,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
@@ -94,8 +95,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("weight" to 1L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
@@ -104,9 +105,9 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("weight" to 2L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
-              .hasOperation(EntityOperation.DELETE)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(DELETE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -127,7 +128,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           topic = "neo4j-cdc-rels-prop-remove-add",
                           patterns = arrayOf(CdcSourceParam("()-[:RELIES_TO {}]->()"))))))
   @Test
-  open fun `should read property removal and additions`(
+  fun `should read property removal and additions`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
       consumer: GenericKafkaConsumer,
@@ -160,8 +161,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
@@ -171,8 +172,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   mapOf("weight" to 1L, "rate" to 42L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
@@ -182,8 +183,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("weight" to 2L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
@@ -193,9 +194,9 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   mapOf("weight" to 2L, "rate" to 50L, "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
-              .hasOperation(EntityOperation.DELETE)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(DELETE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -240,8 +241,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("R")
               .startLabelledAs("A")
@@ -252,8 +253,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   mapOf("a" to "eni", "b" to "midi", "c" to "beni", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("R")
               .startLabelledAs("A")
@@ -297,8 +298,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("IS_EMPLOYEE")
               .startLabelledAs("Person")
@@ -307,8 +308,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("IS_EMPLOYEE")
               .startLabelledAs("Person")
@@ -367,8 +368,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(createsConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
@@ -379,8 +380,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(updatesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.UPDATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
@@ -391,9 +392,9 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .verifyWithin(Duration.ofSeconds(30))
     TopicVerifier.create(deletesConsumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
-              .hasOperation(EntityOperation.DELETE)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(DELETE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -443,8 +444,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
@@ -492,8 +493,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
 
     TopicVerifier.create(consumer, ChangeEvent::class.java)
         .assertMessageValue { value ->
-          ChangeEventAssert.assertThat(value)
-              .hasEventType(EventType.RELATIONSHIP)
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
               .hasOperation(EntityOperation.CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")

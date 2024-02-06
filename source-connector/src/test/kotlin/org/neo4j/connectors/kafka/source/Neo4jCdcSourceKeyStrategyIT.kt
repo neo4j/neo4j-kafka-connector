@@ -247,7 +247,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
           ),
   )
   @Test
-  open fun `supports serialization of keys as (missing) rel keys`(
+  fun `supports serialization of keys as (missing) rel keys`(
       testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
@@ -282,7 +282,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
           ),
   )
   @Test
-  open fun `supports serialization of keys as rel keys`(
+  fun `supports serialization of keys as rel keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
       consumer: GenericKafkaConsumer,
