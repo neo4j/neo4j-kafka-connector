@@ -149,6 +149,8 @@ object ChangeEventExtensions {
                   "properties",
                   SchemaBuilder.struct()
                       .also {
+                        // TODO: should we check for incompatible types for the existing value,
+                        // and what happens in that case?
                         val combinedProperties =
                             (before?.properties?.toMutableMap() ?: mutableMapOf()).also {
                               it.putAll(after?.properties ?: emptyMap())
@@ -259,6 +261,8 @@ object ChangeEventExtensions {
                   "properties",
                   SchemaBuilder.struct()
                       .also {
+                        // TODO: should we check for incompatible types for the existing value,
+                        // and what happens in that case?
                         val combinedProperties =
                             (before?.properties?.toMutableMap() ?: mutableMapOf()).also {
                               it.putAll(after?.properties ?: emptyMap())
