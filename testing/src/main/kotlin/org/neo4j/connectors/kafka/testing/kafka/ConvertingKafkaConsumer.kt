@@ -17,22 +17,14 @@
 
 package org.neo4j.connectors.kafka.testing.kafka
 
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
-data class GenericKafkaProducer(
+data class ConvertingKafkaConsumer(
     val keyConverter: KafkaConverter,
     val valueConverter: KafkaConverter,
-    val kafkaProducer: KafkaProducer<Any, Any>,
-    val topicRegistry: TopicRegistry
-) {
+    val kafkaConsumer: KafkaConsumer<*, *>
+)
 
-  fun publish(topic: String, value: Any, schema: Schema) {
-    val serialisedValue = valueConverter.testShimSerializer.serialise(value, schema)
-    val record: ProducerRecord<Any, Any> =
-        ProducerRecord(topicRegistry.resolveTopic(topic), serialisedValue)
-    kafkaProducer.send(record)
-  }
-}
+data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)

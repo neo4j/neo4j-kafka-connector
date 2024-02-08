@@ -25,6 +25,8 @@ import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serializer
+import org.junit.jupiter.api.extension.ExtensionContext
+import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroDeserializer
 import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
 import org.neo4j.connectors.kafka.testing.format.json.JsonDeserializer
@@ -63,3 +65,34 @@ enum class KafkaConverter(
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class KeyValueConverter(val key: KafkaConverter, val value: KafkaConverter)
+
+class KeyValueConverterResolver {
+
+  private lateinit var keyConverter: KafkaConverter
+  private lateinit var valueConverter: KafkaConverter
+
+  fun resolveKeyConverter(context: ExtensionContext?): KafkaConverter {
+    initializeKeyValueConverters(context)
+    return keyConverter
+  }
+
+  fun resolveValueConverter(context: ExtensionContext?): KafkaConverter {
+    initializeKeyValueConverters(context)
+    return keyConverter
+  }
+
+  private fun initializeKeyValueConverters(context: ExtensionContext?) {
+    if (this::keyConverter.isInitialized && this::valueConverter.isInitialized) {
+      return
+    }
+    val annotation: KeyValueConverter? =
+        AnnotationSupport.findAnnotation<KeyValueConverter>(context)
+    if (annotation == null) {
+      keyConverter = KafkaConverter.AVRO
+      valueConverter = KafkaConverter.AVRO
+    } else {
+      keyConverter = annotation.key
+      valueConverter = annotation.value
+    }
+  }
+}

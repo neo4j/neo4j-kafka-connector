@@ -39,7 +39,7 @@ import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -64,7 +64,7 @@ internal class Neo4jSourceExtension(
       ParameterResolvers(
           mapOf(
               Session::class.java to ::resolveSession,
-              GenericKafkaConsumer::class.java to ::resolveTopicConsumer,
+              ConvertingKafkaConsumer::class.java to ::resolveTopicConsumer,
           ),
       )
 
@@ -134,7 +134,6 @@ internal class Neo4jSourceExtension(
   }
 
   override fun beforeEach(context: ExtensionContext?) {
-    initialiseKeyValueConverter(context)
     ensureDatabase(context)
 
     source =
@@ -176,7 +175,7 @@ internal class Neo4jSourceExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): KafkaConsumer<*, *> {
-    initialiseKeyValueConverter(extensionContext)
+    initializeKeyValueConverter(extensionContext)
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
     val properties = Properties()
@@ -247,7 +246,7 @@ internal class Neo4jSourceExtension(
     }
   }
 
-  private fun initialiseKeyValueConverter(context: ExtensionContext?) {
+  private fun initializeKeyValueConverter(context: ExtensionContext?) {
     if (this::keyConverter.isInitialized && this::valueConverter.isInitialized) {
       return
     }
@@ -265,9 +264,9 @@ internal class Neo4jSourceExtension(
   private fun resolveTopicConsumer(
       parameterContext: ParameterContext?,
       context: ExtensionContext?
-  ): GenericKafkaConsumer {
+  ): ConvertingKafkaConsumer {
     val kafkaConsumer = resolveConsumer(parameterContext, context)
-    return GenericKafkaConsumer(keyConverter, valueConverter, kafkaConsumer)
+    return ConvertingKafkaConsumer(keyConverter, valueConverter, kafkaConsumer)
   }
 
   private fun CdcSource.paramAsMap(

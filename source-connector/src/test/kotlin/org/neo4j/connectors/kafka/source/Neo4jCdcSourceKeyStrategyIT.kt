@@ -25,14 +25,13 @@ import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
-import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.CdcSource
 import org.neo4j.connectors.kafka.testing.source.CdcSourceParam
 import org.neo4j.connectors.kafka.testing.source.CdcSourceTopic
@@ -61,7 +60,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports skipping serialization of keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-none", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -72,7 +71,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.createForMap(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -95,7 +94,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as whole values`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-whole", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -106,7 +105,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageKey { key ->
           ChangeEventAssert.assertThat(key)
               .isNotNull()
@@ -137,7 +136,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as element IDs`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-element-ids", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -148,7 +147,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer, String::class.java, Map::class.java)
+    TopicVerifier.create<String, Map<String, Any>>(consumer)
         .assertMessageKey { it.shouldNotBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -172,7 +171,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-key-serialization-missing-node-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -183,7 +182,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<String, Map<String, Any>>(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -206,7 +205,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as node keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-node-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -223,9 +222,9 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer, Map::class.java)
+    TopicVerifier.createForMap(consumer)
         .assertMessageKey {
-          assertThat(it?.asGeneric())
+          assertThat(it)
               .isNotNull
               .isEqualTo(mapOf("keys" to mapOf("TestSource" to listOf(mapOf("name" to "Jane")))))
         }
@@ -251,7 +250,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -262,7 +261,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<String, Map<String, Any>>(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -285,7 +284,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as rel keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -302,7 +301,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         )
         .consume()
 
-    TopicVerifier.create(consumer, Map::class.java, Map::class.java)
+    TopicVerifier.createForMap(consumer)
         .assertMessageKey { key ->
           assertThat(key)
               .isNotNull()

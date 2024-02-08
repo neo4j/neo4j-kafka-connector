@@ -22,7 +22,12 @@ import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
 object AvroSerializer : KafkaRecordSerializer {
-  override fun serialise(value: Any, schema: Schema): Any {
-    return AvroData(100).fromConnectData(schema, value)
+
+  private const val CACHE_SIZE = 100
+
+  private val avroData = AvroData(CACHE_SIZE)
+
+  override fun serialize(value: Any, schema: Schema): Any {
+    return avroData.fromConnectData(schema, value)
   }
 }

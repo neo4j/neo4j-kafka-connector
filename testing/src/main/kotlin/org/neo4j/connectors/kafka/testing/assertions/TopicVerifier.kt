@@ -22,13 +22,13 @@ import java.util.function.Predicate
 import kotlin.math.min
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class TopicVerifier<K, V>(
-    private val consumer: GenericKafkaConsumer,
+    private val consumer: ConvertingKafkaConsumer,
     private val keyAssertionClass: Class<K>,
     private val valueAssertionClass: Class<V>
 ) {
@@ -93,21 +93,14 @@ class TopicVerifier<K, V>(
   }
 
   companion object {
-    fun <K, V> create(
-        consumer: GenericKafkaConsumer,
-        keyAssertionClass: Class<K>,
-        valueAssertionClass: Class<V>
+    inline fun <reified K, reified V> create(
+        consumer: ConvertingKafkaConsumer
     ): TopicVerifier<K, V> {
-      return TopicVerifier(consumer, keyAssertionClass, valueAssertionClass)
+      return TopicVerifier(consumer, K::class.java, V::class.java)
     }
 
-    fun <T> create(consumer: GenericKafkaConsumer, assertionClass: Class<T>): TopicVerifier<T, T> {
-      return TopicVerifier(consumer, assertionClass, assertionClass)
-    }
-
-    fun create(consumer: GenericKafkaConsumer): TopicVerifier<Map<*, *>, Map<*, *>> {
-      return TopicVerifier(consumer, Map::class.java, Map::class.java)
-    }
+    fun createForMap(consumer: ConvertingKafkaConsumer) =
+        create<Map<String, Any>, Map<String, Any>>(consumer)
   }
 }
 

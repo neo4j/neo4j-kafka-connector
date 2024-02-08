@@ -25,7 +25,7 @@ interface KafkaRecordDeserializer {
 }
 
 interface KafkaRecordSerializer {
-  fun serialise(value: Any, schema: Schema): Any
+  fun serialize(value: Any, schema: Schema): Any
 }
 
 class MappingException(msg: String) : InvalidParameterException(msg) {

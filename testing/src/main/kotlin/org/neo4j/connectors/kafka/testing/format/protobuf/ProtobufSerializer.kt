@@ -22,7 +22,10 @@ import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
 object ProtobufSerializer : KafkaRecordSerializer {
-  override fun serialise(value: Any, schema: Schema): Any {
-    return ProtobufData().fromConnectData(schema, value).value
+
+  private val protobufData = ProtobufData()
+
+  override fun serialize(value: Any, schema: Schema): Any {
+    return protobufData.fromConnectData(schema, value).value
   }
 }

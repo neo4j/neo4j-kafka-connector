@@ -54,7 +54,6 @@
         <joda-time.version>2.10.14</joda-time.version>
         <jreleaser-maven-plugin.version>1.9.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
-        <!-- dependency of confluent serializers -->
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <kafka-schema-registry.version>6.1.13</kafka-schema-registry.version>

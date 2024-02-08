@@ -48,7 +48,7 @@ enum class Neo4jCdcKeyStrategy {
 
     override fun value(message: SchemaAndValue): Any? {
       val keysValue = extractEventValue(message).get("keys") ?: return null
-      val schema = schema(message) ?: return null
+      val schema = schema(message)
       return Struct(schema).put("keys", keysValue)
     }
   },

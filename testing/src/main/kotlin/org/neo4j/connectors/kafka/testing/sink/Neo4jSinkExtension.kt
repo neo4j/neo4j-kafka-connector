@@ -33,9 +33,8 @@ import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter
-import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaProducer
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -53,7 +52,7 @@ internal class Neo4jSinkExtension(
       ParameterResolvers(
           mapOf(
               Session::class.java to ::resolveSession,
-              GenericKafkaProducer::class.java to ::resolveGenericProducer,
+              ConvertingKafkaProducer::class.java to ::resolveGenericProducer,
           ))
 
   private lateinit var sinkAnnotation: Neo4jSink
@@ -63,9 +62,6 @@ internal class Neo4jSinkExtension(
   private lateinit var driver: Driver
 
   private lateinit var session: Session
-
-  private lateinit var keyConverter: KafkaConverter
-  private lateinit var valueConverter: KafkaConverter
 
   private val brokerExternalHost =
       AnnotationValueResolver(Neo4jSink::brokerExternalHost, envAccessor)
@@ -98,6 +94,8 @@ internal class Neo4jSinkExtension(
 
   private val topicRegistry = TopicRegistry()
 
+  private val keyValueConverterResolver = KeyValueConverterResolver()
+
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
         AnnotationSupport.findAnnotation<Neo4jSink>(context)
@@ -125,7 +123,6 @@ internal class Neo4jSinkExtension(
   }
 
   override fun beforeEach(extensionContext: ExtensionContext?) {
-    initialiseKeyValueConverter(extensionContext)
     if (::driver.isInitialized) {
       driver.verifyConnectivity()
     }
@@ -140,8 +137,8 @@ internal class Neo4jSinkExtension(
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
             schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation),
-            keyConverter = keyConverter,
-            valueConverter = valueConverter)
+            keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+            valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext))
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }
@@ -184,12 +181,13 @@ internal class Neo4jSinkExtension(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): KafkaProducer<Any, Any> {
-    initialiseKeyValueConverter(extensionContext)
     val properties = Properties()
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
         brokerExternalHost.resolve(sinkAnnotation),
     )
+    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
+    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
     if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
       properties.setProperty(
           KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
@@ -207,28 +205,13 @@ internal class Neo4jSinkExtension(
     return KafkaProducer<Any, Any>(properties)
   }
 
-  private fun initialiseKeyValueConverter(context: ExtensionContext?) {
-    if (this::keyConverter.isInitialized && this::valueConverter.isInitialized) {
-      return
-    }
-    val annotation: KeyValueConverter? =
-        AnnotationSupport.findAnnotation<KeyValueConverter>(context)
-    if (annotation == null) {
-      keyConverter = KafkaConverter.AVRO
-      valueConverter = KafkaConverter.AVRO
-    } else {
-      keyConverter = annotation.key
-      valueConverter = annotation.value
-    }
-  }
-
   private fun resolveGenericProducer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
-    return GenericKafkaProducer(
-        keyConverter = keyConverter,
-        valueConverter = valueConverter,
+    return ConvertingKafkaProducer(
+        keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+        valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
         topicRegistry = topicRegistry)
   }

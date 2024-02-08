@@ -32,7 +32,7 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.CdcSource
 import org.neo4j.connectors.kafka.testing.source.CdcSourceParam
 import org.neo4j.connectors.kafka.testing.source.CdcSourceTopic
@@ -60,9 +60,9 @@ abstract class Neo4jCdcSourceIT {
   fun `should place cdc related information into headers`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-nodes-topic", offset = "earliest")
-      nodesConsumer: GenericKafkaConsumer,
+      nodesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "neo4j-cdc-rels-topic", offset = "earliest")
-      relsConsumer: GenericKafkaConsumer,
+      relsConsumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -83,7 +83,7 @@ abstract class Neo4jCdcSourceIT {
                         "id" to 2L, "name" to "John", "surname" to "Doe", "execId" to executionId)))
         .consume()
 
-    TopicVerifier.create(nodesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(nodesConsumer)
         .assertMessage { msg ->
           msg.raw
               .headers()
@@ -148,7 +148,7 @@ abstract class Neo4jCdcSourceIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
 
-    TopicVerifier.create(relsConsumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(relsConsumer)
         .assertMessage { msg ->
           msg.raw
               .headers()

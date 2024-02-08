@@ -20,14 +20,13 @@ import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.MapSupport.asGeneric
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.Neo4jSource
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
@@ -47,7 +46,7 @@ abstract class Neo4jSourceIT {
   @Test
   fun `reads latest changes from Neo4j source`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: GenericKafkaConsumer,
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -68,17 +67,17 @@ abstract class Neo4jSourceIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier.create(consumer, Map::class.java)
+    TopicVerifier.createForMap(consumer)
         .assertMessageValue { value ->
-          assertThat(value.asGeneric().excludingKeys("timestamp"))
+          assertThat(value.excludingKeys("timestamp"))
               .isEqualTo(mapOf("name" to "jane", "surname" to "doe", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          assertThat(value.asGeneric().excludingKeys("timestamp"))
+          assertThat(value.excludingKeys("timestamp"))
               .isEqualTo(mapOf("name" to "john", "surname" to "doe", "execId" to executionId))
         }
         .assertMessageValue { value ->
-          assertThat(value.asGeneric().excludingKeys("timestamp"))
+          assertThat(value.excludingKeys("timestamp"))
               .isEqualTo(mapOf("name" to "mary", "surname" to "doe", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))

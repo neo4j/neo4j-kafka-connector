@@ -44,7 +44,7 @@ import org.neo4j.connectors.kafka.testing.JUnitSupport.annotatedParameterContext
 import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
 import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
@@ -144,7 +144,7 @@ class Neo4jSourceExtensionTest {
     )
     assertTrue(
         extension.supportsParameter(
-            parameterContextForType(GenericKafkaConsumer::class),
+            parameterContextForType(ConvertingKafkaConsumer::class),
             mock<ExtensionContext>(),
         ),
         "consumer parameter should be resolvable",
@@ -189,13 +189,13 @@ class Neo4jSourceExtensionTest {
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
 
-    val genericKafkaConsumer =
+    val convertingKafkaConsumer =
         extension.resolveParameter(
-            annotatedParameterContextForType(GenericKafkaConsumer::class, consumerAnnotation),
+            annotatedParameterContextForType(ConvertingKafkaConsumer::class, consumerAnnotation),
             extensionContext)
 
-    assertIs<GenericKafkaConsumer>(genericKafkaConsumer)
-    assertSame(consumer, genericKafkaConsumer.kafkaConsumer)
+    assertIs<ConvertingKafkaConsumer>(convertingKafkaConsumer)
+    assertSame(consumer, convertingKafkaConsumer.kafkaConsumer)
   }
 
   @Test

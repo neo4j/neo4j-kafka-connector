@@ -31,7 +31,7 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
-import org.neo4j.connectors.kafka.testing.kafka.GenericKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.CdcMetadata
 import org.neo4j.connectors.kafka.testing.source.CdcSource
 import org.neo4j.connectors.kafka.testing.source.CdcSourceParam
@@ -60,7 +60,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   @Test
   fun `should read changes caught by patterns`(
       testInfo: TestInfo,
-      @TopicConsumer(topic = "neo4j-cdc-rels", offset = "earliest") consumer: GenericKafkaConsumer,
+      @TopicConsumer(topic = "neo4j-cdc-rels", offset = "earliest")
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -83,7 +84,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) DELETE r", params)
         .consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -131,7 +132,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should read property removal and additions`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -159,7 +160,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:TestSource)-[r:RELIES_TO {execId: \$execId}]-(:TestSource) DELETE r", params)
         .consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -225,7 +226,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should read only specified field changes on update`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-update-rel", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -239,7 +240,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
     session.run("MATCH (:A)-[r:R {a: 'mini'}]->(:B) SET r.a = 'eni', r.c = 'beni'").consume()
     session.run("MATCH (:A)-[r:R {a: 'eni'}]->(:B) SET r.a = 'obi', r.c = 'bobi'").consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -282,7 +283,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   open fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-create-inc-rel", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -296,7 +297,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             params)
         .consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -344,11 +345,11 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should read each operation to a separate topic`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "cdc-creates-rel", offset = "earliest")
-      createsConsumer: GenericKafkaConsumer,
+      createsConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-updates-rel", offset = "earliest")
-      updatesConsumer: GenericKafkaConsumer,
+      updatesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-deletes-rel", offset = "earliest")
-      deletesConsumer: GenericKafkaConsumer,
+      deletesConsumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -366,7 +367,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run("MATCH (:Person)-[r:EMPLOYED {execId: \$execId}]->(:Company) DELETE r", params)
         .consume()
 
-    TopicVerifier.create(createsConsumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(createsConsumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -378,7 +379,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("role" to "SWE", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier.create(updatesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(updatesConsumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -390,7 +391,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               .hasAfterStateProperties(mapOf("role" to "EM", "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier.create(deletesConsumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(deletesConsumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -421,7 +422,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should read changes marked with specific transaction metadata attribute`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-metadata-rel", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -442,7 +443,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .consume()
     transaction2.commit()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -472,7 +473,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should read changes containing relationship keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -491,7 +492,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier.create(consumer, ChangeEvent::class.java)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
@@ -516,7 +517,7 @@ class Neo4jCdcSourceRelationshipsJsonIT : Neo4jCdcSourceRelationshipsIT() {
   @Disabled("Json schema doesn't tolerate when an optional field changes the name")
   override fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
-      consumer: GenericKafkaConsumer,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     super
