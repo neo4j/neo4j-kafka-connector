@@ -36,9 +36,7 @@ import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.enableCdc
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
-import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
@@ -78,9 +76,6 @@ internal class Neo4jSourceExtension(
 
   private lateinit var neo4jDatabase: String
 
-  private lateinit var keyConverter: KafkaConverter
-  private lateinit var valueConverter: KafkaConverter
-
   private val brokerExternalHost =
       AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
 
@@ -111,6 +106,8 @@ internal class Neo4jSourceExtension(
       )
 
   private val topicRegistry = TopicRegistry()
+
+  private val keyValueConverterResolver = KeyValueConverterResolver()
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
@@ -148,8 +145,8 @@ internal class Neo4jSourceExtension(
             startFrom = sourceAnnotation.startFrom,
             query = sourceAnnotation.query,
             strategy = sourceAnnotation.strategy,
-            keyConverter = keyConverter,
-            valueConverter = valueConverter,
+            keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
+            valueConverter = keyValueConverterResolver.resolveValueConverter(context),
             cdcPatternsIndexed = sourceAnnotation.cdc.patternsIndexed,
             cdcPatterns = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::patterns),
             cdcOperations = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::operations),
@@ -175,7 +172,6 @@ internal class Neo4jSourceExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): KafkaConsumer<*, *> {
-    initializeKeyValueConverter(extensionContext)
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
     val properties = Properties()
@@ -183,6 +179,8 @@ internal class Neo4jSourceExtension(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
         brokerExternalHost.resolve(sourceAnnotation),
     )
+    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
+    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
     if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
       properties.setProperty(
           KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
@@ -246,27 +244,15 @@ internal class Neo4jSourceExtension(
     }
   }
 
-  private fun initializeKeyValueConverter(context: ExtensionContext?) {
-    if (this::keyConverter.isInitialized && this::valueConverter.isInitialized) {
-      return
-    }
-    val annotation: KeyValueConverter? =
-        AnnotationSupport.findAnnotation<KeyValueConverter>(context)
-    if (annotation == null) {
-      keyConverter = AVRO
-      valueConverter = AVRO
-    } else {
-      keyConverter = annotation.key
-      valueConverter = annotation.value
-    }
-  }
-
   private fun resolveTopicConsumer(
       parameterContext: ParameterContext?,
       context: ExtensionContext?
   ): ConvertingKafkaConsumer {
     val kafkaConsumer = resolveConsumer(parameterContext, context)
-    return ConvertingKafkaConsumer(keyConverter, valueConverter, kafkaConsumer)
+    return ConvertingKafkaConsumer(
+        keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
+        valueConverter = keyValueConverterResolver.resolveValueConverter(context),
+        kafkaConsumer = kafkaConsumer)
   }
 
   private fun CdcSource.paramAsMap(
