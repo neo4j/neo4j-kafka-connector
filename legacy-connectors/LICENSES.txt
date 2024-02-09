@@ -20,6 +20,7 @@ Apache Software License, Version 2.0
   kotlinx-coroutines-reactive
   kotlinx-coroutines-reactor
   Non-Blocking Reactive Foundation for the JVM
+  org.apiguardian:apiguardian-api
 ------------------------------------------------------------------------------
 
                                  Apache License
