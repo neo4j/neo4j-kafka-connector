@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.source
 
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
+import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 
 enum class Neo4jCdcKeyStrategy {
@@ -41,11 +42,14 @@ enum class Neo4jCdcKeyStrategy {
   },
   ENTITY_KEYS {
     override fun schema(message: SchemaAndValue): Schema? {
-      return extractEventSchema(message).field("keys").schema()
+      val keysSchema = extractEventSchema(message).field("keys").schema()
+      return SchemaBuilder.struct().field("keys", keysSchema).optional().build()
     }
 
     override fun value(message: SchemaAndValue): Any? {
-      return extractEventValue(message).get("keys")
+      val keysValue = extractEventValue(message).get("keys") ?: return null
+      val schema = schema(message)
+      return Struct(schema).put("keys", keysValue)
     }
   },
   WHOLE_VALUE {

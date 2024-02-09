@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing
+package org.neo4j.connectors.kafka.testing.format.avro
 
 import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
@@ -22,28 +22,26 @@ import org.apache.avro.generic.GenericRecord
 object GenericRecordSupport {
 
   fun GenericRecord.asMap(): Map<String, Any> {
-    // FIXME: properly convert values
     return this.schema.fields
         .filter { field -> this.get(field.name()) != null }
-        .associate { field -> field.name() to castMapValue(this.get(field.name())) }
+        .associate { field -> field.name() to castValue(this.get(field.name())) }
   }
 
-  fun GenericRecord.getRecord(k: String): GenericRecord? = this.get(k) as? GenericRecord
+  fun GenericArray<*>.asList(): List<Any> {
+    return this.map { castValue(it) }.toList()
+  }
 
-  fun GenericRecord.getString(k: String): String? = this.get(k)?.toString()
-
-  @Suppress("UNCHECKED_CAST")
-  fun GenericRecord.getMap(k: String): Map<String, Any>? =
-      (this.get(k) as? Map<Any, Any>)?.map { it.key.toString() to castMapValue(it.value) }?.toMap()
-
-  @Suppress("UNCHECKED_CAST")
-  fun <T> GenericRecord.getArray(k: String): GenericArray<T>? = this.get(k) as? GenericArray<T>
-
-  private fun castMapValue(value: Any): Any =
+  private fun castValue(value: Any): Any =
       when (value) {
-        is Long,
-        is GenericArray<*>,
-        is GenericRecord -> value
+        is Int -> value.toLong()
+        is Long -> value
+        is Map<*, *> ->
+            value
+                .filter { it.key != null && it.value != null }
+                .mapKeys { castValue(it.key!!) }
+                .mapValues { castValue(it.value!!) }
+        is GenericArray<*> -> value.asList()
+        is GenericRecord -> value.asMap()
         else -> value.toString()
       }
 }

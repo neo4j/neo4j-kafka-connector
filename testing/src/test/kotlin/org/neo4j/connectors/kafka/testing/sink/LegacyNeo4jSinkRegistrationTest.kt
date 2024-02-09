@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.testing.sink
 import kotlin.test.assertIs
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
 class LegacyNeo4jSinkRegistrationTest {
 
@@ -47,7 +48,9 @@ class LegacyNeo4jSinkRegistrationTest {
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
-            schemaControlRegistryUri = "http://example.com")
+            schemaControlRegistryUri = "http://example.com",
+            keyConverter = KafkaConverter.AVRO,
+            valueConverter = KafkaConverter.AVRO)
 
     val payload = registration.getPayload()
 
@@ -63,7 +66,9 @@ class LegacyNeo4jSinkRegistrationTest {
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
-            schemaControlRegistryUri = "http://example.com")
+            schemaControlRegistryUri = "http://example.com",
+            keyConverter = KafkaConverter.AVRO,
+            valueConverter = KafkaConverter.AVRO)
 
     val payload = registration.getPayload()
 

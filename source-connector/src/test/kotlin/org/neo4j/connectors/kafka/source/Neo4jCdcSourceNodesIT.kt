@@ -18,14 +18,20 @@
 package org.neo4j.connectors.kafka.source
 
 import java.time.Duration
-import org.apache.avro.generic.GenericRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
-import org.neo4j.connectors.kafka.testing.assertions.AvroCdcRecordAssert.Companion.assertThat
-import org.neo4j.connectors.kafka.testing.assertions.EventType
-import org.neo4j.connectors.kafka.testing.assertions.Operation
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.EntityOperation.UPDATE
+import org.neo4j.cdc.client.model.EventType.NODE
+import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.source.CdcMetadata
 import org.neo4j.connectors.kafka.testing.source.CdcSource
 import org.neo4j.connectors.kafka.testing.source.CdcSourceParam
@@ -36,7 +42,7 @@ import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 import org.neo4j.driver.TransactionConfig
 
-class Neo4jCdcSourceNodesIT {
+abstract class Neo4jCdcSourceNodesIT {
 
   @Neo4jSource(
       startFrom = "EARLIEST",
@@ -54,7 +60,7 @@ class Neo4jCdcSourceNodesIT {
   fun `should read changes caught by patterns`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -66,11 +72,11 @@ class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(
@@ -78,8 +84,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf("name" to "Jane", "surname" to "Doe", "execId" to executionId))
@@ -88,8 +94,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.DELETE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
@@ -112,7 +118,7 @@ class Neo4jCdcSourceNodesIT {
   fun `should read property removal and additions`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -127,11 +133,11 @@ class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.age = 50").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(
@@ -140,8 +146,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -151,8 +157,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf("name" to "Jane", "surname" to "Smith", "execId" to executionId))
@@ -165,8 +171,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.DELETE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -199,7 +205,7 @@ class Neo4jCdcSourceNodesIT {
   fun `should read only specified field changes on update`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -218,11 +224,11 @@ class Neo4jCdcSourceNodesIT {
             "MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Johansson', ts.email = 'janejoh@example.com'")
         .consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -239,8 +245,8 @@ class Neo4jCdcSourceNodesIT {
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -269,10 +275,10 @@ class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-create-inc",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read changes with different properties using the default topic compatibility mode`(
+  open fun `should read changes with different properties using the default topic compatibility mode`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -286,19 +292,19 @@ class Neo4jCdcSourceNodesIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "John", "execId" to executionId))
         }
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("title" to "Neo4j", "execId" to executionId))
@@ -330,11 +336,11 @@ class Neo4jCdcSourceNodesIT {
   fun `should read each operation to a separate topic`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "cdc-creates", offset = "earliest")
-      createsConsumer: KafkaConsumer<String, GenericRecord>,
+      createsConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-updates", offset = "earliest")
-      updatesConsumer: KafkaConsumer<String, GenericRecord>,
+      updatesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-deletes", offset = "earliest")
-      deletesConsumer: KafkaConsumer<String, GenericRecord>,
+      deletesConsumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -346,11 +352,11 @@ class Neo4jCdcSourceNodesIT {
     session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
     session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
 
-    TopicVerifier.create(createsConsumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(createsConsumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(
@@ -358,11 +364,11 @@ class Neo4jCdcSourceNodesIT {
                       "name" to "Jane", "surname" to "Doe", "age" to 42L, "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier.create(updatesConsumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(updatesConsumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.UPDATE)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -375,11 +381,11 @@ class Neo4jCdcSourceNodesIT {
                       "execId" to executionId))
         }
         .verifyWithin(Duration.ofSeconds(30))
-    TopicVerifier.create(deletesConsumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(deletesConsumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.DELETE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.DELETE)
               .labelledAs("TestSource")
               .hasBeforeStateProperties(
                   mapOf(
@@ -409,7 +415,7 @@ class Neo4jCdcSourceNodesIT {
   fun `should read changes marked with specific transaction metadata attribute`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-metadata", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -432,11 +438,11 @@ class Neo4jCdcSourceNodesIT {
         .consume()
     transaction2.commit()
 
-    TopicVerifier.create(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
           assertThat(value)
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Alice", "execId" to executionId))
@@ -459,7 +465,7 @@ class Neo4jCdcSourceNodesIT {
   fun `should read changes containing node keys`(
       testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
-      consumer: KafkaConsumer<String, GenericRecord>,
+      consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     val executionId = testInfo.displayName + System.currentTimeMillis()
@@ -479,11 +485,11 @@ class Neo4jCdcSourceNodesIT {
             mapOf("execId" to executionId))
         .consume()
 
-    TopicVerifier.create(consumer)
-        .assertMessage { msg ->
-          assertThat(msg.value())
-              .hasEventType(EventType.NODE)
-              .hasOperation(Operation.CREATE)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.CREATE)
               .hasLabels(setOf("TestSource", "Employee"))
               .hasNoBeforeState()
               .hasAfterStateProperties(
@@ -497,3 +503,24 @@ class Neo4jCdcSourceNodesIT {
         .verifyWithin(Duration.ofSeconds(30))
   }
 }
+
+@KeyValueConverter(key = AVRO, value = AVRO)
+class Neo4jCdcSourceNodesAvroIT : Neo4jCdcSourceNodesIT()
+
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT() {
+
+  @Disabled("Json schema doesn't tolerate when an optional field changes the name")
+  override fun `should read changes with different properties using the default topic compatibility mode`(
+      testInfo: TestInfo,
+      consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    super
+        .`should read changes with different properties using the default topic compatibility mode`(
+            testInfo, consumer, session)
+  }
+}
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
+class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT()

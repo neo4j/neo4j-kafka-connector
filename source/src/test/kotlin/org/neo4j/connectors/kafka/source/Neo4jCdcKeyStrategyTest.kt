@@ -120,25 +120,40 @@ object TestData {
 
   val nodeKeysSchema: Schema =
       SchemaBuilder.struct()
-          .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
+          .field(
+              "keys",
+              SchemaBuilder.struct()
+                  .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
+                  .optional()
+                  .build())
           .optional()
           .build()
 
   val nodeKeys: Struct =
       Struct(nodeKeysSchema)
           .put(
-              LABEL,
+              "keys",
+              Struct(nodeKeysSchema.field("keys").schema())
+                  .put(
+                      LABEL,
+                      listOf(
+                          Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
+                      ),
+                  ))
+
+  val relKeysSchema: Schema =
+      SchemaBuilder.struct()
+          .field("keys", SchemaBuilder.array(propertySchema).optional().build())
+          .optional()
+          .build()
+
+  val relKeys: Struct =
+      Struct(relKeysSchema)
+          .put(
+              "keys",
               listOf(
                   Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
-              ),
-          )
-
-  val relKeysSchema: Schema = SchemaBuilder.array(propertySchema).optional().build()
-
-  val relKeys: List<Struct> =
-      listOf(
-          Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
-      )
+              ))
 
   val nodeChange =
       ChangeEvent(

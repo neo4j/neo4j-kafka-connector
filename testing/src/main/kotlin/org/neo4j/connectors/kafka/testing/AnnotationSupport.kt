@@ -25,13 +25,21 @@ internal object AnnotationSupport {
   inline fun <reified T : Annotation> findAnnotation(context: ExtensionContext?): T? {
     var current = context
     while (current != null) {
-      val annotation =
-          AnnotationSupport.findAnnotation(
-              current.requiredTestMethod,
-              T::class.java,
-          )
-      if (annotation.isPresent) {
-        return annotation.get()
+      if (current.testMethod.isPresent) {
+        val methodAnnotation =
+            AnnotationSupport.findAnnotation(
+                current.testMethod.get(),
+                T::class.java,
+            )
+        if (methodAnnotation.isPresent) {
+          return methodAnnotation.get()
+        }
+      }
+      if (current.testClass.isPresent) {
+        val classAnnotation = AnnotationSupport.findAnnotation(current.testClass, T::class.java)
+        if (classAnnotation.isPresent) {
+          return classAnnotation.get()
+        }
       }
       current = current.parent.getOrNull()
     }

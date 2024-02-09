@@ -20,8 +20,10 @@ import java.net.URI
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import org.neo4j.connectors.kafka.testing.MapSupport.nestUnder
+import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
 internal class Neo4jSinkRegistration(
     topicQuerys: Map<String, String>,
@@ -33,7 +35,9 @@ internal class Neo4jSinkRegistration(
     errorTolerance: String = "all",
     enableErrorLog: Boolean = true,
     includeMessagesInErrorLog: Boolean = true,
-    schemaControlRegistryUri: String
+    schemaControlRegistryUri: String,
+    keyConverter: KafkaConverter,
+    valueConverter: KafkaConverter
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
@@ -45,23 +49,29 @@ internal class Neo4jSinkRegistration(
         mutableMapOf(
                 "name" to name,
                 "config" to
-                    mutableMapOf(
-                        "topics" to topicQuerys.keys.joinToString(","),
-                        "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
-                        "key.converter" to "io.confluent.connect.avro.AvroConverter",
-                        "key.converter.schema.registry.url" to schemaControlRegistryUri,
-                        "value.converter" to "io.confluent.connect.avro.AvroConverter",
-                        "value.converter.schema.registry.url" to schemaControlRegistryUri,
-                        "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
-                        "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
-                        "errors.tolerance" to errorTolerance,
-                        "errors.log.enable" to enableErrorLog,
-                        "errors.log.include.messages" to includeMessagesInErrorLog,
-                        "neo4j.uri" to neo4jUri,
-                        "neo4j.authentication.type" to "BASIC",
-                        "neo4j.authentication.basic.username" to neo4jUser,
-                        "neo4j.authentication.basic.password" to neo4jPassword,
-                    ))
+                    mutableMapOf<String, Any>(
+                            "topics" to topicQuerys.keys.joinToString(","),
+                            "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+                            "key.converter" to keyConverter.className,
+                            "value.converter" to valueConverter.className,
+                            "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
+                            "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
+                            "errors.tolerance" to errorTolerance,
+                            "errors.log.enable" to enableErrorLog,
+                            "errors.log.include.messages" to includeMessagesInErrorLog,
+                            "neo4j.uri" to neo4jUri,
+                            "neo4j.authentication.type" to "BASIC",
+                            "neo4j.authentication.basic.username" to neo4jUser,
+                            "neo4j.authentication.basic.password" to neo4jPassword,
+                        )
+                        .putConditionally(
+                            "key.converter.schema.registry.url", schemaControlRegistryUri) {
+                              keyConverter.supportsSchemaRegistry
+                            }
+                        .putConditionally(
+                            "value.converter.schema.registry.url", schemaControlRegistryUri) {
+                              valueConverter.supportsSchemaRegistry
+                            })
             .nestUnder("config", queries)
             .toMap()
   }

@@ -14,26 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.neo4j.connectors.kafka.testing.assertions
 
-import io.kotest.matchers.nulls.shouldBeNull
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.awaitility.Awaitility.await
+import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
+import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
+class TopicVerifier<K, V>(
+    private val consumer: ConvertingKafkaConsumer,
+    private val keyAssertionClass: Class<K>,
+    private val valueAssertionClass: Class<V>
+) {
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
-  private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<K, V>>>()
+  private var messagePredicates = mutableListOf<Predicate<GenericRecord<K, V>>>()
 
-  fun assertMessage(assertion: (ConsumerRecord<K, V>) -> Unit): TopicVerifier<K, V> {
+  fun assertMessageKey(assertion: (K?) -> Unit): TopicVerifier<K, V> {
+    return assertMessage { assertion(it.key) }
+  }
+
+  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
+    return assertMessage { assertion(it.value) }
+  }
+
+  fun assertMessage(assertion: (GenericRecord<K, V>) -> Unit): TopicVerifier<K, V> {
     messagePredicates.add { record ->
       try {
         assertion(record)
@@ -46,42 +58,28 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
     return this
   }
 
-  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { msg -> assertion(msg.value()) }
-  }
-
-  fun assertMessageKey(assertion: (K) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { msg -> assertion(msg.key()) }
-  }
-
-  fun assertNoMessageKey(): TopicVerifier<K, V> {
-    return assertMessage { msg -> msg.key().shouldBeNull() }
-  }
-
-  @Deprecated(message = "redundant API", replaceWith = ReplaceWith("assertMessageValue"))
-  fun expectMessageValueMatching(predicate: Predicate<V>): TopicVerifier<K, V> {
-    messagePredicates.add { record -> predicate.test(record.value()) }
-    return this
-  }
-
-  /**
-   * Verifies that the provided predicates pass for each of the corresponding actual messages. This
-   * assertion only keeps the last _n_ received messages, where _n_ corresponds to the number of
-   * predicates. The first predicate applies to the first message, the second predicate to the
-   * second message, etc. The assertion will fail if:
-   * - any of the predicate fails
-   * - the number of predicates exceeds the number of actual messages The verification is retried
-   *   until it succeeds or the provided (or default) timeout is reached.
-   */
-  fun verifyWithin(timeout: Duration): Unit {
+  fun verifyWithin(timeout: Duration) {
     val predicates = messagePredicates.toList()
     if (predicates.isEmpty()) {
       throw AssertionError("expected at least 1 expected message predicate but got none")
     }
-    val receivedMessages = RingBuffer<ConsumerRecord<K, V>>(predicates.size)
+    val receivedMessages = RingBuffer<GenericRecord<K, V>>(predicates.size)
     try {
-      await().atMost(timeout).until {
-        consumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
+      Awaitility.await().atMost(timeout).until {
+        consumer.kafkaConsumer
+            .poll(Duration.ofMillis(500))
+            .map {
+              val value: V =
+                  consumer.valueConverter.testShimDeserializer.deserialize(
+                      it.value(), valueAssertionClass)!!
+              GenericRecord(
+                  raw = it,
+                  key =
+                      consumer.keyConverter.testShimDeserializer.deserialize(
+                          it.key(), keyAssertionClass),
+                  value = value)
+            }
+            .forEach { receivedMessages.add(it) }
         val messages = receivedMessages.toList()
         messages.size == predicates.size &&
             predicates.foldIndexed(true) { i, prev, predicate ->
@@ -95,9 +93,14 @@ class TopicVerifier<K, V>(private val consumer: KafkaConsumer<K, V>) {
   }
 
   companion object {
-    fun <K, V> create(consumer: KafkaConsumer<K, V>): TopicVerifier<K, V> {
-      return TopicVerifier(consumer)
+    inline fun <reified K, reified V> create(
+        consumer: ConvertingKafkaConsumer
+    ): TopicVerifier<K, V> {
+      return TopicVerifier(consumer, K::class.java, V::class.java)
     }
+
+    fun createForMap(consumer: ConvertingKafkaConsumer) =
+        create<Map<String, Any>, Map<String, Any>>(consumer)
   }
 }
 

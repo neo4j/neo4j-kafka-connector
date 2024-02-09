@@ -18,9 +18,11 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
+import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
 internal class LegacyNeo4jSourceRegistration(
     topic: String,
@@ -32,34 +34,37 @@ internal class LegacyNeo4jSourceRegistration(
     streamingProperty: String,
     streamingFrom: String,
     streamingQuery: String,
-    schemaControlRegistryUri: String
+    schemaControlRegistryUri: String,
+    keyConverter: KafkaConverter,
+    valueConverter: KafkaConverter,
 ) {
 
   private val name: String = randomizedName("Neo4jSourceConnector")
   private val payload: Map<String, Any>
 
   init {
-    payload =
-        mapOf(
-            "name" to name,
-            "config" to
-                mapOf(
-                    "topic" to topic,
-                    "connector.class" to "streams.kafka.connect.source.Neo4jSourceConnector",
-                    "key.converter" to "io.confluent.connect.avro.AvroConverter",
-                    "key.converter.schema.registry.url" to schemaControlRegistryUri,
-                    "value.converter" to "io.confluent.connect.avro.AvroConverter",
-                    "value.converter.schema.registry.url" to schemaControlRegistryUri,
-                    "neo4j.server.uri" to neo4jUri,
-                    "neo4j.authentication.basic.username" to neo4jUser,
-                    "neo4j.authentication.basic.password" to neo4jPassword,
-                    "neo4j.streaming.poll.interval.msecs" to pollInterval.toMillis(),
-                    "neo4j.streaming.property" to streamingProperty,
-                    "neo4j.streaming.from" to streamingFrom,
-                    "neo4j.enforce.schema" to enforceSchema,
-                    "neo4j.source.query" to streamingQuery,
-                ),
-        )
+    val config =
+        mutableMapOf<String, Any>(
+                "topic" to topic,
+                "connector.class" to "streams.kafka.connect.source.Neo4jSourceConnector",
+                "key.converter" to keyConverter.className,
+                "value.converter" to valueConverter.className,
+                "neo4j.server.uri" to neo4jUri,
+                "neo4j.authentication.basic.username" to neo4jUser,
+                "neo4j.authentication.basic.password" to neo4jPassword,
+                "neo4j.streaming.poll.interval.msecs" to pollInterval.toMillis(),
+                "neo4j.streaming.property" to streamingProperty,
+                "neo4j.streaming.from" to streamingFrom,
+                "neo4j.enforce.schema" to enforceSchema,
+                "neo4j.source.query" to streamingQuery,
+            )
+            .putConditionally("key.converter.schema.registry.url", schemaControlRegistryUri) {
+              keyConverter.supportsSchemaRegistry
+            }
+            .putConditionally("value.converter.schema.registry.url", schemaControlRegistryUri) {
+              valueConverter.supportsSchemaRegistry
+            }
+    payload = mapOf("name" to name, "config" to config)
   }
 
   private lateinit var connectBaseUri: String

@@ -17,13 +17,10 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
-import io.confluent.kafka.serializers.KafkaAvroSerializer
 import java.util.*
-import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -36,6 +33,9 @@ import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
+import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -52,7 +52,7 @@ internal class Neo4jSinkExtension(
       ParameterResolvers(
           mapOf(
               Session::class.java to ::resolveSession,
-              KafkaProducer::class.java to ::resolveProducer,
+              ConvertingKafkaProducer::class.java to ::resolveGenericProducer,
           ))
 
   private lateinit var sinkAnnotation: Neo4jSink
@@ -92,6 +92,10 @@ internal class Neo4jSinkExtension(
           neo4jPassword,
       )
 
+  private val topicRegistry = TopicRegistry()
+
+  private val keyValueConverterResolver = KeyValueConverterResolver()
+
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
         AnnotationSupport.findAnnotation<Neo4jSink>(context)
@@ -125,12 +129,18 @@ internal class Neo4jSinkExtension(
 
     sink =
         Neo4jSinkRegistration(
-            topicQuerys = sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap(),
+            topicQuerys =
+                sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap().mapKeys {
+                  topicRegistry.resolveTopic(it.key)
+                },
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
-            schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation))
+            schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation),
+            keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+            valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext))
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
+    topicRegistry.log()
   }
 
   override fun afterEach(extensionContent: ExtensionContext?) {
@@ -169,25 +179,40 @@ internal class Neo4jSinkExtension(
 
   private fun resolveProducer(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
-  ): Any {
+      extensionContext: ExtensionContext?
+  ): KafkaProducer<Any, Any> {
     val properties = Properties()
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
         brokerExternalHost.resolve(sinkAnnotation),
     )
-    properties.setProperty(
-        KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaControlRegistryExternalUri.resolve(sinkAnnotation),
-    )
+    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
+    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
+    if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
+      properties.setProperty(
+          KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
+          schemaControlRegistryExternalUri.resolve(sinkAnnotation),
+      )
+    }
     properties.setProperty(
         ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-        StringSerializer::class.java.getName(),
+        keyConverter.serializerClass.name,
     )
     properties.setProperty(
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-        KafkaAvroSerializer::class.java.getName(),
+        valueConverter.serializerClass.name,
     )
-    return KafkaProducer<String, GenericRecord>(properties)
+    return KafkaProducer<Any, Any>(properties)
+  }
+
+  private fun resolveGenericProducer(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    return ConvertingKafkaProducer(
+        keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+        valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
+        kafkaProducer = resolveProducer(parameterContext, extensionContext),
+        topicRegistry = topicRegistry)
   }
 }

@@ -24,7 +24,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -40,6 +39,7 @@ import org.neo4j.connectors.kafka.testing.JUnitSupport.annotatedParameterContext
 import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
 import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 
@@ -126,7 +126,7 @@ class LegacyNeo4jSourceExtensionTest {
     )
     assertTrue(
         extension.supportsParameter(
-            parameterContextForType(KafkaConsumer::class),
+            parameterContextForType(ConvertingKafkaConsumer::class),
             mock<ExtensionContext>(),
         ),
         "consumer parameter should be resolvable",
@@ -157,19 +157,19 @@ class LegacyNeo4jSourceExtensionTest {
 
   @Test
   fun `resolves consumer parameter`() {
-    val consumer = mock<KafkaConsumer<String, GenericRecord>>()
+    val consumer = mock<KafkaConsumer<Any, Any>>()
     val extension = LegacyNeo4jSourceExtension(consumerFactory = { _, _ -> consumer })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
 
-    val consumerParam =
+    val convertingKafkaConsumer =
         extension.resolveParameter(
-            annotatedParameterContextForType(KafkaConsumer::class, consumerAnnotation),
+            annotatedParameterContextForType(ConvertingKafkaConsumer::class, consumerAnnotation),
             extensionContext)
 
-    assertIs<KafkaConsumer<String, GenericRecord>>(consumerParam)
-    assertSame(consumer, consumerParam)
+    assertIs<ConvertingKafkaConsumer>(convertingKafkaConsumer)
+    assertSame(consumer, convertingKafkaConsumer.kafkaConsumer)
   }
 
   @Test
