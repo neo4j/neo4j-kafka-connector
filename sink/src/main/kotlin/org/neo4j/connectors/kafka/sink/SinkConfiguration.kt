@@ -38,6 +38,10 @@ import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrateg
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.renderer.Configuration
+import org.neo4j.cypherdsl.core.renderer.Dialect
+import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SINK) {
@@ -58,6 +62,37 @@ class SinkConfiguration(originals: Map<*, *>) :
   val kafkaBrokerProperties: Map<String, Any?> by lazy {
     originals().filterKeys { it.startsWith("kafka.") }.mapKeys { it.key.substring("kafka.".length) }
   }
+
+  val dialect: Dialect by lazy {
+    session().use {
+      val name = Cypher.name("name")
+      val versions = Cypher.name("versions")
+      val stmt =
+          Cypher.call("dbms.components")
+              .yield(name, versions)
+              .where(name.eq(Cypher.anonParameter("Neo4j Kernel")))
+              .returning(Cypher.valueAt(versions, 0))
+              .build()
+
+      val version = it.run(stmt.cypher, stmt.parameters).single().get(0).asString()
+      if (version.startsWith("5")) {
+        return@lazy Dialect.NEO4J_5
+      } else if (version.startsWith("4")) {
+        return@lazy Dialect.DEFAULT
+      }
+
+      throw ConfigException("unsupported Neo4j version: $version")
+    }
+  }
+
+  val renderer: Renderer by lazy {
+    Renderer.getRenderer(Configuration.newConfig().withDialect(dialect).build())
+  }
+
+  val topicNames: List<String>
+    get() =
+        originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
+            ?: emptyList()
 
   init {
     validateAllTopics(originals)

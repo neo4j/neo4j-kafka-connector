@@ -51,7 +51,7 @@ class Neo4jCdcTask : SourceTask() {
 
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
 
-  override fun start(props: MutableMap<String, String>?) {
+  override fun start(props: Map<String, String>?) {
     log.info("starting")
 
     settings = props!!
