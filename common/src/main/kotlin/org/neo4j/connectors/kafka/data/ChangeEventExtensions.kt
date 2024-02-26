@@ -52,7 +52,6 @@ object ChangeEventExtensions {
 
   private fun ChangeEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
-          .namespaced("cdc.ChangeEvent")
           .field("id", SimpleTypes.STRING.schema())
           .field("txId", SimpleTypes.LONG.schema())
           .field("seq", SimpleTypes.LONG.schema())
@@ -71,7 +70,6 @@ object ChangeEventExtensions {
 
   internal fun Metadata.toConnectSchema(): Schema =
       SchemaBuilder.struct()
-          .namespaced("cdc.Metadata")
           .field("authenticatedUser", SimpleTypes.STRING.schema())
           .field("executingUser", SimpleTypes.STRING.schema())
           .field("connectionType", SimpleTypes.STRING.schema(true))
@@ -148,7 +146,6 @@ object ChangeEventExtensions {
 
   internal fun NodeEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
-          .namespaced("cdc.NodeEvent")
           .field("elementId", SimpleTypes.STRING.schema())
           .field("eventType", SimpleTypes.STRING.schema())
           .field("operation", SimpleTypes.STRING.schema())
@@ -185,7 +182,6 @@ object ChangeEventExtensions {
   private fun nodeStateSchema(before: NodeState?, after: NodeState?): Schema {
     val stateSchema =
         SchemaBuilder.struct()
-            .namespaced("cdc.NodeState")
             .apply {
               this.field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
               this.field(
@@ -207,11 +203,7 @@ object ChangeEventExtensions {
             .optional()
             .build()
 
-    return SchemaBuilder.struct()
-        .namespaced("cdc.NodeStates")
-        .field("before", stateSchema)
-        .field("after", stateSchema)
-        .build()
+    return SchemaBuilder.struct().field("before", stateSchema).field("after", stateSchema).build()
   }
 
   private fun nodeStateValue(schema: Schema, before: NodeState?, after: NodeState?): Struct =
@@ -263,7 +255,6 @@ object ChangeEventExtensions {
 
   internal fun RelationshipEvent.toConnectSchema(): Schema =
       SchemaBuilder.struct()
-          .namespaced("cdc.RelationshipEvent")
           .field("elementId", SimpleTypes.STRING.schema())
           .field("eventType", SimpleTypes.STRING.schema())
           .field("operation", SimpleTypes.STRING.schema())
@@ -307,7 +298,6 @@ object ChangeEventExtensions {
 
   internal fun Node.toConnectSchema(): Schema {
     return SchemaBuilder.struct()
-        .namespaced("cdc.Node")
         .field("elementId", SimpleTypes.STRING.schema())
         .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
         .field("keys", schemaForKeysByLabel(this.keys))
@@ -336,7 +326,6 @@ object ChangeEventExtensions {
   ): Schema {
     val stateSchema =
         SchemaBuilder.struct()
-            .namespaced("cdc.RelationshipState")
             .apply {
               this.field(
                   "properties",
@@ -357,11 +346,7 @@ object ChangeEventExtensions {
             .optional()
             .build()
 
-    return SchemaBuilder.struct()
-        .namespaced("cdc.RelationshipStates")
-        .field("before", stateSchema)
-        .field("after", stateSchema)
-        .build()
+    return SchemaBuilder.struct().field("before", stateSchema).field("after", stateSchema).build()
   }
 
   private fun relationshipStateValue(
