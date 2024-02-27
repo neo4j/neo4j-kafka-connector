@@ -23,9 +23,12 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toChangeEvent
+import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
+import org.neo4j.connectors.kafka.utils.SchemaUtils
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -87,11 +90,10 @@ abstract class CdcHandler : SinkStrategyHandler {
   protected abstract fun transformDelete(event: RelationshipEvent): Query
 }
 
-// TODO: throw an exception with the message so that we can log what's wrong with the message
 internal fun SinkMessage.toChangeEvent(): ChangeEvent =
     when {
       this.isCdcMessage -> parseCdcChangeEvent(this)
-      else -> parseStreamsChangeEvent(this)!!
+      else -> parseStreamsChangeEvent(this)
     }
 
 internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
@@ -101,7 +103,10 @@ internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
           throw IllegalArgumentException("unexpected message value type ${value?.javaClass?.name}")
     }
 
-@Suppress("UNUSED_PARAMETER")
-internal fun parseStreamsChangeEvent(message: SinkMessage): ChangeEvent? {
-  TODO("not implemented yet")
+internal fun parseStreamsChangeEvent(message: SinkMessage): ChangeEvent {
+  val event =
+      SchemaUtils.toStreamsTransactionEvent(message.record.toStreamsSinkEntity()) { _ -> true }
+          ?: throw IllegalArgumentException("unsupported change event message")
+
+  return event.toChangeEvent()
 }
