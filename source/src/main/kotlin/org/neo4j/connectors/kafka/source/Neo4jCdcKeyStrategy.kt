@@ -46,11 +46,18 @@ enum class Neo4jCdcKeyStrategy {
       return SchemaBuilder.struct().field("keys", keysSchema).optional().build()
     }
 
-    override fun value(message: SchemaAndValue): Any? {
-      val keysValue = extractEventValue(message).get("keys") ?: return null
-      val schema = schema(message)
-      return Struct(schema).put("keys", keysValue)
-    }
+    @Suppress("IMPLICIT_CAST_TO_ANY")
+    override fun value(message: SchemaAndValue): Any? =
+        when (val keys = extractEventValue(message).get("keys")) {
+          // this is a keys value for a relationship
+          is List<*> -> keys.ifEmpty { null }
+          // this is a keys value for a node
+          is Struct -> keys.let { if (it.schema().fields().isEmpty()) null else keys }
+          else -> throw IllegalArgumentException("unexpected key value type ${keys.javaClass.name}")
+        }?.let {
+          val schema = schema(message)
+          Struct(schema).put("keys", it)
+        }
   },
   WHOLE_VALUE {
     override fun schema(message: SchemaAndValue): Schema? {

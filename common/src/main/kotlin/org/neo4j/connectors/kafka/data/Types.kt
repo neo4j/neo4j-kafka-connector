@@ -17,18 +17,20 @@
 package org.neo4j.connectors.kafka.data
 
 import java.nio.ByteBuffer
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.OffsetTime
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAccessor
+import java.time.temporal.TemporalQueries
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.neo4j.driver.Values
 import org.neo4j.driver.types.IsoDuration
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
@@ -52,15 +54,30 @@ enum class SimpleTypes(private val schema: Schema, private val optionalSchema: S
   LOCALTIME(
       SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalTime").optional().build()),
+  @Suppress("SpellCheckingInspection")
   ZONEDDATETIME(
       SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalZonedDateTime").optional().build()),
+  @Suppress("SpellCheckingInspection")
   OFFSETTIME(
       SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").build(),
       SchemaBuilder(Schema.Type.STRING).namespaced("OptionalOffsetTime").optional().build()),
   DURATION(
-      SchemaBuilder(Schema.Type.STRING).namespaced("Duration").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalDuration").optional().build()),
+      SchemaBuilder(Schema.Type.STRUCT)
+          .namespaced("Duration")
+          .field("months", Schema.INT64_SCHEMA)
+          .field("days", Schema.INT64_SCHEMA)
+          .field("seconds", Schema.INT64_SCHEMA)
+          .field("nanoseconds", Schema.INT32_SCHEMA)
+          .build(),
+      SchemaBuilder(Schema.Type.STRUCT)
+          .namespaced("OptionalDuration")
+          .field("months", Schema.INT64_SCHEMA)
+          .field("days", Schema.INT64_SCHEMA)
+          .field("seconds", Schema.INT64_SCHEMA)
+          .field("nanoseconds", Schema.INT32_SCHEMA)
+          .optional()
+          .build()),
   POINT(
       SchemaBuilder(Schema.Type.STRUCT)
           .namespaced("Point")
@@ -83,7 +100,7 @@ enum class SimpleTypes(private val schema: Schema, private val optionalSchema: S
 
 object DynamicTypes {
 
-  fun valueFor(schema: Schema, value: Any?): Any? {
+  fun toConnectValue(schema: Schema, value: Any?): Any? {
     if (value == null) {
       return null
     }
@@ -97,23 +114,29 @@ object DynamicTypes {
           }
       Schema.Type.ARRAY ->
           when (value) {
-            is Collection<*> -> value.map { valueFor(schema.valueSchema(), it) }
-            is Array<*> -> value.map { valueFor(schema.valueSchema(), it) }.toTypedArray()
-            is ShortArray -> value.map { s -> s.toLong() }.toLongArray()
-            is IntArray -> value.map { i -> i.toLong() }.toLongArray()
-            is FloatArray -> value.map { f -> f.toDouble() }.toDoubleArray()
-            is BooleanArray,
-            is LongArray,
-            is DoubleArray -> value
+            is Collection<*> -> value.map { toConnectValue(schema.valueSchema(), it) }
+            is Array<*> -> value.map { toConnectValue(schema.valueSchema(), it) }.toList()
+            is ShortArray -> value.map { s -> s.toLong() }.toList()
+            is IntArray -> value.map { i -> i.toLong() }.toList()
+            is FloatArray -> value.map { f -> f.toDouble() }.toList()
+            is BooleanArray -> value.toList()
+            is LongArray -> value.toList()
+            is DoubleArray -> value.toList()
             else -> throw IllegalArgumentException("unsupported array type ${value.javaClass.name}")
           }
       Schema.Type.MAP ->
           when (value) {
-            is Map<*, *> -> value.mapValues { valueFor(schema.valueSchema(), it.value) }
+            is Map<*, *> -> value.mapValues { toConnectValue(schema.valueSchema(), it.value) }
             else -> throw IllegalArgumentException("unsupported map type ${value.javaClass.name}")
           }
       Schema.Type.STRUCT ->
           when (value) {
+            is IsoDuration ->
+                Struct(schema)
+                    .put("months", value.months())
+                    .put("days", value.days())
+                    .put("seconds", value.seconds())
+                    .put("nanoseconds", value.nanoseconds())
             is Point ->
                 Struct(schema)
                     .put("srid", value.srid())
@@ -127,7 +150,9 @@ object DynamicTypes {
 
                   value
                       .asMap { it.asObject() }
-                      .forEach { e -> put(e.key, valueFor(schema.field(e.key).schema(), e.value)) }
+                      .forEach { e ->
+                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
+                      }
                 }
             is Relationship ->
                 Struct(schema).apply {
@@ -138,12 +163,14 @@ object DynamicTypes {
 
                   value
                       .asMap { it.asObject() }
-                      .forEach { e -> put(e.key, valueFor(schema.field(e.key).schema(), e.value)) }
+                      .forEach { e ->
+                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
+                      }
                 }
             is Map<*, *> ->
                 Struct(schema).apply {
                   schema.fields().forEach {
-                    put(it.name(), valueFor(it.schema(), value[it.name()]))
+                    put(it.name(), toConnectValue(it.schema(), value[it.name()]))
                   }
                 }
             is Collection<*> ->
@@ -151,7 +178,8 @@ object DynamicTypes {
                   schema.fields().forEach {
                     put(
                         it.name(),
-                        valueFor(it.schema(), value.elementAt(it.name().substring(1).toInt())))
+                        toConnectValue(
+                            it.schema(), value.elementAt(it.name().substring(1).toInt())))
                   }
                 }
             else ->
@@ -163,8 +191,6 @@ object DynamicTypes {
             is OffsetTime -> DateTimeFormatter.ISO_TIME.format(value)
             is LocalTime -> DateTimeFormatter.ISO_TIME.format(value)
             is TemporalAccessor -> DateTimeFormatter.ISO_DATE_TIME.format(value)
-            is Duration -> value.toString()
-            is IsoDuration -> value.toString()
             is String -> value
             is Char -> value.toString()
             is CharArray -> String(value)
@@ -184,7 +210,158 @@ object DynamicTypes {
     }
   }
 
-  fun schemaFor(value: Any?, optional: Boolean = false): Schema =
+  fun fromConnectValue(schema: Schema, value: Any?, skipNullValuesInMaps: Boolean = false): Any? {
+    if (value == null) {
+      return null
+    }
+
+    return when (schema) {
+      SimpleTypes.BOOLEAN.schema(false),
+      SimpleTypes.BOOLEAN.schema(true) -> value as Boolean
+      SimpleTypes.LONG.schema(false),
+      SimpleTypes.LONG.schema(true) -> value as Long?
+      SimpleTypes.FLOAT.schema(false),
+      SimpleTypes.FLOAT.schema(true) -> value as Double?
+      SimpleTypes.STRING.schema(false),
+      SimpleTypes.STRING.schema(true) -> value as String?
+      SimpleTypes.BYTES.schema(false),
+      SimpleTypes.BYTES.schema(true) -> value as ByteArray?
+      SimpleTypes.LOCALDATE.schema(false),
+      SimpleTypes.LOCALDATE.schema(true) ->
+          (value as String?)?.let {
+            DateTimeFormatter.ISO_DATE.parse(it) { parsed -> LocalDate.from(parsed) }
+          }
+      SimpleTypes.LOCALTIME.schema(false),
+      SimpleTypes.LOCALTIME.schema(true) ->
+          (value as String?)?.let {
+            DateTimeFormatter.ISO_TIME.parse(it) { parsed -> LocalTime.from(parsed) }
+          }
+      SimpleTypes.LOCALDATETIME.schema(false),
+      SimpleTypes.LOCALDATETIME.schema(true) ->
+          (value as String?)?.let {
+            DateTimeFormatter.ISO_DATE_TIME.parse(it) { parsed -> LocalDateTime.from(parsed) }
+          }
+      SimpleTypes.ZONEDDATETIME.schema(false),
+      SimpleTypes.ZONEDDATETIME.schema(true) ->
+          (value as String?)?.let {
+            DateTimeFormatter.ISO_DATE_TIME.parse(it) { parsed ->
+              val zoneId = parsed.query(TemporalQueries.zone())
+
+              if (zoneId is ZoneOffset) {
+                OffsetDateTime.from(parsed)
+              } else {
+                ZonedDateTime.from(parsed)
+              }
+            }
+          }
+      SimpleTypes.OFFSETTIME.schema(false),
+      SimpleTypes.OFFSETTIME.schema(true) ->
+          (value as String?)?.let {
+            DateTimeFormatter.ISO_TIME.parse(it) { parsed -> OffsetTime.from(parsed) }
+          }
+      SimpleTypes.DURATION.schema(false),
+      SimpleTypes.DURATION.schema(true) ->
+          (value as Struct?)
+              ?.let {
+                Values.isoDuration(
+                    it.getInt64("months"),
+                    it.getInt64("days"),
+                    it.getInt64("seconds"),
+                    it.getInt32("nanoseconds"))
+              }
+              ?.asIsoDuration()
+      SimpleTypes.POINT.schema(false),
+      SimpleTypes.POINT.schema(true) ->
+          (value as Struct?)
+              ?.let {
+                if (it.getFloat64("z").isNaN())
+                    Values.point(it.getInt32("srid"), it.getFloat64("x"), it.getFloat64("y"))
+                else
+                    Values.point(
+                        it.getInt32("srid"),
+                        it.getFloat64("x"),
+                        it.getFloat64("y"),
+                        it.getFloat64("z"))
+              }
+              ?.asPoint()
+      else ->
+          return when (schema.type()) {
+            Schema.Type.ARRAY -> {
+              val result = mutableListOf<Any?>()
+
+              when {
+                value.javaClass.isArray ->
+                    for (i in 0 ..< java.lang.reflect.Array.getLength(value)) {
+                      result.add(
+                          fromConnectValue(
+                              schema.valueSchema(),
+                              java.lang.reflect.Array.get(value, i),
+                              skipNullValuesInMaps))
+                    }
+                value is Iterable<*> ->
+                    for (element in value) {
+                      result.add(
+                          fromConnectValue(schema.valueSchema(), element, skipNullValuesInMaps))
+                    }
+                else ->
+                    throw IllegalArgumentException("unsupported array type ${value.javaClass.name}")
+              }
+
+              result.toList()
+            }
+            Schema.Type.MAP -> {
+              val result = mutableMapOf<String, Any?>()
+              val map = value as Map<*, *>
+
+              for (entry in map.entries) {
+                if (entry.key !is String) {
+                  throw IllegalArgumentException(
+                      "invalid key type (${entry.key?.javaClass?.name} in map value")
+                }
+
+                result[entry.key as String] =
+                    fromConnectValue(schema.valueSchema(), entry.value, skipNullValuesInMaps)
+              }
+
+              result
+            }
+            Schema.Type.STRUCT -> {
+              val result = mutableMapOf<String, Any?>()
+              val struct = value as Struct
+
+              for (field in schema.fields()) {
+                val fieldValue =
+                    fromConnectValue(field.schema(), struct.get(field), skipNullValuesInMaps)
+
+                if (fieldValue != null || !skipNullValuesInMaps) {
+                  result[field.name()] = fieldValue
+                }
+              }
+
+              if (result.isNotEmpty() &&
+                  result.keys.all { it.startsWith("e") && it.substring(1).toIntOrNull() != null }) {
+                result
+                    .mapKeys { it.key.substring(1).toInt() }
+                    .entries
+                    .sortedBy { it.key }
+                    .map { it.value }
+                    .toList()
+              } else {
+                result
+              }
+            }
+            else ->
+                throw IllegalArgumentException(
+                    "unsupported schema ($schema) and value type (${value.javaClass.name})")
+          }
+    }
+  }
+
+  fun toConnectSchema(
+      value: Any?,
+      optional: Boolean = false,
+      forceMapsAsStruct: Boolean = false
+  ): Schema =
       when (value) {
         null -> SchemaBuilder.struct().optional().build()
         is Boolean -> SimpleTypes.BOOLEAN.schema(optional)
@@ -207,7 +384,7 @@ object DynamicTypes {
             SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).apply { if (optional) optional() }.build()
         is Array<*> ->
             value
-                .firstNotNullOfOrNull { schemaFor(it, false) }
+                .firstNotNullOfOrNull { toConnectSchema(it, false, forceMapsAsStruct) }
                 ?.run { SchemaBuilder.array(this).apply { if (optional) optional() }.build() }
                 ?: SchemaBuilder.struct().apply { if (optional) optional() }.build()
         is LocalDate -> SimpleTypes.LOCALDATE.schema(optional)
@@ -216,7 +393,6 @@ object DynamicTypes {
         is OffsetDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
         is ZonedDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
         is OffsetTime -> SimpleTypes.OFFSETTIME.schema(optional)
-        is Duration,
         is IsoDuration -> SimpleTypes.DURATION.schema(optional)
         is Point -> SimpleTypes.POINT.schema(optional)
         is Node ->
@@ -226,7 +402,10 @@ object DynamicTypes {
                   field("<id>", SimpleTypes.LONG.schema())
                   field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
 
-                  value.keys().forEach { field(it, schemaFor(value.get(it).asObject(), optional)) }
+                  value.keys().forEach {
+                    field(
+                        it, toConnectSchema(value.get(it).asObject(), optional, forceMapsAsStruct))
+                  }
 
                   if (optional) optional()
                 }
@@ -240,13 +419,16 @@ object DynamicTypes {
                   field("<start.id>", SimpleTypes.LONG.schema())
                   field("<end.id>", SimpleTypes.LONG.schema())
 
-                  value.keys().forEach { field(it, schemaFor(value.get(it).asObject(), optional)) }
+                  value.keys().forEach {
+                    field(
+                        it, toConnectSchema(value.get(it).asObject(), optional, forceMapsAsStruct))
+                  }
 
                   if (optional) optional()
                 }
                 .build()
         is Collection<*> -> {
-          val elementTypes = value.map { schemaFor(it, false) }
+          val elementTypes = value.map { toConnectSchema(it, false, forceMapsAsStruct) }
 
           when (elementTypes.toSet().size) {
             0 -> SchemaBuilder.struct().also { if (optional) it.optional() }.build()
@@ -270,11 +452,12 @@ object DynamicTypes {
                               "unsupported map key type ${key?.javaClass?.name}")
                     }
                   }
-                  .mapValues { e -> schemaFor(e.value, optional) }
+                  .mapValues { e -> toConnectSchema(e.value, optional, forceMapsAsStruct) }
 
-          when (elementTypes.values.toSet().size) {
-            0 -> SchemaBuilder.struct().apply { if (optional) optional() }.build()
-            1 ->
+          val valueSet = elementTypes.values.toSet()
+          when {
+            valueSet.isEmpty() -> SchemaBuilder.struct().apply { if (optional) optional() }.build()
+            valueSet.singleOrNull() != null && !forceMapsAsStruct ->
                 SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
                     .apply { if (optional) optional() }
                     .build()

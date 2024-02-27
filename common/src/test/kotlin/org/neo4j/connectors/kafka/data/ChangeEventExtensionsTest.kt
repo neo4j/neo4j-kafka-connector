@@ -35,7 +35,13 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toChangeEvent
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectSchema
 import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toMetadata
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toNode
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toNodeEvent
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toRelationshipEvent
 
 class ChangeEventExtensionsTest {
 
@@ -72,7 +78,9 @@ class ChangeEventExtensionsTest {
             .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
             .field(
                 "txMetadata",
-                SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                SchemaBuilder.struct()
+                    .field("user", Schema.OPTIONAL_STRING_SCHEMA)
+                    .field("app", Schema.OPTIONAL_STRING_SCHEMA)
                     .optional()
                     .build())
             .build()
@@ -93,12 +101,16 @@ class ChangeEventExtensionsTest {
             .put(
                 "txCommitTime",
                 change.metadata.txCommitTime.format(DateTimeFormatter.ISO_DATE_TIME))
-            .put("txMetadata", mapOf("user" to "app_user", "app" to "hr"))
+            .put(
+                "txMetadata",
+                Struct(schema.nestedSchema("metadata.txMetadata"))
+                    .put("user", "app_user")
+                    .put("app", "hr"))
   }
 
   @Test
-  fun `schema and value should be generated correctly for node create events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for node create events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -210,11 +222,14 @@ class ChangeEventExtensionsTest {
                                     .put("id", 5L)
                                     .put("name", "john")
                                     .put("surname", "doe"))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
-  fun `schema and value should be generated correctly for node update events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for node update events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -228,7 +243,7 @@ class ChangeEventExtensionsTest {
                     mapOf("id" to 5L, "name" to "john", "surname" to "doe")),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L))))
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -341,11 +356,14 @@ class ChangeEventExtensionsTest {
                                     .put("name", "john")
                                     .put("surname", "doe")
                                     .put("age", 25L))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
-  fun `schema and value should be generated correctly for node delete events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for node delete events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             NodeEvent(
                 "element-0",
@@ -356,7 +374,7 @@ class ChangeEventExtensionsTest {
                     "Label2" to listOf(mapOf("id" to 5L))),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25)),
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L)),
                 null))
 
     schema.nestedSchema("event") shouldBe
@@ -460,11 +478,14 @@ class ChangeEventExtensionsTest {
                                     .put("name", "john")
                                     .put("surname", "doe")
                                     .put("age", 25L))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
-  fun `schema and value should be generated correctly for relationship create events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for relationship create events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -613,11 +634,14 @@ class ChangeEventExtensionsTest {
                                 Struct(schema.nestedSchema("event.state.after.properties"))
                                     .put("id", 5L)
                                     .put("since", "1999-12-31"))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
-  fun `schema and value should be generated correctly for relationship update events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for relationship update events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -774,11 +798,14 @@ class ChangeEventExtensionsTest {
                                 Struct(schema.nestedSchema("event.state.after.properties"))
                                     .put("id", 5L)
                                     .put("since", "2000-01-01"))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
-  fun `schema and value should be generated correctly for relationship delete events`() {
-    val (_, _, schema, value) =
+  fun `schema and value should be generated and converted back correctly for relationship delete events`() {
+    val (_, change, schema, value) =
         newChangeEvent(
             RelationshipEvent(
                 "rel-0",
@@ -927,6 +954,9 @@ class ChangeEventExtensionsTest {
                                 Struct(schema.nestedSchema("event.state.before.properties"))
                                     .put("id", 5L)
                                     .put("since", "2000-01-01"))))
+
+    val reverted = value.toChangeEvent()
+    reverted shouldBe change
   }
 
   @Test
@@ -943,7 +973,7 @@ class ChangeEventExtensionsTest {
 
     val expectedKeySchema = SchemaBuilder.struct().optional().build()
     schema.nestedSchema("event.keys") shouldBe expectedKeySchema
-    value.nestedValue("event.keys") shouldBe null
+    value.nestedValue("event.keys") shouldBe Struct(expectedKeySchema)
   }
 
   @Test
@@ -963,7 +993,317 @@ class ChangeEventExtensionsTest {
     val expectedKeySchema =
         SchemaBuilder.array(SchemaBuilder.struct().optional().build()).optional().build()
     schema.nestedSchema("event.keys") shouldBe expectedKeySchema
-    value.nestedValue("event.keys") shouldBe null
+    value.nestedValue("event.keys") shouldBe emptyList<Any>()
+  }
+
+  @Test
+  fun `metadata should be converted to struct and back`() {
+    val startTime = ZonedDateTime.now().minusSeconds(1)
+    val commitTime = startTime.plusSeconds(1)
+    val metadata =
+        Metadata(
+            "service",
+            "neo4j",
+            "server-1",
+            CaptureMode.DIFF,
+            "bolt",
+            "127.0.0.1:32000",
+            "127.0.0.1:7687",
+            startTime,
+            commitTime,
+            mapOf("user" to "app_user", "app" to "hr", "xyz" to mapOf("a" to 1L, "b" to 2L)),
+            mapOf("new_field" to "abc", "another_field" to 1L))
+    val schema = metadata.toConnectSchema()
+    val converted = metadata.toConnectValue(schema)
+
+    converted shouldBe
+        Struct(schema)
+            .put("authenticatedUser", "service")
+            .put("executingUser", "neo4j")
+            .put("serverId", "server-1")
+            .put("captureMode", CaptureMode.DIFF.name)
+            .put("connectionType", "bolt")
+            .put("connectionClient", "127.0.0.1:32000")
+            .put("connectionServer", "127.0.0.1:7687")
+            .put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(startTime))
+            .put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(commitTime))
+            .put(
+                "txMetadata",
+                Struct(schema.nestedSchema("txMetadata").schema())
+                    .put("user", "app_user")
+                    .put("app", "hr")
+                    .put(
+                        "xyz",
+                        Struct(schema.nestedSchema("txMetadata.xyz")).put("a", 1L).put("b", 2L)))
+            .put("new_field", "abc")
+            .put("another_field", 1L)
+
+    val reverted = converted.toMetadata()
+    reverted shouldBe metadata
+  }
+
+  @Test
+  fun `node events should be converted to struct and back`() {
+    listOf(
+            NodeEvent(
+                "rel-1",
+                EntityOperation.CREATE,
+                listOf("Person", "Employee"),
+                null,
+                null,
+                NodeState(
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1)))),
+            NodeEvent(
+                "rel-1",
+                EntityOperation.CREATE,
+                listOf("Person", "Employee"),
+                mapOf(),
+                null,
+                NodeState(
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1)))),
+            NodeEvent(
+                "rel-1",
+                EntityOperation.CREATE,
+                listOf("Person", "Employee"),
+                mapOf(
+                    "Person" to
+                        listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
+                    "Employee" to listOf(mapOf("id" to 1L))),
+                null,
+                NodeState(
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1)))),
+            NodeEvent(
+                "rel-1",
+                EntityOperation.UPDATE,
+                listOf("Person", "Employee"),
+                mapOf(
+                    "Person" to
+                        listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
+                    "Employee" to listOf(mapOf("id" to 1L))),
+                NodeState(
+                    listOf("Person"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                        "pob" to "London")),
+                NodeState(
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1)))),
+            NodeEvent(
+                "rel-1",
+                EntityOperation.DELETE,
+                listOf("Person", "Employee"),
+                mapOf(
+                    "Person" to
+                        listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
+                    "Employee" to listOf(mapOf("id" to 1L))),
+                NodeState(
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "id" to 1L,
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1))),
+                null))
+        .forEach { event ->
+          val schema = event.toConnectSchema()
+          val converted = event.toConnectValue(schema)
+          val reverted = converted.toNodeEvent()
+
+          reverted shouldBe event
+        }
+  }
+
+  @Test
+  fun `node should be converted to struct and back`() {
+    val node =
+        Node(
+            "element-id-1",
+            listOf("Person", "Employee"),
+            mapOf(
+                "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
+                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L))))
+    val schema = node.toConnectSchema()
+    val converted = node.toConnectValue(schema)
+
+    converted shouldBe
+        Struct(schema)
+            .put("elementId", "element-id-1")
+            .put("labels", listOf("Person", "Employee"))
+            .put(
+                "keys",
+                Struct(schema.nestedSchema("keys"))
+                    .put(
+                        "Person",
+                        listOf(
+                            Struct(schema.nestedSchema("keys.Person").valueSchema()).put("id", 1L),
+                            Struct(schema.nestedSchema("keys.Person").valueSchema())
+                                .put("name", "john")
+                                .put("surname", "doe")))
+                    .put(
+                        "Employee",
+                        listOf(
+                            Struct(schema.nestedSchema("keys.Employee").valueSchema())
+                                .put("id", 5L)
+                                .put("company_id", 7L))))
+
+    val reverted = converted.toNode()
+    reverted shouldBe node
+  }
+
+  @Test
+  fun `relationship events should be converted to struct and back`() {
+    listOf(
+            RelationshipEvent(
+                "rel-1",
+                "KNOWS",
+                Node(
+                    "node-1",
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                Node(
+                    "node-2",
+                    listOf("Person"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                null,
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(
+                    mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London"))),
+            RelationshipEvent(
+                "rel-1",
+                "KNOWS",
+                Node(
+                    "node-1",
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                Node(
+                    "node-2",
+                    listOf("Person"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                listOf(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(
+                    mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London"))),
+            RelationshipEvent(
+                "rel-1",
+                "KNOWS",
+                Node(
+                    "node-1",
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                Node(
+                    "node-2",
+                    listOf("Person"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                listOf(mapOf("a" to 1L), mapOf("b" to "another")),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(
+                    mapOf(
+                        "since" to LocalDate.of(2012, 10, 1),
+                        "met_at" to "London",
+                        "a" to 1L,
+                        "b" to "another"))),
+            RelationshipEvent(
+                "rel-1",
+                "KNOWS",
+                Node(
+                    "node-1",
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                Node(
+                    "node-2",
+                    listOf("Person"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                listOf(mapOf("a" to 1L), mapOf("b" to "another")),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("a" to 1L, "b" to "another", "c" to 5L)),
+                RelationshipState(
+                    mapOf(
+                        "since" to LocalDate.of(2012, 10, 1),
+                        "met_at" to "London",
+                        "a" to 1L,
+                        "b" to "another"))),
+            RelationshipEvent(
+                "rel-1",
+                "KNOWS",
+                Node(
+                    "node-1",
+                    listOf("Person", "Employee"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                Node(
+                    "node-2",
+                    listOf("Person"),
+                    mapOf(
+                        "Person" to
+                            listOf(
+                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                listOf(mapOf("a" to 1L), mapOf("b" to "another")),
+                EntityOperation.DELETE,
+                RelationshipState(
+                    mapOf(
+                        "since" to LocalDate.of(2012, 10, 1),
+                        "met_at" to "London",
+                        "a" to 1L,
+                        "b" to "another")),
+                null))
+        .forEach { event ->
+          val schema = event.toConnectSchema()
+          val converted = event.toConnectValue(schema)
+          val reverted = converted.toRelationshipEvent()
+
+          reverted shouldBe event
+        }
   }
 
   data class ChangeEventResult<T : Event>(
