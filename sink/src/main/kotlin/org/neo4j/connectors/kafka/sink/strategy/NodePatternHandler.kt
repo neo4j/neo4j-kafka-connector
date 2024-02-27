@@ -16,13 +16,15 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
 
-class NodePatternHandler(val topic: String, val pattern: String, val mergeProperties: Boolean) :
-    SinkStrategyHandler {
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<Query>> {
-    TODO("Not yet implemented")
-  }
-}
+class NodePatternHandler(
+    val topic: String,
+    val pattern: String,
+    mergeProperties: Boolean,
+    batchSize: Int
+) :
+    RedirectingHandler(
+        NodePatternIngestionStrategy(NodePatternConfiguration.parse(pattern, mergeProperties)),
+        batchSize) {}

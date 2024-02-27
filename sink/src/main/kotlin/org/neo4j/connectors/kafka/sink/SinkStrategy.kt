@@ -31,7 +31,7 @@ import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
 import org.neo4j.driver.Query
 
-data class SinkMessage(private val record: SinkRecord) {
+data class SinkMessage(val record: SinkRecord) {
   val topic
     get(): String = record.topic()
 
@@ -63,9 +63,11 @@ data class SinkMessage(private val record: SinkRecord) {
   }
 }
 
+data class ChangeQuery(val txId: Long, val seq: Int, val query: Query)
+
 interface SinkStrategyHandler {
 
-  fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<Query>>
+  fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>>
 
   companion object {
 
@@ -78,7 +80,7 @@ interface SinkStrategyHandler {
 
       val query = originals[SinkConfiguration.CYPHER_TOPIC_PREFIX + topic]
       if (query != null) {
-        return CypherHandler(topic, query)
+        return CypherHandler(topic, query, config.batchSize)
       }
 
       val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]
@@ -87,7 +89,7 @@ interface SinkStrategyHandler {
             topic,
             nodePattern,
             config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
-        )
+            config.batchSize)
       }
 
       val relationshipPattern =
@@ -96,8 +98,9 @@ interface SinkStrategyHandler {
         return RelationshipPatternHandler(
             topic,
             relationshipPattern,
+            config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
             config.getBoolean(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES),
-        )
+            config.batchSize)
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
@@ -115,7 +118,7 @@ interface SinkStrategyHandler {
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
       if (cudTopics.contains(topic)) {
-        return CudHandler(topic)
+        return CudHandler(topic, config.batchSize)
       }
 
       throw ConfigException("Topic $topic is not assigned a sink strategy")

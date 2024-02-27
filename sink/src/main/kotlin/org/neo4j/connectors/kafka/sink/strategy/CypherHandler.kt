@@ -16,12 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.service.sink.strategy.CypherTemplateStrategy
 
-class CypherHandler(val topic: String, val query: String) : SinkStrategyHandler {
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<Query>> {
-    TODO("Not yet implemented")
-  }
-}
+class CypherHandler(val topic: String, val query: String, batchSize: Int) :
+    RedirectingHandler(CypherTemplateStrategy(query), batchSize) {}

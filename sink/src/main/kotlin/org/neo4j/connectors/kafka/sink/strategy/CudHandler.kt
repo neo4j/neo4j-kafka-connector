@@ -16,12 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
 
-class CudHandler(val topic: String) : SinkStrategyHandler {
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<Query>> {
-    TODO("Not yet implemented")
-  }
-}
+class CudHandler(val topic: String, batchSize: Int) :
+    RedirectingHandler(CUDIngestionStrategy(), batchSize) {}
