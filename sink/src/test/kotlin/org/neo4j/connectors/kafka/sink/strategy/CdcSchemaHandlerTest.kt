@@ -17,27 +17,22 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldMatchInOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
-import java.time.ZonedDateTime
-import org.apache.kafka.common.record.TimestampType
-import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.Test
-import org.neo4j.cdc.client.model.CaptureMode
-import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.Event
-import org.neo4j.cdc.client.model.Metadata
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
-import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -136,16 +131,19 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
-                    mapOf(
-                        "nName" to "john",
-                        "nSurname" to "doe",
-                        "nProps" to
-                            mapOf(
-                                "name" to "john",
-                                "surname" to "doe",
-                                "dob" to LocalDate.of(1990, 1, 1)))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
+                        mapOf(
+                            "nName" to "john",
+                            "nSurname" to "doe",
+                            "nProps" to
+                                mapOf(
+                                    "name" to "john",
+                                    "surname" to "doe",
+                                    "dob" to LocalDate.of(1990, 1, 1))))))))
 
     verify(
         listOf(
@@ -166,16 +164,19 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
-                    mapOf(
-                        "nName" to "john",
-                        "nSurname" to "doe",
-                        "nProps" to
-                            mapOf(
-                                "name" to "john",
-                                "surname" to "doe",
-                                "dob" to LocalDate.of(1990, 1, 1)))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
+                        mapOf(
+                            "nName" to "john",
+                            "nSurname" to "doe",
+                            "nProps" to
+                                mapOf(
+                                    "name" to "john",
+                                    "surname" to "doe",
+                                    "dob" to LocalDate.of(1990, 1, 1))))))))
   }
 
   @Test
@@ -200,12 +201,16 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
-                    mapOf(
-                        "nName" to "john",
-                        "nSurname" to "doe",
-                        "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
+                        mapOf(
+                            "nName" to "john",
+                            "nSurname" to "doe",
+                            "nProps" to
+                                mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1))))))))
 
     verify(
         listOf(
@@ -228,16 +233,19 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
-                    mapOf(
-                        "nName" to "john",
-                        "nSurname" to "doe",
-                        "nProps" to
-                            mapOf(
-                                "name" to "john",
-                                "dob" to LocalDate.of(1990, 1, 1),
-                                "married" to null))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        mapOf(
+                            "nName" to "john",
+                            "nSurname" to "doe",
+                            "nProps" to
+                                mapOf(
+                                    "name" to "john",
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                    "married" to null)))))))
 
     verify(
         listOf(
@@ -262,17 +270,20 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
-                    mapOf(
-                        "nId" to 5000L,
-                        "nName" to "john",
-                        "nSurname" to "doe",
-                        "nProps" to
-                            mapOf(
-                                "name" to "john",
-                                "dob" to LocalDate.of(1990, 1, 1),
-                                "married" to null))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        mapOf(
+                            "nId" to 5000L,
+                            "nName" to "john",
+                            "nSurname" to "doe",
+                            "nProps" to
+                                mapOf(
+                                    "name" to "john",
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                    "married" to null)))))))
   }
 
   @Test
@@ -296,9 +307,12 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) DETACH DELETE n",
-                    mapOf("nName" to "joe", "nSurname" to "doe")))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) DETACH DELETE n",
+                        mapOf("nName" to "joe", "nSurname" to "doe"))))))
   }
 
   @Test
@@ -325,15 +339,18 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (start:`Person` {id: ${'$'}startId}) " +
-                        "MERGE (end:`Person` {id: ${'$'}endId}) " +
-                        "MERGE (start)-[r:`KNOWS` {}]->(end) " +
-                        "SET r = ${'$'}rProps",
-                    mapOf(
-                        "startId" to 1L,
-                        "endId" to 2L,
-                        "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1)))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (start:`Person` {id: ${'$'}startId}) " +
+                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
+                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
+                            "SET r = ${'$'}rProps",
+                        mapOf(
+                            "startId" to 1L,
+                            "endId" to 2L,
+                            "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))))))))
   }
 
   @Test
@@ -364,17 +381,20 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                        "MERGE (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
-                        "MERGE (start)-[r:`KNOWS` {}]->(end) " +
-                        "SET r += ${'$'}rProps",
-                    mapOf(
-                        "startId" to 1L,
-                        "startContractId" to 5000L,
-                        "endId" to 2L,
-                        "endContractId" to 5001L,
-                        "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1)))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
+                            "MERGE (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
+                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
+                            "SET r += ${'$'}rProps",
+                        mapOf(
+                            "startId" to 1L,
+                            "startContractId" to 5000L,
+                            "endId" to 2L,
+                            "endContractId" to 5001L,
+                            "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1))))))))
 
     verify(
         listOf(
@@ -400,17 +420,20 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                        "MERGE (end:`Person` {id: ${'$'}endId}) " +
-                        "MERGE (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                        "SET r += ${'$'}rProps",
-                    mapOf(
-                        "startId" to 1L,
-                        "startContractId" to 5000L,
-                        "endId" to 2L,
-                        "rId" to 1001L,
-                        "rProps" to mapOf("name" to "joe"))))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
+                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
+                            "MERGE (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
+                            "SET r += ${'$'}rProps",
+                        mapOf(
+                            "startId" to 1L,
+                            "startContractId" to 5000L,
+                            "endId" to 2L,
+                            "rId" to 1001L,
+                            "rProps" to mapOf("name" to "joe")))))))
   }
 
   @Test
@@ -437,12 +460,15 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MATCH (start:`Person` {id: ${'$'}startId}) " +
-                        "MATCH (end:`Person` {id: ${'$'}endId}) " +
-                        "MATCH (start)-[r:`KNOWS` {}]->(end) " +
-                        "DELETE r",
-                    mapOf("startId" to 1L, "endId" to 2L)))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MATCH (start:`Person` {id: ${'$'}startId}) " +
+                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
+                            "MATCH (start)-[r:`KNOWS` {}]->(end) " +
+                            "DELETE r",
+                        mapOf("startId" to 1L, "endId" to 2L))))))
 
     verify(
         listOf(
@@ -468,58 +494,83 @@ class CdcSchemaHandlerTest {
                 0)),
         listOf(
             listOf(
-                Query(
-                    "MATCH (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                        "MATCH (end:`Person` {id: ${'$'}endId}) " +
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                        "DELETE r",
-                    mapOf(
-                        "startId" to 1L,
-                        "startContractId" to 5000L,
-                        "endId" to 2L,
-                        "rId" to 1001L)))))
+                ChangeQuery(
+                    1,
+                    0,
+                    Query(
+                        "MATCH (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
+                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
+                            "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
+                            "DELETE r",
+                        mapOf(
+                            "startId" to 1L,
+                            "startContractId" to 5000L,
+                            "endId" to 2L,
+                            "rId" to 1001L))))))
   }
 
-  private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<Query>>) {
+  @Test
+  fun `should split changes into transactional boundaries`() {
+    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+
+    val result =
+        handler.handle(
+            listOf(
+                newChangeEventMessage(randomChangeEvent(), 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0),
+                newChangeEventMessage(randomChangeEvent(), 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 2, 0)))
+
+    result
+        .shouldHaveSize(3)
+        .shouldMatchInOrder(
+            { first ->
+              first
+                  .shouldHaveSize(3)
+                  .shouldMatchInOrder(
+                      { q1 ->
+                        q1.txId shouldBe 0
+                        q1.seq shouldBe 0
+                      },
+                      { q2 ->
+                        q2.txId shouldBe 0
+                        q2.seq shouldBe 1
+                      },
+                      { q3 ->
+                        q3.txId shouldBe 0
+                        q3.seq shouldBe 2
+                      })
+            },
+            { second ->
+              second
+                  .shouldHaveSize(2)
+                  .shouldMatchInOrder(
+                      { q1 ->
+                        q1.txId shouldBe 1
+                        q1.seq shouldBe 0
+                      },
+                      { q2 ->
+                        q2.txId shouldBe 1
+                        q2.seq shouldBe 1
+                      })
+            },
+            { third ->
+              third
+                  .shouldHaveSize(1)
+                  .shouldMatchInOrder({ q1 ->
+                    q1.txId shouldBe 2
+                    q1.seq shouldBe 0
+                  })
+            })
+  }
+
+  private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
     val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
 
     val result = handler.handle(messages)
 
     result shouldBe expected
-  }
-
-  private fun <T : Event> newChangeEventMessage(event: T, txId: Long, seq: Int): SinkMessage {
-    val change =
-        ChangeEvent(
-            ChangeIdentifier("change-id"),
-            txId,
-            seq,
-            Metadata(
-                "service",
-                "neo4j",
-                "server-1",
-                CaptureMode.DIFF,
-                "bolt",
-                "127.0.0.1:32000",
-                "127.0.0.1:7687",
-                ZonedDateTime.now().minusSeconds(1),
-                ZonedDateTime.now(),
-                mapOf("user" to "app_user", "app" to "hr"),
-                emptyMap()),
-            event)
-    val changeConnect = change.toConnectValue()
-
-    return SinkMessage(
-        SinkRecord(
-            "my-topic",
-            0,
-            null,
-            null,
-            changeConnect.schema(),
-            changeConnect.value(),
-            0,
-            System.currentTimeMillis(),
-            TimestampType.CREATE_TIME,
-            Headers.from(change)))
   }
 }
