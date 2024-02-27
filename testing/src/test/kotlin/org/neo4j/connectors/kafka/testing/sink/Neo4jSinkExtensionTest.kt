@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import io.kotest.matchers.string.shouldContain
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -293,23 +294,15 @@ class Neo4jSinkExtensionTest {
 
   @Test
   fun `stops execution evaluation if number of queries does not match number of topics`() {
-    val exception1 =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::moreQueriesThanTopicsMethod))
+    assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::noStrategiesMethod))
         }
-    val exception2 =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::moreTopicsThanQueriesMethod))
-        }
+        .message shouldContain "Expected at least one strategy to be defined"
 
-    assertContains(
-        exception1.message!!,
-        "Expected 1 query, but got 2. There must be as many topics (here: 1) as queries defined.",
-    )
-    assertContains(
-        exception2.message!!,
-        "Expected 2 queries, but got 1. There must be as many topics (here: 2) as queries defined.",
-    )
+    assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::duplicateTopicMethod))
+        }
+        .message shouldContain "Same topic alias has been used within multiple sink strategies"
   }
 
   @Neo4jSink(
@@ -318,8 +311,7 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()"],
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
       schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun validMethod() {}
@@ -329,13 +321,12 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()"],
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
       schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
-  @Neo4jSink(topics = ["topic1"], queries = ["MERGE ()"])
+  @Neo4jSink(cypher = [CypherStrategy("topic1", "MERGE ()")])
   @Suppress("UNUSED")
   fun envBackedMethod() {}
 
@@ -346,20 +337,17 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()", "CREATE ()"],
   )
   @Suppress("UNUSED")
-  fun moreQueriesThanTopicsMethod() {}
+  fun noStrategiesMethod() {}
 
   @Neo4jSink(
       kafkaConnectExternalUri = "http://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1", "topic2"],
-      queries = ["MERGE ()"],
-  )
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
+      cud = [CudStrategy("topic1")])
   @Suppress("UNUSED")
-  fun moreTopicsThanQueriesMethod() {}
+  fun duplicateTopicMethod() {}
 }

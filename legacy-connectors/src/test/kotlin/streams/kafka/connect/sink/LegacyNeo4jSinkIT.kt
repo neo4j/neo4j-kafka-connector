@@ -35,18 +35,14 @@ import org.neo4j.driver.Session
 
 abstract class LegacyNeo4jSinkIT {
 
-  companion object {
-    const val TOPIC = "persons"
-  }
-
   @LegacyNeo4jSink(
-      topics = [TOPIC],
+      topics = ["persons"],
       queries =
           [
               "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})"])
   @Test
   fun `writes messages to Neo4j via legacy sink connector`(
-      @TopicProducer producer: ConvertingKafkaProducer,
+      @TopicProducer("persons") producer: ConvertingKafkaProducer,
       session: Session,
       testInfo: TestInfo
   ) {
@@ -61,7 +57,7 @@ abstract class LegacyNeo4jSinkIT {
     val struct = Struct(schema)
     schema.fields().forEach { struct.put(it, value[it.name()]) }
 
-    producer.publish(TOPIC, struct, schema)
+    producer.publish(struct, schema)
 
     await().atMost(30.seconds.toJavaDuration()).until {
       session

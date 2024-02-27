@@ -210,10 +210,11 @@ internal class LegacyNeo4jSinkExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
+    val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
     return ConvertingKafkaProducer(
         keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
         valueConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topicRegistry = topicRegistry)
+        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
   }
 }

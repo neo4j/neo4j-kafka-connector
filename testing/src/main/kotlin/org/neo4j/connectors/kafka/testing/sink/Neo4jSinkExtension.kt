@@ -32,7 +32,6 @@ import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
-import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
@@ -107,11 +106,23 @@ internal class Neo4jSinkExtension(
         errors.add(it.errorMessage())
       }
     }
-    val topicCount = metadata.topics.size
-    if (topicCount != metadata.queries.size) {
-      errors.add(
-          "Expected $topicCount ${pluralize(topicCount, "query", "queries")}, but got ${metadata.queries.size}. There must be as many topics (here: ${topicCount}) as queries defined.")
+
+    val topicCount =
+        metadata.cypher.size +
+            metadata.cdcSchema.size +
+            metadata.cdcSourceId.size +
+            metadata.nodePattern.size +
+            metadata.relationshipPattern.size +
+            metadata.cud.size
+    if (topicCount == 0) {
+      errors.add("Expected at least one strategy to be defined")
     }
+
+    val (topics, _) = buildStrategies(metadata)
+    if (topics.distinct().size != topics.size) {
+      errors.add("Same topic alias has been used within multiple sink strategies")
+    }
+
     if (errors.isNotEmpty()) {
       throw ExtensionConfigurationException(
           "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}",
@@ -122,23 +133,78 @@ internal class Neo4jSinkExtension(
     return ConditionEvaluationResult.enabled("@Neo4jSink and environment properly configured")
   }
 
+  fun buildStrategies(metadata: Neo4jSink): Pair<List<String>, Map<String, Any>> {
+    val topics = mutableListOf<String>()
+    val strategies = mutableMapOf<String, Any>()
+
+    metadata.cypher.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.cypher.topic.$resolved"] = it.query
+    }
+
+    if (metadata.cdcSourceId.isNotEmpty()) {
+      val resolved = metadata.cdcSourceId.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cdc.sourceId.topics"] = resolved.joinToString(",")
+
+      val labelName = metadata.cdcSourceId.first().labelName
+      if (labelName.isNotBlank()) {
+        strategies["neo4j.cdc.sourceId.labelName"] = labelName
+      }
+      val propertyName = metadata.cdcSourceId.first().propertyName
+      if (propertyName.isNotBlank()) {
+        strategies["neo4j.cdc.sourceId.propertyName"] = propertyName
+      }
+    }
+
+    if (metadata.cdcSchema.isNotEmpty()) {
+      val resolved = metadata.cdcSchema.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cdc.schema.topics"] = resolved.joinToString(",")
+    }
+
+    metadata.nodePattern.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.pattern.node.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
+    }
+
+    metadata.relationshipPattern.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.pattern.relationship.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
+      strategies["neo4j.pattern.relationship.merge-properties"] = it.mergeRelationshipProperties
+    }
+
+    if (metadata.cud.isNotEmpty()) {
+      val resolved = metadata.cud.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cud.topics"] = resolved.joinToString(",")
+    }
+
+    return topics to strategies
+  }
+
   override fun beforeEach(extensionContext: ExtensionContext?) {
     if (::driver.isInitialized) {
       driver.verifyConnectivity()
     }
 
+    val (topics, strategies) = buildStrategies(sinkAnnotation)
+
     sink =
         Neo4jSinkRegistration(
-            topicQuerys =
-                sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap().mapKeys {
-                  topicRegistry.resolveTopic(it.key)
-                },
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
             schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation),
             keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
-            valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext))
+            valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
+            topics = topics.distinct(),
+            strategies = strategies)
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }
@@ -209,10 +275,11 @@ internal class Neo4jSinkExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
+    val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
     return ConvertingKafkaProducer(
         keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
         valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topicRegistry = topicRegistry)
+        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
   }
 }

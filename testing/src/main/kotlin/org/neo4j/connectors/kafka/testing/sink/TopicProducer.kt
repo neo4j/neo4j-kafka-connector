@@ -18,4 +18,4 @@ package org.neo4j.connectors.kafka.testing.sink
 
 @Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class TopicProducer()
+annotation class TopicProducer(val topic: String)

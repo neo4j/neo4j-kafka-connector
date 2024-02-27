@@ -29,24 +29,22 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
+import org.neo4j.connectors.kafka.testing.sink.CypherStrategy
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
 abstract class Neo4jSinkIT {
 
-  companion object {
-    const val TOPIC = "persons"
-  }
-
   @Neo4jSink(
-      topics = [TOPIC],
-      queries =
+      cypher =
           [
-              "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})"])
+              CypherStrategy(
+                  "persons",
+                  "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})")])
   @Test
   fun `writes messages to Neo4j via sink connector`(
-      @TopicProducer producer: ConvertingKafkaProducer,
+      @TopicProducer("persons") producer: ConvertingKafkaProducer,
       session: Session,
       testInfo: TestInfo
   ) {
@@ -61,7 +59,7 @@ abstract class Neo4jSinkIT {
     val struct = Struct(schema)
     schema.fields().forEach { struct.put(it, value[it.name()]) }
 
-    producer.publish(TOPIC, struct, schema)
+    producer.publish(struct, schema)
 
     await().atMost(30.seconds.toJavaDuration()).until {
       session

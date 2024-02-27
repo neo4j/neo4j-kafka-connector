@@ -26,13 +26,12 @@ data class ConvertingKafkaProducer(
     val keyConverter: KafkaConverter,
     val valueConverter: KafkaConverter,
     val kafkaProducer: KafkaProducer<Any, Any>,
-    val topicRegistry: TopicRegistry
+    val topic: String
 ) {
 
-  fun publish(topic: String, value: Any, schema: Schema) {
+  fun publish(value: Any, schema: Schema) {
     val serialisedValue = valueConverter.testShimSerializer.serialize(value, schema)
-    val record: ProducerRecord<Any, Any> =
-        ProducerRecord(topicRegistry.resolveTopic(topic), serialisedValue)
+    val record: ProducerRecord<Any, Any> = ProducerRecord(topic, serialisedValue)
     kafkaProducer.send(record)
   }
 }
