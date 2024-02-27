@@ -70,8 +70,9 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
+@Suppress("DEPRECATION")
 @Testcontainers
-class Neo4jSinkTaskTest {
+class DeprecatedNeo4jSinkTaskTest {
 
   companion object {
     @Container
@@ -108,7 +109,7 @@ class Neo4jSinkTaskTest {
 
   @BeforeEach
   fun before() {
-    task = Neo4jSinkTask()
+    task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
   }
 
@@ -1157,7 +1158,7 @@ class Neo4jSinkTaskTest {
                     label = "KNOWS WHO"),
             schema = relSchema)
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
@@ -1822,7 +1823,7 @@ class Neo4jSinkTaskTest {
     }
 
     props[Neo4jConfiguration.DATABASE] = "neo4j"
-    val taskNotValid = Neo4jSinkTask()
+    val taskNotValid = DeprecatedNeo4jSinkTask()
     taskNotValid.initialize(Mockito.mock(SinkTaskContext::class.java))
     taskNotValid.start(props)
 
@@ -1877,14 +1878,14 @@ class Neo4jSinkTaskTest {
 
     // test with large timeout
     props[SinkConfiguration.BATCH_TIMEOUT] = "30s"
-    val taskValidParallelFalse = Neo4jSinkTask()
+    val taskValidParallelFalse = DeprecatedNeo4jSinkTask()
     taskValidParallelFalse.initialize(Mockito.mock(SinkTaskContext::class.java))
     taskValidParallelFalse.start(props)
     taskValidParallelFalse.put(input)
     countFooPersonEntities(batchSize)
 
     props[SinkConfiguration.BATCH_PARALLELIZE] = true.toString()
-    val taskValidParallelTrue = Neo4jSinkTask()
+    val taskValidParallelTrue = DeprecatedNeo4jSinkTask()
     taskValidParallelTrue.initialize(Mockito.mock(SinkTaskContext::class.java))
     taskValidParallelTrue.start(props)
     taskValidParallelTrue.put(input)
@@ -1898,7 +1899,7 @@ class Neo4jSinkTaskTest {
   ) {
     val exception =
         assertFailsWith(ProcessingError::class) {
-          val taskInvalid = Neo4jSinkTask()
+          val taskInvalid = DeprecatedNeo4jSinkTask()
           taskInvalid.initialize(Mockito.mock(SinkTaskContext::class.java))
           taskInvalid.start(props)
           taskInvalid.put(input)

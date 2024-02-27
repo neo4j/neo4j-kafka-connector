@@ -31,7 +31,7 @@ class Neo4jConnector : SinkConnector() {
     this.props = props!!.toMap()
   }
 
-  override fun taskClass(): Class<out Task> = Neo4jNewSinkTask::class.java
+  override fun taskClass(): Class<out Task> = Neo4jSinkTask::class.java
 
   override fun taskConfigs(maxTasks: Int): List<Map<String, String>> = List(maxTasks) { props }
 

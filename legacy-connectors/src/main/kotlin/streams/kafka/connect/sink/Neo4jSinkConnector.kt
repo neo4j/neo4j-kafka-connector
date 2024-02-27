@@ -22,7 +22,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
 import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
-import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
@@ -46,7 +46,7 @@ class Neo4jSinkConnector : SinkConnector() {
   }
 
   override fun taskClass(): Class<out Task> {
-    return Neo4jSinkTask::class.java
+    return DeprecatedNeo4jSinkTask::class.java
   }
 
   override fun config(): ConfigDef {
