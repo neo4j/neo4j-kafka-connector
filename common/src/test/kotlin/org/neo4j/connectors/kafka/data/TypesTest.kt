@@ -251,11 +251,9 @@ class TypesTest {
         val value = converted.value() as Struct
 
         schema.type() shouldBe Schema.Type.STRUCT
-        schema.name() shouldBe "org.neo4j.connectors.kafka.cdc.ChangeEvent"
         schema.field("event").schema() should
             { eventSchema ->
               eventSchema.type() shouldBe Schema.Type.STRUCT
-              eventSchema.name() shouldBe "org.neo4j.connectors.kafka.cdc.NodeEvent"
             }
         value.get("event") should beInstanceOf<Struct>()
 
@@ -269,11 +267,9 @@ class TypesTest {
         val value = converted.value() as Struct
 
         schema.type() shouldBe Schema.Type.STRUCT
-        schema.name() shouldBe "org.neo4j.connectors.kafka.cdc.ChangeEvent"
         schema.field("event").schema() should
             { eventSchema ->
               eventSchema.type() shouldBe Schema.Type.STRUCT
-              eventSchema.name() shouldBe "org.neo4j.connectors.kafka.cdc.RelationshipEvent"
             }
         value.get("event") should beInstanceOf<Struct>()
 

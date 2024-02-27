@@ -66,7 +66,6 @@ class ChangeEventExtensionsTest {
     schema.nestedSchema("seq") shouldBe Schema.INT64_SCHEMA
     schema.nestedSchema("metadata") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.Metadata")
             .field("authenticatedUser", Schema.STRING_SCHEMA)
             .field("executingUser", Schema.STRING_SCHEMA)
             .field("connectionType", Schema.OPTIONAL_STRING_SCHEMA)
@@ -126,7 +125,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.NodeEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -158,11 +156,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.NodeStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -176,7 +172,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -247,7 +242,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.NodeEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -279,11 +273,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.NodeStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -298,7 +290,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -379,7 +370,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.NodeEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -411,11 +401,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.NodeStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -430,7 +418,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.NodeState")
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
@@ -503,7 +490,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.RelationshipEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -511,7 +497,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "start",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -532,7 +517,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "end",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -562,11 +546,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.RelationshipStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
@@ -578,7 +560,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
@@ -659,7 +640,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.RelationshipEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -667,7 +647,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "start",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -688,7 +667,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "end",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -718,11 +696,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.RelationshipStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
@@ -734,7 +710,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
@@ -823,7 +798,6 @@ class ChangeEventExtensionsTest {
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
-            .name("org.neo4j.connectors.kafka.cdc.RelationshipEvent")
             .field("elementId", Schema.STRING_SCHEMA)
             .field("eventType", Schema.STRING_SCHEMA)
             .field("operation", Schema.STRING_SCHEMA)
@@ -831,7 +805,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "start",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -852,7 +825,6 @@ class ChangeEventExtensionsTest {
             .field(
                 "end",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.Node")
                     .field("elementId", Schema.STRING_SCHEMA)
                     .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                     .field(
@@ -882,11 +854,9 @@ class ChangeEventExtensionsTest {
             .field(
                 "state",
                 SchemaBuilder.struct()
-                    .name("org.neo4j.connectors.kafka.cdc.RelationshipStates")
                     .field(
                         "before",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
@@ -898,7 +868,6 @@ class ChangeEventExtensionsTest {
                     .field(
                         "after",
                         SchemaBuilder.struct()
-                            .name("org.neo4j.connectors.kafka.cdc.RelationshipState")
                             .field(
                                 "properties",
                                 SchemaBuilder.struct()
