@@ -59,7 +59,7 @@ abstract class Neo4jSinkIT {
     val struct = Struct(schema)
     schema.fields().forEach { struct.put(it, value[it.name()]) }
 
-    producer.publish(struct, schema)
+    producer.publish(value = struct, valueSchema = schema)
 
     await().atMost(30.seconds.toJavaDuration()).until {
       session

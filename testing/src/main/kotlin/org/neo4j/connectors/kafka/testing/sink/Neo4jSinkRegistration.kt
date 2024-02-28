@@ -29,6 +29,7 @@ internal class Neo4jSinkRegistration(
     neo4jUri: String,
     neo4jUser: String,
     neo4jPassword: String,
+    neo4jDatabase: String,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "all",
@@ -63,6 +64,7 @@ internal class Neo4jSinkRegistration(
                             "neo4j.authentication.type" to "BASIC",
                             "neo4j.authentication.basic.username" to neo4jUser,
                             "neo4j.authentication.basic.password" to neo4jPassword,
+                            "neo4j.database" to neo4jDatabase,
                         )
                         .putConditionally(
                             "key.converter.schema.registry.url", schemaControlRegistryUri) {

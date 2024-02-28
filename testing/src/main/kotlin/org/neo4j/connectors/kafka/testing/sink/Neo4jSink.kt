@@ -27,10 +27,14 @@ annotation class Neo4jSink(
     val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
+    val schemaControlKeyCompatibility: SchemaCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
+    val schemaControlValueCompatibility: SchemaCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
     val neo4jUri: String = DEFAULT_TO_ENV,
     val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
+    val neo4jDatabase: String = "",
+    val dropDatabase: Boolean = true,
     val cypher: Array<CypherStrategy> = [],
     val cdcSchema: Array<CdcSchemaStrategy> = [],
     val cdcSourceId: Array<CdcSourceIdStrategy> = [],
@@ -38,6 +42,16 @@ annotation class Neo4jSink(
     val relationshipPattern: Array<RelationshipPatternStrategy> = [],
     val cud: Array<CudStrategy> = []
 )
+
+enum class SchemaCompatibilityMode {
+  BACKWARD,
+  BACKWARD_TRANSITIVE,
+  FORWARD,
+  FORWARD_TRANSITIVE,
+  FULL,
+  FULL_TRANSITIVE,
+  NONE
+}
 
 annotation class CypherStrategy(val topic: String = "", val query: String)
 

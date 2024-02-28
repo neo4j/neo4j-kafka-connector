@@ -17,21 +17,79 @@
 
 package org.neo4j.connectors.kafka.testing.kafka
 
+import java.net.URI
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.header.Header
 import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.Values
+import org.apache.kafka.connect.storage.SimpleHeaderConverter
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.testing.SchemaRegistrySupport
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
+import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 
 data class ConvertingKafkaProducer(
+    val schemaRegistryURI: URI,
+    val keyCompatibilityMode: SchemaCompatibilityMode,
     val keyConverter: KafkaConverter,
+    val valueCompatibilityMode: SchemaCompatibilityMode,
     val valueConverter: KafkaConverter,
     val kafkaProducer: KafkaProducer<Any, Any>,
     val topic: String
 ) {
 
-  fun publish(value: Any, schema: Schema) {
-    val serialisedValue = valueConverter.testShimSerializer.serialize(value, schema)
-    val record: ProducerRecord<Any, Any> = ProducerRecord(topic, serialisedValue)
-    kafkaProducer.send(record)
+  fun publish(
+      keySchema: Schema? = null,
+      key: Any? = null,
+      valueSchema: Schema,
+      value: Any,
+      timestamp: Long? = null,
+      headers: Map<String, Any> = emptyMap()
+  ) {
+    val serialisedKey =
+        when (key) {
+          null -> null
+          else -> keyConverter.testShimSerializer.serialize(key, keySchema!!)
+        }
+    val serialisedValue = valueConverter.testShimSerializer.serialize(value, valueSchema)
+    val converter = SimpleHeaderConverter()
+    val recordHeaders =
+        headers.map { e ->
+          object : Header {
+            override fun key(): String = e.key
+
+            override fun value(): ByteArray {
+              return converter.fromConnectHeader("", e.key, Values.inferSchema(e.value), e.value)
+            }
+          }
+        }
+
+    ensureSchemaCompatibility(topic)
+
+    val record: ProducerRecord<Any, Any> =
+        ProducerRecord(topic, null, timestamp, serialisedKey, serialisedValue, recordHeaders)
+    kafkaProducer.send(record).get()
+  }
+
+  fun publish(event: ChangeEvent) {
+    val connectValue = event.toConnectValue()
+
+    publish(
+        keySchema = connectValue.schema(),
+        key = connectValue.value(),
+        valueSchema = connectValue.schema(),
+        value = connectValue.value(),
+        timestamp = event.metadata.txCommitTime.toInstant().toEpochMilli(),
+        headers = Headers.from(event).associate { it.key() to it.value() })
+  }
+
+  private fun ensureSchemaCompatibility(topic: String) {
+    SchemaRegistrySupport.setCompatibilityMode(
+        schemaRegistryURI, "$topic-key", keyCompatibilityMode)
+    SchemaRegistrySupport.setCompatibilityMode(
+        schemaRegistryURI, "$topic-value", valueCompatibilityMode)
   }
 }

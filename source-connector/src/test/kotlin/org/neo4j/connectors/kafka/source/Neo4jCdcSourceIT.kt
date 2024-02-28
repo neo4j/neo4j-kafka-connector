@@ -20,10 +20,10 @@ package org.neo4j.connectors.kafka.source
 import io.kotest.matchers.collections.shouldHaveSingleElement
 import io.kotest.matchers.collections.shouldHaveSize
 import java.time.Duration
+import java.time.LocalDate
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.Headers
@@ -58,14 +58,12 @@ abstract class Neo4jCdcSourceIT {
                           patterns = arrayOf(CdcSourceParam("()-[:KNOWS]-()"))))))
   @Test
   fun `should place cdc related information into headers`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-nodes-topic", offset = "earliest")
       nodesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "neo4j-cdc-rels-topic", offset = "earliest")
       relsConsumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
     session
         .run(
             """
@@ -77,10 +75,16 @@ abstract class Neo4jCdcSourceIT {
             mapOf(
                 "person1" to
                     mapOf(
-                        "id" to 1L, "name" to "Jane", "surname" to "Doe", "execId" to executionId),
+                        "id" to 1L,
+                        "name" to "Jane",
+                        "surname" to "Doe",
+                        "dob" to LocalDate.of(2000, 1, 1)),
                 "person2" to
                     mapOf(
-                        "id" to 2L, "name" to "John", "surname" to "Doe", "execId" to executionId)))
+                        "id" to 2L,
+                        "name" to "John",
+                        "surname" to "Doe",
+                        "dob" to LocalDate.of(1999, 1, 1))))
         .consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(nodesConsumer)
