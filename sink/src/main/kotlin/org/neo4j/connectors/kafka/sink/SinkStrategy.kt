@@ -63,7 +63,7 @@ data class SinkMessage(val record: SinkRecord) {
   }
 }
 
-data class ChangeQuery(val txId: Long, val seq: Int, val query: Query)
+data class ChangeQuery(val txId: Long?, val seq: Int?, val query: Query)
 
 interface SinkStrategyHandler {
 

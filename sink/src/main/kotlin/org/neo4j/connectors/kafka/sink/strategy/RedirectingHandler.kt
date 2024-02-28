@@ -32,7 +32,7 @@ open class RedirectingHandler(private val original: IngestionStrategy, private v
             original.deleteNodeEvents(events) +
             original.mergeRelationshipEvents(events) +
             original.deleteRelationshipEvents(events))
-        .map { q -> ChangeQuery(-1, -1, Query(q.query, mapOf("events" to q.events))) }
+        .map { q -> ChangeQuery(null, null, Query(q.query, mapOf("events" to q.events))) }
         .chunked(batchSize)
   }
 }
