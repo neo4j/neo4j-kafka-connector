@@ -6,7 +6,6 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 Apache Software License, Version 2.0
   Apache Commons Collections
   Apache Commons Lang
-  cdc
   Jackson-annotations
   Jackson-core
   jackson-databind
@@ -20,8 +19,8 @@ Apache Software License, Version 2.0
   kotlinx-coroutines-core
   kotlinx-coroutines-reactive
   kotlinx-coroutines-reactor
-  Neo4j Java Driver
   Non-Blocking Reactive Foundation for the JVM
+  org.apiguardian:apiguardian-api
 ------------------------------------------------------------------------------
 
                                  Apache License

@@ -38,6 +38,10 @@ import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrateg
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.renderer.Configuration
+import org.neo4j.cypherdsl.core.renderer.Dialect
+import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SINK) {
@@ -58,6 +62,37 @@ class SinkConfiguration(originals: Map<*, *>) :
   val kafkaBrokerProperties: Map<String, Any?> by lazy {
     originals().filterKeys { it.startsWith("kafka.") }.mapKeys { it.key.substring("kafka.".length) }
   }
+
+  val dialect: Dialect by lazy {
+    session().use {
+      val name = Cypher.name("name")
+      val versions = Cypher.name("versions")
+      val stmt =
+          Cypher.call("dbms.components")
+              .yield(name, versions)
+              .where(name.eq(Cypher.anonParameter("Neo4j Kernel")))
+              .returning(Cypher.valueAt(versions, 0))
+              .build()
+
+      val version = it.run(stmt.cypher, stmt.parameters).single().get(0).asString()
+      if (version.startsWith("5")) {
+        return@lazy Dialect.NEO4J_5
+      } else if (version.startsWith("4")) {
+        return@lazy Dialect.DEFAULT
+      }
+
+      throw ConfigException("unsupported Neo4j version: $version")
+    }
+  }
+
+  val renderer: Renderer by lazy {
+    Renderer.getRenderer(Configuration.newConfig().withDialect(dialect).build())
+  }
+
+  val topicNames: List<String>
+    get() =
+        originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
+            ?: emptyList()
 
   init {
     validateAllTopics(originals)
@@ -86,7 +121,7 @@ class SinkConfiguration(originals: Map<*, *>) :
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
     const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.sourceId.topics"
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.sourceId.labelName"
-    const val CDC_SOURCE_ID_ID_NAME = "neo4j.cdc.sourceId.idName"
+    const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.sourceId.propertyName"
     const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
     const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
     const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
@@ -130,7 +165,7 @@ class SinkConfiguration(originals: Map<*, *>) :
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME ->
               migrated[CDC_SOURCE_ID_LABEL_NAME] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME ->
-              migrated[CDC_SOURCE_ID_ID_NAME] = it.value
+              migrated[CDC_SOURCE_ID_PROPERTY_NAME] = it.value
           DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SCHEMA ->
               migrated[CDC_SCHEMA_TOPICS] = it.value.replaceLegacyDelimiter()
           DeprecatedNeo4jSinkConfiguration.TOPIC_CUD ->
@@ -168,7 +203,7 @@ class SinkConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
             .define(
-                ConfigKeyBuilder.of(CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(CDC_SOURCE_ID_PROPERTY_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
                   group = ConfigGroup.TOPIC_CYPHER_MAPPING

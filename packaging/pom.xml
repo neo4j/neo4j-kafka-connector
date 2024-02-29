@@ -179,7 +179,6 @@
                         <phase>compile</phase>
                         <configuration>
                             <licensingRequirementFiles combine.children="append"/>
-                            <excludedGroups>^((org.neo4j.connectors.kafka){1})$</excludedGroups>
                             <thirdPartyLicensingFilename>${project.artifactId}-${project.version}-NOTICE.txt</thirdPartyLicensingFilename>
                             <prependText>licensing/notice-asl-prefix.txt</prependText>
                             <checkExistingNoticeFile combine.self="override">${project.basedir}/src/main/distributions/text/doc/NOTICE.txt</checkExistingNoticeFile>

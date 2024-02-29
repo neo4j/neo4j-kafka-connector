@@ -27,7 +27,7 @@ object DatabaseSupport {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run("CREATE DATABASE \$db_name", mapOf("db_name" to database))
+    this.run("CREATE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
     return this
   }
 
@@ -35,13 +35,13 @@ object DatabaseSupport {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run("DROP DATABASE \$db_name", mapOf("db_name" to database))
+    this.run("DROP DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
     return this
   }
 
   internal fun Session.enableCdc(database: String = "neo4j"): Session {
     this.run(
-        "ALTER DATABASE \$db_name SET OPTION txLogEnrichment \"FULL\"",
+        "ALTER DATABASE \$db_name SET OPTION txLogEnrichment \"FULL\" WAIT 30 SECONDS",
         mapOf("db_name" to database))
     return this
   }

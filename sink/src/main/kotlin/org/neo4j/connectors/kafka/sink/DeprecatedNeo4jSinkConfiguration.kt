@@ -38,7 +38,7 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
     const val TOPIC_CDC_SOURCE_ID = "neo4j.topic.cdc.sourceId"
     @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME}")
     const val TOPIC_CDC_SOURCE_ID_LABEL_NAME = "neo4j.topic.cdc.sourceId.labelName"
-    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_ID_NAME}")
+    @Deprecated("deprecated in favour of ${SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME}")
     const val TOPIC_CDC_SOURCE_ID_ID_NAME = "neo4j.topic.cdc.sourceId.idName"
     @Deprecated("deprecated in favour of ${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}")
     const val TOPIC_PATTERN_NODE_PREFIX = "neo4j.topic.pattern.node."

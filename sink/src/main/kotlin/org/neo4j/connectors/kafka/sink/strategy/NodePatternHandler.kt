@@ -14,26 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.utils
+package org.neo4j.connectors.kafka.sink.strategy
 
-object StreamsUtils {
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
+import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
 
-  @JvmStatic val UNWIND: String = "UNWIND \$events AS event"
-
-  @JvmStatic val WITH_EVENT_FROM: String = "WITH event, from"
-
-  fun <T> ignoreExceptions(action: () -> T, vararg toIgnore: Class<out Throwable>): T? {
-    return try {
-      action()
-    } catch (e: Throwable) {
-      if (toIgnore.isEmpty()) {
-        return null
-      }
-      return if (toIgnore.any { it.isInstance(e) }) {
-        null
-      } else {
-        throw e
-      }
-    }
-  }
-}
+class NodePatternHandler(
+    val topic: String,
+    val pattern: String,
+    mergeProperties: Boolean,
+    batchSize: Int
+) :
+    RedirectingHandler(
+        NodePatternIngestionStrategy(NodePatternConfiguration.parse(pattern, mergeProperties)),
+        batchSize) {}

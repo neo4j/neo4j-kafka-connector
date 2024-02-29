@@ -124,7 +124,7 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
-            SinkConfiguration.CDC_SOURCE_ID_ID_NAME to testId)
+            SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId)
     val config = SinkConfiguration(originals)
 
     assertEquals(
@@ -216,7 +216,7 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES to "false",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo,bar",
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to "Custom",
-            SinkConfiguration.CDC_SOURCE_ID_ID_NAME to "c_id",
+            SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to "c_id",
             SinkConfiguration.CDC_SCHEMA_TOPICS to "foo, bar",
             SinkConfiguration.CUD_TOPICS to "foo,bar",
             "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to "MERGE (c: Source)",

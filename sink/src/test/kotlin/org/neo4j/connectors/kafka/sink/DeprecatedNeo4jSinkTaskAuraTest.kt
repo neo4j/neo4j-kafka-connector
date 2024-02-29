@@ -49,7 +49,8 @@ import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 
-class Neo4jSinkTaskAuraTest {
+@Suppress("DEPRECATION")
+class DeprecatedNeo4jSinkTaskAuraTest {
 
   companion object {
 
@@ -110,7 +111,7 @@ class Neo4jSinkTaskAuraTest {
     props[SinkConfiguration.BATCH_SIZE] = 2.toString()
     props[SinkTask.TOPICS_CONFIG] = NAME_TOPIC
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
@@ -193,7 +194,7 @@ class Neo4jSinkTaskAuraTest {
                     label = "HAS_REL"),
             schema = org.neo4j.connectors.kafka.events.Schema())
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
@@ -272,7 +273,7 @@ class Neo4jSinkTaskAuraTest {
                     label = "KNOWS WHO"),
             schema = org.neo4j.connectors.kafka.events.Schema())
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input =
@@ -324,7 +325,7 @@ class Neo4jSinkTaskAuraTest {
                             labels = listOf("User", "OldLabel")),
                     after = null),
             schema = org.neo4j.connectors.kafka.events.Schema())
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, cdcDataStart, 42))
@@ -347,7 +348,7 @@ class Neo4jSinkTaskAuraTest {
             "surname" to "Pluto",
             "address" to mapOf("city" to "Cerignola", "CAP" to "12345"))
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, data, 42))
@@ -377,7 +378,7 @@ class Neo4jSinkTaskAuraTest {
             "targetName" to "Foo",
             "targetSurname" to "Bar")
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     val input = listOf(SinkRecord(NAME_TOPIC, 1, null, null, null, data, 42))
@@ -414,7 +415,7 @@ class Neo4jSinkTaskAuraTest {
     props[SinkConfiguration.CUD_TOPICS] = topic
     props[SinkTask.TOPICS_CONFIG] = topic
 
-    val task = Neo4jSinkTask()
+    val task = DeprecatedNeo4jSinkTask()
     task.initialize(Mockito.mock(SinkTaskContext::class.java))
     task.start(props)
     task.put(data)

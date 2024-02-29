@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.neo4j.connectors.kafka.sink
 
 import kotlin.streams.toList
@@ -35,10 +36,12 @@ import org.neo4j.driver.exceptions.TransientException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jSinkService(private val config: SinkConfiguration) :
+@Suppress("DEPRECATION")
+@Deprecated("only used by the legacy connector")
+class DeprecatedNeo4jSinkService(private val config: SinkConfiguration) :
     StreamsSinkService(Neo4jStrategyStorage(config)) {
 
-  private val log: Logger = LoggerFactory.getLogger(Neo4jSinkService::class.java)
+  private val log: Logger = LoggerFactory.getLogger(DeprecatedNeo4jSinkService::class.java)
 
   private val transactionConfig: TransactionConfig = config.txConfig()
 

@@ -39,7 +39,9 @@ fun SinkRecord.isCdcMessage(): Boolean =
     this.headers()?.any { header: Header? -> header?.key() == Headers.KEY_CDC_ID } ?: false
 
 fun SinkRecord.cdcTxId(): Long? =
-    this.headers()?.singleOrNull { it.key() == Headers.KEY_CDC_TX_ID }?.value() as Long?
+    (this.headers()?.singleOrNull { it.key() == Headers.KEY_CDC_TX_ID }?.value() as Number?)
+        ?.toLong()
 
 fun SinkRecord.cdcTxSeq(): Int? =
-    this.headers()?.singleOrNull { it.key() == Headers.KEY_CDC_TX_SEQ }?.value() as Int?
+    (this.headers()?.singleOrNull { it.key() == Headers.KEY_CDC_TX_SEQ }?.value() as Number?)
+        ?.toInt()

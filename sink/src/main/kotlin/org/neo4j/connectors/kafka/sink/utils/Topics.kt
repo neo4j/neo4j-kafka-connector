@@ -101,7 +101,7 @@ data class Topics(
                   .toString(),
               config
                   .getOrDefault(
-                      SinkConfiguration.CDC_SOURCE_ID_ID_NAME,
+                      SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME,
                       SourceIdIngestionStrategyConfig.DEFAULT.idName)
                   .toString())
       return Topics(

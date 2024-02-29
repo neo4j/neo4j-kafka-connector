@@ -16,68 +16,47 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.extensions.asProperties
-import org.neo4j.connectors.kafka.service.errors.ErrorData
-import org.neo4j.connectors.kafka.service.errors.ErrorService
-import org.neo4j.connectors.kafka.service.errors.KafkaErrorService
-import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
+
+  private lateinit var settings: Map<String, String>
   private lateinit var config: SinkConfiguration
-  private lateinit var neo4jSinkService: Neo4jSinkService
-  private lateinit var errorService: ErrorService
+  private lateinit var topicHandlers: Map<String, SinkStrategyHandler>
 
-  override fun version(): String {
-    return VersionUtil.version(this.javaClass as Class<*>)
-  }
+  override fun version(): String = VersionUtil.version(Neo4jSinkTask::class.java)
 
-  override fun start(map: Map<String, String>) {
-    this.config = SinkConfiguration(map)
-    this.neo4jSinkService = Neo4jSinkService(this.config)
-    this.errorService =
-        KafkaErrorService(
-            this.config.kafkaBrokerProperties.asProperties(),
-            ErrorService.ErrorConfig.from(map.asProperties()),
-            log::error)
-  }
+  override fun start(props: Map<String, String>?) {
+    log.info("starting")
 
-  @OptIn(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
-  override fun put(collection: Collection<SinkRecord>) {
-    if (collection.isEmpty()) {
-      return
-    }
-    try {
-      val data = EventBuilder().withBatchSize(config.batchSize).withSinkRecords(collection).build()
-
-      neo4jSinkService.writeData(data)
-    } catch (e: Exception) {
-      errorService.report(
-          collection.map {
-            ErrorData(
-                it.topic(),
-                it.timestamp(),
-                it.key(),
-                it.value(),
-                it.kafkaPartition(),
-                it.kafkaOffset(),
-                this::class.java,
-                this.config.database,
-                e)
-          })
-    }
+    settings = props!!
+    config = SinkConfiguration(settings)
+    topicHandlers = SinkStrategyHandler.createFrom(config)
   }
 
   override fun stop() {
-    log.info("Stop() - Neo4j Sink Service")
-    StreamsUtils.ignoreExceptions(
-        { neo4jSinkService.close() }, UninitializedPropertyAccessException::class.java)
+    config.close()
+  }
+
+  override fun put(records: Collection<SinkRecord>?) {
+    records
+        ?.map { SinkMessage(it) }
+        ?.groupBy { it.topic }
+        ?.mapKeys { topicHandlers.getValue(it.key) }
+        ?.forEach { (handler, messages) ->
+          val txGroups = handler.handle(messages)
+
+          txGroups.forEach { group ->
+            config.session().use { session ->
+              session.writeTransaction(
+                  { tx -> group.forEach { tx.run(it.query).consume() } }, config.txConfig())
+            }
+          }
+        }
   }
 }
