@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.mockito.Mockito.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
@@ -40,6 +41,7 @@ import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
 
 class Neo4jSinkExtensionTest {
 
@@ -77,7 +79,13 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSinkExtension(environment::get)
+    val session = mock<Session>()
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -103,7 +111,13 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSinkExtension(environment::get)
+    val session = mock<Session>()
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.beforeEach(extensionContext)
@@ -134,7 +148,11 @@ class Neo4jSinkExtensionTest {
   @Test
   fun `resolves Session parameter`() {
     val session = mock<Session>()
-    val driver = mock<Driver> { on { session() } doReturn session }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
     val extension = Neo4jSinkExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -157,6 +175,7 @@ class Neo4jSinkExtensionTest {
     val driver =
         mock<Driver> {
           on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
           on { verifyConnectivity() } doAnswer {}
         }
     val extension =
@@ -181,7 +200,11 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val driver = mock<Driver> { on { session() } doReturn session }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
     val extension =
         Neo4jSinkExtension(
             envAccessor = environment::get,
