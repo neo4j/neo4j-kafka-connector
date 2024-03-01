@@ -27,9 +27,11 @@ import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.testing.SchemaRegistrySupport
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
+import org.neo4j.connectors.kafka.utils.JSONUtils
 
 data class ConvertingKafkaProducer(
     val schemaRegistryURI: URI,
@@ -84,6 +86,10 @@ data class ConvertingKafkaProducer(
         value = connectValue.value(),
         timestamp = event.metadata.txCommitTime.toInstant().toEpochMilli(),
         headers = Headers.from(event).associate { it.key() to it.value() })
+  }
+
+  fun publish(event: StreamsTransactionEvent) {
+    publish(valueSchema = Schema.STRING_SCHEMA, value = JSONUtils.writeValueAsString(event))
   }
 
   private fun ensureSchemaCompatibility(topic: String) {

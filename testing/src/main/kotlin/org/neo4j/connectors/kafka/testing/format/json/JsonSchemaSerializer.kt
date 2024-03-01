@@ -17,15 +17,12 @@
 
 package org.neo4j.connectors.kafka.testing.format.json
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.confluent.connect.json.JsonSchemaData
 import io.confluent.kafka.schemaregistry.json.JsonSchemaUtils
 import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
-object JsonSerializer : KafkaRecordSerializer {
-
-  private val objectMapper: ObjectMapper = ObjectMapper()
+object JsonSchemaSerializer : KafkaRecordSerializer {
 
   private val jsonSchemaData = JsonSchemaData()
 

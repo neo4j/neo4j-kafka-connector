@@ -46,7 +46,7 @@ import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
-abstract class Neo4jCdcSchemaSinkIT {
+abstract class Neo4jCdcSchemaIT {
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
   @Test
@@ -59,7 +59,7 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.CREATE,
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 5L))),
@@ -95,7 +95,7 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.UPDATE,
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
@@ -142,7 +142,7 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.DELETE,
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
@@ -178,10 +178,10 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
-                Node("node-2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
@@ -231,10 +231,10 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
-                Node("node-2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
@@ -284,10 +284,10 @@ abstract class Neo4jCdcSchemaSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
-                Node("node-2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
@@ -411,7 +411,7 @@ abstract class Neo4jCdcSchemaSinkIT {
     producer.publish(
         newEvent(
             4,
-            2,
+            0,
             RelationshipEvent(
                 "knows1",
                 "KNOWS",
@@ -424,7 +424,7 @@ abstract class Neo4jCdcSchemaSinkIT {
     producer.publish(
         newEvent(
             4,
-            0,
+            1,
             NodeEvent(
                 "person1",
                 EntityOperation.DELETE,
@@ -436,7 +436,7 @@ abstract class Neo4jCdcSchemaSinkIT {
     producer.publish(
         newEvent(
             4,
-            1,
+            2,
             NodeEvent(
                 "person2",
                 EntityOperation.DELETE,
@@ -474,11 +474,11 @@ abstract class Neo4jCdcSchemaSinkIT {
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
-class Neo4jCdcSchemaSinkAvroIT : Neo4jCdcSchemaSinkIT()
+class Neo4JCdcSchemaAvroIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-class Neo4jCdcSchemaSinkJsonIT : Neo4jCdcSchemaSinkIT()
+class Neo4JCdcSchemaJsonIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
 @Disabled
-class Neo4jCdcSchemaSinkProtobufIT : Neo4jCdcSchemaSinkIT()
+class Neo4JCdcSchemaProtobufIT : Neo4jCdcSchemaIT()

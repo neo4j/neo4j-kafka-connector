@@ -46,7 +46,7 @@ import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
-abstract class Neo4jCdcSourceIdSinkIT {
+abstract class Neo4jCdcSourceIdIT {
 
   @Neo4jSink(cdcSourceId = [CdcSourceIdStrategy("source-id", "SourceEvent", "sourceId")])
   @Test
@@ -59,7 +59,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.CREATE,
                 emptyList(),
                 emptyMap(),
@@ -71,13 +71,13 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "node-element-id"))
+                  mapOf("sourceId" to "person1"))
               .single()
 
       result.get("n").asNode() should
           {
             it.labels() shouldBe listOf("SourceEvent")
-            it.asMap() shouldBe mapOf("sourceId" to "node-element-id", "id" to 5L)
+            it.asMap() shouldBe mapOf("sourceId" to "person1", "id" to 5L)
           }
     }
   }
@@ -91,7 +91,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
     session
         .run(
             "CREATE (n:SourceEvent:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "node-element-id", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
         .consume()
 
     producer.publish(
@@ -99,7 +99,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.UPDATE,
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
@@ -117,7 +117,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "node-element-id"))
+                  mapOf("sourceId" to "person1"))
               .single()
 
       result.get("n").asNode() should
@@ -125,7 +125,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
             it.labels() shouldBe listOf("SourceEvent", "Person", "Employee")
             it.asMap() shouldBe
                 mapOf(
-                    "sourceId" to "node-element-id",
+                    "sourceId" to "person1",
                     "id" to 5L,
                     "name" to "john",
                     "surname" to "doe",
@@ -143,7 +143,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
     session
         .run(
             "CREATE (n:SourceEvent) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "node-element-id", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
         .consume()
 
     producer.publish(
@@ -151,7 +151,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             NodeEvent(
-                "node-element-id",
+                "person1",
                 EntityOperation.DELETE,
                 emptyList(),
                 emptyMap(),
@@ -163,7 +163,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "node-element-id"))
+                  mapOf("sourceId" to "person1"))
               .list()
 
       result shouldHaveSize 0
@@ -183,8 +183,8 @@ abstract class Neo4jCdcSourceIdSinkIT {
             CREATE (n2:SourceEvent:Person) SET n2 = ${'$'}person2
             """,
             mapOf(
-                "person1" to mapOf("sourceId" to "node-1", "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("sourceId" to "node-2", "name" to "mary", "surname" to "doe")))
+                "person1" to mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")))
         .consume()
 
     producer.publish(
@@ -192,10 +192,10 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), emptyMap()),
-                Node("node-2", listOf("Person"), emptyMap()),
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), emptyMap()),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
@@ -206,23 +206,22 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "rel-element-id"))
+                  mapOf("sourceId" to "knows1"))
               .single()
 
       result.get("r").asRelationship() should
           {
-            it.asMap() shouldBe
-                mapOf("sourceId" to "rel-element-id", "since" to LocalDate.of(2000, 1, 1))
+            it.asMap() shouldBe mapOf("sourceId" to "knows1", "since" to LocalDate.of(2000, 1, 1))
           }
       result.get("start").asNode() should
           {
             it.labels() shouldBe listOf("SourceEvent", "Person")
-            it.asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "john", "surname" to "doe")
+            it.asMap() shouldBe mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe")
           }
       result.get("end").asNode() should
           {
             it.labels() shouldBe listOf("SourceEvent", "Person")
-            it.asMap() shouldBe mapOf("sourceId" to "node-2", "name" to "mary", "surname" to "doe")
+            it.asMap() shouldBe mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")
           }
     }
   }
@@ -241,11 +240,11 @@ abstract class Neo4jCdcSourceIdSinkIT {
             CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
             """,
             mapOf(
-                "person1" to mapOf("sourceId" to "node-1", "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("sourceId" to "node-2", "name" to "mary", "surname" to "doe"),
+                "person1" to mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe"),
                 "knows" to
                     mapOf(
-                        "sourceId" to "rel-element-id",
+                        "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1),
                         "type" to "friend")))
         .consume()
@@ -255,10 +254,10 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), emptyMap()),
-                Node("node-2", listOf("Person"), emptyMap()),
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), emptyMap()),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
@@ -269,23 +268,22 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "rel-element-id"))
+                  mapOf("sourceId" to "knows1"))
               .single()
 
       result.get("r").asRelationship() should
           {
-            it.asMap() shouldBe
-                mapOf("sourceId" to "rel-element-id", "since" to LocalDate.of(1999, 1, 1))
+            it.asMap() shouldBe mapOf("sourceId" to "knows1", "since" to LocalDate.of(1999, 1, 1))
           }
       result.get("start").asNode() should
           {
             it.labels() shouldBe listOf("SourceEvent", "Person")
-            it.asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "john", "surname" to "doe")
+            it.asMap() shouldBe mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe")
           }
       result.get("end").asNode() should
           {
             it.labels() shouldBe listOf("SourceEvent", "Person")
-            it.asMap() shouldBe mapOf("sourceId" to "node-2", "name" to "mary", "surname" to "doe")
+            it.asMap() shouldBe mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")
           }
     }
   }
@@ -302,11 +300,11 @@ abstract class Neo4jCdcSourceIdSinkIT {
                 "CREATE (n2:SourceEvent:Person) SET n2 = ${'$'}person2 " +
                 "CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows",
             mapOf(
-                "person1" to mapOf("sourceId" to "node-1", "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("sourceId" to "node-2", "name" to "mary", "surname" to "doe"),
+                "person1" to mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe"),
                 "knows" to
                     mapOf(
-                        "sourceId" to "rel-element-id",
+                        "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1),
                         "type" to "friend")))
         .consume()
@@ -316,10 +314,10 @@ abstract class Neo4jCdcSourceIdSinkIT {
             0,
             0,
             RelationshipEvent(
-                "rel-element-id",
+                "knows1",
                 "KNOWS",
-                Node("node-1", listOf("Person"), emptyMap()),
-                Node("node-2", listOf("Person"), emptyMap()),
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), emptyMap()),
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
@@ -330,7 +328,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
           session
               .run(
                   "MATCH ()-[r:KNOWS {sourceId: ${'$'}sourceId}]->() RETURN count(r)",
-                  mapOf("sourceId" to "rel-element-id"))
+                  mapOf("sourceId" to "knows1"))
               .single()
 
       result.get(0).asInt() shouldBe 0
@@ -450,7 +448,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
     producer.publish(
         newEvent(
             4,
-            2,
+            0,
             RelationshipEvent(
                 "knows1",
                 "KNOWS",
@@ -463,7 +461,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
     producer.publish(
         newEvent(
             4,
-            0,
+            1,
             NodeEvent(
                 "person1",
                 EntityOperation.DELETE,
@@ -475,7 +473,7 @@ abstract class Neo4jCdcSourceIdSinkIT {
     producer.publish(
         newEvent(
             4,
-            1,
+            2,
             NodeEvent(
                 "person2",
                 EntityOperation.DELETE,
@@ -513,11 +511,11 @@ abstract class Neo4jCdcSourceIdSinkIT {
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
-class Neo4jCdcSourceIdSinkAvroIT : Neo4jCdcSourceIdSinkIT()
+class Neo4JCdcSourceIdAvroIT : Neo4jCdcSourceIdIT()
 
 @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-class Neo4jCdcSourceIdSinkJsonIT : Neo4jCdcSourceIdSinkIT()
+class Neo4JCdcSourceIdJsonIT : Neo4jCdcSourceIdIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
 @Disabled
-class Neo4jCdcSourceIdSinkProtobufIT : Neo4jCdcSourceIdSinkIT()
+class Neo4JCdcSourceIdProtobufIT : Neo4jCdcSourceIdIT()
