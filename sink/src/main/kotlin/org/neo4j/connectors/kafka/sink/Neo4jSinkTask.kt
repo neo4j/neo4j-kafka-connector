@@ -36,7 +36,7 @@ class Neo4jSinkTask : SinkTask() {
 
     settings = props!!
     config = SinkConfiguration(settings)
-    topicHandlers = SinkStrategyHandler.createFrom(config)
+    topicHandlers = config.topicHandlers
   }
 
   override fun stop() {

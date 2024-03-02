@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternConfiguration
 import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 
 class RelationshipPatternHandler(
     val topic: String,
@@ -30,4 +31,7 @@ class RelationshipPatternHandler(
         RelationshipPatternIngestionStrategy(
             RelationshipPatternConfiguration.parse(
                 pattern, mergeNodeProperties, mergeRelProperties)),
-        batchSize) {}
+        batchSize) {
+
+  override fun strategy() = SinkStrategy.RELATIONSHIP_PATTERN
+}

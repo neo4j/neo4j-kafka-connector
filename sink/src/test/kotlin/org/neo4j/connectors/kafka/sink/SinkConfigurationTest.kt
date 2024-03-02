@@ -16,18 +16,56 @@
  */
 package org.neo4j.connectors.kafka.sink
 
+import io.kotest.matchers.shouldBe
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
+import org.neo4j.driver.TransactionConfig
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 
+@Testcontainers
 class SinkConfigurationTest {
+  companion object {
+    @Container
+    val neo4j: Neo4jContainer<*> =
+        Neo4jContainer("neo4j:5-enterprise")
+            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withoutAuthentication()
+
+    private lateinit var driver: Driver
+    private lateinit var session: Session
+
+    @BeforeAll
+    @JvmStatic
+    fun setUpContainer() {
+      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
+      session = driver.session()
+    }
+
+    @AfterAll
+    @JvmStatic
+    fun tearDownContainer() {
+      session.close()
+      driver.close()
+    }
+  }
 
   @Test
   fun `should throw a ConfigException because of mismatch`() {
@@ -225,5 +263,107 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo")
 
     assertEquals(expected, actual)
+  }
+
+  @ParameterizedTest
+  @EnumSource(SinkStrategy::class, names = ["CDC_SOURCE_ID", "CDC_SCHEMA", "CUD"])
+  fun `should return correct telemetry data for cdc and cud strategies`(strategy: SinkStrategy) {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar",
+            when (strategy) {
+              SinkStrategy.CDC_SCHEMA -> SinkConfiguration.CDC_SCHEMA_TOPICS
+              SinkStrategy.CDC_SOURCE_ID -> SinkConfiguration.CDC_SOURCE_ID_TOPICS
+              SinkStrategy.CUD -> SinkConfiguration.CUD_TOPICS
+              else -> throw IllegalArgumentException(strategy.name)
+            } to "bar",
+        )
+    val config = SinkConfiguration(originals)
+
+    config.txConfig() shouldBe
+        TransactionConfig.builder()
+            .withMetadata(
+                mapOf(
+                    "app" to "kafka-sink",
+                    "metadata" to mapOf("strategies" to strategy.description)))
+            .build()
+  }
+
+  @Test
+  fun `should return correct telemetry data for cypher strategy`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar",
+            SinkConfiguration.CYPHER_TOPIC_PREFIX + "bar" to "RETURN 1")
+    val config = SinkConfiguration(originals)
+
+    config.txConfig() shouldBe
+        TransactionConfig.builder()
+            .withMetadata(
+                mapOf("app" to "kafka-sink", "metadata" to mapOf("strategies" to "cypher")))
+            .build()
+  }
+
+  @Test
+  fun `should return correct telemetry data for node pattern strategy`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar",
+            SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + "bar" to "Label{!id}")
+    val config = SinkConfiguration(originals)
+
+    config.txConfig() shouldBe
+        TransactionConfig.builder()
+            .withMetadata(
+                mapOf("app" to "kafka-sink", "metadata" to mapOf("strategies" to "node-pattern")))
+            .build()
+  }
+
+  @Test
+  fun `should return correct telemetry data for relationship pattern strategy`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar",
+            SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + "bar" to
+                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
+    val config = SinkConfiguration(originals)
+
+    config.txConfig() shouldBe
+        TransactionConfig.builder()
+            .withMetadata(
+                mapOf(
+                    "app" to "kafka-sink",
+                    "metadata" to mapOf("strategies" to "relationship-pattern")))
+            .build()
+  }
+
+  @Test
+  fun `should return correct telemetry data for multiple strategies`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "foo,bar,baz",
+            SinkConfiguration.CUD_TOPICS to "baz",
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
+            SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + "bar" to
+                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
+    val config = SinkConfiguration(originals)
+
+    config.txConfig() shouldBe
+        TransactionConfig.builder()
+            .withMetadata(
+                mapOf(
+                    "app" to "kafka-sink",
+                    "metadata" to mapOf("strategies" to "cdc-source-id,cud,relationship-pattern")))
+            .build()
   }
 }

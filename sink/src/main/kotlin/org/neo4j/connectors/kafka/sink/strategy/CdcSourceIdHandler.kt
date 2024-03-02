@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
 import org.neo4j.cypherdsl.core.Relationship
@@ -30,6 +31,8 @@ class CdcSourceIdHandler(
     private val labelName: String,
     private val propertyName: String
 ) : CdcHandler() {
+
+  override fun strategy() = SinkStrategy.CDC_SOURCE_ID
 
   override fun transformCreate(event: NodeEvent): Query {
     val node = buildNode(event.elementId, "n")

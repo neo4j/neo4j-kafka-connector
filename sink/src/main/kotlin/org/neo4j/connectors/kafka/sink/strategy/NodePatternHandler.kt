@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
 import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 
 class NodePatternHandler(
     val topic: String,
@@ -27,4 +28,7 @@ class NodePatternHandler(
 ) :
     RedirectingHandler(
         NodePatternIngestionStrategy(NodePatternConfiguration.parse(pattern, mergeProperties)),
-        batchSize) {}
+        batchSize) {
+
+  override fun strategy() = SinkStrategy.NODE_PATTERN
+}

@@ -21,6 +21,7 @@ package streams.kafka.connect.sink
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkConfiguration
 import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
@@ -36,7 +37,10 @@ class Neo4jSinkConnector : SinkConnector() {
 
   override fun start(props: MutableMap<String, String>?) {
     settings = props!!
-    config = SinkConfiguration(SinkConfiguration.migrateSettings(settings))
+    config =
+        SinkConfiguration(
+            SinkConfiguration.migrateSettings(settings) +
+                mapOf(Neo4jConfiguration.DEPRECATED to "true"))
   }
 
   override fun stop() {}

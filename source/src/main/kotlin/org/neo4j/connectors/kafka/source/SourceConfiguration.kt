@@ -43,9 +43,9 @@ import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
 import org.neo4j.driver.TransactionConfig
 
-enum class SourceType {
-  QUERY,
-  CDC
+enum class SourceType(val description: String) {
+  QUERY("query"),
+  CDC("cdc")
 }
 
 enum class StartFrom {
@@ -343,9 +343,13 @@ class SourceConfiguration(originals: Map<*, *>) :
       new.withTimeout(queryTimeout.toJavaDuration())
     }
 
-    new.withMetadata(buildMap { original.metadata().forEach { (k, v) -> this[k] = v as Any } })
+    new.withMetadata(buildMap { original.metadata().forEach { (k, v) -> this[k] = v.asObject() } })
 
     return new.build()
+  }
+
+  override fun telemetryData(): Map<String, Any> {
+    return mapOf("strategies" to strategy.description)
   }
 
   fun validate() {

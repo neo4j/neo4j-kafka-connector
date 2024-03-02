@@ -63,9 +63,20 @@ data class SinkMessage(val record: SinkRecord) {
   }
 }
 
+enum class SinkStrategy(val description: String) {
+  CDC_SCHEMA("cdc-schema"),
+  CDC_SOURCE_ID("cdc-source-id"),
+  CYPHER("cypher"),
+  CUD("cud"),
+  NODE_PATTERN("node-pattern"),
+  RELATIONSHIP_PATTERN("relationship-pattern")
+}
+
 data class ChangeQuery(val txId: Long?, val seq: Int?, val query: Query)
 
 interface SinkStrategyHandler {
+
+  fun strategy(): SinkStrategy
 
   fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>>
 
