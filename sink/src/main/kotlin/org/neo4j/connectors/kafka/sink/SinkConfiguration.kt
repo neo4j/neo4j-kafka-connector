@@ -122,9 +122,9 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val BATCH_PARALLELIZE = "neo4j.batch-parallelize"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
-    const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.sourceId.topics"
-    const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.sourceId.labelName"
-    const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.sourceId.propertyName"
+    const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.source-id.topics"
+    const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
+    const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
     const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
     const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
     const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
