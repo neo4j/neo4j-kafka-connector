@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import io.kotest.matchers.string.shouldContain
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.mockito.Mockito.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
@@ -39,6 +41,7 @@ import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
 
 class Neo4jSinkExtensionTest {
 
@@ -76,7 +79,13 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSinkExtension(environment::get)
+    val session = mock<Session>()
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
 
@@ -102,7 +111,13 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val extension = Neo4jSinkExtension(environment::get)
+    val session = mock<Session>()
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.beforeEach(extensionContext)
@@ -133,7 +148,11 @@ class Neo4jSinkExtensionTest {
   @Test
   fun `resolves Session parameter`() {
     val session = mock<Session>()
-    val driver = mock<Driver> { on { session() } doReturn session }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
     val extension = Neo4jSinkExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -156,6 +175,7 @@ class Neo4jSinkExtensionTest {
     val driver =
         mock<Driver> {
           on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
           on { verifyConnectivity() } doAnswer {}
         }
     val extension =
@@ -180,7 +200,11 @@ class Neo4jSinkExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val driver = mock<Driver> { on { session() } doReturn session }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
     val extension =
         Neo4jSinkExtension(
             envAccessor = environment::get,
@@ -293,23 +317,15 @@ class Neo4jSinkExtensionTest {
 
   @Test
   fun `stops execution evaluation if number of queries does not match number of topics`() {
-    val exception1 =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::moreQueriesThanTopicsMethod))
+    assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::noStrategiesMethod))
         }
-    val exception2 =
-        assertFailsWith<ExtensionConfigurationException> {
-          extension.evaluateExecutionCondition(extensionContextFor(::moreTopicsThanQueriesMethod))
-        }
+        .message shouldContain "Expected at least one strategy to be defined"
 
-    assertContains(
-        exception1.message!!,
-        "Expected 1 query, but got 2. There must be as many topics (here: 1) as queries defined.",
-    )
-    assertContains(
-        exception2.message!!,
-        "Expected 2 queries, but got 1. There must be as many topics (here: 2) as queries defined.",
-    )
+    assertFailsWith<ExtensionConfigurationException> {
+          extension.evaluateExecutionCondition(extensionContextFor(::duplicateTopicMethod))
+        }
+        .message shouldContain "Same topic alias has been used within multiple sink strategies"
   }
 
   @Neo4jSink(
@@ -318,8 +334,7 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()"],
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
       schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun validMethod() {}
@@ -329,13 +344,12 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()"],
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
       schemaControlRegistryUri = "http://example.com")
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
-  @Neo4jSink(topics = ["topic1"], queries = ["MERGE ()"])
+  @Neo4jSink(cypher = [CypherStrategy("topic1", "MERGE ()")])
   @Suppress("UNUSED")
   fun envBackedMethod() {}
 
@@ -346,20 +360,17 @@ class Neo4jSinkExtensionTest {
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1"],
-      queries = ["MERGE ()", "CREATE ()"],
   )
   @Suppress("UNUSED")
-  fun moreQueriesThanTopicsMethod() {}
+  fun noStrategiesMethod() {}
 
   @Neo4jSink(
       kafkaConnectExternalUri = "http://example.com",
       neo4jUri = "neo4j://example.com",
       neo4jUser = "user",
       neo4jPassword = "password",
-      topics = ["topic1", "topic2"],
-      queries = ["MERGE ()"],
-  )
+      cypher = [CypherStrategy("topic1", "MERGE ()")],
+      cud = [CudStrategy("topic1")])
   @Suppress("UNUSED")
-  fun moreTopicsThanQueriesMethod() {}
+  fun duplicateTopicMethod() {}
 }

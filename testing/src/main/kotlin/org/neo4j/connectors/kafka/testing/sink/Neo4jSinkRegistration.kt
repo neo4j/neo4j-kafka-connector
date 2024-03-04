@@ -26,10 +26,10 @@ import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
 internal class Neo4jSinkRegistration(
-    topicQuerys: Map<String, String>,
     neo4jUri: String,
     neo4jUser: String,
     neo4jPassword: String,
+    neo4jDatabase: String,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "all",
@@ -37,20 +37,21 @@ internal class Neo4jSinkRegistration(
     includeMessagesInErrorLog: Boolean = true,
     schemaControlRegistryUri: String,
     keyConverter: KafkaConverter,
-    valueConverter: KafkaConverter
+    valueConverter: KafkaConverter,
+    topics: List<String>,
+    strategies: Map<String, Any>
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
   private val payload: Map<String, Any>
 
   init {
-    val queries = topicQuerys.mapKeys { "neo4j.cypher.topic.${it.key}" }
     payload =
         mutableMapOf(
                 "name" to name,
                 "config" to
                     mutableMapOf<String, Any>(
-                            "topics" to topicQuerys.keys.joinToString(","),
+                            "topics" to topics.joinToString(","),
                             "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
                             "key.converter" to keyConverter.className,
                             "value.converter" to valueConverter.className,
@@ -63,6 +64,7 @@ internal class Neo4jSinkRegistration(
                             "neo4j.authentication.type" to "BASIC",
                             "neo4j.authentication.basic.username" to neo4jUser,
                             "neo4j.authentication.basic.password" to neo4jPassword,
+                            "neo4j.database" to neo4jDatabase,
                         )
                         .putConditionally(
                             "key.converter.schema.registry.url", schemaControlRegistryUri) {
@@ -72,7 +74,7 @@ internal class Neo4jSinkRegistration(
                             "value.converter.schema.registry.url", schemaControlRegistryUri) {
                               valueConverter.supportsSchemaRegistry
                             })
-            .nestUnder("config", queries)
+            .nestUnder("config", strategies)
             .toMap()
   }
 

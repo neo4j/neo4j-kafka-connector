@@ -39,19 +39,22 @@ class Neo4jSinkRegistrationTest {
             "errors.log.enable" to true,
             "errors.log.include.messages" to true,
             "neo4j.uri" to "neo4j://example.com",
+            "neo4j.database" to "database",
             "neo4j.authentication.type" to "BASIC",
             "neo4j.authentication.basic.username" to "user",
             "neo4j.authentication.basic.password" to "password",
             "neo4j.cypher.topic.my-topic" to "MERGE ()")
     val registration =
         Neo4jSinkRegistration(
-            topicQuerys = mapOf("my-topic" to "MERGE ()"),
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
+            neo4jDatabase = "database",
             schemaControlRegistryUri = "http://example.com",
             keyConverter = KafkaConverter.AVRO,
-            valueConverter = KafkaConverter.AVRO)
+            valueConverter = KafkaConverter.AVRO,
+            topics = listOf("my-topic"),
+            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"))
 
     val payload = registration.getPayload()
 
@@ -63,19 +66,22 @@ class Neo4jSinkRegistrationTest {
   fun `creates payload with multiple topics`() {
     val registration =
         Neo4jSinkRegistration(
-            topicQuerys = mapOf("topic1" to "MERGE ()", "topic2" to "CREATE ()"),
             neo4jUri = "neo4j://example.com",
             neo4jUser = "user",
             neo4jPassword = "password",
+            neo4jDatabase = "database",
             schemaControlRegistryUri = "http://example.com",
             keyConverter = KafkaConverter.AVRO,
-            valueConverter = KafkaConverter.AVRO)
+            valueConverter = KafkaConverter.AVRO,
+            topics = listOf("topic1", "topic2"),
+            strategies =
+                mapOf("neo4j.cypher.topic.topic1" to "MERGE ()", "neo4j.cud.topics" to "topic2"))
 
     val payload = registration.getPayload()
 
     val config = payload["config"]
     assertIs<Map<*, *>>(config)
     assertEquals("MERGE ()", config["neo4j.cypher.topic.topic1"])
-    assertEquals("CREATE ()", config["neo4j.cypher.topic.topic2"])
+    assertEquals("topic2", config["neo4j.cud.topics"])
   }
 }

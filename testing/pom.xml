@@ -146,6 +146,11 @@
             <artifactId>cdc</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.neo4j.connectors.kafka</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
         </dependency>

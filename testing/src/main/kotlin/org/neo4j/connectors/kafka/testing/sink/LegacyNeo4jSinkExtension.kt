@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import java.net.URI
 import java.util.*
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -210,10 +211,14 @@ internal class LegacyNeo4jSinkExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
+    val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
     return ConvertingKafkaProducer(
+        schemaRegistryURI = URI(schemaControlRegistryExternalUri.resolve(sinkAnnotation)),
+        keyCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
         keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+        valueCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
         valueConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topicRegistry = topicRegistry)
+        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
   }
 }

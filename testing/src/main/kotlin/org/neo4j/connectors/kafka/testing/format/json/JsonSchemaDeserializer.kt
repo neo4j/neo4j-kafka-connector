@@ -22,7 +22,7 @@ import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeE
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordDeserializer
 import org.neo4j.connectors.kafka.testing.format.MappingException
 
-object JsonDeserializer : KafkaRecordDeserializer {
+object JsonSchemaDeserializer : KafkaRecordDeserializer {
 
   @Suppress("UNCHECKED_CAST")
   override fun <K> deserialize(sourceValue: Any?, targetClass: Class<K>): K? {

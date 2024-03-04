@@ -59,7 +59,7 @@ data class SinkMessage(val record: SinkRecord) {
         else Pair(record.cdcTxId()!!, record.cdcTxSeq()!!)
 
   override fun toString(): String {
-    return "SinkMessage{offset=${record.kafkaOffset()},timestamp=${record.timestamp()},timestampType=${record.timestampType()}}"
+    return "SinkMessage{topic=${record.topic()},partition=${record.kafkaPartition()},offset=${record.kafkaOffset()},timestamp=${record.timestamp()},timestampType=${record.timestampType()}}"
   }
 }
 

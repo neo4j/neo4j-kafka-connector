@@ -14,8 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.sink
+package org.neo4j.connectors.kafka.testing.format.string
 
-@Target(AnnotationTarget.VALUE_PARAMETER)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class TopicProducer(val topic: String)
+import org.apache.kafka.connect.data.Schema
+import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
+
+object StringSerializer : KafkaRecordSerializer {
+
+  override fun serialize(value: Any, schema: Schema): Any {
+    return when (value) {
+      is String -> value
+      else -> value.toString()
+    }
+  }
+}
