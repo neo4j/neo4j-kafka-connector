@@ -17,7 +17,9 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import java.net.URI
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -31,8 +33,9 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
-import org.neo4j.connectors.kafka.testing.WordSupport.pluralize
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
@@ -41,12 +44,17 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 internal class Neo4jSinkExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+
+  private val log: Logger = LoggerFactory.getLogger(Neo4jSinkExtension::class.java)
 
   private val paramResolvers =
       ParameterResolvers(
@@ -62,6 +70,8 @@ internal class Neo4jSinkExtension(
   private lateinit var driver: Driver
 
   private lateinit var session: Session
+
+  private lateinit var neo4jDatabase: String
 
   private val brokerExternalHost =
       AnnotationValueResolver(Neo4jSink::brokerExternalHost, envAccessor)
@@ -107,11 +117,23 @@ internal class Neo4jSinkExtension(
         errors.add(it.errorMessage())
       }
     }
-    val topicCount = metadata.topics.size
-    if (topicCount != metadata.queries.size) {
-      errors.add(
-          "Expected $topicCount ${pluralize(topicCount, "query", "queries")}, but got ${metadata.queries.size}. There must be as many topics (here: ${topicCount}) as queries defined.")
+
+    val topicCount =
+        metadata.cypher.size +
+            metadata.cdcSchema.size +
+            metadata.cdcSourceId.size +
+            metadata.nodePattern.size +
+            metadata.relationshipPattern.size +
+            metadata.cud.size
+    if (topicCount == 0) {
+      errors.add("Expected at least one strategy to be defined")
     }
+
+    val (topics, _) = buildStrategies(metadata)
+    if (topics.distinct().size != topics.size) {
+      errors.add("Same topic alias has been used within multiple sink strategies")
+    }
+
     if (errors.isNotEmpty()) {
       throw ExtensionConfigurationException(
           "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}",
@@ -122,31 +144,89 @@ internal class Neo4jSinkExtension(
     return ConditionEvaluationResult.enabled("@Neo4jSink and environment properly configured")
   }
 
-  override fun beforeEach(extensionContext: ExtensionContext?) {
-    if (::driver.isInitialized) {
-      driver.verifyConnectivity()
+  fun buildStrategies(metadata: Neo4jSink): Pair<List<String>, Map<String, Any>> {
+    val topics = mutableListOf<String>()
+    val strategies = mutableMapOf<String, Any>()
+
+    metadata.cypher.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.cypher.topic.$resolved"] = it.query
     }
+
+    if (metadata.cdcSourceId.isNotEmpty()) {
+      val resolved = metadata.cdcSourceId.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cdc.sourceId.topics"] = resolved.joinToString(",")
+
+      val labelName = metadata.cdcSourceId.first().labelName
+      if (labelName.isNotBlank()) {
+        strategies["neo4j.cdc.sourceId.labelName"] = labelName
+      }
+      val propertyName = metadata.cdcSourceId.first().propertyName
+      if (propertyName.isNotBlank()) {
+        strategies["neo4j.cdc.sourceId.propertyName"] = propertyName
+      }
+    }
+
+    if (metadata.cdcSchema.isNotEmpty()) {
+      val resolved = metadata.cdcSchema.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cdc.schema.topics"] = resolved.joinToString(",")
+    }
+
+    metadata.nodePattern.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.pattern.node.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
+    }
+
+    metadata.relationshipPattern.forEach {
+      val resolved = topicRegistry.resolveTopic(it.topic)
+      topics.add(resolved)
+      strategies["neo4j.pattern.relationship.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
+      strategies["neo4j.pattern.relationship.merge-properties"] = it.mergeRelationshipProperties
+    }
+
+    if (metadata.cud.isNotEmpty()) {
+      val resolved = metadata.cud.map { topicRegistry.resolveTopic(it.topic) }
+      topics.addAll(resolved)
+      strategies["neo4j.cud.topics"] = resolved.joinToString(",")
+    }
+
+    return topics to strategies
+  }
+
+  override fun beforeEach(context: ExtensionContext?) {
+    ensureDatabase(context)
+
+    val (topics, strategies) = buildStrategies(sinkAnnotation)
 
     sink =
         Neo4jSinkRegistration(
-            topicQuerys =
-                sinkAnnotation.topics.zip(sinkAnnotation.queries).toMap().mapKeys {
-                  topicRegistry.resolveTopic(it.key)
-                },
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
+            neo4jDatabase = neo4jDatabase,
             schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation),
-            keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
-            valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext))
+            keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
+            valueConverter = keyValueConverterResolver.resolveValueConverter(context),
+            topics = topics.distinct(),
+            strategies = strategies)
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }
 
   override fun afterEach(extensionContent: ExtensionContext?) {
     if (::driver.isInitialized) {
-      session.close()
+      if (sinkAnnotation.dropDatabase) {
+        session.dropDatabase(neo4jDatabase).close()
+      }
       driver.close()
+    } else if (sinkAnnotation.dropDatabase) {
+      createDriver().use { dr -> dr.session().use { it.dropDatabase(neo4jDatabase) } }
     }
     sink.unregister()
   }
@@ -169,12 +249,33 @@ internal class Neo4jSinkExtension(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
       @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
   ): Any {
+    ensureDatabase(extensionContext)
+    driver = createDriver()
+    session = driver.session(SessionConfig.forDatabase(neo4jDatabase))
+    return session
+  }
+
+  private fun createDriver(): Driver {
     val uri = neo4jExternalUri.resolve(sinkAnnotation)
     val username = neo4jUser.resolve(sinkAnnotation)
     val password = neo4jPassword.resolve(sinkAnnotation)
-    driver = driverFactory(uri, AuthTokens.basic(username, password))
-    session = driver.session()
-    return session
+    return driverFactory(uri, AuthTokens.basic(username, password))
+  }
+
+  private fun ensureDatabase(context: ExtensionContext?) {
+    if (this::neo4jDatabase.isInitialized) {
+      return
+    }
+    neo4jDatabase = sinkAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
+    log.debug(
+        "Using database {} for test {}",
+        neo4jDatabase,
+        "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",
+    )
+    createDriver().use { driver ->
+      driver.verifyConnectivity()
+      driver.session().use { session -> session.createDatabase(neo4jDatabase) }
+    }
   }
 
   private fun resolveProducer(
@@ -209,10 +310,14 @@ internal class Neo4jSinkExtension(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
+    val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
     return ConvertingKafkaProducer(
+        schemaRegistryURI = URI(schemaControlRegistryExternalUri.resolve(sinkAnnotation)),
         keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
+        keyCompatibilityMode = sinkAnnotation.schemaControlKeyCompatibility,
         valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
+        valueCompatibilityMode = sinkAnnotation.schemaControlValueCompatibility,
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topicRegistry = topicRegistry)
+        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
   }
 }

@@ -29,10 +29,12 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroDeserializer
 import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
-import org.neo4j.connectors.kafka.testing.format.json.JsonDeserializer
-import org.neo4j.connectors.kafka.testing.format.json.JsonSerializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonSchemaDeserializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonSchemaSerializer
 import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufDeserializer
 import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
+import org.neo4j.connectors.kafka.testing.format.string.StringDeserializer
+import org.neo4j.connectors.kafka.testing.format.string.StringSerializer
 
 enum class KafkaConverter(
     val className: String,
@@ -52,14 +54,20 @@ enum class KafkaConverter(
       className = "io.confluent.connect.json.JsonSchemaConverter",
       deserializerClass = KafkaJsonSchemaDeserializer::class.java,
       serializerClass = KafkaJsonSchemaSerializer::class.java,
-      testShimDeserializer = JsonDeserializer,
-      testShimSerializer = JsonSerializer),
+      testShimDeserializer = JsonSchemaDeserializer,
+      testShimSerializer = JsonSchemaSerializer),
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       deserializerClass = KafkaProtobufDeserializer::class.java,
       serializerClass = KafkaProtobufSerializer::class.java,
       testShimDeserializer = ProtobufDeserializer,
-      testShimSerializer = ProtobufSerializer)
+      testShimSerializer = ProtobufSerializer),
+  STRING(
+      className = "org.apache.kafka.connect.storage.StringConverter",
+      deserializerClass = org.apache.kafka.common.serialization.StringDeserializer::class.java,
+      serializerClass = org.apache.kafka.common.serialization.StringSerializer::class.java,
+      testShimDeserializer = StringDeserializer,
+      testShimSerializer = StringSerializer),
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)

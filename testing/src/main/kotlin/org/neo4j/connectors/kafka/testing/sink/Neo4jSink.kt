@@ -27,10 +27,55 @@ annotation class Neo4jSink(
     val kafkaConnectExternalUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryUri: String = DEFAULT_TO_ENV,
     val schemaControlRegistryExternalUri: String = DEFAULT_TO_ENV,
+    val schemaControlKeyCompatibility: SchemaCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
+    val schemaControlValueCompatibility: SchemaCompatibilityMode = SchemaCompatibilityMode.BACKWARD,
     val neo4jUri: String = DEFAULT_TO_ENV,
     val neo4jExternalUri: String = DEFAULT_TO_ENV,
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
-    val topics: Array<String>,
-    val queries: Array<String>
+    val neo4jDatabase: String = "",
+    val dropDatabase: Boolean = true,
+    val cypher: Array<CypherStrategy> = [],
+    val cdcSchema: Array<CdcSchemaStrategy> = [],
+    val cdcSourceId: Array<CdcSourceIdStrategy> = [],
+    val nodePattern: Array<NodePatternStrategy> = [],
+    val relationshipPattern: Array<RelationshipPatternStrategy> = [],
+    val cud: Array<CudStrategy> = []
 )
+
+enum class SchemaCompatibilityMode {
+  BACKWARD,
+  BACKWARD_TRANSITIVE,
+  FORWARD,
+  FORWARD_TRANSITIVE,
+  FULL,
+  FULL_TRANSITIVE,
+  NONE
+}
+
+annotation class CypherStrategy(val topic: String = "", val query: String)
+
+annotation class CdcSourceIdStrategy(
+    val topic: String,
+    val labelName: String = "",
+    val propertyName: String = ""
+)
+
+annotation class CdcSchemaStrategy(
+    val topic: String,
+)
+
+annotation class NodePatternStrategy(
+    val topic: String,
+    val pattern: String,
+    val mergeNodeProperties: Boolean
+)
+
+annotation class RelationshipPatternStrategy(
+    val topic: String,
+    val pattern: String,
+    val mergeNodeProperties: Boolean,
+    val mergeRelationshipProperties: Boolean
+)
+
+annotation class CudStrategy(val topic: String)
