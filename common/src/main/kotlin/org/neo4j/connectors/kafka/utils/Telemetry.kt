@@ -52,7 +52,9 @@ object Telemetry {
     )
   }
 
-  private fun runningInCCloud(provider: EnvironmentProvider = SystemEnvironmentProvider): Boolean {
+  private fun runningInConfluentCloud(
+      provider: EnvironmentProvider = SystemEnvironmentProvider
+  ): Boolean {
     val value = provider.get(CONFLUENT_ENV)
     if (value.isNullOrEmpty()) {
       return false
@@ -69,7 +71,7 @@ object Telemetry {
   ): String {
     return String.format(
         "%s-%s%s%s",
-        if (runningInCCloud(provider)) "confluent-cloud" else "kafka",
+        if (runningInConfluentCloud(provider)) "confluent-cloud" else "kafka",
         if (legacy) "legacy-$type" else type,
         if (version.isEmpty()) "" else "/$version",
         if (comment.isEmpty()) "" else " ($comment)")

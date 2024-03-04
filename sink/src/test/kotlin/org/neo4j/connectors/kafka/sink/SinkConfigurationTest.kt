@@ -30,9 +30,7 @@ import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.driver.TransactionConfig
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
 class SinkConfigurationTest {
 
   @Test
