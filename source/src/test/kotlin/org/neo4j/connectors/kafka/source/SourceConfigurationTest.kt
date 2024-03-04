@@ -708,11 +708,9 @@ class SourceConfigurationTest {
             "neo4j.cdc.topic.deletes.patterns.0.operation" to "DELETE")
     val config = SourceConfiguration(originals)
 
+    config.userAgentComment() shouldBe "cdc"
     config.txConfig() shouldBe
-        TransactionConfig.builder()
-            .withMetadata(
-                mapOf("app" to "kafka-source", "metadata" to mapOf("strategies" to "cdc")))
-            .build()
+        TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-source")).build()
   }
 
   @Test
@@ -729,10 +727,8 @@ class SourceConfigurationTest {
             "neo4j.topic" to "my-topic")
     val config = SourceConfiguration(originals)
 
+    config.userAgentComment() shouldBe "query"
     config.txConfig() shouldBe
-        TransactionConfig.builder()
-            .withMetadata(
-                mapOf("app" to "kafka-source", "metadata" to mapOf("strategies" to "query")))
-            .build()
+        TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-source")).build()
   }
 }

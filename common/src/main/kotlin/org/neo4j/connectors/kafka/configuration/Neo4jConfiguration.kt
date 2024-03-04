@@ -165,7 +165,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       }
     }
 
-    config.withUserAgent(userAgent(type.description, deprecated))
+    config.withUserAgent(userAgent(type.description, deprecated, userAgentComment()))
     config.withConnectionAcquisitionTimeout(
         connectionAcquisitionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
     config.withConnectionTimeout(connectionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
@@ -211,12 +211,19 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   open fun txConfig(): TransactionConfig =
       TransactionConfig.builder()
           .withMetadata(
-              mapOf(
-                  "app" to connectorInformation(type.description, deprecated),
-                  "metadata" to telemetryData()))
+              buildMap {
+                this["app"] = connectorInformation(type.description, deprecated)
+
+                val metadata = telemetryData()
+                if (metadata.isNotEmpty()) {
+                  this["metadata"] = metadata
+                }
+              })
           .build()
 
   open fun telemetryData(): Map<String, Any> = emptyMap()
+
+  open fun userAgentComment(): String = ""
 
   companion object {
     const val DEPRECATED = "neo4j.deprecated"

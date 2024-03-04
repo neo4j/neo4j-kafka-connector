@@ -348,9 +348,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     return new.build()
   }
 
-  override fun telemetryData(): Map<String, Any> {
-    return mapOf("strategies" to strategy.description)
-  }
+  override fun userAgentComment(): String = strategy.description
 
   fun validate() {
     val def = config()

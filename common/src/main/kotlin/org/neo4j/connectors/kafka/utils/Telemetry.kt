@@ -26,8 +26,8 @@ interface EnvironmentProvider {
 }
 
 object Telemetry {
-  internal val CONFLUENT_ENV: String = "CONFLUENT_ENV"
-  internal val CONFLUENT_ENV_VALUE: String = "CCLOUD_CUSTOM_CONNECTOR"
+  internal const val CONFLUENT_ENV: String = "CONFLUENT_ENV"
+  internal const val CONFLUENT_ENV_VALUE: String = "CCLOUD_CUSTOM_CONNECTOR"
 
   private object SystemEnvironmentProvider : EnvironmentProvider {
     override fun get(env: String): String? {
@@ -38,11 +38,12 @@ object Telemetry {
   fun userAgent(
       type: String,
       legacy: Boolean = false,
+      comment: String = "",
       provider: EnvironmentProvider = SystemEnvironmentProvider
   ): String {
     return String.format(
-        "%s/%s (%s) %s %s %s",
-        connectorInformation(type, legacy, provider),
+        "%s/%s %s (%s) %s %s",
+        connectorInformation(type, legacy, comment, provider),
         VersionUtil.version(Neo4jConfiguration::class.java),
         platform(),
         kafkaConnectInformation(),
@@ -62,12 +63,14 @@ object Telemetry {
   internal fun connectorInformation(
       type: String,
       legacy: Boolean,
+      comment: String = "",
       provider: EnvironmentProvider = SystemEnvironmentProvider
   ): String {
     return String.format(
-        "%s-%s",
+        "%s-%s%s",
         if (runningInCCloud(provider)) "confluent-cloud" else "kafka",
-        if (legacy) "legacy-$type" else type)
+        if (legacy) "legacy-$type" else type,
+        if (comment.isEmpty()) "" else " ($comment)")
   }
 
   internal fun kafkaConnectInformation(): String {

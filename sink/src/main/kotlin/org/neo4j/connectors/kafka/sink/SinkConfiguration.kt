@@ -94,17 +94,12 @@ class SinkConfiguration(originals: Map<String, *>) :
         originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
             ?: emptyList()
 
-  val topicHandlers: Map<String, SinkStrategyHandler> by lazy {
-    SinkStrategyHandler.createFrom(this)
-  }
-
-  private val strategiesTelemetry: String by lazy {
-    topicHandlers.values.map { it.strategy().description }.toSet().sorted().joinToString(",")
-  }
-
   init {
     validateAllTopics(originals)
   }
+
+  override fun userAgentComment(): String =
+      SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 
   private fun validateAllTopics(originals: Map<*, *>) {
     TopicUtils.validate<ConfigException>(this.topics)
@@ -119,10 +114,6 @@ class SinkConfiguration(originals: Map<String, *>) :
       throw ConfigException(
           "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($topics) and configured topics ($allTopics)")
     }
-  }
-
-  override fun telemetryData(): Map<String, Any> {
-    return mapOf("strategies" to strategiesTelemetry)
   }
 
   companion object {

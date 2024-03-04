@@ -134,5 +134,49 @@ interface SinkStrategyHandler {
 
       throw ConfigException("Topic $topic is not assigned a sink strategy")
     }
+
+    fun configuredStrategies(config: SinkConfiguration): Set<String> {
+      return config.topicNames
+          .map { topic -> topicStrategy(topic, config) }
+          .map { it.description }
+          .toSet()
+    }
+
+    private fun topicStrategy(topic: String, config: SinkConfiguration): SinkStrategy {
+      val originals = config.originalsStrings()
+
+      val query = originals[SinkConfiguration.CYPHER_TOPIC_PREFIX + topic]
+      if (query != null) {
+        return SinkStrategy.CYPHER
+      }
+
+      val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]
+      if (nodePattern != null) {
+        return SinkStrategy.NODE_PATTERN
+      }
+
+      val relationshipPattern =
+          originals[SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + topic]
+      if (relationshipPattern != null) {
+        return SinkStrategy.RELATIONSHIP_PATTERN
+      }
+
+      val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
+      if (cdcSourceIdTopics.contains(topic)) {
+        return SinkStrategy.CDC_SOURCE_ID
+      }
+
+      val cdcSchemaTopics = config.getList(SinkConfiguration.CDC_SCHEMA_TOPICS)
+      if (cdcSchemaTopics.contains(topic)) {
+        return SinkStrategy.CDC_SCHEMA
+      }
+
+      val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
+      if (cudTopics.contains(topic)) {
+        return SinkStrategy.CUD
+      }
+
+      throw ConfigException("Topic $topic is not assigned a sink strategy")
+    }
   }
 }
