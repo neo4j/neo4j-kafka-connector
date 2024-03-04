@@ -34,15 +34,18 @@ import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
 abstract class LegacyNeo4jSinkIT {
+  companion object {
+    const val TOPIC = "persons"
+  }
 
   @LegacyNeo4jSink(
-      topics = ["persons"],
+      topics = [TOPIC],
       queries =
           [
               "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})"])
   @Test
   fun `writes messages to Neo4j via legacy sink connector`(
-      @TopicProducer("persons") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       testInfo: TestInfo
   ) {

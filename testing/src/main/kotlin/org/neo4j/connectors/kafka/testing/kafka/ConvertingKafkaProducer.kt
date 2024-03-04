@@ -51,12 +51,12 @@ data class ConvertingKafkaProducer(
       timestamp: Long? = null,
       headers: Map<String, Any> = emptyMap()
   ) {
-    val serialisedKey =
+    val serializedKey =
         when (key) {
           null -> null
           else -> keyConverter.testShimSerializer.serialize(key, keySchema!!)
         }
-    val serialisedValue = valueConverter.testShimSerializer.serialize(value, valueSchema)
+    val serializedValue = valueConverter.testShimSerializer.serialize(value, valueSchema)
     val converter = SimpleHeaderConverter()
     val recordHeaders =
         headers.map { e ->
@@ -72,7 +72,7 @@ data class ConvertingKafkaProducer(
     ensureSchemaCompatibility(topic)
 
     val record: ProducerRecord<Any, Any> =
-        ProducerRecord(topic, null, timestamp, serialisedKey, serialisedValue, recordHeaders)
+        ProducerRecord(topic, null, timestamp, serializedKey, serializedValue, recordHeaders)
     kafkaProducer.send(record).get()
   }
 

@@ -48,10 +48,14 @@ import org.neo4j.driver.Session
 
 abstract class Neo4jCdcSchemaIT {
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  companion object {
+    const val TOPIC = "schema"
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should create node`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     producer.publish(
@@ -66,7 +70,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 NodeState(emptyList(), mapOf("id" to 5L, "name" to "john", "surname" to "doe")))))
 
-    eventually(60.seconds) {
+    eventually(30.seconds) {
       val result =
           session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 5)).single()
 
@@ -78,10 +82,10 @@ abstract class Neo4jCdcSchemaIT {
     }
   }
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should update node`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session
@@ -125,10 +129,10 @@ abstract class Neo4jCdcSchemaIT {
     }
   }
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should delete node`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session
@@ -156,10 +160,10 @@ abstract class Neo4jCdcSchemaIT {
     }
   }
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should create relationship`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session
@@ -207,10 +211,10 @@ abstract class Neo4jCdcSchemaIT {
     }
   }
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should update relationship`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session
@@ -260,10 +264,10 @@ abstract class Neo4jCdcSchemaIT {
     }
   }
 
-  @Neo4jSink(cdcSchema = [CdcSchemaStrategy("schema")])
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should delete relationship`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session
@@ -303,10 +307,10 @@ abstract class Neo4jCdcSchemaIT {
   @Neo4jSink(
       schemaControlKeyCompatibility = SchemaCompatibilityMode.NONE,
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
-      cdcSchema = [CdcSchemaStrategy("schema")])
+      cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
   fun `should sync continuous changes`(
-      @TopicProducer("schema") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     producer.publish(

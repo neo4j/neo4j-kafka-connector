@@ -35,16 +35,19 @@ import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
 abstract class Neo4jSinkIT {
+  companion object {
+    const val TOPIC = "persons"
+  }
 
   @Neo4jSink(
       cypher =
           [
               CypherStrategy(
-                  "persons",
+                  TOPIC,
                   "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})")])
   @Test
   fun `writes messages to Neo4j via sink connector`(
-      @TopicProducer("persons") producer: ConvertingKafkaProducer,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       testInfo: TestInfo
   ) {
