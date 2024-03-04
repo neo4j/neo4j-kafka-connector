@@ -42,11 +42,11 @@ object Telemetry {
       provider: EnvironmentProvider = SystemEnvironmentProvider
   ): String {
     return String.format(
-        "%s/%s %s (%s) %s %s",
-        connectorInformation(type, legacy, comment, provider),
-        VersionUtil.version(Neo4jConfiguration::class.java),
-        platform(),
+        "%s %s (%s) %s %s",
+        connectorInformation(
+            type, legacy, VersionUtil.version(Neo4jConfiguration::class.java), comment, provider),
         kafkaConnectInformation(),
+        platform(),
         neo4jDriverVersion(),
         jreInformation(),
     )
@@ -63,13 +63,15 @@ object Telemetry {
   internal fun connectorInformation(
       type: String,
       legacy: Boolean,
+      version: String = "",
       comment: String = "",
       provider: EnvironmentProvider = SystemEnvironmentProvider
   ): String {
     return String.format(
-        "%s-%s%s",
+        "%s-%s%s%s",
         if (runningInCCloud(provider)) "confluent-cloud" else "kafka",
         if (legacy) "legacy-$type" else type,
+        if (version.isEmpty()) "" else "/$version",
         if (comment.isEmpty()) "" else " ($comment)")
   }
 
