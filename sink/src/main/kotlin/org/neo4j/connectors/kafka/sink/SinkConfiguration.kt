@@ -43,7 +43,7 @@ import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Dialect
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
-class SinkConfiguration(originals: Map<*, *>) :
+class SinkConfiguration(originals: Map<String, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SINK) {
 
   val parallelBatches
@@ -97,6 +97,9 @@ class SinkConfiguration(originals: Map<*, *>) :
   init {
     validateAllTopics(originals)
   }
+
+  override fun userAgentComment(): String =
+      SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 
   private fun validateAllTopics(originals: Map<*, *>) {
     TopicUtils.validate<ConfigException>(this.topics)

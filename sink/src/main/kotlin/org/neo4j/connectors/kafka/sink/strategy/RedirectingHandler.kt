@@ -23,8 +23,10 @@ import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
 import org.neo4j.driver.Query
 
-open class RedirectingHandler(private val original: IngestionStrategy, private val batchSize: Int) :
-    SinkStrategyHandler {
+abstract class RedirectingHandler(
+    private val original: IngestionStrategy,
+    private val batchSize: Int
+) : SinkStrategyHandler {
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     val events = messages.map { it.record.toStreamsSinkEntity() }
 

@@ -36,6 +36,7 @@ import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.driver.TransactionConfig
 
 class SourceConfigurationTest {
 
@@ -686,5 +687,48 @@ class SourceConfigurationTest {
           it shouldHaveMessage
               "Invalid value INVALID for configuration neo4j.cdc.topic.topic-1.key-strategy: Must be one of: 'SKIP', 'ELEMENT_ID', 'ENTITY_KEYS', 'WHOLE_VALUE'."
         }
+  }
+
+  @Test
+  fun `should return correct telemetry data for cdc strategy`() {
+    val originals =
+        mapOf(
+            "neo4j.uri" to "neo4j://neo4j:7687",
+            "neo4j.authentication.type" to "BASIC",
+            "neo4j.authentication.basic.username" to "neo4j",
+            "neo4j.authentication.basic.password" to "password",
+            "neo4j.source-strategy" to "CDC",
+            "neo4j.start-from" to "NOW",
+            "neo4j.cdc.poll-interval" to "5s",
+            "neo4j.cdc.topic.creates.patterns.0.pattern" to "(:TestSource)",
+            "neo4j.cdc.topic.creates.patterns.0.operation" to "CREATE",
+            "neo4j.cdc.topic.updates.patterns.0.pattern" to "(:TestSource)",
+            "neo4j.cdc.topic.updates.patterns.0.operation" to "UPDATE",
+            "neo4j.cdc.topic.deletes.patterns.0.pattern" to "(:TestSource)",
+            "neo4j.cdc.topic.deletes.patterns.0.operation" to "DELETE")
+    val config = SourceConfiguration(originals)
+
+    config.userAgentComment() shouldBe "cdc"
+    config.txConfig() shouldBe
+        TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-source")).build()
+  }
+
+  @Test
+  fun `should return correct telemetry data for query strategy`() {
+    val originals =
+        mapOf(
+            "neo4j.uri" to "neo4j://neo4j:7687",
+            "neo4j.authentication.type" to "BASIC",
+            "neo4j.authentication.basic.username" to "neo4j",
+            "neo4j.authentication.basic.password" to "password",
+            "neo4j.source-strategy" to "QUERY",
+            "neo4j.query" to "RETURN 1",
+            "neo4j.start-from" to "NOW",
+            "neo4j.topic" to "my-topic")
+    val config = SourceConfiguration(originals)
+
+    config.userAgentComment() shouldBe "query"
+    config.txConfig() shouldBe
+        TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-source")).build()
   }
 }

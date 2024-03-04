@@ -21,6 +21,7 @@ package streams.kafka.connect.source
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration
 import org.neo4j.connectors.kafka.source.Neo4jQueryTask
 import org.neo4j.connectors.kafka.source.SourceConfiguration
@@ -40,7 +41,10 @@ class Neo4jSourceConnector : SourceConnector() {
 
   override fun start(props: MutableMap<String, String>?) {
     settings = props!!
-    config = SourceConfiguration(SourceConfiguration.migrateSettings(settings))
+    config =
+        SourceConfiguration(
+            SourceConfiguration.migrateSettings(settings) +
+                mapOf(Neo4jConfiguration.DEPRECATED to "true"))
   }
 
   override fun stop() {}

@@ -28,6 +28,8 @@ import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
+import org.neo4j.connectors.kafka.utils.Telemetry.connectorInformation
+import org.neo4j.connectors.kafka.utils.Telemetry.userAgent
 import org.neo4j.driver.AccessMode
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -44,9 +46,9 @@ import org.neo4j.driver.net.ServerAddress
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-enum class ConnectorType {
-  SINK,
-  SOURCE
+enum class ConnectorType(val description: String) {
+  SINK("sink"),
+  SOURCE("source"),
 }
 
 enum class AuthenticationType {
@@ -60,6 +62,10 @@ enum class AuthenticationType {
 open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val type: ConnectorType) :
     AbstractConfig(configDef, originals), Closeable {
   private val logger: Logger = LoggerFactory.getLogger(Neo4jConfiguration::class.java)
+
+  private val deprecated: Boolean by lazy {
+    originalsStrings().getOrElse(DEPRECATED) { "false" }.toBoolean()
+  }
 
   val database
     get(): String = getString(DATABASE)
@@ -159,6 +165,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       }
     }
 
+    config.withUserAgent(userAgent(type.description, deprecated, userAgentComment()))
     config.withConnectionAcquisitionTimeout(
         connectionAcquisitionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
     config.withConnectionTimeout(connectionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
@@ -201,9 +208,26 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     return driver.session(config.build())
   }
 
-  open fun txConfig(): TransactionConfig = TransactionConfig.empty()
+  open fun txConfig(): TransactionConfig =
+      TransactionConfig.builder()
+          .withMetadata(
+              buildMap {
+                this["app"] = connectorInformation(type.description, deprecated)
+
+                val metadata = telemetryData()
+                if (metadata.isNotEmpty()) {
+                  this["metadata"] = metadata
+                }
+              })
+          .build()
+
+  open fun telemetryData(): Map<String, Any> = emptyMap()
+
+  open fun userAgentComment(): String = ""
 
   companion object {
+    const val DEPRECATED = "neo4j.deprecated"
+
     const val DEFAULT_MAX_RETRY_ATTEMPTS = 5
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
 

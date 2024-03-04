@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
 import org.neo4j.cypherdsl.core.Relationship
@@ -25,6 +26,9 @@ import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcHandler() {
+
+  override fun strategy() = SinkStrategy.CDC_SCHEMA
+
   override fun transformCreate(event: NodeEvent): Query {
     val node = buildNode(event.keys, "n")
     val stmt =

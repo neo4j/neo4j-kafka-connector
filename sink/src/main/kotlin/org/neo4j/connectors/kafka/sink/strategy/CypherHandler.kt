@@ -17,6 +17,10 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.connectors.kafka.service.sink.strategy.CypherTemplateStrategy
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 
 class CypherHandler(val topic: String, val query: String, batchSize: Int) :
-    RedirectingHandler(CypherTemplateStrategy(query), batchSize) {}
+    RedirectingHandler(CypherTemplateStrategy(query), batchSize) {
+
+  override fun strategy() = SinkStrategy.CYPHER
+}
