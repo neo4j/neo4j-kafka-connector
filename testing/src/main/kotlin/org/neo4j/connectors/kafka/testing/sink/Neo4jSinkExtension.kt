@@ -157,15 +157,15 @@ internal class Neo4jSinkExtension(
     if (metadata.cdcSourceId.isNotEmpty()) {
       val resolved = metadata.cdcSourceId.map { topicRegistry.resolveTopic(it.topic) }
       topics.addAll(resolved)
-      strategies["neo4j.cdc.sourceId.topics"] = resolved.joinToString(",")
+      strategies["neo4j.cdc.source-id.topics"] = resolved.joinToString(",")
 
       val labelName = metadata.cdcSourceId.first().labelName
       if (labelName.isNotBlank()) {
-        strategies["neo4j.cdc.sourceId.labelName"] = labelName
+        strategies["neo4j.cdc.source-id.label-name"] = labelName
       }
       val propertyName = metadata.cdcSourceId.first().propertyName
       if (propertyName.isNotBlank()) {
-        strategies["neo4j.cdc.sourceId.propertyName"] = propertyName
+        strategies["neo4j.cdc.source-id.property-name"] = propertyName
       }
     }
 
