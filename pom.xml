@@ -57,7 +57,8 @@
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <kafka-schema-registry.version>6.1.13</kafka-schema-registry.version>
-        <kafka.version>2.7.2</kafka.version>
+        <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
+        <kafka.version>3.4.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.8.0</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
         <kotlin.version>1.9.0</kotlin.version>
