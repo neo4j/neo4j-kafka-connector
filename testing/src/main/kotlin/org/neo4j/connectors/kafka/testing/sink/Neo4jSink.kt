@@ -40,7 +40,7 @@ annotation class Neo4jSink(
     val cdcSourceId: Array<CdcSourceIdStrategy> = [],
     val nodePattern: Array<NodePatternStrategy> = [],
     val relationshipPattern: Array<RelationshipPatternStrategy> = [],
-    val cud: Array<CudStrategy> = []
+    val cud: Array<CudStrategy> = [],
 )
 
 enum class SchemaCompatibilityMode {
@@ -53,7 +53,14 @@ enum class SchemaCompatibilityMode {
   NONE
 }
 
-annotation class CypherStrategy(val topic: String = "", val query: String)
+annotation class CypherStrategy(
+    val topic: String = "",
+    val query: String,
+    val bindHeaderAs: String = "__header",
+    val bindKeyAs: String = "__key",
+    val bindValueAs: String = "__value",
+    val bindValueAsEvent: Boolean = true
+)
 
 annotation class CdcSourceIdStrategy(
     val topic: String,

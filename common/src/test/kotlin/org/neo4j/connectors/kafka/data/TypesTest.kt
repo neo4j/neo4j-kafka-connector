@@ -126,7 +126,6 @@ class TypesTest {
       schemaAndValue(person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .name("org.neo4j.connectors.kafka.Node")
                 .field("<id>", SimpleTypes.LONG.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
@@ -155,7 +154,6 @@ class TypesTest {
       schemaAndValue(company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .name("org.neo4j.connectors.kafka.Node")
                 .field("<id>", SimpleTypes.LONG.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
@@ -181,7 +179,6 @@ class TypesTest {
       schemaAndValue(worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .name("org.neo4j.connectors.kafka.Relationship")
                 .field("<id>", SimpleTypes.LONG.schema())
                 .field("<type>", SimpleTypes.STRING.schema())
                 .field("<start.id>", SimpleTypes.LONG.schema())

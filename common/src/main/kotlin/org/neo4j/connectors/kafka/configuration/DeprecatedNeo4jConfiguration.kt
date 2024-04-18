@@ -35,7 +35,7 @@ object ConfigGroup {
   const val ENCRYPTION = "Encryption"
   const val CONNECTION = "Connection"
   const val AUTHENTICATION = "Authentication"
-  const val TOPIC_CYPHER_MAPPING = "Topic Cypher Mapping"
+  const val STRATEGIES = "Mapping Strategies"
   const val BATCH = "Batch Management"
   const val RETRY = "Retry Strategy"
 }

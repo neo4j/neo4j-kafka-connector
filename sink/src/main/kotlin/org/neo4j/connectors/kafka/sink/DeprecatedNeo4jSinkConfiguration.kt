@@ -67,25 +67,25 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SOURCE_ID_ID_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(TOPIC_CDC_SCHEMA, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN) {
@@ -97,7 +97,7 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(TOPIC_CUD, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(
@@ -106,7 +106,7 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
                           PropertiesUtil.getProperty(TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED)
                       importance = ConfigDef.Importance.MEDIUM
                       defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED
-                      group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                      group = ConfigGroup.STRATEGIES
                     })
             .define(
                 ConfigKeyBuilder.of(
@@ -116,7 +116,7 @@ class DeprecatedNeo4jSinkConfiguration(originals: Map<*, *>) :
                               TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED)
                       importance = ConfigDef.Importance.MEDIUM
                       defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED
-                      group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                      group = ConfigGroup.STRATEGIES
                     })
   }
 }

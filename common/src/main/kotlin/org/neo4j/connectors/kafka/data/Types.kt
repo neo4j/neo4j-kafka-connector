@@ -46,32 +46,34 @@ enum class SimpleTypes(private val schema: Schema, private val optionalSchema: S
   STRING(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA),
   BYTES(Schema.BYTES_SCHEMA, Schema.OPTIONAL_BYTES_SCHEMA),
   LOCALDATE(
-      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDate").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalDate").optional().build()),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDate").version(1).build(),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDate").version(1).optional().build()),
   LOCALDATETIME(
-      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDateTime").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalDateTime").optional().build()),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDateTime").version(1).build(),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalDateTime").version(1).optional().build()),
   LOCALTIME(
-      SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalLocalTime").optional().build()),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").version(1).build(),
+      SchemaBuilder(Schema.Type.STRING).namespaced("LocalTime").version(1).optional().build()),
   @Suppress("SpellCheckingInspection")
   ZONEDDATETIME(
-      SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalZonedDateTime").optional().build()),
+      SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").version(1).build(),
+      SchemaBuilder(Schema.Type.STRING).namespaced("ZonedDateTime").version(1).optional().build()),
   @Suppress("SpellCheckingInspection")
   OFFSETTIME(
-      SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").build(),
-      SchemaBuilder(Schema.Type.STRING).namespaced("OptionalOffsetTime").optional().build()),
+      SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").version(1).build(),
+      SchemaBuilder(Schema.Type.STRING).namespaced("OffsetTime").version(1).optional().build()),
   DURATION(
       SchemaBuilder(Schema.Type.STRUCT)
           .namespaced("Duration")
+          .version(1)
           .field("months", Schema.INT64_SCHEMA)
           .field("days", Schema.INT64_SCHEMA)
           .field("seconds", Schema.INT64_SCHEMA)
           .field("nanoseconds", Schema.INT32_SCHEMA)
           .build(),
       SchemaBuilder(Schema.Type.STRUCT)
-          .namespaced("OptionalDuration")
+          .namespaced("Duration")
+          .version(1)
           .field("months", Schema.INT64_SCHEMA)
           .field("days", Schema.INT64_SCHEMA)
           .field("seconds", Schema.INT64_SCHEMA)
@@ -81,13 +83,15 @@ enum class SimpleTypes(private val schema: Schema, private val optionalSchema: S
   POINT(
       SchemaBuilder(Schema.Type.STRUCT)
           .namespaced("Point")
+          .version(1)
           .field("srid", Schema.INT32_SCHEMA)
           .field("x", Schema.FLOAT64_SCHEMA)
           .field("y", Schema.FLOAT64_SCHEMA)
           .field("z", Schema.FLOAT64_SCHEMA)
           .build(),
       SchemaBuilder(Schema.Type.STRUCT)
-          .namespaced("OptionalPoint")
+          .namespaced("Point")
+          .version(1)
           .field("srid", Schema.INT32_SCHEMA)
           .field("x", Schema.FLOAT64_SCHEMA)
           .field("y", Schema.FLOAT64_SCHEMA)
@@ -217,7 +221,7 @@ object DynamicTypes {
 
     return when (schema) {
       SimpleTypes.BOOLEAN.schema(false),
-      SimpleTypes.BOOLEAN.schema(true) -> value as Boolean
+      SimpleTypes.BOOLEAN.schema(true) -> value as Boolean?
       SimpleTypes.LONG.schema(false),
       SimpleTypes.LONG.schema(true) -> value as Long?
       SimpleTypes.FLOAT.schema(false),
@@ -225,7 +229,12 @@ object DynamicTypes {
       SimpleTypes.STRING.schema(false),
       SimpleTypes.STRING.schema(true) -> value as String?
       SimpleTypes.BYTES.schema(false),
-      SimpleTypes.BYTES.schema(true) -> value as ByteArray?
+      SimpleTypes.BYTES.schema(true) ->
+          when (value) {
+            is ByteArray -> value
+            is ByteBuffer -> value.array()
+            else -> throw IllegalArgumentException("unsupported bytes type ${value.javaClass.name}")
+          }
       SimpleTypes.LOCALDATE.schema(false),
       SimpleTypes.LOCALDATE.schema(true) ->
           (value as String?)?.let {
@@ -350,6 +359,22 @@ object DynamicTypes {
                 result
               }
             }
+            Schema.Type.BYTES ->
+                when (value) {
+                  is ByteArray -> value
+                  is ByteBuffer -> value.array()
+                  else ->
+                      throw IllegalArgumentException(
+                          "unsupported bytes type ${value.javaClass.name}")
+                }
+            Schema.Type.STRING -> value as String?
+            Schema.Type.INT8 -> value as Byte?
+            Schema.Type.INT16 -> value as Short?
+            Schema.Type.INT32 -> value as Int?
+            Schema.Type.INT64 -> value as Long?
+            Schema.Type.FLOAT32 -> value as Float?
+            Schema.Type.FLOAT64 -> value as Double?
+            Schema.Type.BOOLEAN -> value as Boolean?
             else ->
                 throw IllegalArgumentException(
                     "unsupported schema ($schema) and value type (${value.javaClass.name})")
@@ -397,7 +422,6 @@ object DynamicTypes {
         is Point -> SimpleTypes.POINT.schema(optional)
         is Node ->
             SchemaBuilder.struct()
-                .namespaced("Node")
                 .apply {
                   field("<id>", SimpleTypes.LONG.schema())
                   field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
@@ -412,7 +436,6 @@ object DynamicTypes {
                 .build()
         is Relationship ->
             SchemaBuilder.struct()
-                .namespaced("Relationship")
                 .apply {
                   field("<id>", SimpleTypes.LONG.schema())
                   field("<type>", SimpleTypes.STRING.schema())

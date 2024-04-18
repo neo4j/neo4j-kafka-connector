@@ -63,6 +63,18 @@ class SinkConfiguration(originals: Map<String, *>) :
     originals().filterKeys { it.startsWith("kafka.") }.mapKeys { it.key.substring("kafka.".length) }
   }
 
+  val cypherBindHeaderAs
+    get(): String = getString(CYPHER_BIND_HEADER_AS)
+
+  val cypherBindKeyAs
+    get(): String = getString(CYPHER_BIND_KEY_AS)
+
+  val cypherBindValueAs
+    get(): String = getString(CYPHER_BIND_VALUE_AS)
+
+  val cypherBindValueAsEvent
+    get(): Boolean = getBoolean(CYPHER_BIND_VALUE_AS_EVENT)
+
   val dialect: Dialect by lazy {
     session().use {
       val name = Cypher.name("name")
@@ -122,6 +134,10 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val BATCH_PARALLELIZE = "neo4j.batch-parallelize"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
+    const val CYPHER_BIND_HEADER_AS = "neo4j.cypher.bind-header-as"
+    const val CYPHER_BIND_KEY_AS = "neo4j.cypher.bind-key-as"
+    const val CYPHER_BIND_VALUE_AS = "neo4j.cypher.bind-value-as"
+    const val CYPHER_BIND_VALUE_AS_EVENT = "neo4j.cypher.bind-value-as-event"
     const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.source-id.topics"
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
     const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
@@ -137,6 +153,10 @@ class SinkConfiguration(originals: Map<String, *>) :
     private const val DEFAULT_BATCH_PARALLELIZE = true
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
+    const val DEFAULT_CYPHER_BIND_HEADER_ALIAS = "__header"
+    const val DEFAULT_CYPHER_BIND_KEY_ALIAS = "__key"
+    const val DEFAULT_CYPHER_BIND_VALUE_ALIAS = "__value"
+    const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
 
     @Suppress("DEPRECATION")
     @JvmStatic
@@ -187,6 +207,34 @@ class SinkConfiguration(originals: Map<String, *>) :
 
     fun validate(config: Config) {
       Neo4jConfiguration.validate(config)
+
+      // cypher bind variables
+      val cypherAliasForHeader = config.value<String>(CYPHER_BIND_HEADER_AS).isNullOrEmpty()
+      val cypherAliasForKey = config.value<String>(CYPHER_BIND_KEY_AS).isNullOrEmpty()
+      val cypherAliasForValue = config.value<String>(CYPHER_BIND_VALUE_AS).isNullOrEmpty()
+      val cypherUseEventForValue = config.value<Boolean>(CYPHER_BIND_VALUE_AS_EVENT) ?: true
+      if (!cypherUseEventForValue &&
+          (cypherAliasForHeader && cypherAliasForKey && cypherAliasForValue)) {
+        config
+            .configValues()
+            .filter {
+              it.name() in
+                  listOf(
+                      CYPHER_BIND_HEADER_AS,
+                      CYPHER_BIND_KEY_AS,
+                      CYPHER_BIND_VALUE_AS,
+                      CYPHER_BIND_VALUE_AS_EVENT)
+            }
+            .forEach {
+              it.addErrorMessage(
+                  "At least one variable binding must be specified for Cypher strategies.")
+            }
+      }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> Config.value(key: String): T? {
+      return this.configValues().first { it.name() == key }.let { it.value() as T? }
     }
 
     fun config(): ConfigDef =
@@ -195,13 +243,13 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
@@ -209,7 +257,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_PROPERTY_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
@@ -217,19 +265,19 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -241,7 +289,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                   documentation = PropertiesUtil.getProperty(PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
-                  group = ConfigGroup.TOPIC_CYPHER_MAPPING
+                  group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -265,6 +313,39 @@ class SinkConfiguration(originals: Map<String, *>) :
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_PARALLELIZE
                   group = ConfigGroup.BATCH
+                })
+            .define(
+                ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CYPHER_BIND_HEADER_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                })
+            .define(
+                ConfigKeyBuilder.of(CYPHER_BIND_KEY_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CYPHER_BIND_KEY_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                })
+            .define(
+                ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CYPHER_BIND_VALUE_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                })
+            .define(
+                ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS_EVENT, ConfigDef.Type.BOOLEAN) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
+                  validator = ConfigDef.NonNullValidator()
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
 
     private fun replaceLegacyPropertyKeys(key: String) =

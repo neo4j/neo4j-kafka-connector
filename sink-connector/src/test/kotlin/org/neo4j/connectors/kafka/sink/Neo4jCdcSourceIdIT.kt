@@ -514,11 +514,11 @@ abstract class Neo4jCdcSourceIdIT {
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
-class Neo4JCdcSourceIdAvroIT : Neo4jCdcSourceIdIT()
+class Neo4jCdcSourceIdAvroIT : Neo4jCdcSourceIdIT()
 
 @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-class Neo4JCdcSourceIdJsonIT : Neo4jCdcSourceIdIT()
+class Neo4jCdcSourceIdJsonIT : Neo4jCdcSourceIdIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
 @Disabled // TODO: make schema generation protobuf compatible
-class Neo4JCdcSourceIdProtobufIT : Neo4jCdcSourceIdIT()
+class Neo4jCdcSourceIdProtobufIT : Neo4jCdcSourceIdIT()
