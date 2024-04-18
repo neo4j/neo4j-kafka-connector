@@ -3,14 +3,12 @@ import builds.Neo4jKafkaConnectorVcs
 import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.version
 
-version = "2023.11"
+version = "2024.03"
 
 project {
   params {
-    password("github-commit-status-token", "credentialsJSON:23b1c78f-22be-4c3e-9efc-3e7ead3238ed")
-    password("github-pull-request-token", "credentialsJSON:23b1c78f-22be-4c3e-9efc-3e7ead3238ed")
-    text("github-packages-user", "neo4j-build-service")
-    password("github-packages-token", "credentialsJSON:b43ccf66-3394-496f-8c22-be161097c2df")
+    password("github-commit-status-token", "%github-token%")
+    password("github-pull-request-token", "%github-token%")
   }
 
   vcsRoot(Neo4jKafkaConnectorVcs)
