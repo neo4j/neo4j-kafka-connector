@@ -49,7 +49,7 @@ import org.neo4j.driver.Session
 abstract class Neo4jCdcSchemaIT {
 
   companion object {
-    const val TOPIC = "schema"
+    private const val TOPIC = "schema"
   }
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])

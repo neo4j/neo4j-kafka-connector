@@ -34,7 +34,7 @@ import org.neo4j.driver.Session
 abstract class Neo4jSourceIT {
 
   companion object {
-    const val TOPIC = "neo4j-source-topic"
+    private const val TOPIC = "neo4j-source-topic"
   }
 
   @Neo4jSource(

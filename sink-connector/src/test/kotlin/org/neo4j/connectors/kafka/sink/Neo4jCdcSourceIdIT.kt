@@ -48,7 +48,7 @@ import org.neo4j.driver.Session
 
 abstract class Neo4jCdcSourceIdIT {
   companion object {
-    const val TOPIC = "source-id"
+    private const val TOPIC = "source-id"
   }
 
   @Neo4jSink(cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")])
@@ -520,5 +520,5 @@ class Neo4JCdcSourceIdAvroIT : Neo4jCdcSourceIdIT()
 class Neo4JCdcSourceIdJsonIT : Neo4jCdcSourceIdIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
-@Disabled
+@Disabled // TODO: make schema generation protobuf compatible
 class Neo4JCdcSourceIdProtobufIT : Neo4jCdcSourceIdIT()

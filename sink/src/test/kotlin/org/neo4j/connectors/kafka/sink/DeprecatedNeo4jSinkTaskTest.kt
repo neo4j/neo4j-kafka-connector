@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import io.kotest.matchers.collections.shouldHaveSize
 import java.util.Date
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -1268,6 +1267,8 @@ class DeprecatedNeo4jSinkTaskTest {
     }
   }
 
+  // cypher strategy waits for the values to be a Map, hence a raw string value will not be
+  // mapped to a cypher event and nothing will be created out of it
   @Test
   fun `should report but not fail invalid schema`() {
     val topic = "neotopic"
