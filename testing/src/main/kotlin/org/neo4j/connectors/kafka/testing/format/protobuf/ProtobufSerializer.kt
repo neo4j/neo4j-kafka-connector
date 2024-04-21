@@ -18,12 +18,13 @@
 package org.neo4j.connectors.kafka.testing.format.protobuf
 
 import io.confluent.connect.protobuf.ProtobufData
+import io.confluent.connect.protobuf.ProtobufDataConfig
 import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
-object ProtobufSerializer : KafkaRecordSerializer {
+class ProtobufSerializer(config: Map<*, *>) : KafkaRecordSerializer {
 
-  private val protobufData = ProtobufData()
+  private val protobufData = ProtobufData(ProtobufDataConfig(config))
 
   override fun serialize(value: Any, schema: Schema): Any {
     return protobufData.fromConnectData(schema, value).value

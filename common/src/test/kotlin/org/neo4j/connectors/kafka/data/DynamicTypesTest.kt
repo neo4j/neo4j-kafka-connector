@@ -30,10 +30,16 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.function.Function
+import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.ArgumentsProvider
+import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.neo4j.driver.types.Node
@@ -144,38 +150,38 @@ class DynamicTypesTest {
 
     // Temporal Types
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), false) shouldBe
-        SimpleTypes.LOCALDATE.schema()
+        SimpleTypes.LOCALDATE_STRUCT.schema()
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), true) shouldBe
-        SimpleTypes.LOCALDATE.schema(true)
+        SimpleTypes.LOCALDATE_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALTIME.schema()
+        SimpleTypes.LOCALTIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALTIME.schema(true)
+        SimpleTypes.LOCALTIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALDATETIME.schema()
+        SimpleTypes.LOCALDATETIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALDATETIME.schema(true)
+        SimpleTypes.LOCALDATETIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.OFFSETTIME.schema()
+        SimpleTypes.OFFSETTIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.OFFSETTIME.schema(true)
+        SimpleTypes.OFFSETTIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema()
+        SimpleTypes.ZONEDDATETIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema(true)
+        SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema()
+        SimpleTypes.ZONEDDATETIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), true) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema(true)
+        SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(
         Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe
@@ -384,28 +390,63 @@ class DynamicTypesTest {
         }
   }
 
-  @Test
-  fun `temporal types should be returned as strings and should be converted back`() {
-    listOf(
-            LocalDate.of(1999, 12, 31) to "1999-12-31",
-            LocalTime.of(23, 59, 59, 9999) to "23:59:59.000009999",
-            LocalDateTime.of(1999, 12, 31, 23, 59, 59, 9999) to "1999-12-31T23:59:59.000009999",
-            OffsetTime.of(23, 59, 59, 9999, ZoneOffset.UTC) to "23:59:59.000009999Z",
-            OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneOffset.ofHours(1)) to
-                "1999-12-31T23:59:59.000009999+01:00",
-            ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneId.of("Europe/Istanbul")) to
-                "1999-12-31T23:59:59.000009999+02:00[Europe/Istanbul]")
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.toConnectSchema(value, false)
-            val converted = DynamicTypes.toConnectValue(schema, value)
+  @ParameterizedTest
+  @ArgumentsSource(TemporalTypes::class)
+  fun `temporal types should be returned as structs and should be converted back`(
+      value: Any,
+      expected: Any
+  ) {
+    val schema = DynamicTypes.toConnectSchema(value, false)
+    val converted = DynamicTypes.toConnectValue(schema, value)
 
-            converted shouldBe expected
+    converted shouldBe expected
 
-            val reverted = DynamicTypes.fromConnectValue(schema, converted)
-            reverted shouldBe value
-          }
-        }
+    val reverted = DynamicTypes.fromConnectValue(schema, converted)
+    reverted shouldBe value
+  }
+
+  object TemporalTypes : ArgumentsProvider {
+    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+      return Stream.of(
+          LocalDate.of(1999, 12, 31).let {
+            Arguments.of(
+                it, Struct(SimpleTypes.LOCALDATE_STRUCT.schema).put(EPOCH_DAYS, it.toEpochDay()))
+          },
+          LocalTime.of(23, 59, 59, 9999).let {
+            Arguments.of(
+                it, Struct(SimpleTypes.LOCALTIME_STRUCT.schema).put(NANOS_OF_DAY, it.toNanoOfDay()))
+          },
+          LocalDateTime.of(1999, 12, 31, 23, 59, 59, 9999).let {
+            Arguments.of(
+                it,
+                Struct(SimpleTypes.LOCALDATETIME_STRUCT.schema)
+                    .put(EPOCH_DAYS, it.toLocalDate().toEpochDay())
+                    .put(NANOS_OF_DAY, it.toLocalTime().toNanoOfDay()))
+          },
+          OffsetTime.of(23, 59, 59, 9999, ZoneOffset.UTC).let {
+            Arguments.of(
+                it,
+                Struct(SimpleTypes.OFFSETTIME_STRUCT.schema)
+                    .put(NANOS_OF_DAY, it.toLocalTime().toNanoOfDay())
+                    .put(ZONE_ID, it.offset.id))
+          },
+          OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneOffset.ofHours(1)).let {
+            Arguments.of(
+                it,
+                Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                    .put(EPOCH_SECONDS, it.toEpochSecond())
+                    .put(NANOS_OF_SECOND, it.nano)
+                    .put(ZONE_ID, it.offset.id))
+          },
+          ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneId.of("Europe/Istanbul")).let {
+            Arguments.of(
+                it,
+                Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                    .put(EPOCH_SECONDS, it.toEpochSecond())
+                    .put(NANOS_OF_SECOND, it.nano)
+                    .put(ZONE_ID, it.zone.id))
+          })
+    }
   }
 
   @Test
@@ -490,22 +531,40 @@ class DynamicTypesTest {
   }
 
   @Test
-  fun `points should be returned as structs and should be converted back`() {
-    listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
-        .forEach { point ->
-          val schema = DynamicTypes.toConnectSchema(point, false)
-          val converted = DynamicTypes.toConnectValue(schema, point)
+  fun `2d points should be returned as structs and should be converted back`() {
+    //    listOf(, Values.point(4326, 1.0, 2.0, 3.0).asPoint())
+    val point = Values.point(4326, 1.0, 2.0).asPoint()
+    val schema = DynamicTypes.toConnectSchema(point, false)
+    val converted = DynamicTypes.toConnectValue(schema, point)
 
-          converted shouldBe
-              Struct(schema)
-                  .put("srid", point.srid())
-                  .put("x", point.x())
-                  .put("y", point.y())
-                  .put("z", point.z())
+    converted shouldBe
+        Struct(schema)
+            .put("dimension", 2.toByte())
+            .put("srid", point.srid())
+            .put("x", point.x())
+            .put("y", point.y())
+            .put("z", null)
 
-          val reverted = DynamicTypes.fromConnectValue(schema, converted)
-          reverted shouldBe point
-        }
+    val reverted = DynamicTypes.fromConnectValue(schema, converted)
+    reverted shouldBe point
+  }
+
+  @Test
+  fun `3d points should be returned as structs and should be converted back`() {
+    val point = Values.point(4326, 1.0, 2.0, 3.0).asPoint()
+    val schema = DynamicTypes.toConnectSchema(point, false)
+    val converted = DynamicTypes.toConnectValue(schema, point)
+
+    converted shouldBe
+        Struct(schema)
+            .put("dimension", 3.toByte())
+            .put("srid", point.srid())
+            .put("x", point.x())
+            .put("y", point.y())
+            .put("z", point.z())
+
+    val reverted = DynamicTypes.fromConnectValue(schema, converted)
+    reverted shouldBe point
   }
 
   @Test
@@ -582,7 +641,10 @@ class DynamicTypesTest {
         Struct(schema)
             .put("name", "john")
             .put("age", 21L)
-            .put("dob", "1999-12-31")
+            .put(
+                "dob",
+                Struct(SimpleTypes.LOCALDATE_STRUCT.schema)
+                    .put(EPOCH_DAYS, LocalDate.of(1999, 12, 31).toEpochDay()))
             .put("employed", true)
             .put("nullable", null)
 
@@ -600,7 +662,10 @@ class DynamicTypesTest {
         Struct(schema)
             .put("e0", "john")
             .put("e1", 21L)
-            .put("e2", "1999-12-31")
+            .put(
+                "e2",
+                Struct(SimpleTypes.LOCALDATE_STRUCT.schema)
+                    .put(EPOCH_DAYS, LocalDate.of(1999, 12, 31).toEpochDay()))
             .put("e3", true)
             .put("e4", null)
 

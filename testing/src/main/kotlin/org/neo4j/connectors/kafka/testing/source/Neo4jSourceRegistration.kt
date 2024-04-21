@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
-import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
@@ -54,44 +53,46 @@ internal class Neo4jSourceRegistration(
   private val payload: Map<String, Any>
 
   init {
-    val config =
-        mutableMapOf<String, Any>(
-                "connector.class" to "org.neo4j.connectors.kafka.source.Neo4jConnector",
-                "key.converter" to keyConverter.className,
-                "value.converter" to valueConverter.className,
-                "neo4j.uri" to neo4jUri,
-                "neo4j.authentication.type" to "BASIC",
-                "neo4j.authentication.basic.username" to neo4jUser,
-                "neo4j.authentication.basic.password" to neo4jPassword,
-                "neo4j.database" to neo4jDatabase,
-                "neo4j.start-from" to startFrom,
-                "neo4j.source-strategy" to strategy.name.uppercase())
-            .putConditionally("key.converter.schema.registry.url", schemaControlRegistryUri) {
-              keyConverter.supportsSchemaRegistry
-            }
-            .putConditionally("value.converter.schema.registry.url", schemaControlRegistryUri) {
-              valueConverter.supportsSchemaRegistry
-            }
-            .putConditionally("topic", topic, String::isNotEmpty)
-            .putConditionally("neo4j.query", query, String::isNotEmpty)
-            .putConditionally(
-                "neo4j.query.streaming-property", streamingProperty, String::isNotEmpty)
-            .putConditionally("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms") {
-              strategy == QUERY
-            }
-            .putConditionally("neo4j.enforce-schema", enforceSchema) { strategy == QUERY }
-            .putConditionally("neo4j.cdc.poll-interval", "${pollInterval.toMillis()}ms") {
-              strategy == CDC
-            }
-            .putConditionally("neo4j.cdc.poll-duration", "${pollDuration.toMillis()}ms") {
-              strategy == CDC
-            }
-            .putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.operation", cdcOperations)
-            .putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.changesTo", cdcChangesTo)
-            .putCdcPatterns(cdcPatterns, cdcPatternsIndexed)
-            .putCdcMetadata(cdcMetadata)
-            .putCdcKeySerializations("neo4j.cdc.topic.%s.key-strategy", cdcKeySerializations)
-            .toMap()
+    val config = buildMap {
+      put("connector.class", "org.neo4j.connectors.kafka.source.Neo4jConnector")
+      put("key.converter", keyConverter.className)
+      put("value.converter", valueConverter.className)
+      put("neo4j.uri", neo4jUri)
+      put("neo4j.authentication.type", "BASIC")
+      put("neo4j.authentication.basic.username", neo4jUser)
+      put("neo4j.authentication.basic.password", neo4jPassword)
+      put("neo4j.database", neo4jDatabase)
+      put("neo4j.start-from", startFrom)
+      put("neo4j.source-strategy", strategy.name.uppercase())
+
+      if (keyConverter.supportsSchemaRegistry) {
+        put("key.converter.schema.registry.url", schemaControlRegistryUri)
+      }
+      putAll(keyConverter.additionalProperties.mapKeys { "key.converter.${it.key}" })
+
+      if (valueConverter.supportsSchemaRegistry) {
+        put("value.converter.schema.registry.url", schemaControlRegistryUri)
+      }
+      putAll(valueConverter.additionalProperties.mapKeys { "value.converter.${it.key}" })
+
+      if (strategy == QUERY) {
+        put("topic", topic)
+        put("neo4j.query", query)
+        put("neo4j.query.streaming-property", streamingProperty)
+        put("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms")
+        put("neo4j.enforce-schema", enforceSchema)
+      }
+
+      if (strategy == CDC) {
+        put("neo4j.cdc.poll-interval", "${pollInterval.toMillis()}ms")
+        put("neo4j.cdc.poll-duration", "${pollDuration.toMillis()}ms")
+        putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.operation", cdcOperations)
+        putCdcParameters("neo4j.cdc.topic.%s.patterns.%s.changesTo", cdcChangesTo)
+        putCdcPatterns(cdcPatterns, cdcPatternsIndexed)
+        putCdcMetadata(cdcMetadata)
+        putCdcKeySerializations("neo4j.cdc.topic.%s.key-strategy", cdcKeySerializations)
+      }
+    }
 
     payload = mapOf("name" to name, "config" to config)
   }

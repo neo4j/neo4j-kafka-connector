@@ -36,13 +36,17 @@ import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
 import org.neo4j.connectors.kafka.testing.format.string.StringDeserializer
 import org.neo4j.connectors.kafka.testing.format.string.StringSerializer
 
+private val PROTOBUF_OPTIONS =
+    mapOf("enhanced.protobuf.schema.support" to true, "optional.for.nullables" to "true")
+
 enum class KafkaConverter(
     val className: String,
     val deserializerClass: Class<out Deserializer<*>>,
     val serializerClass: Class<out Serializer<*>>,
     val testShimDeserializer: KafkaRecordDeserializer,
     val testShimSerializer: KafkaRecordSerializer,
-    val supportsSchemaRegistry: Boolean = true
+    val supportsSchemaRegistry: Boolean = true,
+    val additionalProperties: Map<String, Any> = mapOf(),
 ) {
   AVRO(
       className = "io.confluent.connect.avro.AvroConverter",
@@ -61,13 +65,14 @@ enum class KafkaConverter(
       deserializerClass = KafkaProtobufDeserializer::class.java,
       serializerClass = KafkaProtobufSerializer::class.java,
       testShimDeserializer = ProtobufDeserializer,
-      testShimSerializer = ProtobufSerializer),
+      testShimSerializer = ProtobufSerializer(PROTOBUF_OPTIONS),
+      additionalProperties = PROTOBUF_OPTIONS),
   STRING(
       className = "org.apache.kafka.connect.storage.StringConverter",
       deserializerClass = org.apache.kafka.common.serialization.StringDeserializer::class.java,
       serializerClass = org.apache.kafka.common.serialization.StringSerializer::class.java,
       testShimDeserializer = StringDeserializer,
-      testShimSerializer = StringSerializer),
+      testShimSerializer = StringSerializer)
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)

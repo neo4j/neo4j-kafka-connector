@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.data
 
-import java.time.format.DateTimeFormatter
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -32,8 +31,6 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toNode
 
 object ChangeEventExtensions {
 
@@ -77,8 +74,8 @@ object ChangeEventExtensions {
           .field("connectionServer", SimpleTypes.STRING.schema(true))
           .field("serverId", SimpleTypes.STRING.schema())
           .field("captureMode", SimpleTypes.STRING.schema())
-          .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema())
-          .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
+          .field("txStartTime", SimpleTypes.ZONEDDATETIME_STRUCT.schema())
+          .field("txCommitTime", SimpleTypes.ZONEDDATETIME_STRUCT.schema())
           .field(
               "txMetadata",
               DynamicTypes.toConnectSchema(
@@ -100,8 +97,14 @@ object ChangeEventExtensions {
         it.put("connectionServer", this.connectionServer)
         it.put("serverId", this.serverId)
         it.put("captureMode", this.captureMode.name)
-        it.put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txStartTime))
-        it.put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(this.txCommitTime))
+        it.put(
+            "txStartTime",
+            DynamicTypes.toConnectValue(
+                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), this.txStartTime))
+        it.put(
+            "txCommitTime",
+            DynamicTypes.toConnectValue(
+                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), this.txCommitTime))
         it.put(
             "txMetadata",
             DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), this.txMetadata))

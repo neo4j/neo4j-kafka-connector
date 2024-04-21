@@ -19,7 +19,6 @@ package org.neo4j.connectors.kafka.data
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
@@ -73,8 +72,8 @@ class ChangeEventExtensionsTest {
             .field("connectionServer", Schema.OPTIONAL_STRING_SCHEMA)
             .field("serverId", Schema.STRING_SCHEMA)
             .field("captureMode", Schema.STRING_SCHEMA)
-            .field("txStartTime", SimpleTypes.ZONEDDATETIME.schema())
-            .field("txCommitTime", SimpleTypes.ZONEDDATETIME.schema())
+            .field("txStartTime", SimpleTypes.ZONEDDATETIME_STRUCT.schema())
+            .field("txCommitTime", SimpleTypes.ZONEDDATETIME_STRUCT.schema())
             .field(
                 "txMetadata",
                 SchemaBuilder.struct()
@@ -96,10 +95,22 @@ class ChangeEventExtensionsTest {
             .put("connectionServer", change.metadata.connectionServer)
             .put("serverId", change.metadata.serverId)
             .put("captureMode", change.metadata.captureMode.name)
-            .put("txStartTime", change.metadata.txStartTime.format(DateTimeFormatter.ISO_DATE_TIME))
+            .put(
+                "txStartTime",
+                change.metadata.txStartTime.let {
+                  Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                      .put(EPOCH_SECONDS, it.toEpochSecond())
+                      .put(NANOS_OF_SECOND, it.nano)
+                      .put(ZONE_ID, it.zone.id)
+                })
             .put(
                 "txCommitTime",
-                change.metadata.txCommitTime.format(DateTimeFormatter.ISO_DATE_TIME))
+                change.metadata.txCommitTime.let {
+                  Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                      .put(EPOCH_SECONDS, it.toEpochSecond())
+                      .put(NANOS_OF_SECOND, it.nano)
+                      .put(ZONE_ID, it.zone.id)
+                })
             .put(
                 "txMetadata",
                 Struct(schema.nestedSchema("metadata.txMetadata"))
@@ -553,7 +564,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -564,7 +575,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -614,7 +625,12 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 Struct(schema.nestedSchema("event.state.after.properties"))
                                     .put("id", 5L)
-                                    .put("since", "1999-12-31"))))
+                                    .put(
+                                        "since",
+                                        Struct(SimpleTypes.LOCALDATE_STRUCT.schema(true))
+                                            .put(
+                                                EPOCH_DAYS,
+                                                LocalDate.of(1999, 12, 31).toEpochDay())))))
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -703,7 +719,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -714,7 +730,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -764,7 +780,12 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 Struct(schema.nestedSchema("event.state.before.properties"))
                                     .put("id", 5L)
-                                    .put("since", "1999-12-31")))
+                                    .put(
+                                        "since",
+                                        Struct(SimpleTypes.LOCALDATE_STRUCT.schema(true))
+                                            .put(
+                                                EPOCH_DAYS,
+                                                LocalDate.of(1999, 12, 31).toEpochDay()))))
                     .put(
                         "after",
                         Struct(schema.nestedSchema("event.state.after"))
@@ -772,7 +793,12 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 Struct(schema.nestedSchema("event.state.after.properties"))
                                     .put("id", 5L)
-                                    .put("since", "2000-01-01"))))
+                                    .put(
+                                        "since",
+                                        Struct(SimpleTypes.LOCALDATE_STRUCT.schema(true))
+                                            .put(
+                                                EPOCH_DAYS,
+                                                LocalDate.of(2000, 1, 1).toEpochDay())))))
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -861,7 +887,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -872,7 +898,7 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
+                                    .field("since", SimpleTypes.LOCALDATE_STRUCT.schema(true))
                                     .build())
                             .optional()
                             .build())
@@ -922,7 +948,12 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 Struct(schema.nestedSchema("event.state.before.properties"))
                                     .put("id", 5L)
-                                    .put("since", "2000-01-01"))))
+                                    .put(
+                                        "since",
+                                        Struct(SimpleTypes.LOCALDATE_STRUCT.schema(true))
+                                            .put(
+                                                EPOCH_DAYS,
+                                                LocalDate.of(2000, 1, 1).toEpochDay())))))
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -994,8 +1025,22 @@ class ChangeEventExtensionsTest {
             .put("connectionType", "bolt")
             .put("connectionClient", "127.0.0.1:32000")
             .put("connectionServer", "127.0.0.1:7687")
-            .put("txStartTime", DateTimeFormatter.ISO_DATE_TIME.format(startTime))
-            .put("txCommitTime", DateTimeFormatter.ISO_DATE_TIME.format(commitTime))
+            .put(
+                "txStartTime",
+                startTime.let {
+                  Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                      .put(EPOCH_SECONDS, it.toEpochSecond())
+                      .put(NANOS_OF_SECOND, it.nano)
+                      .put(ZONE_ID, it.zone.id)
+                })
+            .put(
+                "txCommitTime",
+                commitTime.let {
+                  Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
+                      .put(EPOCH_SECONDS, it.toEpochSecond())
+                      .put(NANOS_OF_SECOND, it.nano)
+                      .put(ZONE_ID, it.zone.id)
+                })
             .put(
                 "txMetadata",
                 Struct(schema.nestedSchema("txMetadata").schema())

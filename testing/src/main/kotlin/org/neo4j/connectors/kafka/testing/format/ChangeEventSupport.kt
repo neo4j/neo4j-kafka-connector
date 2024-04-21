@@ -18,7 +18,8 @@
 package org.neo4j.connectors.kafka.testing.format
 
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import java.time.temporal.Temporal
+import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -30,6 +31,11 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.data.EPOCH_SECONDS
+import org.neo4j.connectors.kafka.data.NANOS_OF_SECOND
+import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.ZONE_ID
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -159,7 +165,18 @@ object ChangeEventSupport {
   }
 
   private fun Map<String, Any?>.getZonedDateTime(key: String): ZonedDateTime? =
-      this.getString(key)?.let { ZonedDateTime.parse(it, DateTimeFormatter.ISO_DATE_TIME) }
+      this.getMap(key)?.let { map ->
+        val temporal =
+            DynamicTypes.fromConnectValue(
+                SimpleTypes.ZONEDDATETIME_STRUCT.schema(),
+                Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema()).let { struct ->
+                  struct.put(EPOCH_SECONDS, map.getLong(EPOCH_SECONDS))
+                  struct.put(NANOS_OF_SECOND, map.getLong(NANOS_OF_SECOND)?.toInt())
+                  struct.put(ZONE_ID, map.getString(ZONE_ID))
+                }) as Temporal?
+
+        ZonedDateTime.from(temporal)
+      }
 
   @Suppress("UNCHECKED_CAST")
   private fun Map<String, Any?>.getList(key: String): List<String>? =

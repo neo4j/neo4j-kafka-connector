@@ -19,8 +19,6 @@ package org.neo4j.connectors.kafka.testing.sink
 import java.net.URI
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import org.neo4j.connectors.kafka.testing.MapSupport.nestUnder
-import org.neo4j.connectors.kafka.testing.MapSupport.putConditionally
 import org.neo4j.connectors.kafka.testing.RegistrationSupport
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
@@ -50,31 +48,38 @@ internal class Neo4jSinkRegistration(
         mutableMapOf(
                 "name" to name,
                 "config" to
-                    mutableMapOf<String, Any>(
-                            "topics" to topics.joinToString(","),
-                            "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
-                            "key.converter" to keyConverter.className,
-                            "value.converter" to valueConverter.className,
-                            "errors.retry.timeout" to retryTimeout.inWholeMilliseconds,
-                            "errors.retry.delay.max.ms" to retryMaxDelay.inWholeMilliseconds,
-                            "errors.tolerance" to errorTolerance,
-                            "errors.log.enable" to enableErrorLog,
-                            "errors.log.include.messages" to includeMessagesInErrorLog,
-                            "neo4j.uri" to neo4jUri,
-                            "neo4j.authentication.type" to "BASIC",
-                            "neo4j.authentication.basic.username" to neo4jUser,
-                            "neo4j.authentication.basic.password" to neo4jPassword,
-                            "neo4j.database" to neo4jDatabase,
-                        )
-                        .putConditionally(
-                            "key.converter.schema.registry.url", schemaControlRegistryUri) {
-                              keyConverter.supportsSchemaRegistry
-                            }
-                        .putConditionally(
-                            "value.converter.schema.registry.url", schemaControlRegistryUri) {
-                              valueConverter.supportsSchemaRegistry
-                            })
-            .nestUnder("config", strategies)
+                    buildMap {
+                      put("topics", topics.joinToString(","))
+                      put("connector.class", "org.neo4j.connectors.kafka.sink.Neo4jConnector")
+                      put("key.converter", keyConverter.className)
+                      put("value.converter", valueConverter.className)
+                      put("errors.retry.timeout", retryTimeout.inWholeMilliseconds)
+                      put("errors.retry.delay.max.ms", retryMaxDelay.inWholeMilliseconds)
+                      put("errors.tolerance", errorTolerance)
+                      put("errors.log.enable", enableErrorLog)
+                      put("errors.log.include.messages", includeMessagesInErrorLog)
+                      put("neo4j.uri", neo4jUri)
+                      put("neo4j.authentication.type", "BASIC")
+                      put("neo4j.authentication.basic.username", neo4jUser)
+                      put("neo4j.authentication.basic.password", neo4jPassword)
+                      put("neo4j.database", neo4jDatabase)
+
+                      if (keyConverter.supportsSchemaRegistry) {
+                        put("key.converter.schema.registry.url", schemaControlRegistryUri)
+                      }
+                      putAll(
+                          keyConverter.additionalProperties.mapKeys { "key.converter.${it.key}" })
+
+                      if (valueConverter.supportsSchemaRegistry) {
+                        put("value.converter.schema.registry.url", schemaControlRegistryUri)
+                      }
+                      putAll(
+                          valueConverter.additionalProperties.mapKeys {
+                            "value.converter.${it.key}"
+                          })
+
+                      putAll(strategies)
+                    })
             .toMap()
   }
 
