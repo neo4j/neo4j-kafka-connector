@@ -36,13 +36,13 @@ data class SinkMessage(val record: SinkRecord) {
     get(): String = record.topic()
 
   val keySchema
-    get(): Schema = record.keySchema()
+    get(): Schema? = record.keySchema()
 
   val key
     get(): Any? = record.key()
 
   val valueSchema
-    get(): Schema = record.valueSchema()
+    get(): Schema? = record.valueSchema()
 
   val value
     get(): Any? = record.value()
@@ -78,6 +78,13 @@ interface SinkStrategyHandler {
 
   fun strategy(): SinkStrategy
 
+  /**
+   * Process incoming sink messages by converting them into Cypher queries, grouped as transactional
+   * boundaries. Each `Iterable<ChangeQuery>` will be executed as a transaction.
+   *
+   * @param messages Incoming sink messages
+   * @return Iterable of change queries split into transactional boundaries
+   */
   fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>>
 
   companion object {
@@ -91,7 +98,15 @@ interface SinkStrategyHandler {
 
       val query = originals[SinkConfiguration.CYPHER_TOPIC_PREFIX + topic]
       if (query != null) {
-        return CypherHandler(topic, query, config.batchSize)
+        return CypherHandler(
+            topic,
+            query,
+            config.renderer,
+            config.batchSize,
+            bindHeaderAs = config.cypherBindHeaderAs,
+            bindKeyAs = config.cypherBindKeyAs,
+            bindValueAs = config.cypherBindValueAs,
+            bindValueAsEvent = config.cypherBindValueAsEvent)
       }
 
       val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]

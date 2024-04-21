@@ -46,17 +46,25 @@ data class ConvertingKafkaProducer(
   fun publish(
       keySchema: Schema? = null,
       key: Any? = null,
-      valueSchema: Schema,
-      value: Any,
+      valueSchema: Schema? = null,
+      value: Any? = null,
       timestamp: Long? = null,
       headers: Map<String, Any> = emptyMap()
   ) {
     val serializedKey =
         when (key) {
           null -> null
-          else -> keyConverter.testShimSerializer.serialize(key, keySchema!!)
+          else ->
+              keyConverter.testShimSerializer.serialize(
+                  key, keySchema ?: throw IllegalArgumentException("null key schema"))
         }
-    val serializedValue = valueConverter.testShimSerializer.serialize(value, valueSchema)
+    val serializedValue =
+        when (value) {
+          null -> null
+          else ->
+              valueConverter.testShimSerializer.serialize(
+                  value, valueSchema ?: throw IllegalArgumentException("null value schema"))
+        }
     val converter = SimpleHeaderConverter()
     val recordHeaders =
         headers.map { e ->

@@ -48,7 +48,7 @@ import org.neo4j.driver.Session
 class Neo4jCdcSourceIdFromStreamsMessageIT {
 
   companion object {
-    const val TOPIC = "source-id"
+    private const val TOPIC = "source-id"
   }
 
   @Neo4jSink(cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")])

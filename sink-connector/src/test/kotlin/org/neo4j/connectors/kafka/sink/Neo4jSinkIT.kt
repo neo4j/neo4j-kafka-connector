@@ -36,7 +36,7 @@ import org.neo4j.driver.Session
 
 abstract class Neo4jSinkIT {
   companion object {
-    const val TOPIC = "persons"
+    private const val TOPIC = "persons"
   }
 
   @Neo4jSink(

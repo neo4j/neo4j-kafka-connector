@@ -40,4 +40,8 @@ class TopicRegistry {
           " * '${it.key}' -> '${it.value}'" 
         }}")
   }
+
+  fun clear() {
+    aliases.clear()
+  }
 }

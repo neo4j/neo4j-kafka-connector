@@ -1248,30 +1248,6 @@ class DeprecatedNeo4jSinkTaskTest {
   }
 
   @Test
-  fun `should not insert data into Neo4j when cypher is specified for different label`() {
-    val topic = "neotopic"
-    val props = mutableMapOf<String, String>()
-    props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props["${SinkConfiguration.CYPHER_TOPIC_PREFIX}$topic"] =
-        "CREATE (n:Person {name: event.firstName, surname: event.lastName})"
-    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
-    props[SinkTask.TOPICS_CONFIG] = topic
-
-    val struct =
-        Struct(PLACE_SCHEMA)
-            .put("name", "San Mateo (CA)")
-            .put("latitude", 37.5629917.toFloat())
-            .put("longitude", -122.3255254.toFloat())
-
-    task.start(props)
-    task.put(listOf(SinkRecord(topic, 1, null, null, PERSON_SCHEMA, struct, 42)))
-    session.beginTransaction().use {
-      val node: Node? = it.findNode("Person", "name", "Alex")
-      assertTrue { node == null }
-    }
-  }
-
-  @Test
   fun `should report but not fail parsing data`() {
     val topic = "neotopic"
     val props = mutableMapOf<String, String>()
@@ -1291,6 +1267,8 @@ class DeprecatedNeo4jSinkTaskTest {
     }
   }
 
+  // cypher strategy waits for the values to be a Map, hence a raw string value will not be
+  // mapped to a cypher event and nothing will be created out of it
   @Test
   fun `should report but not fail invalid schema`() {
     val topic = "neotopic"

@@ -67,11 +67,11 @@ internal class Neo4jSinkExtension(
 
   private lateinit var sink: Neo4jSinkRegistration
 
-  private lateinit var driver: Driver
+  private var driver: Driver? = null
 
-  private lateinit var session: Session
+  private var session: Session? = null
 
-  private lateinit var neo4jDatabase: String
+  private var neo4jDatabase: String? = null
 
   private val brokerExternalHost =
       AnnotationValueResolver(Neo4jSink::brokerExternalHost, envAccessor)
@@ -152,6 +152,10 @@ internal class Neo4jSinkExtension(
       val resolved = topicRegistry.resolveTopic(it.topic)
       topics.add(resolved)
       strategies["neo4j.cypher.topic.$resolved"] = it.query
+      strategies["neo4j.cypher.bind-header-as"] = it.bindHeaderAs
+      strategies["neo4j.cypher.bind-key-as"] = it.bindKeyAs
+      strategies["neo4j.cypher.bind-value-as"] = it.bindValueAs
+      strategies["neo4j.cypher.bind-value-as-event"] = it.bindValueAsEvent
     }
 
     if (metadata.cdcSourceId.isNotEmpty()) {
@@ -209,7 +213,7 @@ internal class Neo4jSinkExtension(
             neo4jUri = neo4jUri.resolve(sinkAnnotation),
             neo4jUser = neo4jUser.resolve(sinkAnnotation),
             neo4jPassword = neo4jPassword.resolve(sinkAnnotation),
-            neo4jDatabase = neo4jDatabase,
+            neo4jDatabase = neo4jDatabase!!,
             schemaControlRegistryUri = schemaControlRegistryUri.resolve(sinkAnnotation),
             keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
             valueConverter = keyValueConverterResolver.resolveValueConverter(context),
@@ -220,15 +224,20 @@ internal class Neo4jSinkExtension(
   }
 
   override fun afterEach(extensionContent: ExtensionContext?) {
-    if (::driver.isInitialized) {
+    if (driver != null) {
       if (sinkAnnotation.dropDatabase) {
-        session.dropDatabase(neo4jDatabase).close()
+        session?.dropDatabase(neo4jDatabase!!)?.close()
       }
-      driver.close()
+      driver!!.close()
     } else if (sinkAnnotation.dropDatabase) {
-      createDriver().use { dr -> dr.session().use { it.dropDatabase(neo4jDatabase) } }
+      createDriver().use { dr -> dr.session().use { it.dropDatabase(neo4jDatabase!!) } }
     }
     sink.unregister()
+
+    topicRegistry.clear()
+    neo4jDatabase = null
+    driver = null
+    session = null
   }
 
   override fun supportsParameter(
@@ -247,12 +256,12 @@ internal class Neo4jSinkExtension(
 
   private fun resolveSession(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      @Suppress("UNUSED_PARAMETER") extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?
   ): Any {
     ensureDatabase(extensionContext)
-    driver = createDriver()
-    session = driver.session(SessionConfig.forDatabase(neo4jDatabase))
-    return session
+    driver = driver ?: createDriver()
+    session = driver!!.session(SessionConfig.forDatabase(neo4jDatabase))
+    return session!!
   }
 
   private fun createDriver(): Driver {
@@ -263,7 +272,7 @@ internal class Neo4jSinkExtension(
   }
 
   private fun ensureDatabase(context: ExtensionContext?) {
-    if (this::neo4jDatabase.isInitialized) {
+    if (neo4jDatabase != null) {
       return
     }
     neo4jDatabase = sinkAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
@@ -272,9 +281,10 @@ internal class Neo4jSinkExtension(
         neo4jDatabase,
         "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",
     )
-    createDriver().use { driver ->
-      driver.verifyConnectivity()
-      driver.session().use { session -> session.createDatabase(neo4jDatabase) }
+    driver = driver ?: createDriver()
+    driver?.apply {
+      this.verifyConnectivity()
+      this.session().use { session -> session.createDatabase(neo4jDatabase!!) }
     }
   }
 

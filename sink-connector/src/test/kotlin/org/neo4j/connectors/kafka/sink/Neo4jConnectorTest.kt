@@ -98,4 +98,82 @@ class Neo4jConnectorTest {
         .first { it.name() == Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM }
         .errorMessages() should beEmpty<String>()
   }
+
+  @Test
+  fun `should validate cypher strategy alias settings when no alias set`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
+                SinkConfiguration.CYPHER_BIND_KEY_AS to "",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS to "",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false"))
+
+    config
+        .configValues()
+        .filter {
+          it.name() in
+              listOf(
+                  SinkConfiguration.CYPHER_BIND_HEADER_AS,
+                  SinkConfiguration.CYPHER_BIND_KEY_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+        }
+        .forEach {
+          it.errorMessages() shouldContain
+              "At least one variable binding must be specified for Cypher strategies."
+        }
+  }
+
+  @Test
+  fun `should validate cypher strategy alias settings with value as event`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
+                SinkConfiguration.CYPHER_BIND_KEY_AS to "",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS to "",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "true"))
+
+    config
+        .configValues()
+        .filter {
+          it.name() in
+              listOf(
+                  SinkConfiguration.CYPHER_BIND_HEADER_AS,
+                  SinkConfiguration.CYPHER_BIND_KEY_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+        }
+        .forEach { it.errorMessages() should beEmpty<String>() }
+  }
+
+  @Test
+  fun `should validate cypher strategy alias settings with value as __value`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
+                SinkConfiguration.CYPHER_BIND_KEY_AS to "",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS to "__value",
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false"))
+
+    config
+        .configValues()
+        .filter {
+          it.name() in
+              listOf(
+                  SinkConfiguration.CYPHER_BIND_HEADER_AS,
+                  SinkConfiguration.CYPHER_BIND_KEY_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS,
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+        }
+        .forEach { it.errorMessages() should beEmpty<String>() }
+  }
 }

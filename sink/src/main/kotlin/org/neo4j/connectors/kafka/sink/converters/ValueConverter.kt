@@ -104,51 +104,51 @@ abstract class ValueConverter<T> {
       val fieldValue = value[key]
       try {
         if (null == fieldValue) {
-          log.trace("convertStruct() - Setting '{}' to null.", fieldName)
+          log.trace("convertMap() - Setting '{}' to null.", fieldName)
           setNullField(result, fieldName)
           continue
         }
         if (fieldValue is String) {
-          log.trace("convertStruct() - Processing '{}' as string.", fieldName)
+          log.trace("convertMap() - Processing '{}' as string.", fieldName)
           setStringField(result, fieldName, fieldValue as String?)
         } else if (fieldValue is Byte) {
-          log.trace("convertStruct() - Processing '{}' as int8.", fieldName)
+          log.trace("convertMap() - Processing '{}' as int8.", fieldName)
           setInt8Field(result, fieldName, fieldValue)
         } else if (fieldValue is Short) {
-          log.trace("convertStruct() - Processing '{}' as int16.", fieldName)
+          log.trace("convertMap() - Processing '{}' as int16.", fieldName)
           setInt16Field(result, fieldName, fieldValue)
         } else if (fieldValue is Int) {
-          log.trace("convertStruct() - Processing '{}' as int32.", fieldName)
+          log.trace("convertMap() - Processing '{}' as int32.", fieldName)
           setInt32Field(result, fieldName, fieldValue as Int?)
         } else if (fieldValue is Long) {
-          log.trace("convertStruct() - Processing '{}' as long.", fieldName)
+          log.trace("convertMap() - Processing '{}' as long.", fieldName)
           setInt64Field(result, fieldName, fieldValue)
         } else if (fieldValue is BigInteger) {
-          log.trace("convertStruct() - Processing '{}' as long.", fieldName)
+          log.trace("convertMap() - Processing '{}' as long.", fieldName)
           setInt64Field(result, fieldName, fieldValue.toLong())
         } else if (fieldValue is Double) {
-          log.trace("convertStruct() - Processing '{}' as float64.", fieldName)
+          log.trace("convertMap() - Processing '{}' as float64.", fieldName)
           setFloat64Field(result, fieldName, fieldValue)
         } else if (fieldValue is Float) {
-          log.trace("convertStruct() - Processing '{}' as float32.", fieldName)
+          log.trace("convertMap() - Processing '{}' as float32.", fieldName)
           setFloat32Field(result, fieldName, fieldValue as Float?)
         } else if (fieldValue is BigDecimal) {
-          log.trace("convertStruct() - Processing '{}' as decimal.", fieldName)
+          log.trace("convertMap() - Processing '{}' as decimal.", fieldName)
           setDecimalField(result, fieldName, fieldValue)
         } else if (fieldValue is Boolean) {
-          log.trace("convertStruct() - Processing '{}' as boolean.", fieldName)
+          log.trace("convertMap() - Processing '{}' as boolean.", fieldName)
           setBooleanField(result, fieldName, fieldValue)
         } else if (fieldValue is java.util.Date) {
-          log.trace("convertStruct() - Processing '{}' as timestamp.", fieldName)
+          log.trace("convertMap() - Processing '{}' as timestamp.", fieldName)
           setTimestampField(result, fieldName, fieldValue)
         } else if (fieldValue is ByteArray) {
-          log.trace("convertStruct() - Processing '{}' as bytes.", fieldName)
+          log.trace("convertMap() - Processing '{}' as bytes.", fieldName)
           setBytesField(result, fieldName, fieldValue as ByteArray?)
         } else if (fieldValue is List<*>) {
-          log.trace("convertStruct() - Processing '{}' as array.", fieldName)
+          log.trace("convertMap() - Processing '{}' as array.", fieldName)
           setArray(result, fieldName, null, fieldValue as MutableList<Any?>?)
         } else if (fieldValue is Map<*, *>) {
-          log.trace("convertStruct() - Processing '{}' as map.", fieldName)
+          log.trace("convertMap() - Processing '{}' as map.", fieldName)
           setMap(result, fieldName, null, fieldValue as MutableMap<Any?, Any?>?)
         } else {
           throw DataException(

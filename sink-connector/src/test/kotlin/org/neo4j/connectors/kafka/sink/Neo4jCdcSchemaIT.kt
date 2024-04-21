@@ -49,7 +49,7 @@ import org.neo4j.driver.Session
 abstract class Neo4jCdcSchemaIT {
 
   companion object {
-    const val TOPIC = "schema"
+    private const val TOPIC = "schema"
   }
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
@@ -478,11 +478,11 @@ abstract class Neo4jCdcSchemaIT {
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
-class Neo4JCdcSchemaAvroIT : Neo4jCdcSchemaIT()
+class Neo4jCdcSchemaAvroIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-class Neo4JCdcSchemaJsonIT : Neo4jCdcSchemaIT()
+class Neo4jCdcSchemaJsonIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
-@Disabled
-class Neo4JCdcSchemaProtobufIT : Neo4jCdcSchemaIT()
+@Disabled // TODO: make schema generation protobuf compatible
+class Neo4jCdcSchemaProtobufIT : Neo4jCdcSchemaIT()

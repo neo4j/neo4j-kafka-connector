@@ -35,7 +35,7 @@ import org.neo4j.driver.Session
 
 abstract class LegacyNeo4jSinkIT {
   companion object {
-    const val TOPIC = "persons"
+    private const val TOPIC = "persons"
   }
 
   @LegacyNeo4jSink(

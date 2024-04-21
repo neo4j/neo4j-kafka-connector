@@ -48,7 +48,7 @@ import org.neo4j.driver.Session
 class Neo4jCdcSchemaFromStreamsMessageIT {
 
   companion object {
-    const val TOPIC = "schema"
+    private const val TOPIC = "schema"
   }
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
