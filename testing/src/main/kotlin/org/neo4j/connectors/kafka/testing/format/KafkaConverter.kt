@@ -36,8 +36,7 @@ import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
 import org.neo4j.connectors.kafka.testing.format.string.StringDeserializer
 import org.neo4j.connectors.kafka.testing.format.string.StringSerializer
 
-private val PROTOBUF_OPTIONS =
-    mapOf("enhanced.protobuf.schema.support" to true, "optional.for.nullables" to "true")
+private val PROTOBUF_OPTIONS = mapOf("optional.for.nullables" to "true")
 
 enum class KafkaConverter(
     val className: String,
