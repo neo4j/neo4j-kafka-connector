@@ -34,7 +34,6 @@ import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
@@ -298,6 +297,16 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.OPTIONAL_BOOLEAN_SCHEMA),
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_BYTES_SCHEMA),
+          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
+          Arguments.of(SimpleTypes.LOCALTIME.schema(true)),
+          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
+          Arguments.of(SimpleTypes.OFFSETTIME.schema(true)),
+          Arguments.of(SimpleTypes.ZONEDDATETIME.schema(true)),
+          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
+          Arguments.of(SimpleTypes.LOCALTIME_STRUCT.schema(true)),
+          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
+          Arguments.of(SimpleTypes.OFFSETTIME_STRUCT.schema(true)),
+          Arguments.of(SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)),
           Arguments.of(SimpleTypes.DURATION.schema(true)))
     }
   }
@@ -338,27 +347,29 @@ abstract class Neo4jCypherIT {
           Arguments.of(SimpleTypes.STRING.schema(true), "another string"),
           Arguments.of(SimpleTypes.BYTES.schema(false), "a string".encodeToByteArray()),
           Arguments.of(SimpleTypes.BYTES.schema(true), "another string".encodeToByteArray()),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(false), LocalDate.of(2019, 5, 1)),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(true), LocalDate.of(2019, 5, 1)),
+          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(false), LocalDate.of(2019, 5, 1)),
+          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true), LocalDate.of(2019, 5, 1)),
           Arguments.of(
-              SimpleTypes.LOCALDATETIME.schema(false),
+              SimpleTypes.LOCALDATETIME_STRUCT.schema(false),
               LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
           Arguments.of(
-              SimpleTypes.LOCALDATETIME.schema(true),
+              SimpleTypes.LOCALDATETIME_STRUCT.schema(true),
               LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(SimpleTypes.LOCALTIME.schema(false), LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(SimpleTypes.LOCALTIME.schema(true), LocalTime.of(23, 59, 59, 999999999)),
           Arguments.of(
-              SimpleTypes.ZONEDDATETIME.schema(false),
+              SimpleTypes.LOCALTIME_STRUCT.schema(false), LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(
+              SimpleTypes.LOCALTIME_STRUCT.schema(true), LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(
+              SimpleTypes.ZONEDDATETIME_STRUCT.schema(false),
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              SimpleTypes.ZONEDDATETIME.schema(true),
+              SimpleTypes.ZONEDDATETIME_STRUCT.schema(true),
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              SimpleTypes.OFFSETTIME.schema(false),
+              SimpleTypes.OFFSETTIME_STRUCT.schema(false),
               OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
           Arguments.of(
-              SimpleTypes.OFFSETTIME.schema(true),
+              SimpleTypes.OFFSETTIME_STRUCT.schema(true),
               OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
           Arguments.of(
               SimpleTypes.DURATION.schema(false), Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
@@ -379,7 +390,7 @@ abstract class Neo4jCypherIT {
               CypherStrategy(
                   TOPIC,
                   """
-                  UNWIND __value AS id
+                  UNWIND __value.array AS id
                   CREATE (n:Data) SET n.id = id
                   """)])
   @ParameterizedTest
@@ -391,7 +402,12 @@ abstract class Neo4jCypherIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) = runTest {
-    producer.publish(valueSchema = SchemaBuilder.array(elementType), value = value)
+    SchemaBuilder.array(elementType).build().let { array ->
+      // Protobuf does not support top level ARRAY values, so we are wrapping it inside a struct
+      SchemaBuilder.struct().field("array", array).build().let { wrapper ->
+        producer.publish(valueSchema = wrapper, value = Struct(wrapper).put("array", value))
+      }
+    }
 
     eventually(30.seconds) {
       session.run("MATCH (n:Data) RETURN n.id ORDER BY id(n)", emptyMap()).list { r ->
@@ -429,16 +445,20 @@ abstract class Neo4jCypherIT {
               CypherStrategy(
                   TOPIC,
                   """
-                  CREATE (n:Data) SET n = __value
+                  CREATE (n:Data) SET n = __value.map
                   """)])
   @Test
   fun `should support simple maps`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) = runTest {
-    SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build().let { schema ->
-      producer.publish(
-          valueSchema = schema, value = mapOf("firstName" to "john", "lastName" to "doe"))
+    SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build().let { map ->
+      // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
+      SchemaBuilder.struct().field("map", map).build().let { wrapper ->
+        producer.publish(
+            valueSchema = wrapper,
+            value = Struct(wrapper).put("map", mapOf("firstName" to "john", "lastName" to "doe")))
+      }
     }
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n", emptyMap()).single() }
@@ -677,6 +697,5 @@ abstract class Neo4jCypherIT {
   class Neo4jCypherJsonIT : Neo4jCypherIT()
 
   @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
-  @Disabled // TODO: make schema generation protobuf compatible
   class Neo4jCypherProtobufIT : Neo4jCypherIT()
 }

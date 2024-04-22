@@ -23,7 +23,6 @@ import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.seconds
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
@@ -484,5 +483,4 @@ class Neo4jCdcSchemaAvroIT : Neo4jCdcSchemaIT()
 class Neo4jCdcSchemaJsonIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
-@Disabled // TODO: make schema generation protobuf compatible
 class Neo4jCdcSchemaProtobufIT : Neo4jCdcSchemaIT()
