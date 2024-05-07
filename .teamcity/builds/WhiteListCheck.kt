@@ -24,12 +24,17 @@ class WhiteListCheck(id: String, name: String) :
               """
                 #!/bin/bash -eu
                 
-                token="%github-pull-request-token%"
+                BRANCH=%teamcity.pullRequest.source.branch%
+                if [[ "${'$'}BRANCH" =~ dependabot/.* ]]; then
+                  echo "Raised by dependabot, skipping the white list check"
+                  exit 0
+                fi
                 
                 echo "Checking committers on PR %teamcity.build.branch%"
+                TOKEN="%github-pull-request-token%"
                 
                 # process pull request
-                ./whitelist-check/bin/examine-pull-request $GITHUB_OWNER $GITHUB_REPOSITORY "${'$'}{token}" %teamcity.build.branch% whitelist-check/cla-database.csv
+                ./whitelist-check/bin/examine-pull-request $GITHUB_OWNER $GITHUB_REPOSITORY "${'$'}{TOKEN}" %teamcity.build.branch% whitelist-check/cla-database.csv
             """
                   .trimIndent()
           formatStderrAsError = true
