@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@commitlint/cli": "^17.0.3",
+    "@commitlint/cli": "^19.3.0",
     "@commitlint/config-conventional": "^17.0.3",
     "@commitlint/lint": "^17.0.3",
     "@commitlint/load": "^17.0.3",
