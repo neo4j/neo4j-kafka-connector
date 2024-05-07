@@ -40,49 +40,50 @@
         <module>testing</module>
     </modules>
     <properties>
-        <annotations.version>24.0.1</annotations.version>
-        <assertj-core.version>3.24.2</assertj-core.version>
+        <annotations.version>24.1.0</annotations.version>
+        <assertj-core.version>3.25.3</assertj-core.version>
         <avro.version>1.11.3</avro.version>
-        <awaitility.version>4.2.0</awaitility.version>
+        <awaitility.version>4.2.1</awaitility.version>
         <build-resources.version>1.0.0</build-resources.version>
+        <byte-buddy.version>1.14.14</byte-buddy.version>
         <cdc.version>1.0.6</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
-        <commons-lang3.version>3.13.0</commons-lang3.version>
+        <commons-lang3.version>3.14.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
-        <jackson.version>2.15.2</jackson.version>
+        <jackson.version>2.17.1</jackson.version>
         <java.version>11</java.version>
-        <joda-time.version>2.10.14</joda-time.version>
-        <jreleaser-maven-plugin.version>1.9.0</jreleaser-maven-plugin.version>
+        <joda-time.version>2.12.7</joda-time.version>
+        <jreleaser-maven-plugin.version>1.12.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <kafka-schema-registry.version>7.2.9</kafka-schema-registry.version>
         <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <kafka.version>3.4.1</kafka.version>
-        <kotest-assertions-core-jvm.version>5.8.0</kotest-assertions-core-jvm.version>
-        <kotlin.coroutines.version>1.7.3</kotlin.coroutines.version>
-        <kotlin.version>1.9.0</kotlin.version>
+        <kotest-assertions-core-jvm.version>5.8.1</kotest-assertions-core-jvm.version>
+        <kotlin.coroutines.version>1.8.0</kotlin.coroutines.version>
+        <kotlin.version>1.9.24</kotlin.version>
         <license-maven-plugin.version>4.2</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/licensing/notice-asl-prefix.txt</licensing.prepend.text>
-        <logback.version>1.2.13</logback.version>
+        <logback.version>1.5.6</logback.version>
         <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
         <maven-enforcer-plugin.version>3.3.0</maven-enforcer-plugin.version>
         <maven-failsafe-plugin.version>3.1.2</maven-failsafe-plugin.version>
-        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-jar-plugin.version>3.4.1</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-surefire-plugin.version>3.1.2</maven-surefire-plugin.version>
-        <mockito-kotlin.version>5.1.0</mockito-kotlin.version>
-        <mockito.version>5.5.0</mockito.version>
+        <mockito-kotlin.version>5.3.1</mockito-kotlin.version>
+        <mockito.version>5.11.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.23.2</protobuf.version>
-        <reactor.version>2022.0.11</reactor.version>
+        <reactor.version>2023.0.5</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <sortpom-maven-plugin.version>3.3.0</sortpom-maven-plugin.version>
+        <sortpom-maven-plugin.version>3.4.1</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
-        <testcontainers.version>1.19.0</testcontainers.version>
+        <testcontainers.version>1.19.7</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -205,7 +206,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.14.11</version>
+                <version>${byte-buddy.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.avro</groupId>
