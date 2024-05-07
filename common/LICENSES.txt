@@ -13,9 +13,6 @@ Apache Software License, Version 2.0
   JetBrains Java Annotations
   Kotlin Reflect
   Kotlin Stdlib
-  Kotlin Stdlib Common
-  Kotlin Stdlib Jdk7
-  Kotlin Stdlib Jdk8
   kotlinx-coroutines-core
   Non-Blocking Reactive Foundation for the JVM
 ------------------------------------------------------------------------------
