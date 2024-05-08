@@ -82,7 +82,7 @@
         <reactor.version>2023.0.5</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>3.4.1</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
         <testcontainers.version>1.19.7</testcontainers.version>
     </properties>
     <dependencyManagement>
