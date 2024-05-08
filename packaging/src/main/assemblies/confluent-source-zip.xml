@@ -14,10 +14,24 @@
             <outputDirectory/>
             <lineEnding>keep</lineEnding>
             <filtered>true</filtered>
+            <includes>
+                <include>**/*</include>
+            </includes>
             <excludes>
                 <exclude>**/.keep</exclude>
                 <exclude>**/*.formatted</exclude>
+                <exclude>config/*.properties</exclude>
             </excludes>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/distributions/text/config</directory>
+            <outputDirectory>config</outputDirectory>
+            <lineEnding>keep</lineEnding>
+            <includes>
+                <include>source-*.properties</include>
+            </includes>
             <directoryMode>0755</directoryMode>
             <fileMode>0644</fileMode>
         </fileSet>
