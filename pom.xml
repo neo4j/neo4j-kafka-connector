@@ -83,7 +83,7 @@
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <protobuf.version>3.23.2</protobuf.version>
+        <protobuf.version>4.26.1</protobuf.version>
         <reactor.version>2023.0.5</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>3.4.1</sortpom-maven-plugin.version>
