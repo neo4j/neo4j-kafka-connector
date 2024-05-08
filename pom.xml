@@ -81,7 +81,7 @@
         <mockito-kotlin.version>5.3.1</mockito-kotlin.version>
         <mockito.version>5.11.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
-        <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
+        <neo4j-java-driver.version>5.20.0</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.23.2</protobuf.version>
         <reactor.version>2023.0.5</reactor.version>
