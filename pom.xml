@@ -44,7 +44,7 @@
         <assertj-core.version>3.25.3</assertj-core.version>
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.1</awaitility.version>
-        <build-resources.version>1.0.0</build-resources.version>
+        <build-resources.version>2024-03.2</build-resources.version>
         <byte-buddy.version>1.14.15</byte-buddy.version>
         <cdc.version>1.0.6</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
@@ -65,7 +65,7 @@
         <kotlin.version>1.9.24</kotlin.version>
         <license-maven-plugin.version>4.2</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
-        <licensing.prepend.text>/licensing/notice-asl-prefix.txt</licensing.prepend.text>
+        <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
         <logback.version>1.5.6</logback.version>
         <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -316,12 +316,6 @@
             <url>https://packages.confluent.io/maven/</url>
         </repository>
     </repositories>
-    <pluginRepositories>
-        <pluginRepository>
-            <id>github</id>
-            <url>https://maven.pkg.github.com/neo4j/connectors-build-resources</url>
-        </pluginRepository>
-    </pluginRepositories>
     <build>
         <pluginManagement>
             <plugins>
@@ -384,8 +378,8 @@
                     </configuration>
                     <dependencies>
                         <dependency>
-                            <groupId>org.neo4j.connectors</groupId>
-                            <artifactId>build-resources</artifactId>
+                            <groupId>org.neo4j.build</groupId>
+                            <artifactId>resources</artifactId>
                             <version>${build-resources.version}</version>
                         </dependency>
                     </dependencies>
@@ -561,7 +555,7 @@
                     <strictCheck>true</strictCheck>
                     <licenseSets>
                         <licenseSet>
-                            <header>/headers/ASL-2-header.txt</header>
+                            <header>/license/neo4j_apache_v2/header.txt</header>
                             <includes>
                                 <include>src/**/*.kt</include>
                                 <include>src/**/*.java</include>
@@ -574,8 +568,8 @@
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>org.neo4j.connectors</groupId>
-                        <artifactId>build-resources</artifactId>
+                        <groupId>org.neo4j.build</groupId>
+                        <artifactId>resources</artifactId>
                         <version>${build-resources.version}</version>
                     </dependency>
                 </dependencies>

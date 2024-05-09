@@ -1,5 +1,5 @@
 {
-  "name": "kafka-connect-neo4j#{product.type-suffix}",
+  "name": "#{product.id}",
   "version": "#{project.version}",
   "title": "#{product.name}",
   "description": "#{product.description}",
@@ -23,7 +23,9 @@
     "nodes",
     "relationships",
     "json",
-    "nosql"
+    "nosql",
+    "aura",
+    "cdc"
   ],
   "features": {
     "supported_encodings": [
@@ -36,9 +38,6 @@
   "logo": "assets/kafka-connect-neo4j.png",
   "documentation_url": "#{product.docs.url}",
   "docker_image": {},
-  "component_types": [
-    "sink",
-    "source"
-  ],
+  "component_types": [ #{product.components} ],
   "release_date": "#{timestamp}"
 }

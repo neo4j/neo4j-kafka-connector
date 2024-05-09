@@ -1,0 +1,1 @@
+Please refer to #{product.docs.url} for documentation on #{product.name}.
