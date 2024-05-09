@@ -3,14 +3,9 @@ updates:
   - package-ecosystem: maven
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     open-pull-requests-limit: 10
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: daily
-    groups:
-      commitlint:
-        applies-to: version-updates
-        patterns:
-          - "@commitlint*"
+      interval: weekly
