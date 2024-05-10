@@ -56,6 +56,7 @@ enum class SchemaCompatibilityMode {
 annotation class CypherStrategy(
     val topic: String = "",
     val query: String,
+    val bindTimestampAs: String = "__timestamp",
     val bindHeaderAs: String = "__header",
     val bindKeyAs: String = "__key",
     val bindValueAs: String = "__value",

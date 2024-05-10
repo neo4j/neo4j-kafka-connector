@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.kafka
 
 import java.net.URI
+import java.time.Instant
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.Header
@@ -47,7 +48,7 @@ data class ConvertingKafkaProducer(
       key: Any? = null,
       valueSchema: Schema? = null,
       value: Any? = null,
-      timestamp: Long? = null,
+      timestamp: Instant? = null,
       headers: Map<String, Any> = emptyMap()
   ) {
     val serializedKey =
@@ -79,7 +80,8 @@ data class ConvertingKafkaProducer(
     ensureSchemaCompatibility(topic)
 
     val record: ProducerRecord<Any, Any> =
-        ProducerRecord(topic, null, timestamp, serializedKey, serializedValue, recordHeaders)
+        ProducerRecord(
+            topic, null, timestamp?.toEpochMilli(), serializedKey, serializedValue, recordHeaders)
     kafkaProducer.send(record).get()
   }
 
@@ -91,7 +93,7 @@ data class ConvertingKafkaProducer(
         key = connectValue.value(),
         valueSchema = connectValue.schema(),
         value = connectValue.value(),
-        timestamp = event.metadata.txCommitTime.toInstant().toEpochMilli(),
+        timestamp = event.metadata.txCommitTime.toInstant(),
         headers = Headers.from(event).associate { it.key() to it.value() })
   }
 

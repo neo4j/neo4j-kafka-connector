@@ -106,6 +106,7 @@ class Neo4jConnectorTest {
         connector.validate(
             mutableMapOf(
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+                SinkConfiguration.CYPHER_BIND_TIMESTAMP_AS to "",
                 SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
                 SinkConfiguration.CYPHER_BIND_KEY_AS to "",
                 SinkConfiguration.CYPHER_BIND_VALUE_AS to "",
@@ -116,6 +117,7 @@ class Neo4jConnectorTest {
         .filter {
           it.name() in
               listOf(
+                  SinkConfiguration.CYPHER_BIND_TIMESTAMP_AS,
                   SinkConfiguration.CYPHER_BIND_HEADER_AS,
                   SinkConfiguration.CYPHER_BIND_KEY_AS,
                   SinkConfiguration.CYPHER_BIND_VALUE_AS,

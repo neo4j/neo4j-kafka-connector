@@ -152,6 +152,7 @@ internal class Neo4jSinkExtension(
       val resolved = topicRegistry.resolveTopic(it.topic)
       topics.add(resolved)
       strategies["neo4j.cypher.topic.$resolved"] = it.query
+      strategies["neo4j.cypher.bind-timestamp-as"] = it.bindTimestampAs
       strategies["neo4j.cypher.bind-header-as"] = it.bindHeaderAs
       strategies["neo4j.cypher.bind-key-as"] = it.bindKeyAs
       strategies["neo4j.cypher.bind-value-as"] = it.bindValueAs

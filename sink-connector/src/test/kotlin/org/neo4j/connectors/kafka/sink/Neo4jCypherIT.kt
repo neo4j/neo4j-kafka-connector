@@ -22,6 +22,7 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -29,6 +30,7 @@ import java.time.OffsetTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.stream.Stream
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.connect.data.Schema
@@ -615,20 +617,24 @@ abstract class Neo4jCypherIT {
                   CREATE (p:Person) SET 
                     p.id = __key,
                     p.name = __value.firstName, p.surname = __value.lastName,
-                    p.createdBy = __header.createdBy
+                    p.createdBy = __header.createdBy,
+                    p.createdAt = __timestamp
                   """)])
   @Test
-  fun `should get message value from default header, key and value binding`(
+  fun `should get message value from default timestamp, header, key and value binding`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+
     producer.publish(
         headers = mapOf("createdBy" to "john-doe"),
         keySchema = Schema.INT64_SCHEMA,
         key = 64L,
         valueSchema = Schema.STRING_SCHEMA,
         value =
-            ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")))
+            ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")),
+        timestamp = timestamp)
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -636,7 +642,12 @@ abstract class Neo4jCypherIT {
         {
           it.labels() shouldBe listOf("Person")
           it.asMap() shouldBe
-              mapOf("id" to 64L, "name" to "john", "surname" to "doe", "createdBy" to "john-doe")
+              mapOf(
+                  "id" to 64L,
+                  "name" to "john",
+                  "surname" to "doe",
+                  "createdBy" to "john-doe",
+                  "createdAt" to timestamp.atZone(ZoneOffset.UTC))
         }
   }
 
@@ -649,23 +660,28 @@ abstract class Neo4jCypherIT {
                   CREATE (p:Person) SET 
                     p.id = custom_key,
                     p.name = custom_value.firstName, p.surname = custom_value.lastName,
-                    p.createdBy = custom_header.createdBy
+                    p.createdBy = custom_header.createdBy,
+                    p.createdAt = custom_timestamp
                   """,
+                  bindTimestampAs = "custom_timestamp",
                   bindHeaderAs = "custom_header",
                   bindKeyAs = "custom_key",
                   bindValueAs = "custom_value")])
   @Test
-  fun `should get message value from custom header, key and value binding`(
+  fun `should get message value from custom timestamp, header, key and value binding`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+
     producer.publish(
         headers = mapOf("createdBy" to "john-doe"),
         keySchema = Schema.INT64_SCHEMA,
         key = 64L,
         valueSchema = Schema.STRING_SCHEMA,
         value =
-            ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")))
+            ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")),
+        timestamp = timestamp)
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -673,7 +689,12 @@ abstract class Neo4jCypherIT {
         {
           it.labels() shouldBe listOf("Person")
           it.asMap() shouldBe
-              mapOf("id" to 64L, "name" to "john", "surname" to "doe", "createdBy" to "john-doe")
+              mapOf(
+                  "id" to 64L,
+                  "name" to "john",
+                  "surname" to "doe",
+                  "createdBy" to "john-doe",
+                  "createdAt" to timestamp.atZone(ZoneOffset.UTC))
         }
   }
 
