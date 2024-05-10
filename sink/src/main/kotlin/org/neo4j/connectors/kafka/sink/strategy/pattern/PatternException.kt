@@ -14,15 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.pattern;
+package org.neo4j.connectors.kafka.sink.strategy.pattern
 
-public class PatternException extends RuntimeException {
+class PatternException : RuntimeException {
+  constructor(message: String?) : super(message)
 
-    public PatternException(String message) {
-        super(message);
-    }
-
-    public PatternException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  constructor(message: String?, cause: Throwable?) : super(message, cause)
 }
