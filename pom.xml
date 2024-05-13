@@ -63,7 +63,7 @@
         <kotest-assertions-core-jvm.version>5.8.1</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.8.0</kotlin.coroutines.version>
         <kotlin.version>1.9.24</kotlin.version>
-        <license-maven-plugin.version>4.3</license-maven-plugin.version>
+        <license-maven-plugin.version>4.5</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
         <logback.version>1.5.6</logback.version>
