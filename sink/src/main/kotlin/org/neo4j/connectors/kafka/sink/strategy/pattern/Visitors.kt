@@ -22,6 +22,7 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
+import org.neo4j.connectors.kafka.sink.strategy.pattern.PatternParser.PropertyKeyNameOrAliasContext
 
 internal object Visitors {
   fun parse(source: String?): Pattern {
@@ -69,8 +70,8 @@ internal object Visitors {
         val bidirectional =
             ((relPattern.leftArrow() != null && relPattern.rightArrow() != null) ||
                 (relPattern.leftArrow() == null && relPattern.rightArrow() == null))
-        val keyProperties = mutableSetOf<String>()
-        val includeProperties = mutableSetOf<String>()
+        val keyProperties = mutableMapOf<String, String>()
+        val includeProperties = mutableMapOf<String, String>()
         val excludeProperties = mutableSetOf<String>()
         if (bidirectional) {
           throw PatternException("Direction of relationship pattern must be explicitly set.")
@@ -109,8 +110,8 @@ internal object Visitors {
     override fun visitSimplePattern(ctx: PatternParser.SimplePatternContext): Pattern {
       if (ctx.simpleRelationshipPattern() != null) {
         val relPattern = ctx.simpleRelationshipPattern()
-        val keyProperties = mutableSetOf<String>()
-        val includeProperties = mutableSetOf<String>()
+        val keyProperties = mutableMapOf<String, String>()
+        val includeProperties = mutableMapOf<String, String>()
         val excludeProperties = mutableSetOf<String>()
 
         if (relPattern.properties() != null && relPattern.properties().propertySelector() != null) {
@@ -164,7 +165,7 @@ internal object Visitors {
                 "Property exclusions are not allowed on start and end node patterns.")
           }
 
-          if (pattern.includeProperties.contains("*")) {
+          if (pattern.includeProperties.containsKey("*")) {
             throw PatternException(
                 "Wildcard property inclusion is not allowed on start and end node patterns.")
           }
@@ -174,7 +175,7 @@ internal object Visitors {
             throw PatternException("Property exclusions are not allowed on relationship patterns.")
           }
 
-          if (pattern.includeProperties.contains("*")) {
+          if (pattern.includeProperties.containsKey("*")) {
             throw PatternException(
                 "Wildcard property inclusion is not allowed on relationship patterns.")
           }
@@ -202,8 +203,8 @@ internal object Visitors {
         labels: Set<String>,
         properties: PatternParser.PropertiesContext?,
     ): NodePattern {
-      val keyProperties = mutableSetOf<String>()
-      val includeProperties = mutableSetOf<String>()
+      val keyProperties = mutableMapOf<String, String>()
+      val includeProperties = mutableMapOf<String, String>()
       val excludeProperties = mutableSetOf<String>()
 
       if (properties?.propertySelector() != null) {
@@ -220,29 +221,40 @@ internal object Visitors {
 
     private fun extractPropertySelectors(
         selectors: List<PatternParser.PropSelectorContext>,
-        keyProperties: MutableSet<String>,
-        includeProperties: MutableSet<String>,
+        keyProperties: MutableMap<String, String>,
+        includeProperties: MutableMap<String, String>,
         excludeProperties: MutableSet<String>,
     ) {
       selectors.forEach { child ->
         if (child.TIMES() != null) {
-          includeProperties.add("*")
+          includeProperties["*"] = "*"
         } else if (child.MINUS() != null) {
           excludeProperties.add(
               PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName()))
         } else if (child.EXCLAMATION() != null) {
-          keyProperties.add(PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName()))
+          keyProperties += extractPropertyNameOrAlias(child.propertyKeyNameOrAlias())
         } else {
-          includeProperties.add(
-              PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName()))
+          includeProperties += extractPropertyNameOrAlias(child.propertyKeyNameOrAlias())
         }
       }
 
       if (includeProperties.isNotEmpty() && excludeProperties.isNotEmpty()) {
-        if (!includeProperties.contains("*")) {
+        if (!includeProperties.containsKey("*")) {
           throw PatternException("Property inclusions and exclusions are mutually exclusive.")
         }
       }
+    }
+  }
+
+  private fun extractPropertyNameOrAlias(ctx: PropertyKeyNameOrAliasContext): Pair<String, String> {
+    return if (ctx.propertyKeyName() != null) {
+      PropertyKeyNameVisitor.visitPropertyKeyName(ctx.propertyKeyName()) to
+          PropertyKeyNameVisitor.visitPropertyKeyName(ctx.propertyKeyName())
+    } else {
+      PropertyKeyNameVisitor.visitPropertyKeyName(
+          ctx.aliasedPropertyKeyName().propertyKeyName(0)) to
+          PropertyKeyNameVisitor.visitPropertyKeyName(
+              ctx.aliasedPropertyKeyName().propertyKeyName(1))
     }
   }
 

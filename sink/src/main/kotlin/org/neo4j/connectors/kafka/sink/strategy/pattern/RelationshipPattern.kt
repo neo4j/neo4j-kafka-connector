@@ -20,7 +20,7 @@ data class RelationshipPattern(
     val type: String?,
     val start: NodePattern,
     val end: NodePattern,
-    val keyProperties: Set<String>,
-    val includeProperties: Set<String>,
+    val keyProperties: Map<String, String>,
+    val includeProperties: Map<String, String>,
     val excludeProperties: Set<String>
 ) : Pattern {}

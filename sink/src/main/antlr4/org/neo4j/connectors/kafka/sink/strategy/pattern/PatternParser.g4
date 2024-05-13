@@ -49,7 +49,13 @@ propertySelector:
    LCURLY propSelector? (COMMA propSelector)* RCURLY;
 
 propSelector:
-    TIMES | PLUS? propertyKeyName | MINUS propertyKeyName | EXCLAMATION propertyKeyName;
+    TIMES | PLUS? propertyKeyNameOrAlias | MINUS propertyKeyName | EXCLAMATION propertyKeyNameOrAlias;
+
+propertyKeyNameOrAlias:
+    propertyKeyName | aliasedPropertyKeyName;
+
+aliasedPropertyKeyName:
+    propertyKeyName COLON propertyKeyName;
 
 cypherRelationshipPattern:
    leftArrow? arrowLine (

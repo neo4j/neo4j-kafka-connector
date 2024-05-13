@@ -18,7 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy.pattern
 
 data class NodePattern(
     val labels: Set<String>,
-    val keyProperties: Set<String>,
-    val includeProperties: Set<String>,
+    val keyProperties: Map<String, String>,
+    val includeProperties: Map<String, String>,
     val excludeProperties: Set<String>
 ) : Pattern {}
