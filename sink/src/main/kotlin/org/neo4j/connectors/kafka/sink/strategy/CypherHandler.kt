@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import com.fasterxml.jackson.core.JsonParseException
+import java.time.Instant
+import java.time.ZoneOffset
 import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.sink.ChangeQuery
@@ -36,6 +38,7 @@ class CypherHandler(
     query: String,
     renderer: Renderer,
     val batchSize: Int,
+    bindTimestampAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS,
     bindHeaderAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_HEADER_ALIAS,
     bindKeyAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_KEY_ALIAS,
     bindValueAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_ALIAS,
@@ -55,6 +58,9 @@ class CypherHandler(
                     buildList {
                       if (bindValueAsEvent) {
                         add(message.property("value").`as`("event"))
+                      }
+                      if (bindTimestampAs.isNotEmpty()) {
+                        add(message.property("timestamp").`as`(bindTimestampAs))
                       }
                       if (bindHeaderAs.isNotEmpty()) {
                         add(message.property("header").`as`(bindHeaderAs))
@@ -86,6 +92,8 @@ class CypherHandler(
         .map {
           val mapped =
               mapOf(
+                  "timestamp" to
+                      Instant.ofEpochMilli(it.record.timestamp()).atOffset(ZoneOffset.UTC),
                   "header" to it.headerFromConnectValue(),
                   "key" to it.keyFromConnectValue(),
                   "value" to it.valueFromConnectValue())

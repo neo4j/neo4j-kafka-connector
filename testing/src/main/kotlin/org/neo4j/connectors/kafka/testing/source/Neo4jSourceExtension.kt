@@ -228,7 +228,7 @@ internal class Neo4jSourceExtension(
     }
     neo4jDatabase =
         sourceAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
-    log.debug(
+    log.info(
         "Using database {} for test {}",
         neo4jDatabase,
         "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",

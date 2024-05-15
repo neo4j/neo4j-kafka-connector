@@ -63,6 +63,9 @@ class SinkConfiguration(originals: Map<String, *>) :
     originals().filterKeys { it.startsWith("kafka.") }.mapKeys { it.key.substring("kafka.".length) }
   }
 
+  val cypherBindTimestampAs
+    get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
+
   val cypherBindHeaderAs
     get(): String = getString(CYPHER_BIND_HEADER_AS)
 
@@ -134,6 +137,7 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val BATCH_PARALLELIZE = "neo4j.batch-parallelize"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
+    const val CYPHER_BIND_TIMESTAMP_AS = "neo4j.cypher.bind-timestamp-as"
     const val CYPHER_BIND_HEADER_AS = "neo4j.cypher.bind-header-as"
     const val CYPHER_BIND_KEY_AS = "neo4j.cypher.bind-key-as"
     const val CYPHER_BIND_VALUE_AS = "neo4j.cypher.bind-value-as"
@@ -153,6 +157,7 @@ class SinkConfiguration(originals: Map<String, *>) :
     private const val DEFAULT_BATCH_PARALLELIZE = true
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
+    const val DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS = "__timestamp"
     const val DEFAULT_CYPHER_BIND_HEADER_ALIAS = "__header"
     const val DEFAULT_CYPHER_BIND_KEY_ALIAS = "__key"
     const val DEFAULT_CYPHER_BIND_VALUE_ALIAS = "__value"
@@ -209,17 +214,22 @@ class SinkConfiguration(originals: Map<String, *>) :
       Neo4jConfiguration.validate(config)
 
       // cypher bind variables
+      val cypherAliasForTimestamp = config.value<String>(CYPHER_BIND_TIMESTAMP_AS).isNullOrEmpty()
       val cypherAliasForHeader = config.value<String>(CYPHER_BIND_HEADER_AS).isNullOrEmpty()
       val cypherAliasForKey = config.value<String>(CYPHER_BIND_KEY_AS).isNullOrEmpty()
       val cypherAliasForValue = config.value<String>(CYPHER_BIND_VALUE_AS).isNullOrEmpty()
       val cypherUseEventForValue = config.value<Boolean>(CYPHER_BIND_VALUE_AS_EVENT) ?: true
       if (!cypherUseEventForValue &&
-          (cypherAliasForHeader && cypherAliasForKey && cypherAliasForValue)) {
+          (cypherAliasForHeader &&
+              cypherAliasForKey &&
+              cypherAliasForValue &&
+              cypherAliasForTimestamp)) {
         config
             .configValues()
             .filter {
               it.name() in
                   listOf(
+                      CYPHER_BIND_TIMESTAMP_AS,
                       CYPHER_BIND_HEADER_AS,
                       CYPHER_BIND_KEY_AS,
                       CYPHER_BIND_VALUE_AS,
@@ -313,6 +323,14 @@ class SinkConfiguration(originals: Map<String, *>) :
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_PARALLELIZE
                   group = ConfigGroup.BATCH
+                })
+            .define(
+                ConfigKeyBuilder.of(CYPHER_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {

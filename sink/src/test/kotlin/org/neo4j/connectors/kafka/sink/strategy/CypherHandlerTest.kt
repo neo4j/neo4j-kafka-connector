@@ -18,6 +18,8 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
+import java.time.Instant
+import java.time.ZoneOffset
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
@@ -44,6 +46,7 @@ class CypherHandlerTest {
             "",
             "",
             "",
+            "",
             true)
 
     handler.handle(listOf(newMessage(Schema.STRING_SCHEMA, "{}"))) shouldBe
@@ -58,9 +61,12 @@ class CypherHandlerTest {
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
-                                        "value" to emptyMap())))))))
+                                        "value" to emptyMap<String, Any>())))))))
   }
 
   @Test
@@ -71,6 +77,7 @@ class CypherHandlerTest {
             "CREATE (n:Node) SET n = __value",
             Renderer.getDefaultRenderer(),
             1,
+            "",
             "",
             "",
             "__value",
@@ -88,9 +95,12 @@ class CypherHandlerTest {
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
-                                        "value" to emptyMap())))))))
+                                        "value" to emptyMap<String, Any>())))))))
   }
 
   @Test
@@ -101,6 +111,7 @@ class CypherHandlerTest {
             "CREATE (n:Node) SET n = __key",
             Renderer.getDefaultRenderer(),
             1,
+            "",
             "",
             "__key",
             "__value",
@@ -119,6 +130,9 @@ class CypherHandlerTest {
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to 32L,
                                         "value" to emptyMap<String, Any>())))))))
@@ -132,6 +146,7 @@ class CypherHandlerTest {
             "CREATE (n:Node) SET n = __header",
             Renderer.getDefaultRenderer(),
             1,
+            "",
             "__header",
             "__key",
             "__value",
@@ -156,6 +171,9 @@ class CypherHandlerTest {
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("age" to 24),
                                         "key" to 32L,
                                         "value" to emptyMap<String, Any>())))))))
@@ -169,6 +187,7 @@ class CypherHandlerTest {
             "CREATE (n:Node) SET n = __header",
             Renderer.getDefaultRenderer(),
             1,
+            "",
             "__header",
             "__key",
             "__value",
@@ -193,6 +212,50 @@ class CypherHandlerTest {
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
+                                        "header" to mapOf<String, Any>("age" to 24),
+                                        "key" to 32L,
+                                        "value" to emptyMap<String, Any>())))))))
+  }
+
+  @Test
+  fun `should generate correct statement with timestamp, header, key and value accessors`() {
+    val handler =
+        CypherHandler(
+            "my-topic",
+            "CREATE (n:Node) SET n = __header",
+            Renderer.getDefaultRenderer(),
+            1,
+            "__timestamp",
+            "__header",
+            "__key",
+            "__value",
+            false)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                "{}",
+                Schema.INT64_SCHEMA,
+                32L,
+                listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24)))))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
+                        mapOf(
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("age" to 24),
                                         "key" to 32L,
                                         "value" to emptyMap<String, Any>())))))))
@@ -209,6 +272,7 @@ class CypherHandlerTest {
           "",
           "",
           "",
+          "",
           false)
     } shouldHaveMessage
         "no effective accessors specified for binding the message into cypher template for topic 'my-topic'"
@@ -222,6 +286,7 @@ class CypherHandlerTest {
             "CREATE (n:Node) SET n.id = __value",
             Renderer.getDefaultRenderer(),
             5,
+            "__timestamp",
             "__header",
             "__key",
             "__value",
@@ -236,11 +301,13 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
                             "events" to
                                 (1..5).map { seq ->
                                   mapOf(
+                                      "timestamp" to
+                                          Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
                                       "value" to seq)
@@ -250,11 +317,13 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
                             "events" to
                                 (6..10).map { seq ->
                                   mapOf(
+                                      "timestamp" to
+                                          Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
                                       "value" to seq)
@@ -264,11 +333,13 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
                             "events" to
                                 (11..13).map { seq ->
                                   mapOf(
+                                      "timestamp" to
+                                          Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
                                       "value" to seq)
@@ -289,11 +360,14 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
                                         "value" to
@@ -321,11 +395,14 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to
                                             mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true),
@@ -357,11 +434,14 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
                                         "header" to
                                             mapOf(
                                                 "number" to 24,
@@ -386,21 +466,24 @@ class CypherHandlerTest {
                 "{]",
                 Schema.BYTES_SCHEMA,
                 "{a: b}".toByteArray(),
-                listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b"))))))
-    listOf(
+                listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b")))))) shouldBe
         listOf(
-            ChangeQuery(
-                null,
-                null,
-                Query(
-                    "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
-                    mapOf(
-                        "events" to
-                            listOf(
-                                mapOf(
-                                    "header" to mapOf<String, Any>("test" to "b"),
-                                    "key" to "{a: b}".toByteArray(),
-                                    "value" to "{]")))))))
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        mapOf(
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
+                                        "header" to mapOf<String, Any>("test" to "b"),
+                                        "key" to "{a: b}".toByteArray(),
+                                        "value" to "{]")))))))
   }
 
   private fun newMessage(
@@ -419,8 +502,12 @@ class CypherHandlerTest {
             valueSchema,
             value,
             0,
-            System.currentTimeMillis(),
+            TIMESTAMP,
             TimestampType.CREATE_TIME,
             headers))
+  }
+
+  companion object {
+    val TIMESTAMP: Long = Instant.now().toEpochMilli()
   }
 }

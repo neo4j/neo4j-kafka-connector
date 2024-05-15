@@ -170,7 +170,9 @@ object ChangeEventSupport {
                 SimpleTypes.ZONEDDATETIME_STRUCT.schema(),
                 Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema()).let { struct ->
                   struct.put(EPOCH_SECONDS, map.getLong(EPOCH_SECONDS))
-                  struct.put(NANOS_OF_SECOND, map.getLong(NANOS_OF_SECOND)?.toInt())
+                  // When the persisted value is `0`, PROTOBUF does not return it in the data hence
+                  // we need to assume null or missing entry will translate to `0`.
+                  struct.put(NANOS_OF_SECOND, map.getLong(NANOS_OF_SECOND)?.toInt() ?: 0)
                   struct.put(ZONE_ID, map.getString(ZONE_ID))
                 }) as Temporal?
 

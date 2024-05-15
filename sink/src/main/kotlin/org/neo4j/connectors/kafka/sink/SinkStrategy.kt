@@ -103,6 +103,7 @@ interface SinkStrategyHandler {
             query,
             config.renderer,
             config.batchSize,
+            bindTimestampAs = config.cypherBindTimestampAs,
             bindHeaderAs = config.cypherBindHeaderAs,
             bindKeyAs = config.cypherBindKeyAs,
             bindValueAs = config.cypherBindValueAs,

@@ -66,7 +66,6 @@
         <license-maven-plugin.version>4.5</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
-        <logback.version>1.5.6</logback.version>
         <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
@@ -145,11 +144,6 @@
                 <groupId>${project.groupId}</groupId>
                 <artifactId>testing</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.version}</version>
             </dependency>
             <dependency>
                 <!-- dependency of confluent protobuf converter -->
@@ -296,7 +290,7 @@
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-nop</artifactId>
+                <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <dependency>

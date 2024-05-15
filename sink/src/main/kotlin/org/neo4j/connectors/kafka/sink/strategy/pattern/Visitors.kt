@@ -138,42 +138,23 @@ internal object Visitors {
       return enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
     }
 
-    private fun <T : Pattern> enforceKeyProperties(pattern: T): T {
-      when (pattern) {
-        is NodePattern -> {
-          if (pattern.keyProperties.isEmpty()) {
-            throw PatternException("At least one key selector must be specified in node patterns.")
-          }
-        }
-        is RelationshipPattern -> {
-          throw IllegalArgumentException("Cannot enforce key properties on relationship patterns.")
-        }
-        else ->
-            throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
+    private fun enforceKeyProperties(pattern: NodePattern): NodePattern {
+      if (pattern.keyProperties.isEmpty()) {
+        throw PatternException("At least one key selector must be specified in node patterns.")
       }
 
       return pattern
     }
 
-    private fun <T : Pattern> enforceExplicitInclusionOnly(pattern: T): T {
-      when (pattern) {
-        is NodePattern -> {
-          if (pattern.excludeProperties.isNotEmpty()) {
-            throw PatternException(
-                "Property exclusions are not allowed on start and end node patterns.")
-          }
+    private fun enforceExplicitInclusionOnly(pattern: NodePattern): NodePattern {
+      if (pattern.excludeProperties.isNotEmpty()) {
+        throw PatternException(
+            "Property exclusions are not allowed on start and end node patterns.")
+      }
 
-          if (pattern.includeProperties.containsKey("*")) {
-            throw PatternException(
-                "Wildcard property inclusion is not allowed on start and end node patterns.")
-          }
-        }
-        is RelationshipPattern -> {
-          throw IllegalArgumentException(
-              "Cannot enforce explicit inclusions on relationship patterns.")
-        }
-        else ->
-            throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
+      if (pattern.includeProperties.containsKey("*")) {
+        throw PatternException(
+            "Wildcard property inclusion is not allowed on start and end node patterns.")
       }
 
       return pattern
