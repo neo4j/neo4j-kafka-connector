@@ -171,7 +171,7 @@ class PatternTest {
 
     @Test
     fun `should throw an exception because of invalid alias`() {
-      val pattern = "(LabelA{!id,-foo: xyz})"
+      val pattern = "(:LabelA{!id,-foo: xyz})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) }.message shouldStartWith
           "Invalid pattern:"
