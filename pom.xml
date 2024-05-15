@@ -44,7 +44,7 @@
         <assertj-core.version>3.25.3</assertj-core.version>
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.1</awaitility.version>
-        <build-resources.version>2024-03.2</build-resources.version>
+        <build-resources.version>2024-05.1</build-resources.version>
         <byte-buddy.version>1.14.15</byte-buddy.version>
         <cdc.version>1.0.6</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
@@ -60,10 +60,10 @@
         <kafka-schema-registry.version>7.2.9</kafka-schema-registry.version>
         <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <kafka.version>3.4.1</kafka.version>
-        <kotest-assertions-core-jvm.version>5.8.1</kotest-assertions-core-jvm.version>
-        <kotlin.coroutines.version>1.8.0</kotlin.coroutines.version>
+        <kotest-assertions-core-jvm.version>5.9.0</kotest-assertions-core-jvm.version>
+        <kotlin.coroutines.version>1.8.1</kotlin.coroutines.version>
         <kotlin.version>1.9.24</kotlin.version>
-        <license-maven-plugin.version>4.3</license-maven-plugin.version>
+        <license-maven-plugin.version>4.5</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
         <logback.version>1.5.6</logback.version>
@@ -79,7 +79,7 @@
         <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <mockito-kotlin.version>5.3.1</mockito-kotlin.version>
-        <mockito.version>5.11.0</mockito.version>
+        <mockito.version>5.12.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
