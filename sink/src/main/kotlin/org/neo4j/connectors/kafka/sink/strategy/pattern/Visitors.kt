@@ -70,12 +70,13 @@ internal object Visitors {
         val bidirectional =
             ((relPattern.leftArrow() != null && relPattern.rightArrow() != null) ||
                 (relPattern.leftArrow() == null && relPattern.rightArrow() == null))
-        val keyProperties = mutableMapOf<String, String>()
-        val includeProperties = mutableMapOf<String, String>()
-        val excludeProperties = mutableSetOf<String>()
         if (bidirectional) {
           throw PatternException("Direction of relationship pattern must be explicitly set.")
         }
+
+        val keyProperties = mutableMapOf<String, String>()
+        val includeProperties = mutableMapOf<String, String>()
+        val excludeProperties = mutableSetOf<String>()
 
         if (relPattern.properties() != null && relPattern.properties().propertySelector() != null) {
           extractPropertySelectors(
@@ -145,10 +146,7 @@ internal object Visitors {
           }
         }
         is RelationshipPattern -> {
-          if (pattern.keyProperties.isEmpty()) {
-            throw PatternException(
-                "At least one key selector must be specified in relationship patterns.")
-          }
+          throw IllegalArgumentException("Cannot enforce key properties on relationship patterns.")
         }
         else ->
             throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
@@ -171,14 +169,8 @@ internal object Visitors {
           }
         }
         is RelationshipPattern -> {
-          if (pattern.excludeProperties.isNotEmpty()) {
-            throw PatternException("Property exclusions are not allowed on relationship patterns.")
-          }
-
-          if (pattern.includeProperties.containsKey("*")) {
-            throw PatternException(
-                "Wildcard property inclusion is not allowed on relationship patterns.")
-          }
+          throw IllegalArgumentException(
+              "Cannot enforce explicit inclusions on relationship patterns.")
         }
         else ->
             throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
