@@ -466,23 +466,24 @@ class CypherHandlerTest {
                 "{]",
                 Schema.BYTES_SCHEMA,
                 "{a: b}".toByteArray(),
-                listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b"))))))
-    listOf(
+                listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b")))))) shouldBe
         listOf(
-            ChangeQuery(
-                null,
-                null,
-                Query(
-                    "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
-                    mapOf(
-                        "events" to
-                            listOf(
-                                mapOf(
-                                    "timestamp" to
-                                        Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
-                                    "header" to mapOf<String, Any>("test" to "b"),
-                                    "key" to "{a: b}".toByteArray(),
-                                    "value" to "{]")))))))
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        mapOf(
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "timestamp" to
+                                            Instant.ofEpochMilli(TIMESTAMP)
+                                                .atOffset(ZoneOffset.UTC),
+                                        "header" to mapOf<String, Any>("test" to "b"),
+                                        "key" to "{a: b}".toByteArray(),
+                                        "value" to "{]")))))))
   }
 
   private fun newMessage(
