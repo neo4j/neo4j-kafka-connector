@@ -162,7 +162,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because of invalid pattern`() {
+    fun `should throw an exception because of invalid label pattern`() {
       val pattern = "(LabelA{!id,-foo,bar})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) }.message shouldStartWith
@@ -178,7 +178,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain a key`() {
+    fun `should throw an exception because the pattern is missing a key`() {
       val pattern = "(:LabelA{id,bar})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -186,7 +186,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain a key when selectors are empty`() {
+    fun `should throw an exception because the pattern is missing a key when selectors are empty`() {
       val pattern = "(:LabelA{})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -345,7 +345,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain a key - simple`() {
+    fun `should throw an exception because the pattern is missing a key - simple`() {
       val pattern = "LabelA{id,foo,bar}"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -353,7 +353,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain a key when selectors are empty - simple`() {
+    fun `should throw an exception because the pattern is missing a key when selectors are empty - simple`() {
       val pattern = "LabelA{}"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -571,7 +571,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain nodes with ids`() {
+    fun `should throw an exception because the node pattern is missing a key`() {
       val pattern = "(:LabelA{id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -579,7 +579,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern should contain nodes with ids when selectors are empty`() {
+    fun `should throw an exception because the node pattern is missing a key when selectors are empty`() {
       val pattern = "(:LabelA{})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
@@ -587,7 +587,7 @@ class PatternTest {
     }
 
     @Test
-    fun `should throw an exception because the pattern is invalid`() {
+    fun `should throw an exception because of invalid label pattern`() {
       val pattern = "(LabelA{!id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})"
 
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) }.message shouldStartWith
