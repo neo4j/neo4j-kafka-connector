@@ -17,8 +17,6 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.shouldBe
-import java.time.Instant
-import java.time.ZoneOffset
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.header.Header
@@ -29,6 +27,7 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandlerTest.Companion.TIMESTAMP
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.neo4j.cypherdsl.parser.CypherParser
 import org.neo4j.driver.Query
 
 class NodePatternHandlerTest {
@@ -53,17 +52,26 @@ class NodePatternHandlerTest {
                     null,
                     null,
                     Query(
-                        "TODO",
+                        CypherParser.parse(
+                                """
+                          UNWIND ${'$'}messages AS event
+                          WITH
+                            CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                            CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                            event[1] AS event
+                          FOREACH (i IN create | MERGE (n:`ALabel` {id: event.keys.id}) SET n = event.properties SET n += ${'$'}event) 
+                          FOREACH (i IN delete | MERGE (n:`ALabel` {id: event.keys.id}) DETACH DELETE n)
+                        """
+                                    .trimIndent())
+                            .cypher,
                         mapOf(
                             "events" to
                                 listOf(
-                                    mapOf(
-                                        "timestamp" to
-                                            Instant.ofEpochMilli(TIMESTAMP)
-                                                .atOffset(ZoneOffset.UTC),
-                                        "header" to mapOf<String, Any>("test" to "b"),
-                                        "key" to "{a: b}".toByteArray(),
-                                        "value" to "{]")))))))
+                                    listOf(
+                                        "C",
+                                        mapOf(
+                                            "keys" to mapOf("id" to 42),
+                                            "properties" to emptyMap<String, Any?>()))))))))
   }
 
   // TODO: extract this and share between CypherHandlerTest and here
