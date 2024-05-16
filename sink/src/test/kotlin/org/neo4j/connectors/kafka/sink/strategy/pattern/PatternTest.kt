@@ -84,7 +84,7 @@ class PatternTest {
       val result = Pattern.parse(pattern)
 
       result shouldBe
-          NodePattern(setOf("LabelA"), mapOf("id" to "id"), emptyMap(), setOf("foo", "bar"))
+          NodePattern(setOf("LabelA"), mapOf("id" to "id"), mapOf("*" to "*"), setOf("foo", "bar"))
     }
 
     @Test
@@ -150,7 +150,8 @@ class PatternTest {
       val result = Pattern.parse(pattern)
 
       result shouldBe
-          NodePattern(setOf("LabelA"), mapOf("id" to "product.id"), emptyMap(), setOf("foo", "bar"))
+          NodePattern(
+              setOf("LabelA"), mapOf("id" to "product.id"), mapOf("*" to "*"), setOf("foo", "bar"))
     }
 
     @Test
@@ -252,7 +253,7 @@ class PatternTest {
           )
 
       result shouldBe
-          NodePattern(setOf("LabelA"), mapOf("id" to "id"), emptyMap(), setOf("foo", "bar"))
+          NodePattern(setOf("LabelA"), mapOf("id" to "id"), mapOf("*" to "*"), setOf("foo", "bar"))
     }
 
     @Test
@@ -318,7 +319,8 @@ class PatternTest {
           )
 
       result shouldBe
-          NodePattern(setOf("LabelA"), mapOf("id" to "product.id"), emptyMap(), setOf("foo", "bar"))
+          NodePattern(
+              setOf("LabelA"), mapOf("id" to "product.id"), mapOf("*" to "*"), setOf("foo", "bar"))
     }
 
     @Test
@@ -376,7 +378,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("idA" to "idA"), mapOf("aa" to "aa"), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("idB" to "idB"), mapOf("bb" to "bb"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -392,7 +394,7 @@ class PatternTest {
               NodePattern(setOf("LabelB"), mapOf("idB" to "idB"), mapOf("bb" to "bb"), emptySet()),
               NodePattern(setOf("LabelA"), mapOf("idA" to "idA"), mapOf("aa" to "aa"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -440,7 +442,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("idA" to "idA"), emptyMap(), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("idB" to "idB"), emptyMap(), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               setOf("foo", "BAR"))
     }
 
@@ -462,7 +464,7 @@ class PatternTest {
               NodePattern(
                   setOf("LabelB"), mapOf("id" to "end.id"), mapOf("bb" to "end.bb"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -484,7 +486,7 @@ class PatternTest {
               NodePattern(
                   setOf("LabelA"), mapOf("id" to "end.id"), mapOf("aa" to "end.aa"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -534,7 +536,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("id" to "start.id"), emptyMap(), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("id" to "end.id"), emptyMap(), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               setOf("foo", "BAR"))
     }
 
@@ -622,7 +624,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("idA" to "idA"), mapOf("aa" to "aa"), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("idB" to "idB"), mapOf("bb" to "bb"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -670,7 +672,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("idA" to "idA"), emptyMap(), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("idB" to "idB"), emptyMap(), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               setOf("foo", "BAR"))
     }
 
@@ -691,7 +693,7 @@ class PatternTest {
               NodePattern(
                   setOf("LabelB"), mapOf("id" to "end.id"), mapOf("bb" to "end.bb"), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               emptySet())
     }
 
@@ -740,7 +742,7 @@ class PatternTest {
               NodePattern(setOf("LabelA"), mapOf("id" to "start.id"), emptyMap(), emptySet()),
               NodePattern(setOf("LabelB"), mapOf("id" to "end.id"), emptyMap(), emptySet()),
               emptyMap(),
-              emptyMap(),
+              mapOf("*" to "*"),
               setOf("foo", "BAR"))
     }
 

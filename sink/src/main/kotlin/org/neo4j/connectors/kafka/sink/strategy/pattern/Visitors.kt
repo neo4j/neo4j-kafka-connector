@@ -96,16 +96,18 @@ internal object Visitors {
                 visitCypherNodePattern(
                     ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 1 else 0)))
 
-        return RelationshipPattern(
-            LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
-            enforceExplicitInclusionOnly(startNode),
-            enforceExplicitInclusionOnly(endNode),
-            keyProperties,
-            includeProperties,
-            excludeProperties)
+        return ensureImplicitWildcard(
+            RelationshipPattern(
+                LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
+                enforceExplicitInclusionOnly(startNode),
+                enforceExplicitInclusionOnly(endNode),
+                keyProperties,
+                includeProperties,
+                excludeProperties))
       }
 
-      return enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0)))
+      return ensureImplicitWildcard(
+          enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0))))
     }
 
     override fun visitSimplePattern(ctx: PatternParser.SimplePatternContext): Pattern {
@@ -126,16 +128,47 @@ internal object Visitors {
         val startNode = enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
         val endNode = enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(1)))
 
-        return RelationshipPattern(
-            SymbolicNameStringVisitor.visitSymbolicNameString(relPattern.symbolicNameString()),
-            enforceExplicitInclusionOnly(startNode),
-            enforceExplicitInclusionOnly(endNode),
-            keyProperties,
-            includeProperties,
-            excludeProperties)
+        return ensureImplicitWildcard(
+            RelationshipPattern(
+                SymbolicNameStringVisitor.visitSymbolicNameString(relPattern.symbolicNameString()),
+                enforceExplicitInclusionOnly(startNode),
+                enforceExplicitInclusionOnly(endNode),
+                keyProperties,
+                includeProperties,
+                excludeProperties))
       }
 
-      return enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
+      return ensureImplicitWildcard(
+          enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0))))
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Pattern> ensureImplicitWildcard(pattern: T): T {
+      when (pattern) {
+        is NodePattern -> {
+          if (pattern.includeProperties.isEmpty()) {
+            return NodePattern(
+                pattern.labels, pattern.keyProperties, mapOf("*" to "*"), pattern.excludeProperties)
+                as T
+          }
+        }
+        is RelationshipPattern -> {
+          if (pattern.includeProperties.isEmpty()) {
+            return RelationshipPattern(
+                pattern.type,
+                pattern.start,
+                pattern.end,
+                pattern.keyProperties,
+                mapOf("*" to "*"),
+                pattern.excludeProperties)
+                as T
+          }
+        }
+        else ->
+            throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
+      }
+
+      return pattern
     }
 
     private fun enforceKeyProperties(pattern: NodePattern): NodePattern {

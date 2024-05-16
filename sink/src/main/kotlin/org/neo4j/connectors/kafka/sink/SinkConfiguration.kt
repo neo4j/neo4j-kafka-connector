@@ -146,6 +146,10 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
     const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
     const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
+    const val PATTERN_BIND_TIMESTAMP_AS = "neo4j.pattern.bind-timestamp-as"
+    const val PATTERN_BIND_HEADER_AS = "neo4j.pattern.bind-header-as"
+    const val PATTERN_BIND_KEY_AS = "neo4j.pattern.bind-key-as"
+    const val PATTERN_BIND_VALUE_AS = "neo4j.pattern.bind-value-as"
     const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
     const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
     const val PATTERN_NODE_MERGE_PROPERTIES = "neo4j.pattern.node.merge-properties"
@@ -157,10 +161,10 @@ class SinkConfiguration(originals: Map<String, *>) :
     private const val DEFAULT_BATCH_PARALLELIZE = true
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
-    const val DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS = "__timestamp"
-    const val DEFAULT_CYPHER_BIND_HEADER_ALIAS = "__header"
-    const val DEFAULT_CYPHER_BIND_KEY_ALIAS = "__key"
-    const val DEFAULT_CYPHER_BIND_VALUE_ALIAS = "__value"
+    const val DEFAULT_BIND_TIMESTAMP_ALIAS = "__timestamp"
+    const val DEFAULT_BIND_HEADER_ALIAS = "__header"
+    const val DEFAULT_BIND_KEY_ALIAS = "__key"
+    const val DEFAULT_BIND_VALUE_ALIAS = "__value"
     const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
 
     @Suppress("DEPRECATION")
@@ -327,7 +331,7 @@ class SinkConfiguration(originals: Map<String, *>) :
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS
+                  defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
                   group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
@@ -335,7 +339,7 @@ class SinkConfiguration(originals: Map<String, *>) :
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_CYPHER_BIND_HEADER_ALIAS
+                  defaultValue = DEFAULT_BIND_HEADER_ALIAS
                   group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
@@ -343,7 +347,7 @@ class SinkConfiguration(originals: Map<String, *>) :
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_KEY_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_CYPHER_BIND_KEY_ALIAS
+                  defaultValue = DEFAULT_BIND_KEY_ALIAS
                   group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
@@ -351,7 +355,7 @@ class SinkConfiguration(originals: Map<String, *>) :
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_CYPHER_BIND_VALUE_ALIAS
+                  defaultValue = DEFAULT_BIND_VALUE_ALIAS
                   group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
@@ -364,6 +368,50 @@ class SinkConfiguration(originals: Map<String, *>) :
                   group = ConfigGroup.STRATEGIES
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k ->
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
+                      }
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_BIND_HEADER_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BIND_HEADER_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k ->
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
+                      }
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_BIND_KEY_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BIND_KEY_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k ->
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
+                      }
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_BIND_VALUE_AS, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BIND_VALUE_ALIAS
+                  group = ConfigGroup.STRATEGIES
+                  recommender =
+                      Recommenders.visibleIfNotEmpty { k ->
+                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
+                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
+                      }
                 })
 
     private fun replaceLegacyPropertyKeys(key: String) =

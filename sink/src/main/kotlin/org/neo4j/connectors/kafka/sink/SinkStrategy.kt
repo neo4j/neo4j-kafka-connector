@@ -116,6 +116,7 @@ interface SinkStrategyHandler {
             topic,
             nodePattern,
             config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
+            config.renderer,
             config.batchSize)
       }
 
