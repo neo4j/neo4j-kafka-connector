@@ -17,9 +17,21 @@
 package org.neo4j.connectors.kafka.sink.strategy.pattern
 
 interface Pattern {
+  val includeAllValueProperties: Boolean
+  val keyProperties: Set<PropertyMapping>
+  val includeProperties: Set<PropertyMapping>
+  val excludeProperties: Set<String>
+
   companion object {
     fun parse(expression: String): Pattern {
       return Visitors.parse(expression)
     }
+  }
+}
+
+data class PropertyMapping(val from: String, val to: String) {
+
+  companion object {
+    val WILDCARD = PropertyMapping("*", "*")
   }
 }
