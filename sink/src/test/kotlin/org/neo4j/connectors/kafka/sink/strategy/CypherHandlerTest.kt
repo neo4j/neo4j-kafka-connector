@@ -473,7 +473,7 @@ class CypherHandlerTest {
                     null,
                     null,
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
                             "events" to
                                 listOf(
