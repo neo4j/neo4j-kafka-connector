@@ -60,7 +60,7 @@ class NodePatternHandler(
     pattern = parsed
     query = buildStatement()
 
-    logger.debug("using Cypher delete query '{}' for topic '{}'", query, topic)
+    logger.debug("using Cypher query '{}' for topic '{}'", query, topic)
   }
 
   override fun strategy() = SinkStrategy.NODE_PATTERN
