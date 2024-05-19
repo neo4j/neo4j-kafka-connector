@@ -672,6 +672,74 @@ class DynamicTypesTest {
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe coll
   }
+
+  @Test
+  fun `structs should be returned as maps`() {
+    val schema =
+        SchemaBuilder.struct()
+            .field("id", Schema.INT32_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .field("last_name", Schema.STRING_SCHEMA)
+            .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+            .build()
+    val struct =
+        Struct(schema)
+            .put("id", 1)
+            .put("name", "john")
+            .put("last_name", "doe")
+            .put(
+                "dob",
+                DynamicTypes.toConnectValue(
+                    SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(2000, 1, 1)))
+
+    DynamicTypes.fromConnectValue(schema, struct) shouldBe
+        mapOf("id" to 1, "name" to "john", "last_name" to "doe", "dob" to LocalDate.of(2000, 1, 1))
+  }
+
+  @Test
+  fun `structs with complex values should be returned as maps`() {
+    val addressSchema =
+        SchemaBuilder.struct()
+            .field("city", Schema.STRING_SCHEMA)
+            .field("country", Schema.STRING_SCHEMA)
+            .build()
+    val schema =
+        SchemaBuilder.struct()
+            .field("id", Schema.INT32_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .field("last_name", Schema.STRING_SCHEMA)
+            .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+            .field("address", addressSchema)
+            .field("years_of_interest", SchemaBuilder.array(Schema.INT32_SCHEMA))
+            .field(
+                "events_of_interest", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA))
+            .build()
+    val struct =
+        Struct(schema)
+            .put("id", 1)
+            .put("name", "john")
+            .put("last_name", "doe")
+            .put(
+                "dob",
+                DynamicTypes.toConnectValue(
+                    SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(2000, 1, 1)))
+            .put("address", Struct(addressSchema).put("city", "london").put("country", "uk"))
+            .put("years_of_interest", listOf(2000, 2005, 2017))
+            .put(
+                "events_of_interest",
+                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
+
+    DynamicTypes.fromConnectValue(schema, struct) shouldBe
+        mapOf(
+            "id" to 1,
+            "name" to "john",
+            "last_name" to "doe",
+            "dob" to LocalDate.of(2000, 1, 1),
+            "address" to mapOf("city" to "london", "country" to "uk"),
+            "years_of_interest" to listOf(2000, 2005, 2017),
+            "events_of_interest" to
+                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
+  }
 }
 
 private abstract class Entity(val props: Map<String, Value>) {

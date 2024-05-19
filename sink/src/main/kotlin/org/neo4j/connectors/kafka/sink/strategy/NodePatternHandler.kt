@@ -92,16 +92,11 @@ class NodePatternHandler(
                   }
                   .flatten()
 
+          val keys = extractKeys(flattened, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
-                listOf(
-                    "D",
-                    mapOf(
-                        "keys" to extractKeys(flattened, bindKeyAs),
-                    ))
+                listOf("D", mapOf("keys" to keys))
               } else {
-                val keys = extractKeys(flattened, bindValueAs, bindKeyAs)
-
                 listOf(
                     "C",
                     mapOf("keys" to keys, "properties" to computeProperties(flattened, keys.keys)))
@@ -124,7 +119,7 @@ class NodePatternHandler(
       pattern.keyProperties
           .associateBy { it.to }
           .mapValues { (_, mapping) ->
-            if (isExplicitlyDefined(mapping.from)) {
+            if (isExplicit(mapping.from)) {
               return@mapValues flattened[mapping.from]
             }
 
@@ -137,7 +132,7 @@ class NodePatternHandler(
             }
           }
 
-  private fun isExplicitlyDefined(from: String): Boolean =
+  private fun isExplicit(from: String): Boolean =
       from.startsWith(bindValueAs) ||
           from.startsWith(bindKeyAs) ||
           from.startsWith(bindTimestampAs) ||
@@ -156,8 +151,7 @@ class NodePatternHandler(
       }
 
       pattern.includeProperties.forEach { mapping ->
-        val key =
-            if (isExplicitlyDefined(mapping.from)) mapping.from else "$bindValueAs.${mapping.from}"
+        val key = if (isExplicit(mapping.from)) mapping.from else "$bindValueAs.${mapping.from}"
         if (flattened.containsKey(key)) {
           this[mapping.to] = flattened[key]
         } else {
