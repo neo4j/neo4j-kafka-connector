@@ -20,23 +20,18 @@ import io.kotest.matchers.shouldBe
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
-import org.apache.kafka.connect.header.Header
-import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.sink.ChangeQuery
-import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.strategy.CypherHandlerTest.Companion.TIMESTAMP
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.cypherdsl.parser.CypherParser
 import org.neo4j.driver.Query
 
-class NodePatternHandlerTest {
+class NodePatternHandlerTest : HandlerTest() {
 
   @Test
   fun `should include all properties`() {
@@ -541,27 +536,5 @@ class NodePatternHandlerTest {
                 ),
             ),
         )
-  }
-
-  // TODO: extract this and share between CypherHandlerTest and here
-  private fun newMessage(
-      valueSchema: Schema?,
-      value: Any?,
-      keySchema: Schema? = null,
-      key: Any? = null,
-      headers: Iterable<Header> = emptyList()
-  ): SinkMessage {
-    return SinkMessage(
-        SinkRecord(
-            "my-topic",
-            0,
-            keySchema,
-            key,
-            valueSchema,
-            value,
-            0,
-            TIMESTAMP,
-            TimestampType.CREATE_TIME,
-            headers))
   }
 }

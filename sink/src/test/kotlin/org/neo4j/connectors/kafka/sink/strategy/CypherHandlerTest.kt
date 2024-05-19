@@ -20,20 +20,16 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.Instant
 import java.time.ZoneOffset
-import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
-import org.apache.kafka.connect.header.Header
-import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.sink.ChangeQuery
-import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
-class CypherHandlerTest {
+class CypherHandlerTest : HandlerTest() {
 
   @Test
   fun `should generate correct statement without new accessors`() {
@@ -484,30 +480,5 @@ class CypherHandlerTest {
                                         "header" to mapOf<String, Any>("test" to "b"),
                                         "key" to "{a: b}".toByteArray(),
                                         "value" to "{]")))))))
-  }
-
-  private fun newMessage(
-      valueSchema: Schema?,
-      value: Any?,
-      keySchema: Schema? = null,
-      key: Any? = null,
-      headers: Iterable<Header> = emptyList()
-  ): SinkMessage {
-    return SinkMessage(
-        SinkRecord(
-            "my-topic",
-            0,
-            keySchema,
-            key,
-            valueSchema,
-            value,
-            0,
-            TIMESTAMP,
-            TimestampType.CREATE_TIME,
-            headers))
-  }
-
-  companion object {
-    val TIMESTAMP: Long = Instant.now().toEpochMilli()
   }
 }
