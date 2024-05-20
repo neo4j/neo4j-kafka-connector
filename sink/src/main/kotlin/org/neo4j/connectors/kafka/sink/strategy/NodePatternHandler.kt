@@ -22,10 +22,7 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
-import org.neo4j.cypherdsl.core.Clauses
 import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.Operations
-import org.neo4j.cypherdsl.core.UpdatingClause
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -98,68 +95,57 @@ class NodePatternHandler(
 
   private fun buildStatement(): String {
     val event = Cypher.name("event")
-    val create = Cypher.name("create")
-    val delete = Cypher.name("delete")
+    val created = Cypher.name("created")
+    val deleted = Cypher.name("deleted")
     val createOperation = Cypher.literalOf<String>("C")
     val deleteOperation = Cypher.literalOf<String>("D")
 
-    val singletonList = Cypher.listOf(Cypher.literalOf<Int>(1))
-    val emptyList = Cypher.listOf()
     val node =
         Cypher.node(pattern.labels.first(), pattern.labels.drop(1))
             .withProperties(
                 pattern.keyProperties.associate { it.to to event.property("keys").property(it.to) },
             )
             .named("n")
-    val merge = Clauses.merge(listOf(node), emptyList())
 
     return renderer.render(
         Cypher.unwind(Cypher.parameter("messages"))
             .`as`(event)
-            .with(
-                Cypher.caseExpression()
-                    .`when`(Cypher.valueAt(event, 0).eq(createOperation))
-                    .then(singletonList)
-                    .elseDefault(emptyList)
-                    .`as`(create),
-                Cypher.caseExpression()
-                    .`when`(Cypher.valueAt(event, 0).eq(deleteOperation))
-                    .then(singletonList)
-                    .elseDefault(emptyList)
-                    .`as`(delete),
-                Cypher.valueAt(event, 1).`as`(event),
-            )
-            .foreach(Cypher.name("i"))
-            .`in`(create)
-            .apply(
-                merge as UpdatingClause,
-                Clauses.set(
-                    listOf(
-                        if (mergeProperties) {
-                          Operations.mutate(
-                              node.asExpression(),
-                              Cypher.property("event", "properties"),
-                          )
-                        } else {
-                          Operations.set(
-                              node.asExpression(),
-                              Cypher.property("event", "properties"),
-                          )
-                        },
-                    ),
-                ) as UpdatingClause,
-                Clauses.set(
-                    listOf(
-                        Operations.mutate(
+            .call(
+                Cypher.with(event)
+                    .with(event)
+                    .where(Cypher.valueAt(event, 0).eq(createOperation))
+                    .with(Cypher.valueAt(event, 1).`as`(event))
+                    .merge(node)
+                    .let {
+                      if (mergeProperties) {
+                        it.mutate(
                             node.asExpression(),
-                            Cypher.parameter("event", "keys"),
-                        ),
-                    ),
-                ) as UpdatingClause,
-            )
-            .foreach(Cypher.name("i"))
-            .`in`(delete)
-            .apply(merge, Clauses.delete(true, listOf(node.asExpression())) as UpdatingClause)
+                            Cypher.property("event", "properties"),
+                        )
+                      } else {
+                        it.set(
+                            node.asExpression(),
+                            Cypher.property("event", "properties"),
+                        )
+                      }
+                    }
+                    .mutate(node.asExpression(), Cypher.property("event", "keys"))
+                    .returning(
+                        Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(created))
+                    .build())
+            .call(
+                Cypher.with(event)
+                    .with(event)
+                    .where(Cypher.valueAt(event, 0).eq(deleteOperation))
+                    .with(Cypher.valueAt(event, 1).`as`(event))
+                    .match(node)
+                    .detachDelete(node)
+                    .returning(
+                        Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(deleted))
+                    .build())
+            .returning(
+                Cypher.raw("sum(${'$'}E)", created).`as`(created),
+                Cypher.raw("sum(${'$'}E)", deleted).`as`(deleted))
             .build(),
     )
   }
