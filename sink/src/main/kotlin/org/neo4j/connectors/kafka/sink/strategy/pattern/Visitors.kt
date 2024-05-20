@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.pattern
 
-import java.util.stream.Collectors
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -279,10 +278,7 @@ internal object Visitors {
         return emptySet<String>()
       }
 
-      return ctx.labelOrRelType()
-          .stream()
-          .map { LabelOrRelTypeVisitor.visitLabelOrRelType(it) }
-          .collect(Collectors.toSet())
+      return ctx.labelOrRelType().map { LabelOrRelTypeVisitor.visitLabelOrRelType(it) }.toSet()
     }
   }
 

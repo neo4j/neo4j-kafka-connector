@@ -34,6 +34,131 @@ import org.neo4j.driver.Query
 class NodePatternHandlerTest : HandlerTest() {
 
   @Test
+  fun `should construct correct query for simple pattern`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                WITH
+                  CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                  CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                  event[1] AS event
+                FOREACH (i IN create | MERGE (n:`ALabel` {id: event.keys.id}) SET n += event.properties SET n += ${'$'}event) 
+                FOREACH (i IN delete | MERGE (n:`ALabel` {id: event.keys.id}) DETACH DELETE n)
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
+  fun `should construct correct query for aliased properties`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id: aProperty})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                WITH
+                  CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                  CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                  event[1] AS event
+                FOREACH (i IN create | MERGE (n:`ALabel` {id: event.keys.id}) SET n += event.properties SET n += ${'$'}event) 
+                FOREACH (i IN delete | MERGE (n:`ALabel` {id: event.keys.id}) DETACH DELETE n)
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
+  fun `should construct correct query for composite keys`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!idA: aProperty, !idB: bProperty})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                WITH
+                  CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                  CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                  event[1] AS event
+                FOREACH (i IN create | MERGE (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB}) SET n += event.properties SET n += ${'$'}event) 
+                FOREACH (i IN delete | MERGE (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB}) DETACH DELETE n)
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
+  fun `should construct correct query without merging properties`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id: aProperty})",
+            mergeProperties = false,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                WITH
+                  CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                  CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                  event[1] AS event
+                FOREACH (i IN create | MERGE (n:`ALabel` {id: event.keys.id}) SET n = event.properties SET n += ${'$'}event) 
+                FOREACH (i IN delete | MERGE (n:`ALabel` {id: event.keys.id}) DETACH DELETE n)
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
+  fun `should construct correct query with multiple labels`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel:BLabel{!id: aProperty})",
+            mergeProperties = false,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                WITH
+                  CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
+                  CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
+                  event[1] AS event
+                FOREACH (i IN create | MERGE (n:`ALabel`:`BLabel` {id: event.keys.id}) SET n = event.properties SET n += ${'$'}event) 
+                FOREACH (i IN delete | MERGE (n:`ALabel`:`BLabel` {id: event.keys.id}) DETACH DELETE n)
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
   fun `should include all properties`() {
     assertQueryAndParameters(
         "(:ALabel {!id})",
@@ -398,104 +523,6 @@ class NodePatternHandlerTest : HandlerTest() {
                     mapOf(
                         "keys" to mapOf("id" to 1),
                     ))))
-  }
-
-  @Test
-  fun `should support composite keys`() {
-    val handler =
-        NodePatternHandler(
-            "my-topic",
-            "(:ALabel {!id1: key1, !id2: __key.key2})",
-            false,
-            Renderer.getDefaultRenderer(),
-            1)
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """{"name": "john"}""",
-                keySchema = Schema.STRING_SCHEMA,
-                key = """{"key1": 1, "key2": 2}"""),
-        ),
-    ) shouldBe
-        listOf(
-            listOf(
-                ChangeQuery(
-                    null,
-                    null,
-                    Query(
-                        CypherParser.parse(
-                                """
-                            UNWIND ${'$'}messages AS event
-                            WITH
-                              CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
-                              CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
-                              event[1] AS event
-                            FOREACH (i IN create | MERGE (n:`ALabel` {id1: event.keys.id1, id2: event.keys.id2}) SET n = event.properties SET n += ${'$'}event) 
-                            FOREACH (i IN delete | MERGE (n:`ALabel` {id1: event.keys.id1, id2: event.keys.id2}) DETACH DELETE n)
-                          """
-                                    .trimIndent(),
-                            )
-                            .cypher,
-                        mapOf(
-                            "events" to
-                                listOf(
-                                    listOf(
-                                        "C",
-                                        mapOf(
-                                            "keys" to mapOf("id1" to 1, "id2" to 2),
-                                            "properties" to mapOf("name" to "john"))))),
-                    ),
-                ),
-            ),
-        )
-  }
-
-  @Test
-  fun `should support multiple labels`() {
-    val handler =
-        NodePatternHandler(
-            "my-topic", "(:ALabel:BLabel {!id: __key.id})", false, Renderer.getDefaultRenderer(), 1)
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """{"name": "john"}""",
-                keySchema = Schema.STRING_SCHEMA,
-                key = """{"id": 1}"""),
-        ),
-    ) shouldBe
-        listOf(
-            listOf(
-                ChangeQuery(
-                    null,
-                    null,
-                    Query(
-                        CypherParser.parse(
-                                """
-                            UNWIND ${'$'}messages AS event
-                            WITH
-                              CASE WHEN event[0] = 'C' THEN [1] ELSE [] END AS create,
-                              CASE WHEN event[0] = 'D' THEN [1] ELSE [] END AS delete,
-                              event[1] AS event
-                            FOREACH (i IN create | MERGE (n:`ALabel`:`BLabel` {id: event.keys.id}) SET n = event.properties SET n += ${'$'}event) 
-                            FOREACH (i IN delete | MERGE (n:`ALabel`:`BLabel` {id: event.keys.id}) DETACH DELETE n)
-                          """
-                                    .trimIndent(),
-                            )
-                            .cypher,
-                        mapOf(
-                            "events" to
-                                listOf(
-                                    listOf(
-                                        "C",
-                                        mapOf(
-                                            "keys" to mapOf("id" to 1),
-                                            "properties" to mapOf("name" to "john"))))),
-                    ),
-                ),
-            ),
-        )
   }
 
   private fun assertQueryAndParameters(

@@ -117,7 +117,11 @@ interface SinkStrategyHandler {
             nodePattern,
             config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
             config.renderer,
-            config.batchSize)
+            config.batchSize,
+            bindTimestampAs = config.patternBindTimestampAs,
+            bindHeaderAs = config.patternBindHeaderAs,
+            bindKeyAs = config.patternBindKeyAs,
+            bindValueAs = config.patternBindValueAs)
       }
 
       val relationshipPattern =
@@ -128,7 +132,12 @@ interface SinkStrategyHandler {
             relationshipPattern,
             config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
             config.getBoolean(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES),
-            config.batchSize)
+            config.renderer,
+            config.batchSize,
+            bindTimestampAs = config.patternBindTimestampAs,
+            bindHeaderAs = config.patternBindHeaderAs,
+            bindKeyAs = config.patternBindKeyAs,
+            bindValueAs = config.patternBindValueAs)
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)

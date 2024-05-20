@@ -16,10 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import java.time.Instant
-import java.time.ZoneOffset
-import org.apache.kafka.connect.errors.ConnectException
-import org.neo4j.connectors.kafka.extensions.flatten
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -35,21 +31,25 @@ import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-@Suppress("UNCHECKED_CAST")
 class NodePatternHandler(
     val topic: String,
     patternString: String,
     private val mergeProperties: Boolean,
     private val renderer: Renderer,
     private val batchSize: Int,
-    private val bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
-    private val bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
-    private val bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
-    private val bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
-) : AbstractHandler() {
+    bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
+    bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
+    bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
+    bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
+) :
+    PatternHandler<NodePattern>(
+        bindTimestampAs = bindTimestampAs,
+        bindHeaderAs = bindHeaderAs,
+        bindKeyAs = bindKeyAs,
+        bindValueAs = bindValueAs) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val pattern: NodePattern
-  private val query: String
+  override val pattern: NodePattern
+  internal val query: String
 
   init {
     val parsed = Pattern.parse(patternString)
@@ -71,35 +71,19 @@ class NodePatternHandler(
         .onEach { logger.trace("received message: '{}'", it) }
         .map {
           val isTombstoneMessage = it.value == null
-          val flattened =
-              buildMap<String, Any?> {
-                    this.putAll(
-                        mapOf(
-                            bindTimestampAs to
-                                Instant.ofEpochMilli(it.record.timestamp())
-                                    .atOffset(ZoneOffset.UTC),
-                            bindHeaderAs to it.headerFromConnectValue(),
-                            bindKeyAs to it.keyFromConnectValue()))
-                    if (!isTombstoneMessage) {
-                      this[bindValueAs] =
-                          when (val value = it.valueFromConnectValue()) {
-                            is Map<*, *> -> value as Map<String, Any?>
-                            else ->
-                                throw ConnectException(
-                                    "Message value must be convertible to a Map.")
-                          }
-                    }
-                  }
-                  .flatten()
+          val flattened = flattenMessage(it)
 
-          val keys = extractKeys(flattened, bindValueAs, bindKeyAs)
+          val used = mutableSetOf<String>()
+          val keys = extractKeys(pattern, flattened, used, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
                 listOf("D", mapOf("keys" to keys))
               } else {
                 listOf(
                     "C",
-                    mapOf("keys" to keys, "properties" to computeProperties(flattened, keys.keys)))
+                    mapOf(
+                        "keys" to keys,
+                        "properties" to computeProperties(pattern, flattened, used)))
               }
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
@@ -110,68 +94,6 @@ class NodePatternHandler(
         .map { listOf(ChangeQuery(null, null, Query(query, mapOf("events" to it)))) }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
-  }
-
-  private fun extractKeys(
-      flattened: Map<String, Any?>,
-      vararg prefixes: String
-  ): Map<String, Any?> =
-      pattern.keyProperties
-          .associateBy { it.to }
-          .mapValues { (_, mapping) ->
-            if (isExplicit(mapping.from)) {
-              return@mapValues flattened[mapping.from]
-            }
-
-            for (prefix in prefixes) {
-              val key = "$prefix.${mapping.from}"
-
-              if (flattened.containsKey(key)) {
-                return@mapValues flattened[key]
-              }
-            }
-          }
-
-  private fun isExplicit(from: String): Boolean =
-      from.startsWith(bindValueAs) ||
-          from.startsWith(bindKeyAs) ||
-          from.startsWith(bindTimestampAs) ||
-          from.startsWith(bindHeaderAs)
-
-  private fun computeProperties(
-      flattened: Map<String, Any?>,
-      used: Set<String>
-  ): Map<String, Any?> {
-    return buildMap {
-      if (pattern.includeAllValueProperties) {
-        this.putAll(
-            flattened
-                .filterKeys { it.startsWith(bindValueAs) }
-                .mapKeys { it.key.substring(bindValueAs.length + 1) })
-      }
-
-      pattern.includeProperties.forEach { mapping ->
-        val key = if (isExplicit(mapping.from)) mapping.from else "$bindValueAs.${mapping.from}"
-        if (flattened.containsKey(key)) {
-          this[mapping.to] = flattened[key]
-        } else {
-          this.putAll(
-              flattened
-                  .filterKeys { it.startsWith(key) }
-                  .mapKeys { mapping.to + it.key.substring(key.length) })
-        }
-      }
-
-      pattern.excludeProperties.forEach { exclude ->
-        if (this.containsKey(exclude)) {
-          this.remove(exclude)
-        } else {
-          this.keys.filter { it.startsWith("$exclude.") }.forEach { this.remove(it) }
-        }
-      }
-
-      used.forEach { this.remove(it) }
-    }
   }
 
   private fun buildStatement(): String {

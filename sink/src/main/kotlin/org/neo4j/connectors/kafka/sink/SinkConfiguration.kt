@@ -78,6 +78,18 @@ class SinkConfiguration(originals: Map<String, *>) :
   val cypherBindValueAsEvent
     get(): Boolean = getBoolean(CYPHER_BIND_VALUE_AS_EVENT)
 
+  val patternBindTimestampAs
+    get(): String = getString(PATTERN_BIND_TIMESTAMP_AS)
+
+  val patternBindHeaderAs
+    get(): String = getString(PATTERN_BIND_HEADER_AS)
+
+  val patternBindKeyAs
+    get(): String = getString(PATTERN_BIND_KEY_AS)
+
+  val patternBindValueAs
+    get(): String = getString(PATTERN_BIND_VALUE_AS)
+
   val dialect: Dialect by lazy {
     session().use {
       val name = Cypher.name("name")
