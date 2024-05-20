@@ -72,9 +72,13 @@ class RelationshipPatternHandler(
           val flattened = flattenMessage(it)
 
           val used = mutableSetOf<String>()
-          val startKeys = extractKeys(pattern.start, flattened, used, bindValueAs, bindKeyAs)
-          val endKeys = extractKeys(pattern.end, flattened, used, bindValueAs, bindKeyAs)
-          val keys = extractKeys(pattern, flattened, used, bindValueAs, bindKeyAs)
+          val startKeys =
+              extractKeys(
+                  pattern.start, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
+          val endKeys =
+              extractKeys(pattern.end, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
+          val keys =
+              extractKeys(pattern, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
                 listOf(
@@ -136,7 +140,7 @@ class RelationshipPatternHandler(
             .named("relationship")
 
     return renderer.render(
-        Cypher.unwind(Cypher.parameter("messages"))
+        Cypher.unwind(Cypher.parameter("events"))
             .`as`(event)
             .call(
                 Cypher.with(event)

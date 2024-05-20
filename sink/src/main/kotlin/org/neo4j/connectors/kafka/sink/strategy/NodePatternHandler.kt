@@ -71,7 +71,8 @@ class NodePatternHandler(
           val flattened = flattenMessage(it)
 
           val used = mutableSetOf<String>()
-          val keys = extractKeys(pattern, flattened, used, bindValueAs, bindKeyAs)
+          val keys =
+              extractKeys(pattern, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
                 listOf("D", mapOf("keys" to keys))
@@ -108,7 +109,7 @@ class NodePatternHandler(
             .named("n")
 
     return renderer.render(
-        Cypher.unwind(Cypher.parameter("messages"))
+        Cypher.unwind(Cypher.parameter("events"))
             .`as`(event)
             .call(
                 Cypher.with(event)

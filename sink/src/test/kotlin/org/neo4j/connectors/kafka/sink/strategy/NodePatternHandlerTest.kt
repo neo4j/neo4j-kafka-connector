@@ -46,7 +46,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event
@@ -80,7 +80,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event
@@ -114,7 +114,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event
@@ -148,7 +148,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event
@@ -183,7 +183,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event
@@ -254,6 +254,14 @@ class NodePatternHandlerTest : HandlerTest() {
                         "properties" to
                             mapOf<String, Any?>(
                                 "name" to "john", "surname" to "doe", "dob" to "2000-01-01")))))
+  }
+
+  @Test
+  fun `should remap key properties from message value fields to message key fields for tombstone messages`() {
+    assertQueryAndParameters(
+        "(:ALabel{!id: __value.old_id})",
+        key = """{"old_id": 1}""",
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))))
   }
 
   @Test
@@ -629,7 +637,7 @@ class NodePatternHandlerTest : HandlerTest() {
                     Query(
                         CypherParser.parse(
                                 """
-                            UNWIND ${'$'}messages AS event 
+                            UNWIND ${'$'}events AS event 
                             CALL { WITH event
                               WITH event WHERE event[0] = 'C'
                               WITH event[1] AS event

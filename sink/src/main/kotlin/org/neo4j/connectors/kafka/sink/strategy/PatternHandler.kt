@@ -72,6 +72,7 @@ abstract class PatternHandler<T : Pattern>(
   protected fun extractKeys(
       pattern: Pattern,
       flattened: Map<String, Any?>,
+      isTombstone: Boolean,
       usedTracker: MutableSet<String>,
       vararg prefixes: String
   ): Map<String, Any?> =
@@ -79,8 +80,9 @@ abstract class PatternHandler<T : Pattern>(
           .associateBy { it.to }
           .mapValues { (_, mapping) ->
             if (isExplicit(mapping.from)) {
-              usedTracker += mapping.from
-              return@mapValues flattened[mapping.from]
+              val newKey = if (isTombstone) replaceValueWithKey(mapping.from) else mapping.from
+              usedTracker += newKey
+              return@mapValues flattened[newKey]
             }
 
             for (prefix in prefixes) {
@@ -92,6 +94,13 @@ abstract class PatternHandler<T : Pattern>(
               }
             }
           }
+
+  private fun replaceValueWithKey(mapping: String): String {
+    if (!mapping.startsWith("${bindValueAs}.")) {
+      return mapping
+    }
+    return mapping.replace("${bindValueAs}.", "${bindKeyAs}.")
+  }
 
   /**
    * Extracts properties from flattened message properties, excluding previously used keys from the
