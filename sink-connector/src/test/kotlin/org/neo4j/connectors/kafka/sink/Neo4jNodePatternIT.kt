@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.connect.data.Schema
 import org.junit.jupiter.api.Test
@@ -131,6 +132,74 @@ class Neo4jNodePatternIT {
         {
           it.labels() shouldBe listOf("User")
           it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Test
+  fun `should create node with nested properties`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    producer.publish(
+        valueSchema = Schema.STRING_SCHEMA,
+        value =
+            """{"id": 1, "name": "john", "surname": "doe", "address": {"city": "london", "country": "uk"}}""")
+    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("User")
+          it.asMap() shouldBe
+              mapOf(
+                  "id" to 1L,
+                  "name" to "john",
+                  "surname" to "doe",
+                  "address.city" to "london",
+                  "address.country" to "uk")
+        }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id, -name, -surname})", false)])
+  @Test
+  fun `should create node with excluded properties`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    producer.publish(
+        valueSchema = Schema.STRING_SCHEMA,
+        value =
+            """{"id": 1, "name": "john", "surname": "doe", "dob": "2000-01-01", "address": {"city": "london", "country": "uk"}}""")
+    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("User")
+          it.asMap() shouldBe
+              mapOf(
+                  "id" to 1L,
+                  "dob" to "2000-01-01",
+                  "address.city" to "london",
+                  "address.country" to "uk")
+        }
+  }
+
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id, created_at: __timestamp})", false)])
+  @Test
+  fun `should create node with createdAt`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    producer.publish(
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"id": 1, "name": "john", "surname": "doe"}""")
+    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("User")
+          it.asMap()["created_at"] shouldNotBe null
         }
   }
 }
