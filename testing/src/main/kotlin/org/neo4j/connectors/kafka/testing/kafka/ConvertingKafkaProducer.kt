@@ -33,6 +33,15 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 import org.neo4j.connectors.kafka.utils.JSONUtils
 
+data class KafkaMessage(
+    val keySchema: Schema? = null,
+    val key: Any? = null,
+    val valueSchema: Schema? = null,
+    val value: Any? = null,
+    val timestamp: Instant? = null,
+    val headers: Map<String, Any> = emptyMap()
+)
+
 data class ConvertingKafkaProducer(
     val schemaRegistryURI: URI,
     val keyCompatibilityMode: SchemaCompatibilityMode,
@@ -43,6 +52,59 @@ data class ConvertingKafkaProducer(
     val topic: String
 ) {
 
+  init {
+    ensureSchemaCompatibility(topic)
+  }
+
+  fun publish(vararg kafkaMessages: KafkaMessage) {
+    kafkaProducer.beginTransaction()
+    try {
+      kafkaMessages.forEach {
+        val serializedKey =
+            when (it.key) {
+              null -> null
+              else ->
+                  keyConverter.testShimSerializer.serialize(
+                      it.key, it.keySchema ?: throw IllegalArgumentException("null key schema"))
+            }
+        val serializedValue =
+            when (it.value) {
+              null -> null
+              else ->
+                  valueConverter.testShimSerializer.serialize(
+                      it.value,
+                      it.valueSchema ?: throw IllegalArgumentException("null value schema"))
+            }
+        val converter = SimpleHeaderConverter()
+        val recordHeaders =
+            it.headers.map { e ->
+              object : Header {
+                override fun key(): String = e.key
+
+                override fun value(): ByteArray {
+                  return converter.fromConnectHeader(
+                      "", e.key, Values.inferSchema(e.value), e.value)
+                }
+              }
+            }
+
+        val record: ProducerRecord<Any, Any> =
+            ProducerRecord(
+                topic,
+                null,
+                it.timestamp?.toEpochMilli(),
+                serializedKey,
+                serializedValue,
+                recordHeaders)
+        kafkaProducer.send(record).get()
+      }
+      kafkaProducer.commitTransaction()
+    } catch (e: Exception) {
+      kafkaProducer.abortTransaction()
+      throw e
+    }
+  }
+
   fun publish(
       keySchema: Schema? = null,
       key: Any? = null,
@@ -51,38 +113,7 @@ data class ConvertingKafkaProducer(
       timestamp: Instant? = null,
       headers: Map<String, Any> = emptyMap()
   ) {
-    val serializedKey =
-        when (key) {
-          null -> null
-          else ->
-              keyConverter.testShimSerializer.serialize(
-                  key, keySchema ?: throw IllegalArgumentException("null key schema"))
-        }
-    val serializedValue =
-        when (value) {
-          null -> null
-          else ->
-              valueConverter.testShimSerializer.serialize(
-                  value, valueSchema ?: throw IllegalArgumentException("null value schema"))
-        }
-    val converter = SimpleHeaderConverter()
-    val recordHeaders =
-        headers.map { e ->
-          object : Header {
-            override fun key(): String = e.key
-
-            override fun value(): ByteArray {
-              return converter.fromConnectHeader("", e.key, Values.inferSchema(e.value), e.value)
-            }
-          }
-        }
-
-    ensureSchemaCompatibility(topic)
-
-    val record: ProducerRecord<Any, Any> =
-        ProducerRecord(
-            topic, null, timestamp?.toEpochMilli(), serializedKey, serializedValue, recordHeaders)
-    kafkaProducer.send(record).get()
+    publish(KafkaMessage(keySchema, key, valueSchema, value, timestamp, headers))
   }
 
   fun publish(event: ChangeEvent) {
