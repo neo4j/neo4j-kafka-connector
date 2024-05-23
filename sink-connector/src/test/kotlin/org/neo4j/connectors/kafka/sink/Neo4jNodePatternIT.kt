@@ -17,10 +17,12 @@
 package org.neo4j.connectors.kafka.sink
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.squareup.wire.Instant
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -28,6 +30,7 @@ import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
+import org.neo4j.connectors.kafka.testing.kafka.KafkaMessage
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.NodePatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
@@ -46,6 +49,8 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
         value = """{"id": 1, "name": "john", "surname": "doe"}""")
@@ -65,6 +70,8 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     SchemaBuilder.struct()
         .field("id", Schema.INT64_SCHEMA)
         .field("name", Schema.STRING_SCHEMA)
@@ -91,6 +98,8 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
         value =
@@ -116,6 +125,8 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
         value = """{"old_id": 1, "first_name": "john", "last_name": "doe"}""")
@@ -141,11 +152,14 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
         key = """{"first_name": "john"}""",
         valueSchema = Schema.STRING_SCHEMA,
         value = """{"old_id": 1, "last_name": "doe"}""")
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
@@ -158,6 +172,35 @@ class Neo4jNodePatternIT {
         keySchema = Schema.STRING_SCHEMA,
         key = """{"old_id": 1}""",
     )
+
+    eventually(30.seconds) {
+      session
+          .run("MATCH (n:User) RETURN count(n) AS count", emptyMap())
+          .single()
+          .get("count")
+          .asLong() shouldBe 0
+    }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Test
+  fun `should create and delete node in the same kafka transaction`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
+    producer.publish(
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 1}""",
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "john", "surname": "doe"}"""),
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 1}""",
+        ))
+
     eventually(30.seconds) {
       session
           .run("MATCH (n:User) RETURN count(n) AS count", emptyMap())
@@ -173,22 +216,22 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 1}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"name": "john", "surname": "doe"}""")
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 1}""",
-    )
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 1}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"name": "john-new", "surname": "doe-new"}""")
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
 
-    eventually(30.seconds) {
+    producer.publish(
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 1}""",
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "john", "surname": "doe"}"""),
+        KafkaMessage(keySchema = Schema.STRING_SCHEMA, key = """{"id": 1}"""),
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 1}""",
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "john-new", "surname": "doe-new"}"""))
+
+    eventually(60.seconds) {
       session.run("MATCH (n:User) RETURN n", emptyMap()).single().get("n").asNode() should
           {
             it.labels() shouldBe listOf("User")
@@ -203,16 +246,19 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 1}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"name": "john", "surname": "doe"}""")
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 2}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"name": "mary", "surname": "doe"}""")
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 1}""",
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "john", "surname": "doe"}"""),
+        KafkaMessage(
+            keySchema = Schema.STRING_SCHEMA,
+            key = """{"id": 2}""",
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "mary", "surname": "doe"}"""))
 
     eventually(30.seconds) {
       session.run("MATCH (n:User) RETURN n", emptyMap()).list { r ->
@@ -230,15 +276,18 @@ class Neo4jNodePatternIT {
 
   @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,!name,surname})", false)])
   @Test
-  fun `should create node with compositeKey`(
+  fun `should create node with composite key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
         key = """{"id": 1, "name": "john"}""",
         valueSchema = Schema.STRING_SCHEMA,
         value = """{"surname": "doe"}""")
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
@@ -254,10 +303,13 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
         value =
             """{"id": 1, "name": "john", "surname": "doe", "address": {"city": "london", "country": "uk"}}""")
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
@@ -279,10 +331,13 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
         value =
             """{"id": 1, "name": "john", "surname": "doe", "dob": "2000-01-01", "address": {"city": "london", "country": "uk"}}""")
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
@@ -300,19 +355,25 @@ class Neo4jNodePatternIT {
   @Neo4jSink(
       nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id, created_at: __timestamp})", false)])
   @Test
-  fun `should create node with createdAt`(
+  fun `should create node with timestamp`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
-        value = """{"id": 1, "name": "john", "surname": "doe"}""")
+        value = """{"id": 1, "name": "john", "surname": "doe"}""",
+        timestamp = timestamp)
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
         {
+          println(it.asMap())
           it.labels() shouldBe listOf("User")
-          it.asMap()["created_at"] shouldNotBe null
+          it.asMap() shouldBe mapOf("id" to 1L, "created_at" to timestamp.atZone(ZoneOffset.UTC))
         }
   }
 
@@ -324,15 +385,18 @@ class Neo4jNodePatternIT {
                   "(:User{!id: __key.old_id, name: __key.first_name, surname: __key.last_name})",
                   false)])
   @Test
-  fun `should create and delete node with all keys pattern`(
+  fun `should create and delete node with explicit properties from message key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
         key = """{"old_id": 1, "first_name": "john", "last_name": "doe"}""",
         valueSchema = Schema.STRING_SCHEMA,
         value = """{}""")
+
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
         .asNode() should
@@ -345,6 +409,7 @@ class Neo4jNodePatternIT {
         keySchema = Schema.STRING_SCHEMA,
         key = """{"old_id": 1}""",
     )
+
     eventually(30.seconds) {
       session
           .run("MATCH (n:User) RETURN count(n) AS count", emptyMap())
@@ -360,19 +425,13 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"id": 1}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"name": "john", "surname": "doe"}""")
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
 
-    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
-        .get("n")
-        .asNode() should
-        {
-          it.labels() shouldBe listOf("User")
-          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
-        }
+    session
+        .run(
+            "CREATE (n:User) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1L, "name" to "john", "surname" to "doe")))
+        .consume()
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -400,19 +459,11 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
-    producer.publish(
-        keySchema = Schema.STRING_SCHEMA,
-        key = """{"old_id": 1}""",
-        valueSchema = Schema.STRING_SCHEMA,
-        value = """{"first_name": "john", "last_name": "doe"}""")
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
 
-    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
-        .get("n")
-        .asNode() should
-        {
-          it.labels() shouldBe listOf("User")
-          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
-        }
+    session.run(
+        "CREATE (n:User) SET n = ${'$'}props",
+        mapOf("props" to mapOf("id" to 1L, "name" to "john", "surname" to "doe")))
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -441,6 +492,9 @@ class Neo4jNodePatternIT {
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR (n:Account) REQUIRE n.id IS KEY").consume()
+
     producer1.publish(
         keySchema = Schema.STRING_SCHEMA,
         key = """{"id": 1}""",
@@ -468,5 +522,91 @@ class Neo4jNodePatternIT {
           it.labels() shouldBe listOf("Account")
           it.asMap() shouldBe mapOf("id" to 1L, "email" to "john@doe.com")
         }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Test
+  fun `should create 1000 nodes`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+
+    val kafkaMessages = mutableListOf<KafkaMessage>()
+    for (i in 1..1000) {
+      kafkaMessages.add(
+          KafkaMessage(
+              keySchema = Schema.STRING_SCHEMA,
+              key = """{"id": $i}""",
+              valueSchema = Schema.STRING_SCHEMA,
+              value = """{"name": "john-$i", "surname": "doe-$i"}"""))
+    }
+
+    producer.publish(*kafkaMessages.toTypedArray())
+
+    eventually(30.seconds) {
+      session
+          .run("MATCH (n:User) RETURN count(n) AS count", emptyMap())
+          .single()
+          .get("count")
+          .asLong() shouldBe 1000
+    }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", true)])
+  @Test
+  fun `should append new properties when merge node properties true`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session
+        .run(
+            "CREATE (n:User) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1, "name" to "john", "surname" to "doe")))
+        .consume()
+
+    producer.publish(
+        keySchema = Schema.STRING_SCHEMA,
+        key = """{"id": 1}""",
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"born": 1970}""")
+
+    eventually(30.seconds) {
+      session.run("MATCH (n:User) RETURN n", emptyMap()).single().get("n").asNode() should
+          {
+            it.labels() shouldBe listOf("User")
+            it.asMap() shouldBe
+                mapOf("id" to 1L, "name" to "john", "surname" to "doe", "born" to 1970)
+          }
+    }
+  }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Test
+  fun `should remove existing properties and add new ones when merge node properties false`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session
+        .run(
+            "CREATE (n:User) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1, "name" to "john", "surname" to "doe")))
+        .consume()
+
+    producer.publish(
+        keySchema = Schema.STRING_SCHEMA,
+        key = """{"id": 1}""",
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"born": 1970}""")
+
+    eventually(30.seconds) {
+      session.run("MATCH (n:User) RETURN n", emptyMap()).single().get("n").asNode() should
+          {
+            it.labels() shouldBe listOf("User")
+            it.asMap() shouldBe mapOf("id" to 1L, "born" to 1970)
+          }
+    }
   }
 }
