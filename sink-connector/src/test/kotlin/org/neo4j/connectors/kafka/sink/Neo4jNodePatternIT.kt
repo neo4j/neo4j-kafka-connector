@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.time.Instant
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.seconds
@@ -34,7 +35,6 @@ import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.NodePatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
-import java.time.Instant
 
 class Neo4jNodePatternIT {
   companion object {
@@ -118,8 +118,8 @@ class Neo4jNodePatternIT {
   @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User:Person{!id,name,surname})", false)])
   @Test
   fun `should create node with multiple labels pattern`(
-    @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-    session: Session
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -127,8 +127,8 @@ class Neo4jNodePatternIT {
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
         value =
-        ObjectMapper()
-            .writeValueAsBytes(mapOf("id" to 1L, "name" to "john", "surname" to "doe")))
+            ObjectMapper()
+                .writeValueAsBytes(mapOf("id" to 1L, "name" to "john", "surname" to "doe")))
 
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
         .get("n")
@@ -138,7 +138,6 @@ class Neo4jNodePatternIT {
           it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
         }
   }
-
 
   @Neo4jSink(
       nodePattern =
