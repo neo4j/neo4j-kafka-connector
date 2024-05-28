@@ -235,7 +235,7 @@ internal class Neo4jSourceExtension(
     )
     createDriver().use { driver ->
       driver.verifyConnectivity()
-      driver.session().use { session ->
+      driver.session(SessionConfig.forDatabase("system")).use { session ->
         session.createDatabase(neo4jDatabase)
         if (sourceAnnotation.strategy == SourceStrategy.CDC) {
           session.enableCdc(neo4jDatabase)

@@ -285,7 +285,9 @@ internal class Neo4jSinkExtension(
     driver = driver ?: createDriver()
     driver?.apply {
       this.verifyConnectivity()
-      this.session().use { session -> session.createDatabase(neo4jDatabase!!) }
+      this.session(SessionConfig.forDatabase("system")).use { session ->
+        session.createDatabase(neo4jDatabase!!)
+      }
     }
   }
 

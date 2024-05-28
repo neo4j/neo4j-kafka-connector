@@ -48,6 +48,7 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.Values
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
@@ -82,7 +83,9 @@ class TypesTest {
 
   @BeforeEach
   fun `start with an empty database`() {
-    driver.session().use { it.run("CREATE OR REPLACE DATABASE neo4j WAIT").consume() }
+    driver.session(SessionConfig.forDatabase("system")).use {
+      it.run("CREATE OR REPLACE DATABASE neo4j WAIT").consume()
+    }
   }
 
   @ParameterizedTest(name = "{0}")

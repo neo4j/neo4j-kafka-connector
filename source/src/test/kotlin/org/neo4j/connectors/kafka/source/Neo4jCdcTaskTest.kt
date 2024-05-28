@@ -40,6 +40,7 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -88,11 +89,12 @@ class Neo4jCdcTaskTest {
 
   @BeforeEach
   fun before() {
-    session
-        .run(
-            "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
-            mapOf("db" to "neo4j", "mode" to "FULL"))
-        .consume()
+    driver.session(SessionConfig.forDatabase("system")).use {
+      it.run(
+              "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
+              mapOf("db" to "neo4j", "mode" to "FULL"))
+          .consume()
+    }
 
     task = Neo4jCdcTask()
     task.initialize(newTaskContextWithOffset())
