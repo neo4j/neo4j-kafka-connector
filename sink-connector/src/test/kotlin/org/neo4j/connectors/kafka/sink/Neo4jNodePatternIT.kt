@@ -17,7 +17,6 @@
 package org.neo4j.connectors.kafka.sink
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.squareup.wire.Instant
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
@@ -35,6 +34,7 @@ import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.NodePatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
+import java.time.Instant
 
 class Neo4jNodePatternIT {
   companion object {
@@ -114,6 +114,31 @@ class Neo4jNodePatternIT {
           it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
         }
   }
+
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User:Person{!id,name,surname})", false)])
+  @Test
+  fun `should create node with multiple labels pattern`(
+    @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+    session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+
+    producer.publish(
+        valueSchema = Schema.BYTES_SCHEMA,
+        value =
+        ObjectMapper()
+            .writeValueAsBytes(mapOf("id" to 1L, "name" to "john", "surname" to "doe")))
+
+    eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("User", "Person")
+          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+  }
+
 
   @Neo4jSink(
       nodePattern =
@@ -421,7 +446,7 @@ class Neo4jNodePatternIT {
 
   @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
   @Test
-  fun `should create and update node`(
+  fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
@@ -455,7 +480,7 @@ class Neo4jNodePatternIT {
               NodePatternStrategy(
                   TOPIC, "(:User{!id: old_id, name: first_name, surname: last_name})", false)])
   @Test
-  fun `should create and update node with aliases`(
+  fun `should update node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
@@ -555,7 +580,7 @@ class Neo4jNodePatternIT {
 
   @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", true)])
   @Test
-  fun `should append new properties when merge node properties true`(
+  fun `should merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
@@ -584,7 +609,7 @@ class Neo4jNodePatternIT {
 
   @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
   @Test
-  fun `should remove existing properties and add new ones when merge node properties false`(
+  fun `should not merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
