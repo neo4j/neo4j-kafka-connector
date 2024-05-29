@@ -35,7 +35,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.ParameterizedTest.DISPLAY_NAME_PLACEHOLDER
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
@@ -196,34 +195,6 @@ class Neo4jSourceExtensionTest {
 
     assertIs<ConvertingKafkaConsumer>(convertingKafkaConsumer)
     assertSame(consumer, convertingKafkaConsumer.kafkaConsumer)
-  }
-
-  @Test
-  fun `verifies connectivity if driver is initialized before each test`() {
-    kafkaConnectServer.start()
-    val session = mock<Session>()
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-          on { verifyConnectivity() } doAnswer {}
-        }
-    val extension =
-        Neo4jSourceExtension(
-            envAccessor = environment::get,
-            driverFactory = { _, _ -> driver },
-        )
-    val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
-    extension.evaluateExecutionCondition(extensionContext)
-    extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
-
-    extension.beforeEach(extensionContext)
-
-    verify(driver).verifyConnectivity()
   }
 
   @Test

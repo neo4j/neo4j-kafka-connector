@@ -161,10 +161,13 @@ internal class Neo4jSourceExtension(
   override fun afterEach(context: ExtensionContext?) {
     source.unregister()
     if (this::driver.isInitialized) {
-      session.dropDatabase(neo4jDatabase).close()
+      driver.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+      session.close()
       driver.close()
     } else {
-      createDriver().use { dr -> dr.session().use { it.dropDatabase(neo4jDatabase) } }
+      createDriver().use { dr ->
+        dr.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+      }
     }
   }
 
@@ -234,8 +237,7 @@ internal class Neo4jSourceExtension(
         "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",
     )
     createDriver().use { driver ->
-      driver.verifyConnectivity()
-      driver.session().use { session ->
+      driver.session(SessionConfig.forDatabase("system")).use { session ->
         session.createDatabase(neo4jDatabase)
         if (sourceAnnotation.strategy == SourceStrategy.CDC) {
           session.enableCdc(neo4jDatabase)

@@ -54,6 +54,7 @@ import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
 import org.neo4j.connectors.kafka.service.sink.strategy.CUDNodeRel
 import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
 import org.neo4j.connectors.kafka.service.sink.strategy.CUDRelationship
+import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkTaskTest.Companion.session
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverterTest
 import org.neo4j.connectors.kafka.sink.utils.allLabels
 import org.neo4j.connectors.kafka.sink.utils.allNodes
@@ -65,7 +66,6 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import org.neo4j.driver.types.Node
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -174,7 +174,7 @@ class DeprecatedNeo4jSinkTaskTest {
                 Neo4jValueConverterTest.getTreeStruct(),
                 42))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       assertEquals(1, it.findNodes("BODY").stream().count())
       assertEquals(2, it.findNodes("P").stream().count())
       assertEquals(2, it.findNodes("UL").stream().count())
@@ -241,7 +241,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(firstTopic, 1, null, null, PERSON_SCHEMA, struct, 42),
             SinkRecord(secondTopic, 1, null, null, PERSON_SCHEMA, struct, 43))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       val personCount =
           it.run("MATCH (p:Person) RETURN COUNT(p) as COUNT").single()["COUNT"].asLong()
       val expectedPersonCount = input.filter { it.topic() == secondTopic }.size
@@ -331,7 +331,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(firstTopic, 1, null, null, null, cdcDataEnd, 43),
             SinkRecord(firstTopic, 1, null, null, null, cdcDataRelationship, 44))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       val result =
           it.run(
               """
@@ -350,7 +350,7 @@ class DeprecatedNeo4jSinkTaskTest {
 
   @Test
   fun `should update data into Neo4j from CDC events`() {
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run(
           """
                 CREATE (s:User:OldLabel:SourceEvent{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'0'})
@@ -423,7 +423,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(firstTopic, 1, null, null, null, cdcDataStart, 42),
             SinkRecord(firstTopic, 1, null, null, null, cdcDataRelationship, 43))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       val result =
           it.run(
               """
@@ -598,7 +598,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(firstTopic, 1, null, null, null, cdcDataEnd, 43),
             SinkRecord(firstTopic, 1, null, null, null, cdcDataRelationship, 44))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH (s:User{
@@ -624,7 +624,7 @@ class DeprecatedNeo4jSinkTaskTest {
       assertFalse { result.hasNext() }
     }
 
-    val labels = session.beginTransaction().use { it.allLabels().toSet() }
+    val labels = session.readTransaction { it.allLabels().toSet() }
     assertEquals(setOf("User"), labels)
   }
 
@@ -772,7 +772,7 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.put(input)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH p = (s:Character)-[r:`KNOWS WHO`{since: 2014}]->(e:Writer)
@@ -786,8 +786,7 @@ class DeprecatedNeo4jSinkTaskTest {
       assertFalse { result.hasNext() }
     }
 
-    var allNodes = session.beginTransaction().use { it.allNodes().stream().count() }
-    assertEquals(2L, allNodes)
+    assertEquals(2L, session.readTransaction { it.allNodes().stream().count() })
 
     // another CDC data, not matching the previously created nodes
     val cdcDataRelationshipNotMatched =
@@ -825,7 +824,7 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.put(inputNotMatched)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH p = (s:Character)-[r:`HAS WRITTEN`{since: 1998}]->(e:Writer)
@@ -838,8 +837,7 @@ class DeprecatedNeo4jSinkTaskTest {
       assertEquals(1, count)
       assertFalse { result.hasNext() }
     }
-    allNodes = session.beginTransaction().use { it.allNodes().stream().count() }
-    assertEquals(4L, allNodes)
+    assertEquals(4L, session.readTransaction { it.allNodes().stream().count() })
   }
 
   @Test
@@ -971,7 +969,7 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.put(input)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH p = (s:User)-[r:`KNOWS WHO` {since: 2014}]->(e:User)
@@ -985,11 +983,9 @@ class DeprecatedNeo4jSinkTaskTest {
       assertFalse { result.hasNext() }
     }
 
-    var labels = session.beginTransaction().use { it.allLabels().toSet() }
-    assertEquals(setOf("User"), labels)
+    assertEquals(setOf("User"), session.readTransaction { it.allLabels().toSet() })
 
-    var countUsers = session.beginTransaction().use { it.findNodes("User").stream().count() }
-    assertEquals(2L, countUsers)
+    assertEquals(2L, session.readTransaction { it.findNodes("User").stream().count() })
 
     // another CDC data, not matching the previously created nodes
     val cdcDataRelationshipNotMatched =
@@ -1027,7 +1023,7 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.put(inputNotMatched)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH p = (s:User)-[r:`HAS WRITTEN`{since: 2000}]->(e:User)
@@ -1040,11 +1036,9 @@ class DeprecatedNeo4jSinkTaskTest {
       assertEquals(1, count)
       assertFalse { result.hasNext() }
     }
-    labels = session.beginTransaction().use { it.allLabels().toSet() }
-    assertEquals(setOf("User"), labels)
 
-    countUsers = session.beginTransaction().use { it.allNodes().stream().count() }
-    assertEquals(4L, countUsers)
+    assertEquals(setOf("User"), session.readTransaction { it.allLabels().toSet() })
+    assertEquals(4L, session.readTransaction { it.allNodes().stream().count() })
   }
 
   @Test
@@ -1169,7 +1163,7 @@ class DeprecatedNeo4jSinkTaskTest {
         )
     task.put(input)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val query =
           """
                 |MATCH p = (s:User)-[r:`KNOWS WHO` {since: 2014}]->(e:User)
@@ -1183,16 +1177,16 @@ class DeprecatedNeo4jSinkTaskTest {
       assertFalse { result.hasNext() }
     }
 
-    val labels = session.beginTransaction().use { it.allLabels().toSet() }
+    val labels = session.readTransaction { it.allLabels().toSet() }
     assertEquals(setOf("User"), labels)
 
-    val countUsers = session.beginTransaction().use { it.findNodes("User").stream().count() }
+    val countUsers = session.readTransaction { it.findNodes("User").stream().count() }
     assertEquals(4L, countUsers)
   }
 
   @Test
   fun `should delete data into Neo4j from CDC events`() {
-    session.beginTransaction().use {
+    session.writeTransaction() {
       it.run(
           """
                 CREATE (s:User:OldLabel:SourceEvent{name:'Andrea', `comp@ny`:'LARUS-BA', sourceId:'0'})
@@ -1232,19 +1226,18 @@ class DeprecatedNeo4jSinkTaskTest {
     task.start(props)
     val input = listOf(SinkRecord(firstTopic, 1, null, null, null, cdcDataStart, 42))
     task.put(input)
-    session.beginTransaction().use {
-      val result =
-          it.run(
-              """
+    val count =
+        session.readTransaction {
+          val result =
+              it.run(
+                  """
                     MATCH (s:SourceEvent)
                     RETURN count(s) as count
                 """
-                  .trimIndent())
-      assertTrue { result.hasNext() }
-      val count = result.next()[0].asInt()
-      assertEquals(1, count)
-      assertFalse { result.hasNext() }
-    }
+                      .trimIndent())
+          result.single()[0].asInt()
+        }
+    assertEquals(1, count)
   }
 
   @Test
@@ -1261,10 +1254,8 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.start(props)
     task.put(listOf(SinkRecord(topic, 1, null, null, null, "a", 42)))
-    session.beginTransaction().use {
-      val node: Node? = it.findNode("Person", "name", "Alex")
-      assertTrue { node == null }
-    }
+    val node = session.readTransaction { it.findNode("Person", "name", "Alex") }
+    assertTrue { node == null }
   }
 
   // cypher strategy waits for the values to be a Map, hence a raw string value will not be
@@ -1283,10 +1274,8 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.start(props)
     task.put(listOf(SinkRecord(topic, 1, null, 42, null, "true", 42)))
-    session.beginTransaction().use {
-      val node: Node? = it.findNode("Person", "name", "Alex")
-      assertTrue { node == null }
-    }
+    val node = session.readTransaction { it.findNode("Person", "name", "Alex") }
+    assertTrue { node == null }
   }
 
   @Test
@@ -1302,10 +1291,8 @@ class DeprecatedNeo4jSinkTaskTest {
 
     task.start(props)
     task.put(listOf(SinkRecord(topic, 1, null, 42, null, "{\"foo\":42}", 42)))
-    session.beginTransaction().use {
-      val node: Node? = it.findNode("Person", "name", "Alex")
-      assertTrue { node == null }
-    }
+    val node = session.readTransaction { it.findNode("Person", "name", "Alex") }
+    assertTrue { node == null }
   }
 
   @Test
@@ -1328,15 +1315,14 @@ class DeprecatedNeo4jSinkTaskTest {
     task.start(props)
     val input = listOf(SinkRecord(topic, 1, null, null, null, data, 42))
     task.put(input)
-    session.beginTransaction().use {
-      val result =
-          it.run(
-              "MATCH (n:User{name: 'Andrea', surname: 'Santurbano', userId: 1, `address.city`: 'Venice'}) RETURN count(n) AS count")
-      assertTrue { result.hasNext() }
-      val count = result.next()[0].asInt()
-      assertEquals(1, count)
-      assertFalse { result.hasNext() }
-    }
+    val count =
+        session.readTransaction {
+          val result =
+              it.run(
+                  "MATCH (n:User{name: 'Andrea', surname: 'Santurbano', userId: 1, `address.city`: 'Venice'}) RETURN count(n) AS count")
+          result.single()[0].asInt()
+        }
+    assertEquals(1, count)
   }
 
   @Test
@@ -1362,29 +1348,28 @@ class DeprecatedNeo4jSinkTaskTest {
     task.start(props)
     val input = listOf(SinkRecord(topic, 1, null, null, null, data, 42))
     task.put(input)
-    session.beginTransaction().use {
-      val result =
-          it.run(
-              """
+    val count =
+        session.readTransaction {
+          val result =
+              it.run(
+                  """
                 MATCH p = (s:User{sourceName: 'Andrea', sourceSurname: 'Santurbano', sourceId: 1})-[:KNOWS{since: 2014}]->(e:User{targetName: 'Michael', targetSurname: 'Hunger', targetId: 1})
                 RETURN count(p) AS count
             """
-                  .trimIndent())
-      assertTrue { result.hasNext() }
-      val count = result.next()[0].asInt()
-      assertEquals(1, count)
-      assertFalse { result.hasNext() }
-    }
+                      .trimIndent())
+          result.single()[0].asInt()
+        }
+    assertEquals(1, count)
   }
 
   @Test
   fun `should work with node pattern topic for tombstone record`() {
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run("CREATE (u:User{userId: 1, name: 'Andrea', surname: 'Santurbano'})")
       it.commit()
     }
     val count =
-        session.beginTransaction().use {
+        session.readTransaction {
           it.run("MATCH (n) RETURN count(n) AS count").single()["count"].asLong()
         }
     assertEquals(1L, count)
@@ -1401,13 +1386,12 @@ class DeprecatedNeo4jSinkTaskTest {
     task.start(props)
     val input = listOf(SinkRecord(topic, 1, null, data, null, null, 42))
     task.put(input)
-    session.beginTransaction().use {
-      val result = it.run("MATCH (n) RETURN count(n) AS count")
-      assertTrue { result.hasNext() }
-      val c = result.next()[0].asInt()
-      assertEquals(0, c)
-      assertFalse { result.hasNext() }
-    }
+    val c =
+        session.readTransaction {
+          val result = it.run("MATCH (n) RETURN count(n) AS count")
+          result.single()[0].asInt()
+        }
+    assertEquals(0, c)
   }
 
   @Test
@@ -1418,7 +1402,7 @@ class DeprecatedNeo4jSinkTaskTest {
     val endNode = "TargetNode"
     val topic = UUID.randomUUID().toString()
 
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run("CREATE (:$startNode {key: 1}) CREATE (:$endNode {key: 1})")
       it.commit()
     }
@@ -1440,20 +1424,14 @@ class DeprecatedNeo4jSinkTaskTest {
 
     val queryCount = "MATCH p = (:$startNode)-[:$relType]->(:$endNode) RETURN count(p) AS count"
 
-    session.beginTransaction().use {
-      val countRels = it.run(queryCount).single()[0].asLong()
-      assertEquals(1L, countRels)
-    }
+    assertEquals(1L, session.readTransaction { it.run(queryCount).single()[0].asLong() })
 
     val relDelete =
         CUDRelationship(op = CUDOperations.delete, from = start, to = end, rel_type = relType)
     val sinkRecordDelete = SinkRecord(topic, 1, null, null, null, JSONUtils.asMap(relDelete), 1L)
     task.put(listOf(sinkRecordDelete))
 
-    session.beginTransaction().use {
-      val countRels = it.run(queryCount).single()[0].asLong()
-      assertEquals(0L, countRels)
-    }
+    assertEquals(0L, session.readTransaction { it.run(queryCount).single()[0].asLong() })
   }
 
   @Test
@@ -1485,7 +1463,7 @@ class DeprecatedNeo4jSinkTaskTest {
     task.put(data)
 
     // then
-    session.beginTransaction().use {
+    session.readTransaction {
       val countFooBarLabel =
           it.run("MATCH (n:Foo:Bar:Label) RETURN count(n) AS count").single()[0].asLong()
       assertEquals(5L, countFooBarLabel)
@@ -1519,7 +1497,7 @@ class DeprecatedNeo4jSinkTaskTest {
     props[SinkConfiguration.CUD_TOPICS] = topic
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
     props[SinkTask.TOPICS_CONFIG] = topic
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run(
           """
                 UNWIND range(1, 10) AS id
@@ -1529,7 +1507,6 @@ class DeprecatedNeo4jSinkTaskTest {
               .trimIndent())
       assertEquals(0, it.allRelationships().stream().count().toInt())
       assertEquals(20, it.allNodes().stream().count().toInt())
-      it.commit()
     }
 
     // when
@@ -1537,8 +1514,8 @@ class DeprecatedNeo4jSinkTaskTest {
     task.put(data)
 
     // then
-    session.beginTransaction().use {
-      val countFooBarLabel =
+    val countFooBarLabel =
+        session.readTransaction {
           it.run(
                   """
                 MATCH (:Foo:Bar)-[r:$rel_type]->(:FooBar)
@@ -1547,8 +1524,8 @@ class DeprecatedNeo4jSinkTaskTest {
                       .trimIndent())
               .single()["count"]
               .asLong()
-      assertEquals(10L, countFooBarLabel)
-    }
+        }
+    assertEquals(10L, countFooBarLabel)
   }
 
   @Test
@@ -1586,8 +1563,8 @@ class DeprecatedNeo4jSinkTaskTest {
     task.put(data)
 
     // then
-    session.beginTransaction().use {
-      val countFooBarLabel =
+    var countFooBarLabel =
+        session.readTransaction {
           it.run(
                   """
                 MATCH (:Foo:Bar)-[r:$relType]->(:FooBar)
@@ -1596,8 +1573,8 @@ class DeprecatedNeo4jSinkTaskTest {
                       .trimIndent())
               .single()["count"]
               .asLong()
-      assertEquals(10L, countFooBarLabel)
-    }
+        }
+    assertEquals(10L, countFooBarLabel)
 
     // now, I create only start nodes
     val dataWithStartPreset =
@@ -1617,7 +1594,7 @@ class DeprecatedNeo4jSinkTaskTest {
           SinkRecord(topic, 1, null, null, null, JSONUtils.asMap(rel), it.toLong())
         }
 
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run(
           """
                 UNWIND range(11, 20) AS id
@@ -1626,13 +1603,12 @@ class DeprecatedNeo4jSinkTaskTest {
               .trimIndent())
       assertEquals(10, it.allRelationships().stream().count().toInt())
       assertEquals(30, it.allNodes().stream().count().toInt())
-      it.commit()
     }
 
     task.put(dataWithStartPreset)
 
-    session.beginTransaction().use {
-      val countFooBarLabel =
+    countFooBarLabel =
+        session.readTransaction {
           it.run(
                   """
                 MATCH (:Foo:Bar)-[r:$relType]->(:FooBar)
@@ -1641,8 +1617,8 @@ class DeprecatedNeo4jSinkTaskTest {
                       .trimIndent())
               .single()["count"]
               .asLong()
-      assertEquals(20L, countFooBarLabel)
-    }
+        }
+    assertEquals(20L, countFooBarLabel)
 
     // now, I create only end nodes
     val dataWithEndPreset =
@@ -1662,7 +1638,7 @@ class DeprecatedNeo4jSinkTaskTest {
           SinkRecord(topic, 1, null, null, null, JSONUtils.asMap(rel), it.toLong())
         }
 
-    session.beginTransaction().use {
+    session.writeTransaction {
       it.run(
           """
                 UNWIND range(21, 30) AS id
@@ -1671,13 +1647,12 @@ class DeprecatedNeo4jSinkTaskTest {
               .trimIndent())
       assertEquals(20, it.allRelationships().stream().count().toInt())
       assertEquals(50, it.allNodes().stream().count().toInt())
-      it.commit()
     }
 
     task.put(dataWithEndPreset)
 
-    session.beginTransaction().use {
-      val countFooBarLabel =
+    countFooBarLabel =
+        session.readTransaction {
           it.run(
                   """
                 MATCH (:Foo:Bar)-[r:$relType]->(:FooBar)
@@ -1686,8 +1661,8 @@ class DeprecatedNeo4jSinkTaskTest {
                       .trimIndent())
               .single()["count"]
               .asLong()
-      assertEquals(30L, countFooBarLabel)
-    }
+        }
+    assertEquals(30L, countFooBarLabel)
   }
 
   @Test
@@ -1746,7 +1721,7 @@ class DeprecatedNeo4jSinkTaskTest {
     task.put(dataRel)
 
     // then
-    session.beginTransaction().use {
+    session.readTransaction {
       val countFooBarLabel =
           it.run("MATCH (n:Foo:Bar:Label) RETURN count(n) AS count").single()["count"].asLong()
       assertEquals(7L, countFooBarLabel)
@@ -1930,7 +1905,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(firstTopic, 1, null, null, PERSON_SCHEMA, struct, 42),
             SinkRecord(secondTopic, 1, null, null, PERSON_SCHEMA, struct, 43))
     task.put(input)
-    session.beginTransaction().use {
+    session.readTransaction {
       val personCount =
           it.run("MATCH (p:Person) RETURN COUNT(p) as COUNT").single()["COUNT"].asLong()
       val expectedPersonCount = input.filter { it.topic() == secondTopic }.size
@@ -1973,7 +1948,7 @@ class DeprecatedNeo4jSinkTaskTest {
             SinkRecord(topicB, 1, null, null, null, user, 1))
     task.put(input)
 
-    session.beginTransaction().use {
+    session.readTransaction {
       val actualPlace = it.run("MATCH (p:Place) RETURN p").single().get("p")
       assertEquals(place["name"], actualPlace.get("name").asString())
       assertEquals(
