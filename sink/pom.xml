@@ -13,8 +13,14 @@
     <description>Neo4j Connector for Kafka - Sink</description>
     <properties>
         <antlr4.version>4.13.1</antlr4.version>
+        <json-schema-validator.version>1.4.0</json-schema-validator.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>

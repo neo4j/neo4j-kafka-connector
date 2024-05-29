@@ -16,11 +16,38 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.kafka.sink.ChangeQuery
+import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.cud.Operation
+import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
-class CudHandler(val topic: String, batchSize: Int) :
-    RedirectingHandler(CUDIngestionStrategy(), batchSize) {
+class CudHandler(val topic: String, private val renderer: Renderer, private val batchSize: Int) :
+    AbstractHandler() {
+  private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   override fun strategy() = SinkStrategy.CUD
+
+  @Suppress("UNCHECKED_CAST")
+  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
+    return messages
+        .asSequence()
+        .onEach { logger.trace("received message: '{}'", it) }
+        .map {
+          val value =
+              when (val value = it.valueFromConnectValue()) {
+                is Map<*, *> -> value as Map<String, Any?>
+                else -> throw ConnectException("Message value must be convertible to a Map.")
+              }
+          val cud = Operation.from(value)
+          cud.toQuery(renderer)
+        }
+        .chunked(batchSize)
+        .map { it.map { q -> ChangeQuery(null, null, q) } }
+        .onEach { logger.trace("mapped messages: '{}'", it) }
+        .toList()
+  }
 }

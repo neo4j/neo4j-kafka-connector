@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.neo4j.com/cud.v1.0.json",
+  "title": "CUD (Create, Update, Delete) File Format",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "node create",
+      "$ref": "#/$defs/node.create"
+    },
+    {
+      "title": "node update or merge",
+      "$ref": "#/$defs/node.merge-or-update"
+    },
+    {
+      "title": "node delete",
+      "$ref": "#/$defs/node.delete"
+    },
+    {
+      "title": "relationship create",
+      "$ref": "#/$defs/relationship.create"
+    },
+    {
+      "title": "relationship update or merge",
+      "$ref": "#/$defs/relationship.merge-or-update"
+    },
+    {
+      "title": "relationship delete",
+      "$ref": "#/$defs/relationship.delete"
+    }
+  ],
+  "$defs": {
+    "const.node": {
+      "type": "string",
+      "pattern": "^[Nn][Oo][Dd][Ee]$"
+    },
+    "const.relationship": {
+      "type": "string",
+      "pattern": "^[Rr][Ee][Ll][Aa][Tt][Ii][Oo][Nn][Ss][Hh][Ii][Pp]$"
+    },
+    "const.create": {
+      "type": "string",
+      "pattern": "^[Cc][Rr][Ee][Aa][Tt][Ee]$"
+    },
+    "const.update": {
+      "type": "string",
+      "pattern": "^[Uu][Pp][Dd][Aa][Tt][Ee]$"
+    },
+    "const.merge": {
+      "type": "string",
+      "pattern": "^[Mm][Ee][Rr][Gg][Ee]$"
+    },
+    "const.delete": {
+      "type": "string",
+      "pattern": "^[Dd][Ee][Ll][Ee][Tt][Ee]$"
+    },
+    "const.match": {
+      "type": "string",
+      "pattern": "^[Mm][Aa][Tt][Cc][Hh]$"
+    },
+    "node.create": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.node"
+        },
+        "op": {
+          "$ref": "#/$defs/const.create"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "properties": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "node.merge-or-update": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.node"
+        },
+        "op": {
+          "type": "string",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/const.merge"
+            },
+            {
+              "$ref": "#/$defs/const.update"
+            }
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ids": {
+          "type": "object"
+        },
+        "properties": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "ids",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "node.delete": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.node"
+        },
+        "op": {
+          "$ref": "#/$defs/const.delete"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ids": {
+          "type": "object"
+        },
+        "detach": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "ids"
+      ],
+      "additionalProperties": false
+    },
+    "node.ref": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/const.match"
+            },
+            {
+              "$ref": "#/$defs/const.merge"
+            }
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ids": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "ids"
+      ],
+      "additionalProperties": false
+    },
+    "relationship.create": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.relationship"
+        },
+        "op": {
+          "$ref": "#/$defs/const.create"
+        },
+        "rel_type": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "to": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "properties": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "rel_type",
+        "from",
+        "to",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "relationship.merge-or-update": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.relationship"
+        },
+        "op": {
+          "type": "string",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/const.merge"
+            },
+            {
+              "$ref": "#/$defs/const.update"
+            }
+          ]
+        },
+        "rel_type": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "to": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "ids": {
+          "type": "object"
+        },
+        "properties": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "rel_type",
+        "from",
+        "to",
+        "properties"
+      ],
+      "additionalProperties": false
+    },
+    "relationship.delete": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/const.relationship"
+        },
+        "op": {
+          "$ref": "#/$defs/const.delete"
+        },
+        "rel_type": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "to": {
+          "$ref": "#/$defs/node.ref"
+        },
+        "ids": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "op",
+        "rel_type",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
