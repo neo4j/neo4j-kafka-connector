@@ -227,7 +227,10 @@ internal class Neo4jSinkExtension(
   override fun afterEach(extensionContent: ExtensionContext?) {
     if (driver != null) {
       if (sinkAnnotation.dropDatabase) {
-        session?.dropDatabase(neo4jDatabase!!)?.close()
+        driver!!.session(SessionConfig.forDatabase("system")).use {
+          it.dropDatabase(neo4jDatabase!!)
+        }
+        session?.close()
       }
       driver!!.close()
     } else if (sinkAnnotation.dropDatabase) {

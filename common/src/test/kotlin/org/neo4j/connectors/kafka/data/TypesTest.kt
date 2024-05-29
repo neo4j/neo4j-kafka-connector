@@ -47,7 +47,6 @@ import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.Values
 import org.testcontainers.containers.Neo4jContainer
@@ -64,19 +63,16 @@ class TypesTest {
             .withoutAuthentication()
 
     private lateinit var driver: Driver
-    private lateinit var session: Session
 
     @BeforeAll
     @JvmStatic
     fun setUpContainer() {
       driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
-      session = driver.session()
     }
 
     @AfterAll
     @JvmStatic
     fun tearDownContainer() {
-      session.close()
       driver.close()
     }
   }
