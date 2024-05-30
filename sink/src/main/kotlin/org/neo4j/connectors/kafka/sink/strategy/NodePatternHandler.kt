@@ -124,12 +124,12 @@ class NodePatternHandler(
                         )
                       } else {
                         it.set(
-                            node.asExpression(),
-                            Cypher.property("event", "properties"),
-                        )
+                                node.asExpression(),
+                                Cypher.property("event", "properties"),
+                            )
+                            .mutate(node.asExpression(), Cypher.property("event", "keys"))
                       }
                     }
-                    .mutate(node.asExpression(), Cypher.property("event", "keys"))
                     .returning(
                         Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(created))
                     .build())

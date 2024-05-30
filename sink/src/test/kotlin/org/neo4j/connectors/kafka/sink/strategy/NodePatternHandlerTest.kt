@@ -52,7 +52,6 @@ class NodePatternHandlerTest : HandlerTest() {
                   WITH event[1] AS event
                   MERGE (n:`ALabel` {id: event.keys.id})
                   SET n += event.properties
-                  SET n += event.keys
                   RETURN count(n) AS created
                 } 
                 CALL { WITH event
@@ -87,7 +86,6 @@ class NodePatternHandlerTest : HandlerTest() {
                   WITH event[1] AS event
                   MERGE (n:`ALabel` {id: event.keys.id})
                   SET n += event.properties
-                  SET n += event.keys
                   RETURN count(n) AS created
                 } 
                 CALL { WITH event
@@ -122,7 +120,6 @@ class NodePatternHandlerTest : HandlerTest() {
                   WITH event[1] AS event
                   MERGE (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB})
                   SET n += event.properties
-                  SET n += event.keys
                   RETURN count(n) AS created
                 } 
                 CALL { WITH event

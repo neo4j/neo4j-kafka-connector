@@ -50,13 +50,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA` {idStart: event.start.keys.idStart})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB` {idEnd: event.end.keys.idEnd})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
                     SET relationship += event.properties 
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -92,13 +89,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA` {id: event.start.keys.id})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB` {id: event.end.keys.id})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
                     SET relationship += event.properties 
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -134,13 +128,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA` {id: event.start.keys.id})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB` {id: event.end.keys.id})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
                     SET relationship += event.properties 
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -182,7 +173,6 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
                     SET relationship += event.properties 
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -218,10 +208,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA` {id: event.start.keys.id})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB` {id: event.end.keys.id})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
                     SET relationship = event.properties
                     SET relationship += event.keys 
@@ -302,13 +290,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA` {id1: event.start.keys.id1, id2: event.start.keys.id2})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB` {id1: event.end.keys.id1, id2: event.end.keys.id2})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {rel_id1: event.keys.rel_id1, rel_id2: event.keys.rel_id2}]->(end)
                     SET relationship += event.properties
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -344,13 +329,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     WITH event[1] AS event 
                     MERGE (start:`LabelA`:`LabelC` {id: event.start.keys.id})
                     SET start += event.start.properties
-                    SET start += event.start.keys
                     MERGE (end:`LabelB`:`LabelD` {id: event.end.keys.id})
                     SET end += event.end.properties
-                    SET end += event.end.keys
                     MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
                     SET relationship += event.properties 
-                    SET relationship += event.keys 
                     RETURN count(relationship) AS created
                   } 
                   CALL { WITH event
@@ -813,14 +795,14 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                                   WITH event WHERE event[0] = 'C'
                                   WITH event[1] AS event 
                                   MERGE (start:`LabelA` {id: event.start.keys.id})
-                                  SET start += event.start.properties
-                                  SET start += event.start.keys
+                                  SET start ${if (mergeNodeProperties) "+" else "" }= event.start.properties
+                                  ${if (!mergeNodeProperties) "SET start += event.start.keys" else ""}
                                   MERGE (end:`LabelB` {id: event.end.keys.id})
-                                  SET end += event.end.properties
-                                  SET end += event.end.keys
+                                  SET end ${if (mergeNodeProperties) "+" else "" }= event.end.properties
+                                  ${if (!mergeNodeProperties) "SET end += event.end.keys" else ""}
                                   MERGE (start)-[relationship:`REL_TYPE` {id: event.keys.id}]->(end)
-                                  SET relationship += event.properties 
-                                  SET relationship += event.keys 
+                                  SET relationship ${if (mergeRelationshipProperties) "+" else "" }= event.properties 
+                                  ${if (!mergeRelationshipProperties) "SET relationship += event.keys" else ""}
                                   RETURN count(relationship) AS created
                                 } 
                                 CALL { WITH event
