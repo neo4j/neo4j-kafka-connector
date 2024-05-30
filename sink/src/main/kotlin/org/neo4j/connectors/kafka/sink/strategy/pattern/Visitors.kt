@@ -302,7 +302,7 @@ internal object Visitors {
     override fun visitEscapedSymbolicNameString(
         ctx: PatternParser.EscapedSymbolicNameStringContext
     ): String {
-      return ctx.text
+      return ctx.text.substring(1, ctx.text.length - 1)
     }
 
     override fun visitUnescapedSymbolicNameString(

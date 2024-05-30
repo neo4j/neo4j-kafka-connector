@@ -206,6 +206,41 @@ class NodePatternHandlerTest : HandlerTest() {
   }
 
   @Test
+  fun `should construct correct query with escaped names`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:`ALabel With Space`:BLabel{ !id: aProperty, !`another id`: bProperty, name: `another property`, `last name`: last_name})",
+            mergeProperties = false,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                UNWIND ${'$'}messages AS event 
+                CALL { WITH event
+                  WITH event WHERE event[0] = 'C'
+                  WITH event[1] AS event
+                  MERGE (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
+                  SET n = event.properties
+                  SET n += event.keys
+                  RETURN count(n) AS created
+                } 
+                CALL { WITH event
+                  WITH event WHERE event[0] = 'D'
+                  WITH event[1] AS event 
+                  MATCH (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
+                  DETACH DELETE n
+                  RETURN count(n) AS deleted
+                } 
+                RETURN sum(created) AS created, sum(deleted) AS deleted                 
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
   fun `should include all properties`() {
     assertQueryAndParameters(
         "(:ALabel {!id})",

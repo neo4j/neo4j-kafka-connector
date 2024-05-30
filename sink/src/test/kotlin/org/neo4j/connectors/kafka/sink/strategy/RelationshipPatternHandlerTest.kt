@@ -349,6 +349,45 @@ class RelationshipPatternHandlerTest : HandlerTest() {
   }
 
   @Test
+  fun `should construct correct query for relationship pattern with escaped labels and properties`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:`Label A`:`Label C`{!`a-id`: `id start`})-[:`REL TYPE`{!`rel-id`: `rel id`}]->(:`Label B`:`Label D`{!`b-id`: `id end`})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    handler.query shouldBe
+        CypherParser.parse(
+                """
+                  UNWIND ${'$'}messages AS event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event 
+                    MERGE (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})
+                    SET start += event.start.properties
+                    MERGE (end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
+                    SET end += event.end.properties
+                    MERGE (start)-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end)
+                    SET relationship += event.properties 
+                    RETURN count(relationship) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D' 
+                    WITH event[1] AS event 
+                    MATCH (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
+                    DELETE relationship
+                    RETURN count(relationship) AS deleted
+                  } 
+                  RETURN sum(created) AS created, sum(deleted) AS deleted
+                  """
+                    .trimIndent())
+            .cypher
+  }
+
+  @Test
   fun `should include all properties`() {
     assertQueryAndParameters(
         "(:LabelA{!id: idStart})-[:REL_TYPE{!id: idRelationship}]->(:LabelB{!id: idEnd})",

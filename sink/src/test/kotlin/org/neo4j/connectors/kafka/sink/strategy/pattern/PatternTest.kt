@@ -59,6 +59,27 @@ class PatternTest {
     }
 
     @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "(:`LabelA`:`Label B`{!`id`,`a foo`,`b bar`,`c dar`: `c bar`})",
+                "`LabelA`:`Label B`{!`id`,`a foo`,`b bar`,`c dar`: `c bar`}"])
+    fun `should extract escaped labels and properties`(pattern: String) {
+      val result = Pattern.parse(pattern)
+
+      result shouldBe
+          NodePattern(
+              setOf("LabelA", "Label B"),
+              false,
+              setOf(PropertyMapping("id", "id")),
+              setOf(
+                  PropertyMapping("a foo", "a foo"),
+                  PropertyMapping("b bar", "b bar"),
+                  PropertyMapping("c bar", "c dar")),
+              emptySet())
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["(:LabelA{!id,foo.bar})", "LabelA{!id,foo.bar}"])
     fun `should extract complex params`(pattern: String) {
       val result = Pattern.parse(pattern)
