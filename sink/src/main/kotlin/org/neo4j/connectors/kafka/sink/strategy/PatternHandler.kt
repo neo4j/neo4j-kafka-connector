@@ -22,6 +22,7 @@ import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.extensions.flatten
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 
 abstract class PatternHandler<T : Pattern>(
@@ -29,7 +30,7 @@ abstract class PatternHandler<T : Pattern>(
     protected val bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
     protected val bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
     protected val bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
-) : AbstractHandler() {
+) : SinkStrategyHandler {
   abstract val pattern: T
 
   @Suppress("UNCHECKED_CAST")

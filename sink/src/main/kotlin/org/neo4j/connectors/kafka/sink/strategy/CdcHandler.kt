@@ -25,13 +25,14 @@ import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.SchemaUtils
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class CdcHandler : AbstractHandler() {
+abstract class CdcHandler : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {

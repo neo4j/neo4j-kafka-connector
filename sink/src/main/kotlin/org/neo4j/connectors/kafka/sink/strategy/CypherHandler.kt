@@ -22,6 +22,7 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -38,7 +39,7 @@ class CypherHandler(
     bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
     bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
     bindValueAsEvent: Boolean = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
-) : AbstractHandler() {
+) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val rewrittenQuery: String
 
