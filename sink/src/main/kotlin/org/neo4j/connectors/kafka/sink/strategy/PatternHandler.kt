@@ -24,6 +24,7 @@ import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.cypherdsl.core.Cypher
 
 abstract class PatternHandler<T : Pattern>(
     protected val bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
@@ -31,6 +32,20 @@ abstract class PatternHandler<T : Pattern>(
     protected val bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
     protected val bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
 ) : SinkStrategyHandler {
+  companion object {
+    internal const val CREATE = "C"
+    internal const val DELETE = "D"
+    internal const val EVENTS = "events"
+    internal const val KEYS = "keys"
+    internal const val PROPERTIES = "properties"
+    internal const val START = "start"
+    internal const val END = "end"
+
+    internal val NAME_EVENT = Cypher.name("event")
+    internal val NAME_CREATED = Cypher.name("created")
+    internal val NAME_DELETED = Cypher.name("deleted")
+  }
+
   abstract val pattern: T
 
   @Suppress("UNCHECKED_CAST")
