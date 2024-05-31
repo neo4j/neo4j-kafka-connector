@@ -274,6 +274,11 @@
                 <version>${neo4j-cypher-dsl.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.neo4j</groupId>
+                <artifactId>neo4j-cypher-dsl-parser</artifactId>
+                <version>${neo4j-cypher-dsl.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.neo4j.connectors</groupId>
                 <artifactId>cdc</artifactId>
                 <version>${cdc.version}</version>

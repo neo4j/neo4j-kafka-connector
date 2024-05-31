@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.pattern
 
-import java.util.stream.Collectors
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -74,8 +73,8 @@ internal object Visitors {
           throw PatternException("Direction of relationship pattern must be explicitly set.")
         }
 
-        val keyProperties = mutableMapOf<String, String>()
-        val includeProperties = mutableMapOf<String, String>()
+        val keyProperties = mutableSetOf<PropertyMapping>()
+        val includeProperties = mutableSetOf<PropertyMapping>()
         val excludeProperties = mutableSetOf<String>()
 
         if (relPattern.properties() != null && relPattern.properties().propertySelector() != null) {
@@ -96,23 +95,26 @@ internal object Visitors {
                 visitCypherNodePattern(
                     ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 1 else 0)))
 
-        return RelationshipPattern(
-            LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
-            enforceExplicitInclusionOnly(startNode),
-            enforceExplicitInclusionOnly(endNode),
-            keyProperties,
-            includeProperties,
-            excludeProperties)
+        return ensureImplicitWildcard(
+            RelationshipPattern(
+                LabelOrRelTypeVisitor.visitLabelOrRelType(relPattern.labelOrRelType()),
+                enforceExplicitInclusionOnly(startNode),
+                enforceExplicitInclusionOnly(endNode),
+                includeProperties.contains(PropertyMapping.WILDCARD),
+                keyProperties,
+                includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
+                excludeProperties))
       }
 
-      return enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0)))
+      return ensureImplicitWildcard(
+          enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0))))
     }
 
     override fun visitSimplePattern(ctx: PatternParser.SimplePatternContext): Pattern {
       if (ctx.simpleRelationshipPattern() != null) {
         val relPattern = ctx.simpleRelationshipPattern()
-        val keyProperties = mutableMapOf<String, String>()
-        val includeProperties = mutableMapOf<String, String>()
+        val keyProperties = mutableSetOf<PropertyMapping>()
+        val includeProperties = mutableSetOf<PropertyMapping>()
         val excludeProperties = mutableSetOf<String>()
 
         if (relPattern.properties() != null && relPattern.properties().propertySelector() != null) {
@@ -126,16 +128,49 @@ internal object Visitors {
         val startNode = enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
         val endNode = enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(1)))
 
-        return RelationshipPattern(
-            SymbolicNameStringVisitor.visitSymbolicNameString(relPattern.symbolicNameString()),
-            enforceExplicitInclusionOnly(startNode),
-            enforceExplicitInclusionOnly(endNode),
-            keyProperties,
-            includeProperties,
-            excludeProperties)
+        return ensureImplicitWildcard(
+            RelationshipPattern(
+                SymbolicNameStringVisitor.visitSymbolicNameString(relPattern.symbolicNameString()),
+                enforceExplicitInclusionOnly(startNode),
+                enforceExplicitInclusionOnly(endNode),
+                includeProperties.contains(PropertyMapping.WILDCARD),
+                keyProperties,
+                includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
+                excludeProperties))
       }
 
-      return enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
+      return ensureImplicitWildcard(
+          enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0))))
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Pattern> ensureImplicitWildcard(pattern: T): T {
+      when (pattern) {
+        is NodePattern -> {
+          if (pattern.includeProperties.isEmpty()) {
+            return NodePattern(
+                pattern.labels, true, pattern.keyProperties, emptySet(), pattern.excludeProperties)
+                as T
+          }
+        }
+        is RelationshipPattern -> {
+          if (pattern.includeProperties.isEmpty()) {
+            return RelationshipPattern(
+                pattern.type,
+                pattern.start,
+                pattern.end,
+                true,
+                pattern.keyProperties,
+                emptySet(),
+                pattern.excludeProperties)
+                as T
+          }
+        }
+        else ->
+            throw IllegalArgumentException("Unsupported pattern type: ${pattern.javaClass.name}.")
+      }
+
+      return pattern
     }
 
     private fun enforceKeyProperties(pattern: NodePattern): NodePattern {
@@ -152,7 +187,7 @@ internal object Visitors {
             "Property exclusions are not allowed on start and end node patterns.")
       }
 
-      if (pattern.includeProperties.containsKey("*")) {
+      if (pattern.includeAllValueProperties) {
         throw PatternException(
             "Wildcard property inclusion is not allowed on start and end node patterns.")
       }
@@ -176,8 +211,8 @@ internal object Visitors {
         labels: Set<String>,
         properties: PatternParser.PropertiesContext?,
     ): NodePattern {
-      val keyProperties = mutableMapOf<String, String>()
-      val includeProperties = mutableMapOf<String, String>()
+      val keyProperties = mutableSetOf<PropertyMapping>()
+      val includeProperties = mutableSetOf<PropertyMapping>()
       val excludeProperties = mutableSetOf<String>()
 
       if (properties?.propertySelector() != null) {
@@ -189,18 +224,23 @@ internal object Visitors {
         )
       }
 
-      return NodePattern(labels, keyProperties, includeProperties, excludeProperties)
+      return NodePattern(
+          labels,
+          includeProperties.contains(PropertyMapping.WILDCARD),
+          keyProperties,
+          includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
+          excludeProperties)
     }
 
     private fun extractPropertySelectors(
         selectors: List<PatternParser.PropSelectorContext>,
-        keyProperties: MutableMap<String, String>,
-        includeProperties: MutableMap<String, String>,
+        keyProperties: MutableSet<PropertyMapping>,
+        includeProperties: MutableSet<PropertyMapping>,
         excludeProperties: MutableSet<String>,
     ) {
       selectors.forEach { child ->
         if (child.TIMES() != null) {
-          includeProperties["*"] = "*"
+          includeProperties.add(PropertyMapping.WILDCARD)
         } else if (child.MINUS() != null) {
           excludeProperties.add(
               PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName()))
@@ -212,22 +252,23 @@ internal object Visitors {
       }
 
       if (includeProperties.isNotEmpty() && excludeProperties.isNotEmpty()) {
-        if (!includeProperties.containsKey("*")) {
+        if (!includeProperties.contains(PropertyMapping.WILDCARD)) {
           throw PatternException("Property inclusions and exclusions are mutually exclusive.")
         }
       }
     }
   }
 
-  private fun extractPropertyNameOrAlias(ctx: PropertyKeyNameOrAliasContext): Pair<String, String> {
+  private fun extractPropertyNameOrAlias(ctx: PropertyKeyNameOrAliasContext): PropertyMapping {
     return if (ctx.propertyKeyName() != null) {
-      PropertyKeyNameVisitor.visitPropertyKeyName(ctx.propertyKeyName()) to
-          PropertyKeyNameVisitor.visitPropertyKeyName(ctx.propertyKeyName())
+      val property = PropertyKeyNameVisitor.visitPropertyKeyName(ctx.propertyKeyName())
+      PropertyMapping(property, property)
     } else {
-      PropertyKeyNameVisitor.visitPropertyKeyName(
-          ctx.aliasedPropertyKeyName().propertyKeyName(0)) to
+      PropertyMapping(
           PropertyKeyNameVisitor.visitPropertyKeyName(
-              ctx.aliasedPropertyKeyName().propertyKeyName(1))
+              ctx.aliasedPropertyKeyName().propertyKeyName(1)),
+          PropertyKeyNameVisitor.visitPropertyKeyName(
+              ctx.aliasedPropertyKeyName().propertyKeyName(0)))
     }
   }
 
@@ -237,10 +278,7 @@ internal object Visitors {
         return emptySet<String>()
       }
 
-      return ctx.labelOrRelType()
-          .stream()
-          .map { LabelOrRelTypeVisitor.visitLabelOrRelType(it) }
-          .collect(Collectors.toSet())
+      return ctx.labelOrRelType().map { LabelOrRelTypeVisitor.visitLabelOrRelType(it) }.toSet()
     }
   }
 
@@ -264,7 +302,7 @@ internal object Visitors {
     override fun visitEscapedSymbolicNameString(
         ctx: PatternParser.EscapedSymbolicNameStringContext
     ): String {
-      return ctx.text
+      return ctx.text.substring(1, ctx.text.length - 1)
     }
 
     override fun visitUnescapedSymbolicNameString(

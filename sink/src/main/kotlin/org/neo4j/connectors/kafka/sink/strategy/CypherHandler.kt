@@ -16,17 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import com.fasterxml.jackson.core.JsonParseException
 import java.time.Instant
 import java.time.ZoneOffset
-import org.apache.kafka.connect.data.Schema
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -38,10 +34,10 @@ class CypherHandler(
     query: String,
     renderer: Renderer,
     val batchSize: Int,
-    bindTimestampAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_TIMESTAMP_ALIAS,
-    bindHeaderAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_HEADER_ALIAS,
-    bindKeyAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_KEY_ALIAS,
-    bindValueAs: String = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_ALIAS,
+    bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
+    bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
+    bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
+    bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
     bindValueAsEvent: Boolean = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
@@ -106,32 +102,5 @@ class CypherHandler(
         .map { listOf(ChangeQuery(null, null, Query(rewrittenQuery, mapOf("events" to it)))) }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
-  }
-
-  private fun SinkMessage.valueFromConnectValue(): Any? {
-    return fromConnectValue(valueSchema, value)
-  }
-
-  private fun SinkMessage.keyFromConnectValue(): Any? {
-    return fromConnectValue(keySchema, key)
-  }
-
-  private fun SinkMessage.headerFromConnectValue(): Map<String, Any?> {
-    return headers.associate { it.key() to fromConnectValue(it.schema(), it.value()) }
-  }
-
-  private fun fromConnectValue(schema: Schema?, value: Any?): Any? {
-    return schema?.let {
-      var converted = DynamicTypes.fromConnectValue(schema, value)
-      if (converted is String || converted is ByteArray) {
-        converted =
-            try {
-              JSONUtils.readValue<Any?>(converted)
-            } catch (ex: JsonParseException) {
-              converted
-            }
-      }
-      converted
-    }
   }
 }
