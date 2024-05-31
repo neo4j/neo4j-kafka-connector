@@ -22,20 +22,26 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.time.LocalDate
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.KafkaMessage
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.RelationshipPatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
+import org.neo4j.driver.Values
 
-class Neo4jRelationshipPatternIT {
+abstract class Neo4jRelationshipPatternIT {
 
   companion object {
     const val TOPIC = "test"
@@ -62,10 +68,24 @@ class Neo4jRelationshipPatternIT {
     SchemaBuilder.struct()
         .field("userId", Schema.INT64_SCHEMA)
         .field("productId", Schema.INT64_SCHEMA)
+        .field("at", SimpleTypes.LOCALDATE_STRUCT.schema)
+        .field("place", SimpleTypes.POINT.schema)
         .build()
         .let { schema ->
           producer.publish(
-              valueSchema = schema, value = Struct(schema).put("userId", 1L).put("productId", 2L))
+              valueSchema = schema,
+              value =
+                  Struct(schema)
+                      .put("userId", 1L)
+                      .put("productId", 2L)
+                      .put(
+                          "at",
+                          DynamicTypes.toConnectValue(
+                              SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(1995, 1, 1)))
+                      .put(
+                          "place",
+                          DynamicTypes.toConnectValue(
+                              SimpleTypes.POINT.schema, Values.point(7203, 1.0, 2.5).asPoint())))
         }
 
     eventually(30.seconds) {
@@ -78,7 +98,14 @@ class Neo4jRelationshipPatternIT {
             it.asMap() shouldBe mapOf("userId" to 1L)
           }
 
-      result.get("r").asRelationship() should { it.type() shouldBe "BOUGHT" }
+      result.get("r").asRelationship() should
+          {
+            it.type() shouldBe "BOUGHT"
+            it.asMap() shouldBe
+                mapOf(
+                    "at" to LocalDate.of(1995, 1, 1),
+                    "place" to Values.point(7203, 1.0, 2.5).asPoint())
+          }
 
       result.get("p").asNode() should
           {
@@ -873,4 +900,13 @@ class Neo4jRelationshipPatternIT {
           }
     }
   }
+
+  @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
+  class Neo4jRelationshipPatternAvroIT : Neo4jRelationshipPatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
+  class Neo4jRelationshipPatternJsonIT : Neo4jRelationshipPatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
+  class Neo4jRelationshipPatternProtobufIT : Neo4jRelationshipPatternIT()
 }

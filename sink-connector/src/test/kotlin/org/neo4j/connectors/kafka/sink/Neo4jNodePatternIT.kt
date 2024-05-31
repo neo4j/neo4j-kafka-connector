@@ -21,6 +21,7 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.seconds
@@ -28,15 +29,20 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
+import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.KafkaMessage
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
 import org.neo4j.connectors.kafka.testing.sink.NodePatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
+import org.neo4j.driver.Values
 
-class Neo4jNodePatternIT {
+abstract class Neo4jNodePatternIT {
   companion object {
     const val TOPIC = "test"
     const val TOPIC_1 = "test-1"
@@ -64,7 +70,8 @@ class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname,dob,place})", false)])
   @Test
   fun `should create node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -76,11 +83,25 @@ class Neo4jNodePatternIT {
         .field("id", Schema.INT64_SCHEMA)
         .field("name", Schema.STRING_SCHEMA)
         .field("surname", Schema.STRING_SCHEMA)
+        .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+        .field("place", SimpleTypes.POINT.schema)
         .build()
         .let { schema ->
           producer.publish(
               valueSchema = schema,
-              value = Struct(schema).put("id", 1L).put("name", "john").put("surname", "doe"))
+              value =
+                  Struct(schema)
+                      .put("id", 1L)
+                      .put("name", "john")
+                      .put("surname", "doe")
+                      .put(
+                          "dob",
+                          DynamicTypes.toConnectValue(
+                              SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(1995, 1, 1)))
+                      .put(
+                          "place",
+                          DynamicTypes.toConnectValue(
+                              SimpleTypes.POINT.schema, Values.point(7203, 1.0, 2.5).asPoint())))
         }
 
     eventually(30.seconds) { session.run("MATCH (n:User) RETURN n", emptyMap()).single() }
@@ -88,7 +109,13 @@ class Neo4jNodePatternIT {
         .asNode() should
         {
           it.labels() shouldBe listOf("User")
-          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+          it.asMap() shouldBe
+              mapOf(
+                  "id" to 1L,
+                  "name" to "john",
+                  "surname" to "doe",
+                  "dob" to LocalDate.of(1995, 1, 1),
+                  "place" to Values.point(7203, 1.0, 2.5).asPoint())
         }
   }
 
@@ -633,4 +660,13 @@ class Neo4jNodePatternIT {
           }
     }
   }
+
+  @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
+  class Neo4jNodePatternAvroIT : Neo4jNodePatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
+  class Neo4jNodePatternJsonIT : Neo4jNodePatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
+  class Neo4jNodePatternProtobufIT : Neo4jNodePatternIT()
 }
