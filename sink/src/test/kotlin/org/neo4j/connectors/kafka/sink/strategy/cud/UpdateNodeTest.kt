@@ -38,6 +38,26 @@ class UpdateNodeTest {
   }
 
   @Test
+  fun `should create correct statement with _id`() {
+    val operation = UpdateNode(setOf("Person"), mapOf("_id" to 1), mapOf("age" to 18))
+
+    operation.toQuery() shouldBe
+        Query(
+            "MATCH (n) WHERE id(n) = ${'$'}keys._id SET n += ${'$'}properties",
+            mapOf("keys" to mapOf("_id" to 1), "properties" to mapOf("age" to 18)))
+  }
+
+  @Test
+  fun `should create correct statement with _elementId`() {
+    val operation = UpdateNode(setOf("Person"), mapOf("_elementId" to "db:1"), mapOf("age" to 18))
+
+    operation.toQuery() shouldBe
+        Query(
+            "MATCH (n) WHERE elementId(n) = ${'$'}keys._elementId SET n += ${'$'}properties",
+            mapOf("keys" to mapOf("_elementId" to "db:1"), "properties" to mapOf("age" to 18)))
+  }
+
+  @Test
   fun `should create correct statement with multiple labels`() {
     val operation =
         UpdateNode(

@@ -116,6 +116,67 @@ class MergeRelationshipTest {
   }
 
   @Test
+  fun `should create correct statement with _id`() {
+    val operation =
+        MergeRelationship(
+            "RELATED",
+            NodeReference(setOf("LabelA"), mapOf("_id" to 1), LookupMode.MATCH),
+            NodeReference(setOf("LabelB"), mapOf("_id" to 2), LookupMode.MATCH),
+            emptyMap(),
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+
+    operation.toQuery() shouldBe
+        Query(
+            CypherParser.parse(
+                    """
+                      MATCH (start) WHERE id(start) = ${'$'}start.keys._id
+                      WITH start 
+                      MATCH (end) WHERE id(end) = ${'$'}end.keys._id 
+                      WITH start, end 
+                      MERGE (start)-[r:`RELATED` {}]->(end) 
+                      SET r += ${'$'}properties
+                    """
+                        .trimIndent())
+                .cypher,
+            mapOf(
+                "start" to mapOf("keys" to mapOf("_id" to 1)),
+                "end" to mapOf("keys" to mapOf("_id" to 2)),
+                "keys" to emptyMap(),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+        )
+  }
+
+  @Test
+  fun `should create correct statement with _elementId`() {
+    val operation =
+        MergeRelationship(
+            "RELATED",
+            NodeReference(setOf("LabelA"), mapOf("_elementId" to "db:1"), LookupMode.MATCH),
+            NodeReference(setOf("LabelB"), mapOf("_elementId" to "db:2"), LookupMode.MATCH),
+            emptyMap(),
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+
+    operation.toQuery() shouldBe
+        Query(
+            """
+            MATCH (start) WHERE elementId(start) = ${'$'}start.keys._elementId 
+            WITH start 
+            MATCH (end) WHERE elementId(end) = ${'$'}end.keys._elementId 
+            WITH start, end 
+            MERGE (start)-[r:`RELATED` {}]->(end) 
+            SET r += ${'$'}properties
+            """
+                .trimIndent()
+                .replace(System.lineSeparator(), ""),
+            mapOf(
+                "start" to mapOf("keys" to mapOf("_elementId" to "db:1")),
+                "end" to mapOf("keys" to mapOf("_elementId" to "db:2")),
+                "keys" to emptyMap(),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+        )
+  }
+
+  @Test
   fun `should create correct statement with multiple labels`() {
     val operation =
         MergeRelationship(

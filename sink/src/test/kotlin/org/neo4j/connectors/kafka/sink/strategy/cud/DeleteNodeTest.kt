@@ -36,6 +36,24 @@ class DeleteNodeTest {
   }
 
   @Test
+  fun `should create correct statement with _id`() {
+    val operation = DeleteNode(setOf("Person"), mapOf("_id" to 1), false)
+
+    operation.toQuery() shouldBe
+        Query("MATCH (n) WHERE id(n) = ${'$'}keys._id DELETE n", mapOf("keys" to mapOf("_id" to 1)))
+  }
+
+  @Test
+  fun `should create correct statement with _elementId`() {
+    val operation = DeleteNode(setOf("Person"), mapOf("_elementId" to "db:1"), false)
+
+    operation.toQuery() shouldBe
+        Query(
+            "MATCH (n) WHERE elementId(n) = ${'$'}keys._elementId DELETE n",
+            mapOf("keys" to mapOf("_elementId" to "db:1")))
+  }
+
+  @Test
   fun `should create correct statement with detach delete`() {
     val operation = DeleteNode(setOf("Person"), mapOf("name" to "john", "surname" to "doe"), true)
 

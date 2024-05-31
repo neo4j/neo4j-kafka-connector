@@ -22,12 +22,12 @@ import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion.VersionFlag
 import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.CREATE
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.DELETE
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.MERGE
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.NODE
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.RELATIONSHIP
-import org.neo4j.connectors.kafka.sink.strategy.cud.Values.UPDATE
+import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.CREATE
+import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.DELETE
+import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.MERGE
+import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.UPDATE
+import org.neo4j.connectors.kafka.sink.strategy.cud.Type.NODE
+import org.neo4j.connectors.kafka.sink.strategy.cud.Type.RELATIONSHIP
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -43,15 +43,21 @@ interface Operation {
 
     fun from(values: Map<String, Any?>): Operation {
       val type =
-          when (val type = values[Keys.TYPE]) {
-            is String -> type
-            else -> throw IllegalArgumentException("Unknown type ('$type') in CUD file")
-          }
+          Type.fromString(
+              when (val type = values[Keys.TYPE]) {
+                is String -> type
+                else ->
+                    throw IllegalArgumentException(
+                        "Unsupported data type ('$type') in CUD file type.")
+              }) ?: throw IllegalArgumentException("CUD file type must be specified.")
       val operation =
-          when (val operation = values[Keys.OPERATION]) {
-            is String -> operation
-            else -> throw IllegalArgumentException("Unknown operation ('$operation') for CUD file")
-          }
+          OperationType.fromString(
+              when (val operation = values[Keys.OPERATION]) {
+                is String -> operation
+                else ->
+                    throw IllegalArgumentException(
+                        "Unsupported data type ('$operation') for CUD file operation")
+              }) ?: throw IllegalArgumentException("CUD file operation must be specified.")
 
       val mapper = JSONUtils.getObjectMapper()
       val node = mapper.valueToTree<JsonNode>(values)

@@ -62,11 +62,17 @@ fun lookupNodes(
       startNode,
       endNode,
       when (start.op) {
-        LookupMode.MATCH -> Cypher.match(startNode).with(startNode)
+        LookupMode.MATCH ->
+            Cypher.match(startNode)
+                .applyFilter(startNode, start.ids, startParam.property("keys"))
+                .with(startNode)
         LookupMode.MERGE -> Cypher.merge(startNode).with(startNode)
       }.let {
         when (end.op) {
-          LookupMode.MATCH -> it.match(endNode).with(startNode, endNode)
+          LookupMode.MATCH ->
+              it.match(endNode)
+                  .applyFilter(endNode, end.ids, endParam.property("keys"))
+                  .with(startNode, endNode)
           LookupMode.MERGE -> it.merge(endNode).with(startNode, endNode)
         }
       })

@@ -29,8 +29,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.NODE,
-                Keys.OPERATION to Values.CREATE,
+                Keys.TYPE to Type.NODE.name,
+                Keys.OPERATION to OperationType.CREATE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
 
@@ -44,8 +44,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.NODE,
-                Keys.OPERATION to Values.UPDATE,
+                Keys.TYPE to Type.NODE.name,
+                Keys.OPERATION to OperationType.UPDATE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
                 Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
@@ -62,8 +62,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.NODE,
-                Keys.OPERATION to Values.MERGE,
+                Keys.TYPE to Type.NODE.name,
+                Keys.OPERATION to OperationType.MERGE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
                 Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
@@ -80,8 +80,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.NODE,
-                Keys.OPERATION to Values.DELETE,
+                Keys.TYPE to Type.NODE.name,
+                Keys.OPERATION to OperationType.DELETE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string")))
 
@@ -94,8 +94,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.NODE,
-                Keys.OPERATION to Values.DELETE,
+                Keys.TYPE to Type.NODE.name,
+                Keys.OPERATION to OperationType.DELETE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
                 Keys.DETACH to true))
@@ -109,8 +109,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.CREATE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.CREATE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -137,8 +137,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.CREATE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.CREATE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -165,8 +165,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.UPDATE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.UPDATE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -194,8 +194,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.UPDATE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.UPDATE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -224,8 +224,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.MERGE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.MERGE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -253,8 +253,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.MERGE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.MERGE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -283,8 +283,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.DELETE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.DELETE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -310,8 +310,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.DELETE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.DELETE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(
@@ -338,8 +338,8 @@ class OperationTest {
     val operation =
         Operation.from(
             mapOf(
-                Keys.TYPE to Values.RELATIONSHIP,
-                Keys.OPERATION to Values.DELETE,
+                Keys.TYPE to Type.RELATIONSHIP.name,
+                Keys.OPERATION to OperationType.DELETE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
                 Keys.FROM to
                     mapOf(

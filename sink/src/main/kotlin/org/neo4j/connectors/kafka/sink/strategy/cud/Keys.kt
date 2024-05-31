@@ -29,12 +29,3 @@ internal object Keys {
   const val PHYSICAL_ID = "_id"
   const val ELEMENT_ID = "_elementId"
 }
-
-internal object Values {
-  const val NODE = "node"
-  const val RELATIONSHIP = "relationship"
-  const val CREATE = "create"
-  const val UPDATE = "update"
-  const val MERGE = "merge"
-  const val DELETE = "delete"
-}

@@ -35,7 +35,16 @@ data class MergeNode(
     val keysParam = Cypher.parameter("keys")
     val propertiesParam = Cypher.parameter("properties")
     val node = buildNode(labels, ids, keysParam).named("n")
-    val stmt = renderer.render(Cypher.merge(node).mutate(node, propertiesParam).build())
+    val stmt =
+        renderer.render(
+            if (ids.containsKey(Keys.PHYSICAL_ID) || ids.containsKey(Keys.ELEMENT_ID)) {
+              Cypher.match(node)
+                  .applyFilter(node, ids, keysParam)
+                  .mutate(node, propertiesParam)
+                  .build()
+            } else {
+              Cypher.merge(node).mutate(node, propertiesParam).build()
+            })
 
     return Query(stmt, mapOf("keys" to ids, "properties" to properties))
   }
