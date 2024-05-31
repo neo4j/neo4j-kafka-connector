@@ -28,7 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
 import org.neo4j.driver.TransactionConfig
 
 class SinkConfigurationTest {

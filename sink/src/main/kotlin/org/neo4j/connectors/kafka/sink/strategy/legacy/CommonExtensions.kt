@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.extensions
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import java.nio.ByteBuffer
 import java.util.*
@@ -22,10 +22,7 @@ import javax.lang.model.SourceVersion
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.driver.types.Node
-import org.neo4j.driver.types.Relationship
 
 fun Map<String, String>.getInt(name: String, defaultValue: Int) =
     this.get(name)?.toInt() ?: defaultValue
@@ -36,22 +33,6 @@ fun Map<*, *>.asProperties() =
       properties.putAll(it)
       properties
     }
-
-fun Node.asStreamsMap(): Map<String, Any?> {
-  val nodeMap = this.asMap().toMutableMap()
-  nodeMap["<id>"] = this.id()
-  nodeMap["<labels>"] = this.labels()
-  return nodeMap
-}
-
-fun Relationship.asStreamsMap(): Map<String, Any?> {
-  val relMap = this.asMap().toMutableMap()
-  relMap["<id>"] = this.id()
-  relMap["<type>"] = this.type()
-  relMap["<source.id>"] = this.startNodeId()
-  relMap["<target.id>"] = this.endNodeId()
-  return relMap
-}
 
 fun String.toPointCase(): String {
   return this.split("(?<=[a-z])(?=[A-Z])".toRegex())

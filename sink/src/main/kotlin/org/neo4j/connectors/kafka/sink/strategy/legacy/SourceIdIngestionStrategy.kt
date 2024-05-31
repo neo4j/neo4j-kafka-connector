@@ -14,17 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import org.neo4j.connectors.kafka.events.EntityType
 import org.neo4j.connectors.kafka.events.NodeChange
 import org.neo4j.connectors.kafka.events.OperationType
 import org.neo4j.connectors.kafka.events.RelationshipChange
 import org.neo4j.connectors.kafka.events.RelationshipPayload
-import org.neo4j.connectors.kafka.extensions.quote
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.utils.IngestionUtils.getLabelsAsString
-import org.neo4j.connectors.kafka.utils.SchemaUtils
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.getLabelsAsString
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 data class SourceIdIngestionStrategyConfig(

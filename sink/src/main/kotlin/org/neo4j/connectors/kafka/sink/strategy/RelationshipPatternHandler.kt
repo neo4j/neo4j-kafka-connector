@@ -187,15 +187,15 @@ class RelationshipPatternHandler(
               )
             } else {
               it.set(
-                  startNode.asExpression(),
-                  Cypher.property(NAME_EVENT, START, PROPERTIES),
-              )
+                      startNode.asExpression(),
+                      Cypher.property(NAME_EVENT, START, PROPERTIES),
+                  )
+                  .mutate(
+                      startNode.asExpression(),
+                      Cypher.property(NAME_EVENT, START, KEYS),
+                  )
             }
           }
-          .mutate(
-              startNode.asExpression(),
-              Cypher.property(NAME_EVENT, START, KEYS),
-          )
           .merge(endNode)
           .let {
             if (mergeNodeProperties) {
@@ -205,15 +205,15 @@ class RelationshipPatternHandler(
               )
             } else {
               it.set(
-                  endNode.asExpression(),
-                  Cypher.property(NAME_EVENT, END, PROPERTIES),
-              )
+                      endNode.asExpression(),
+                      Cypher.property(NAME_EVENT, END, PROPERTIES),
+                  )
+                  .mutate(
+                      endNode.asExpression(),
+                      Cypher.property(NAME_EVENT, END, KEYS),
+                  )
             }
           }
-          .mutate(
-              endNode.asExpression(),
-              Cypher.property(NAME_EVENT, END, KEYS),
-          )
           .merge(relationship)
           .let {
             if (mergeRelationshipProperties) {
@@ -223,12 +223,12 @@ class RelationshipPatternHandler(
               )
             } else {
               it.set(
-                  relationship.asExpression(),
-                  Cypher.property(NAME_EVENT, PROPERTIES),
-              )
+                      relationship.asExpression(),
+                      Cypher.property(NAME_EVENT, PROPERTIES),
+                  )
+                  .mutate(relationship.asExpression(), Cypher.property(NAME_EVENT, KEYS))
             }
           }
-          .mutate(relationship.asExpression(), Cypher.property(NAME_EVENT, KEYS))
           .returning(
               Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_CREATED),
           )

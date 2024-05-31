@@ -14,13 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.extensions.quote
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 @Suppress("UNCHECKED_CAST")

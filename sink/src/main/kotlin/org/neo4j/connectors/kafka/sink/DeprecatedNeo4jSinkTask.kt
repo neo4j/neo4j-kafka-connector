@@ -21,10 +21,10 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.extensions.asProperties
 import org.neo4j.connectors.kafka.service.errors.ErrorData
 import org.neo4j.connectors.kafka.service.errors.ErrorService
 import org.neo4j.connectors.kafka.service.errors.KafkaErrorService
+import org.neo4j.connectors.kafka.sink.strategy.legacy.asProperties
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

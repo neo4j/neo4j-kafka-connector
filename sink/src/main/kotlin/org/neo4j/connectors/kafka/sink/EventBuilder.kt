@@ -17,7 +17,7 @@
 package org.neo4j.connectors.kafka.sink
 
 import org.apache.kafka.connect.sink.SinkRecord
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.legacy.StreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
 
 class EventBuilder {

@@ -218,7 +218,7 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
+                UNWIND ${'$'}events AS event 
                 CALL { WITH event
                   WITH event WHERE event[0] = 'C'
                   WITH event[1] AS event

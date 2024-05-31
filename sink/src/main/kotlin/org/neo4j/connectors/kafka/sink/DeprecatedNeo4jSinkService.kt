@@ -25,8 +25,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.extensions.errors
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.service.StreamsSinkService
+import org.neo4j.connectors.kafka.sink.strategy.legacy.StreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.legacy.StreamsSinkService
 import org.neo4j.connectors.kafka.utils.retryForException
 import org.neo4j.driver.Bookmark
 import org.neo4j.driver.TransactionConfig

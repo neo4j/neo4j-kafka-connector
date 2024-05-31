@@ -16,8 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy
 
 class CudHandler(val topic: String, batchSize: Int) :
     RedirectingHandler(CUDIngestionStrategy(), batchSize) {

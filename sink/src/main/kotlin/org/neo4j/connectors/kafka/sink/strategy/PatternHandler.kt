@@ -19,10 +19,10 @@ package org.neo4j.connectors.kafka.sink.strategy
 import java.time.Instant
 import java.time.ZoneOffset
 import org.apache.kafka.connect.errors.ConnectException
-import org.neo4j.connectors.kafka.extensions.flatten
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.connectors.kafka.sink.strategy.legacy.flatten
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.cypherdsl.core.Cypher
 

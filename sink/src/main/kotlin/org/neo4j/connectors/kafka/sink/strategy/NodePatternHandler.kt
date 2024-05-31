@@ -152,12 +152,12 @@ class NodePatternHandler(
               )
             } else {
               it.set(
-                  node.asExpression(),
-                  Cypher.property(NAME_EVENT, PROPERTIES),
-              )
+                      node.asExpression(),
+                      Cypher.property(NAME_EVENT, PROPERTIES),
+                  )
+                  .mutate(node.asExpression(), Cypher.property(NAME_EVENT, KEYS))
             }
           }
-          .mutate(node.asExpression(), Cypher.property(NAME_EVENT, KEYS))
           .returning(Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(NAME_CREATED))
           .build()
 }

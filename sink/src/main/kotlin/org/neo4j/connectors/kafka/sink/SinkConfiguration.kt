@@ -33,8 +33,8 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.service.TopicType
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicType
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
@@ -122,8 +122,7 @@ class SinkConfiguration(originals: Map<String, *>) :
             ?: emptyList()
 
   init {
-    // TODO: reinstate and fix issue
-    //    validateAllTopics(originals)
+    validateAllTopics(originals)
   }
 
   override fun userAgentComment(): String =

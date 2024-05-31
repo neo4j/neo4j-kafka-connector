@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class NodePatternIngestionStrategyTest {
@@ -26,8 +27,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should get all properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id})", true)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, true)
     val data = mapOf("id" to 1, "foo" to "foo", "bar" to "bar", "foobar" to "foobar")
 
     // when
@@ -58,8 +59,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should get nested properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id, foo.bar})", false)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id, foo.bar})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, false)
     val data = mapOf("id" to 1, "foo" to mapOf("bar" to "bar", "foobar" to "foobar"))
 
     // when
@@ -88,8 +89,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should exclude nested properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id, -foo})", false)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id, -foo})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, false)
     val map = mapOf("id" to 1, "foo" to mapOf("bar" to "bar", "foobar" to "foobar"), "prop" to 100)
 
     // when
@@ -118,8 +119,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should include nested properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id, foo})", true)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id, foo})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, true)
     val data = mapOf("id" to 1, "foo" to mapOf("bar" to "bar", "foobar" to "foobar"), "prop" to 100)
 
     // when
@@ -151,8 +152,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should exclude the properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id,-foo,-bar})", false)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id,-foo,-bar})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, false)
     val data = mapOf("id" to 1, "foo" to "foo", "bar" to "bar", "foobar" to "foobar")
 
     // when
@@ -181,8 +182,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should include the properties`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id,foo,bar})", false)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id,foo,bar})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, false)
     val data = mapOf("id" to 1, "foo" to "foo", "bar" to "bar", "foobar" to "foobar")
 
     // when
@@ -212,8 +213,8 @@ class NodePatternIngestionStrategyTest {
   @Test
   fun `should delete the node`() {
     // given
-    val config = NodePatternConfiguration.parse("(:LabelA:LabelB{!id})", true)
-    val strategy = NodePatternIngestionStrategy(config)
+    val config = Pattern.parse("(:LabelA:LabelB{!id})") as NodePattern
+    val strategy = NodePatternIngestionStrategy(config, true)
     val data = mapOf("id" to 1, "foo" to "foo", "bar" to "bar", "foobar" to "foobar")
 
     // when
