@@ -128,7 +128,7 @@ class UpdateRelationshipTest {
     operation.toQuery() shouldBe
         Query(
             CypherParser.parse(
-                """
+                    """
                       MATCH (start) WHERE id(start) = ${'$'}start.keys._id
                       WITH start 
                       MATCH (end) WHERE id(end) = ${'$'}end.keys._id 
@@ -136,7 +136,7 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end) 
                       SET r += ${'$'}properties
                     """
-                    .trimIndent())
+                        .trimIndent())
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("_id" to 1)),
