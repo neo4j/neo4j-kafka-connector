@@ -111,8 +111,12 @@ class NodePatternHandler(
     return renderer.render(
         Cypher.unwind(Cypher.parameter(EVENTS))
             .`as`(NAME_EVENT)
-            .call(buildCreateStatement(NAME_EVENT, createOperation, node))
-            .call(buildDeleteStatement(NAME_EVENT, deleteOperation, node))
+            .call(
+                Cypher.call(buildCreateStatement(NAME_EVENT, createOperation, node))
+                    .call(buildDeleteStatement(NAME_EVENT, deleteOperation, node))
+                    .returning(NAME_CREATED, NAME_DELETED)
+                    .build(),
+                NAME_EVENT)
             .returning(
                 Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
                 Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))

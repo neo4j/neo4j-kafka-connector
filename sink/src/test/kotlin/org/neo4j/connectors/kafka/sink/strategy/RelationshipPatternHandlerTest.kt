@@ -45,24 +45,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {idStart: event.start.keys.idStart})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB` {idEnd: event.end.keys.idEnd})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {idStart: event.start.keys.idStart})-[relationship:`REL_TYPE` {}]->(end:`LabelB` {idEnd: event.end.keys.idEnd})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {idStart: event.start.keys.idStart})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB` {idEnd: event.end.keys.idEnd})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {idStart: event.start.keys.idStart})-[relationship:`REL_TYPE` {}]->(end:`LabelB` {idEnd: event.end.keys.idEnd})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -84,24 +87,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id: event.start.keys.id})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB` {id: event.end.keys.id})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {}]->(end:`LabelB` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id: event.start.keys.id})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB` {id: event.end.keys.id})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {}]->(end:`LabelB` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -123,24 +129,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id: event.start.keys.id})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB` {id: event.end.keys.id})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id: event.start.keys.id})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB` {id: event.end.keys.id})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -162,26 +171,29 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id: event.start.keys.id})
-                    SET start = event.start.properties
-                    SET start += event.start.keys
-                    MERGE (end:`LabelB` {id: event.end.keys.id})
-                    SET end = event.end.properties
-                    SET end += event.end.keys
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id: event.start.keys.id})
+                      SET start = event.start.properties
+                      SET start += event.start.keys
+                      MERGE (end:`LabelB` {id: event.end.keys.id})
+                      SET end = event.end.properties
+                      SET end += event.end.keys
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -203,25 +215,28 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id: event.start.keys.id})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB` {id: event.end.keys.id})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
-                    SET relationship = event.properties
-                    SET relationship += event.keys 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id: event.start.keys.id})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB` {id: event.end.keys.id})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
+                      SET relationship = event.properties
+                      SET relationship += event.keys 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -243,27 +258,30 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id: event.start.keys.id})
-                    SET start = event.start.properties
-                    SET start += event.start.keys
-                    MERGE (end:`LabelB` {id: event.end.keys.id})
-                    SET end = event.end.properties
-                    SET end += event.end.keys
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
-                    SET relationship = event.properties
-                    SET relationship += event.keys 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id: event.start.keys.id})
+                      SET start = event.start.properties
+                      SET start += event.start.keys
+                      MERGE (end:`LabelB` {id: event.end.keys.id})
+                      SET end = event.end.properties
+                      SET end += event.end.keys
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
+                      SET relationship = event.properties
+                      SET relationship += event.keys 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -285,24 +303,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA` {id1: event.start.keys.id1, id2: event.start.keys.id2})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB` {id1: event.end.keys.id1, id2: event.end.keys.id2})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id1: event.keys.rel_id1, rel_id2: event.keys.rel_id2}]->(end)
-                    SET relationship += event.properties
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA` {id1: event.start.keys.id1, id2: event.start.keys.id2})-[relationship:`REL_TYPE` {rel_id1: event.keys.rel_id1, rel_id2: event.keys.rel_id2}]->(end:`LabelB` {id1: event.end.keys.id1, id2: event.end.keys.id2})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA` {id1: event.start.keys.id1, id2: event.start.keys.id2})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB` {id1: event.end.keys.id1, id2: event.end.keys.id2})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id1: event.keys.rel_id1, rel_id2: event.keys.rel_id2}]->(end)
+                      SET relationship += event.properties
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA` {id1: event.start.keys.id1, id2: event.start.keys.id2})-[relationship:`REL_TYPE` {rel_id1: event.keys.rel_id1, rel_id2: event.keys.rel_id2}]->(end:`LabelB` {id1: event.end.keys.id1, id2: event.end.keys.id2})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -324,24 +345,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`LabelA`:`LabelC` {id: event.start.keys.id})
-                    SET start += event.start.properties
-                    MERGE (end:`LabelB`:`LabelD` {id: event.end.keys.id})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`LabelA`:`LabelC` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB`:`LabelD` {id: event.end.keys.id})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`LabelA`:`LabelC` {id: event.start.keys.id})
+                      SET start += event.start.properties
+                      MERGE (end:`LabelB`:`LabelD` {id: event.end.keys.id})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`LabelA`:`LabelC` {id: event.start.keys.id})-[relationship:`REL_TYPE` {rel_id: event.keys.rel_id}]->(end:`LabelB`:`LabelD` {id: event.end.keys.id})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -363,24 +387,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         CypherParser.parse(
                 """
                   UNWIND ${'$'}events AS event 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'C'
-                    WITH event[1] AS event 
-                    MERGE (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})
-                    SET start += event.start.properties
-                    MERGE (end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
-                    SET end += event.end.properties
-                    MERGE (start)-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end)
-                    SET relationship += event.properties 
-                    RETURN count(relationship) AS created
-                  } 
-                  CALL { WITH event
-                    WITH event WHERE event[0] = 'D' 
-                    WITH event[1] AS event 
-                    MATCH (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
-                    DELETE relationship
-                    RETURN count(relationship) AS deleted
-                  } 
+                  CALL { WITH event 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'C'
+                      WITH event[1] AS event 
+                      MERGE (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})
+                      SET start += event.start.properties
+                      MERGE (end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
+                      SET end += event.end.properties
+                      MERGE (start)-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end)
+                      SET relationship += event.properties 
+                      RETURN count(relationship) AS created
+                    } 
+                    CALL { WITH event
+                      WITH event WHERE event[0] = 'D' 
+                      WITH event[1] AS event 
+                      MATCH (start:`Label A`:`Label C` {`a-id`: event.start.keys.`a-id`})-[relationship:`REL TYPE` {`rel-id`: event.keys.`rel-id`}]->(end:`Label B`:`Label D` {`b-id`: event.end.keys.`b-id`})
+                      DELETE relationship
+                      RETURN count(relationship) AS deleted
+                    } 
+                    RETURN created, deleted
+                  }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
                     .trimIndent())
@@ -830,27 +857,30 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         CypherParser.parse(
                                 """
                                 UNWIND ${'$'}events AS event 
-                                CALL { WITH event
-                                  WITH event WHERE event[0] = 'C'
-                                  WITH event[1] AS event 
-                                  MERGE (start:`LabelA` {id: event.start.keys.id})
-                                  SET start ${if (mergeNodeProperties) "+" else "" }= event.start.properties
-                                  ${if (!mergeNodeProperties) "SET start += event.start.keys" else ""}
-                                  MERGE (end:`LabelB` {id: event.end.keys.id})
-                                  SET end ${if (mergeNodeProperties) "+" else "" }= event.end.properties
-                                  ${if (!mergeNodeProperties) "SET end += event.end.keys" else ""}
-                                  MERGE (start)-[relationship:`REL_TYPE` {id: event.keys.id}]->(end)
-                                  SET relationship ${if (mergeRelationshipProperties) "+" else "" }= event.properties 
-                                  ${if (!mergeRelationshipProperties) "SET relationship += event.keys" else ""}
-                                  RETURN count(relationship) AS created
-                                } 
-                                CALL { WITH event
-                                  WITH event WHERE event[0] = 'D' 
-                                  WITH event[1] AS event 
-                                  MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {id: event.keys.id}]->(end:`LabelB` {id: event.end.keys.id})
-                                  DELETE relationship
-                                  RETURN count(relationship) AS deleted
-                                } 
+                                CALL { WITH event 
+                                  CALL { WITH event
+                                    WITH event WHERE event[0] = 'C'
+                                    WITH event[1] AS event 
+                                    MERGE (start:`LabelA` {id: event.start.keys.id})
+                                    SET start ${if (mergeNodeProperties) "+" else "" }= event.start.properties
+                                    ${if (!mergeNodeProperties) "SET start += event.start.keys" else ""}
+                                    MERGE (end:`LabelB` {id: event.end.keys.id})
+                                    SET end ${if (mergeNodeProperties) "+" else "" }= event.end.properties
+                                    ${if (!mergeNodeProperties) "SET end += event.end.keys" else ""}
+                                    MERGE (start)-[relationship:`REL_TYPE` {id: event.keys.id}]->(end)
+                                    SET relationship ${if (mergeRelationshipProperties) "+" else "" }= event.properties 
+                                    ${if (!mergeRelationshipProperties) "SET relationship += event.keys" else ""}
+                                    RETURN count(relationship) AS created
+                                  } 
+                                  CALL { WITH event
+                                    WITH event WHERE event[0] = 'D' 
+                                    WITH event[1] AS event 
+                                    MATCH (start:`LabelA` {id: event.start.keys.id})-[relationship:`REL_TYPE` {id: event.keys.id}]->(end:`LabelB` {id: event.end.keys.id})
+                                    DELETE relationship
+                                    RETURN count(relationship) AS deleted
+                                  } 
+                                  RETURN created, deleted
+                                }
                                 RETURN sum(created) AS created, sum(deleted) AS deleted
                                 """
                                     .trimIndent())

@@ -144,8 +144,12 @@ class RelationshipPatternHandler(
     return renderer.render(
         Cypher.unwind(Cypher.parameter(EVENTS))
             .`as`(NAME_EVENT)
-            .call(buildCreateStatement(startNode, endNode, relationship, createOperation))
-            .call(buildDeleteStatement(relationship, deleteOperation))
+            .call(
+                Cypher.call(buildCreateStatement(startNode, endNode, relationship, createOperation))
+                    .call(buildDeleteStatement(relationship, deleteOperation))
+                    .returning(NAME_CREATED, NAME_DELETED)
+                    .build(),
+                NAME_EVENT)
             .returning(
                 Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
                 Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))
