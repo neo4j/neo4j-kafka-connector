@@ -41,11 +41,11 @@
     </modules>
     <properties>
         <annotations.version>24.1.0</annotations.version>
-        <assertj-core.version>3.25.3</assertj-core.version>
+        <assertj-core.version>3.26.0</assertj-core.version>
         <avro.version>1.11.3</avro.version>
         <awaitility.version>4.2.1</awaitility.version>
         <build-resources.version>2024-05.1</build-resources.version>
-        <byte-buddy.version>1.14.15</byte-buddy.version>
+        <byte-buddy.version>1.14.17</byte-buddy.version>
         <cdc.version>1.0.6</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.14.0</commons-lang3.version>
