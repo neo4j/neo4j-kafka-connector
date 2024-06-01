@@ -204,7 +204,10 @@ internal class LegacyNeo4jSinkExtension(
         ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
         valueConverter.serializerClass.name,
     )
-    return KafkaProducer<Any, Any>(properties)
+    properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, UUID.randomUUID().toString())
+    val producer = KafkaProducer<Any, Any>(properties)
+    producer.initTransactions()
+    return producer
   }
 
   private fun resolveGenericProducer(
