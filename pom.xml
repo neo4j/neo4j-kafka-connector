@@ -588,7 +588,7 @@
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <keepBlankLines>false</keepBlankLines>
-                    <indentSchemaLocation>true</indentSchemaLocation>
+                    <indentAttribute>schemaLocation</indentAttribute>
                     <nrOfIndentSpace>4</nrOfIndentSpace>
                     <sortProperties>true</sortProperties>
                     <sortDependencies>scope,groupId,artifactId</sortDependencies>
