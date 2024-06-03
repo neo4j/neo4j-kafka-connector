@@ -187,11 +187,12 @@ object Validators {
         .let { config ->
           if (config.visible() &&
               (when (val value = config.value()) {
-                is Int? -> value == null
-                is Boolean? -> value == null
-                is String? -> value.isNullOrEmpty()
-                is Password? -> value?.value().isNullOrEmpty()
-                is List<*>? -> value.isEmpty()
+                null -> true
+                is Int -> false
+                is Boolean -> false
+                is String -> value.isEmpty()
+                is Password -> value.value().isNullOrEmpty()
+                is List<*> -> value.isEmpty()
                 else ->
                     throw IllegalArgumentException(
                         "unexpected value '$value' for configuration $name")
