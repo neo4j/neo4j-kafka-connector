@@ -90,8 +90,9 @@ object Recommenders {
             ?.filterKeys { dependentPredicate.test(it) }
             ?.any {
               when (val dependentValue = parsedConfig[it.key]) {
-                is String? -> {
-                  return dependentValue.orEmpty().isNotBlank()
+                null -> false
+                is String -> {
+                  return dependentValue.isNotBlank()
                 }
                 is List<*> -> {
                   return dependentValue.isNotEmpty()
