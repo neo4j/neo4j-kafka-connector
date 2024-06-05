@@ -289,6 +289,35 @@ class CudHandlerTest : HandlerTest() {
   }
 
   @Test
+  fun `should delete node without detach`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                """
+                {
+                  "type": "NODE",
+                  "op": "delete",
+                  "labels": ["Foo", "Bar"],
+                  "ids": {
+                    "id": 0
+                  }                
+                }
+                """))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        CypherParser.parse("MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DELETE n")
+                            .cypher,
+                        mapOf("keys" to mapOf("id" to 0))))))
+  }
+
+  @Test
   fun `should create relationship`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
