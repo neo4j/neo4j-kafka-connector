@@ -16,11 +16,23 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
+import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
 
 data class NodeReference(
-    @JsonProperty(Keys.LABELS) val labels: Set<String>,
-    @JsonProperty(Keys.IDS) val ids: Map<String, Any?>,
-    @JsonProperty(Keys.OPERATION, defaultValue = "MATCH", required = false)
+    val labels: Set<String>,
+    val ids: Map<String, Any?>,
     val op: LookupMode = LookupMode.MATCH
-)
+) {
+  companion object {
+    fun from(values: Map<String, Any?>): NodeReference {
+      return NodeReference(
+          values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
+          values.getMap<String, Any?>(Keys.IDS)?.toMap()
+              ?: throw InvalidDataException("No ${Keys.IDS} found"),
+          LookupMode.fromString(values.getTyped<String>(Keys.OPERATION)) ?: LookupMode.MATCH)
+    }
+  }
+}

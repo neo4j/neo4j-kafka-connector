@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.cypherdsl.parser.CypherParser
 import org.neo4j.driver.Query
 

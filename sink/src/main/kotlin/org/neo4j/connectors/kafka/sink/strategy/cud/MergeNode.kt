@@ -16,16 +16,17 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 data class MergeNode(
-    @JsonProperty(Keys.LABELS) val labels: Set<String>,
-    @JsonProperty(Keys.IDS) val ids: Map<String, Any?>,
-    @JsonProperty(Keys.PROPERTIES) val properties: Map<String, Any?>
+    val labels: Set<String>,
+    val ids: Map<String, Any?>,
+    val properties: Map<String, Any?>
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (ids.isEmpty()) {
@@ -47,5 +48,16 @@ data class MergeNode(
             })
 
     return Query(stmt, mapOf("keys" to ids, "properties" to properties))
+  }
+
+  companion object {
+    fun from(values: Map<String, Any?>): MergeNode {
+      return MergeNode(
+          values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
+          values.getMap<String, Any?>(Keys.IDS)
+              ?: throw InvalidDataException("No ${Keys.IDS} found"),
+          values.getMap<String, Any?>(Keys.PROPERTIES)
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+    }
   }
 }

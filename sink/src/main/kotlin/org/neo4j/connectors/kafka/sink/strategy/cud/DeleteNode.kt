@@ -16,16 +16,18 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
+import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 data class DeleteNode(
-    @JsonProperty(Keys.LABELS) val labels: Set<String>,
-    @JsonProperty(Keys.IDS) val ids: Map<String, Any?>,
-    @JsonProperty(Keys.DETACH, defaultValue = "false") val detach: Boolean = false
+    val labels: Set<String>,
+    val ids: Map<String, Any?>,
+    val detach: Boolean = false
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (ids.isEmpty()) {
@@ -48,5 +50,14 @@ data class DeleteNode(
                 .build())
 
     return Query(stmt, mapOf("keys" to ids))
+  }
+
+  companion object {
+    fun from(values: Map<String, Any?>): DeleteNode {
+      return DeleteNode(
+          values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
+          values.getMap<String, Any?>(Keys.IDS) ?: throw InvalidDataException("No IDS found"),
+          values.getTyped<Boolean>(Keys.DETACH) ?: false)
+    }
   }
 }

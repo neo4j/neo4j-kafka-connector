@@ -16,20 +16,28 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
-data class CreateNode(
-    @JsonProperty(Keys.LABELS) val labels: Set<String>,
-    @JsonProperty(Keys.PROPERTIES) val properties: Map<String, Any?>
-) : Operation {
+data class CreateNode(val labels: Set<String>, val properties: Map<String, Any?>) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     val node = buildNode(labels, emptyMap(), Cypher.parameter("keys")).named("n")
     val stmt =
         renderer.render(Cypher.create(node).set(node, Cypher.parameter("properties")).build())
 
     return Query(stmt, mapOf("properties" to properties))
+  }
+
+  companion object {
+    fun from(values: Map<String, Any?>): CreateNode {
+      return CreateNode(
+          values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
+          values.getMap<String, Any?>(Keys.PROPERTIES)
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+    }
   }
 }

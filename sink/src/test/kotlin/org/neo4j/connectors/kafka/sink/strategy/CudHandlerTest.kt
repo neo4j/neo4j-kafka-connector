@@ -54,7 +54,36 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     null,
                     Query(
-                        CypherParser.parse("CREATE (n:`Bar`:`Foo` {}) SET n = ${'$'}properties")
+                        CypherParser.parse("CREATE (n:`Foo`:`Bar` {}) SET n = ${'$'}properties")
+                            .cypher,
+                        mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+  }
+
+  @Test
+  fun `should create node without labels`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                """
+                {
+                  "type": "node",
+                  "op": "create",
+                  "properties": {
+                    "id": 1,
+                    "foo": "foo-value"
+                  }
+                }
+                """))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        CypherParser.parse("CREATE (n {}) SET n = ${'$'}properties")
                             .cypher,
                         mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
   }
@@ -88,7 +117,42 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     Query(
                         CypherParser.parse(
-                                "MATCH (n:`Bar`:`Foo` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                            .cypher,
+                        mapOf(
+                            "keys" to mapOf("id" to 0),
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+  }
+
+  @Test
+  fun `should update node without labels`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                """
+                {
+                  "type": "node",
+                  "op": "UPDATE",
+                  "ids": {
+                    "id": 0
+                  },
+                  "properties": {
+                    "id": 1,
+                    "foo": "foo-value"
+                  }
+                }
+                """))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        CypherParser.parse(
+                            "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
@@ -124,7 +188,42 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     Query(
                         CypherParser.parse(
-                                "MERGE (n:`Bar`:`Foo` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MERGE (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                            .cypher,
+                        mapOf(
+                            "keys" to mapOf("id" to 0),
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+  }
+
+  @Test
+  fun `should merge node without labels`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                """
+                {
+                  "type": "NODE",
+                  "op": "merge",
+                  "ids": {
+                    "id": 0
+                  },
+                  "properties": {
+                    "id": 1,
+                    "foo": "foo-value"
+                  }
+                }
+                """))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        CypherParser.parse(
+                            "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
@@ -157,7 +256,37 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     Query(
                         CypherParser.parse(
-                                "MATCH (n:`Bar`:`Foo` {id: ${'$'}keys.id}) DETACH DELETE n")
+                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DETACH DELETE n")
+                            .cypher,
+                        mapOf("keys" to mapOf("id" to 0))))))
+  }
+
+  @Test
+  fun `should delete node without labels`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    handler.handle(
+        listOf(
+            newMessage(
+                Schema.STRING_SCHEMA,
+                """
+                {
+                  "type": "NODE",
+                  "op": "delete",
+                  "ids": {
+                    "id": 0
+                  },
+                  "detach": true
+                }
+                """))) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    Query(
+                        CypherParser.parse(
+                            "MATCH (n {id: ${'$'}keys.id}) DETACH DELETE n")
                             .cypher,
                         mapOf("keys" to mapOf("id" to 0))))))
   }

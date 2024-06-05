@@ -20,7 +20,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Query
 
 class DeleteNodeTest {

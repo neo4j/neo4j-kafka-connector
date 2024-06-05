@@ -16,17 +16,18 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
+import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 data class CreateRelationship(
-    @JsonProperty(Keys.RELATION_TYPE) val type: String,
-    @JsonProperty(Keys.FROM) val start: NodeReference,
-    @JsonProperty(Keys.TO) val end: NodeReference,
-    @JsonProperty(Keys.PROPERTIES) val properties: Map<String, Any?>
+    val type: String,
+    val start: NodeReference,
+    val end: NodeReference,
+    val properties: Map<String, Any?>
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (type.isEmpty()) {
@@ -53,5 +54,21 @@ data class CreateRelationship(
             "start" to mapOf("keys" to start.ids),
             "end" to mapOf("keys" to end.ids),
             "properties" to properties))
+  }
+
+  companion object {
+    fun from(values: Map<String, Any?>): CreateRelationship {
+      return CreateRelationship(
+          values.getTyped<String>(Keys.RELATION_TYPE)
+              ?: throw InvalidDataException("No ${Keys.RELATION_TYPE} found"),
+          NodeReference.from(
+              values.getMap<String, Any?>(Keys.FROM)
+                  ?: throw InvalidDataException("No ${Keys.FROM} found")),
+          NodeReference.from(
+              values.getMap<String, Any?>(Keys.TO)
+                  ?: throw InvalidDataException("No ${Keys.TO} found")),
+          values.getMap<String, Any?>(Keys.PROPERTIES)
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+    }
   }
 }

@@ -17,11 +17,10 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.treeToValue
 import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion.VersionFlag
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.CREATE
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.DELETE
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.MERGE
@@ -68,14 +67,14 @@ interface Operation {
       }
 
       return when (type to operation) {
-        NODE to CREATE -> mapper.treeToValue<CreateNode>(node)
-        NODE to UPDATE -> mapper.treeToValue<UpdateNode>(node)
-        NODE to MERGE -> mapper.treeToValue<MergeNode>(node)
-        NODE to DELETE -> mapper.treeToValue<DeleteNode>(node)
-        RELATIONSHIP to CREATE -> mapper.treeToValue<CreateRelationship>(node)
-        RELATIONSHIP to UPDATE -> mapper.treeToValue<UpdateRelationship>(node)
-        RELATIONSHIP to MERGE -> mapper.treeToValue<MergeRelationship>(node)
-        RELATIONSHIP to DELETE -> mapper.treeToValue<DeleteRelationship>(node)
+        NODE to CREATE -> CreateNode.from(values)
+        NODE to UPDATE -> UpdateNode.from(values)
+        NODE to MERGE -> MergeNode.from(values)
+        NODE to DELETE -> DeleteNode.from(values)
+        RELATIONSHIP to CREATE -> CreateRelationship.from(values)
+        RELATIONSHIP to UPDATE -> UpdateRelationship.from(values)
+        RELATIONSHIP to MERGE -> MergeRelationship.from(values)
+        RELATIONSHIP to DELETE -> DeleteRelationship.from(values)
         else ->
             throw IllegalArgumentException(
                 "Unknown type ('$type') and operation ('$operation') for CUD file",

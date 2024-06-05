@@ -16,17 +16,17 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import org.neo4j.connectors.kafka.sink.strategy.InvalidDataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.MapUtils.getMap
+import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 data class DeleteRelationship(
-    @JsonProperty(Keys.RELATION_TYPE) val type: String,
-    @JsonProperty(Keys.FROM) val start: NodeReference,
-    @JsonProperty(Keys.TO) val end: NodeReference,
-    @JsonProperty(Keys.IDS, defaultValue = "{}", required = false)
+    val type: String,
+    val start: NodeReference,
+    val end: NodeReference,
     val ids: Map<String, Any?> = emptyMap()
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
@@ -62,5 +62,20 @@ data class DeleteRelationship(
             "start" to mapOf("keys" to start.ids),
             "end" to mapOf("keys" to end.ids),
             "keys" to ids))
+  }
+
+  companion object {
+    fun from(values: Map<String, Any?>): DeleteRelationship {
+      return DeleteRelationship(
+          values.getTyped<String>(Keys.RELATION_TYPE)
+              ?: throw InvalidDataException("No ${Keys.RELATION_TYPE} found"),
+          NodeReference.from(
+              values.getMap<String, Any?>(Keys.FROM)
+                  ?: throw InvalidDataException("No ${Keys.FROM} found")),
+          NodeReference.from(
+              values.getMap<String, Any?>(Keys.TO)
+                  ?: throw InvalidDataException("No ${Keys.TO} found")),
+          values.getMap<String, Any?>(Keys.IDS) ?: emptyMap())
+    }
   }
 }
