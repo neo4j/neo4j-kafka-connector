@@ -72,7 +72,8 @@ data class UpdateRelationship(
               values.getMap<String, Any?>(Keys.FROM)
                   ?: throw InvalidDataException("No ${Keys.FROM} found")),
           NodeReference.from(
-              values.getMap<String, Any?>(Keys.TO) ?: throw InvalidDataException("No ${Keys.TO} found")),
+              values.getMap<String, Any?>(Keys.TO)
+                  ?: throw InvalidDataException("No ${Keys.TO} found")),
           values.getMap<String, Any?>(Keys.IDS) ?: emptyMap(),
           values.getMap<String, Any?>(Keys.PROPERTIES)
               ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))

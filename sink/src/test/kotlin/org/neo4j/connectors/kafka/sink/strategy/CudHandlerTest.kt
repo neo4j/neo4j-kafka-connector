@@ -83,8 +83,7 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     null,
                     Query(
-                        CypherParser.parse("CREATE (n {}) SET n = ${'$'}properties")
-                            .cypher,
+                        CypherParser.parse("CREATE (n {}) SET n = ${'$'}properties").cypher,
                         mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
   }
 
@@ -152,7 +151,7 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     Query(
                         CypherParser.parse(
-                            "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
@@ -223,7 +222,7 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     Query(
                         CypherParser.parse(
-                            "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
@@ -285,9 +284,7 @@ class CudHandlerTest : HandlerTest() {
                     null,
                     null,
                     Query(
-                        CypherParser.parse(
-                            "MATCH (n {id: ${'$'}keys.id}) DETACH DELETE n")
-                            .cypher,
+                        CypherParser.parse("MATCH (n {id: ${'$'}keys.id}) DETACH DELETE n").cypher,
                         mapOf("keys" to mapOf("id" to 0))))))
   }
 
