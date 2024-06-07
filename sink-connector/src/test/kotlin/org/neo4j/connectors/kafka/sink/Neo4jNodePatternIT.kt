@@ -49,7 +49,9 @@ abstract class Neo4jNodePatternIT {
     const val TOPIC_2 = "test-2"
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create node from json string`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -71,7 +73,10 @@ abstract class Neo4jNodePatternIT {
   }
 
   @Neo4jSink(
-      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname,dob,place})", false)])
+      nodePattern =
+          [
+              NodePatternStrategy(
+                  TOPIC, "(:User{!id,name,surname,dob,place})", mergeNodeProperties = false)])
   @Test
   fun `should create node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -119,7 +124,9 @@ abstract class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create node from json byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -142,7 +149,11 @@ abstract class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User:Person{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [
+              NodePatternStrategy(
+                  TOPIC, "(:User:Person{!id,name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create node with multiple labels pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -170,7 +181,9 @@ abstract class Neo4jNodePatternIT {
       nodePattern =
           [
               NodePatternStrategy(
-                  TOPIC, "(:User{!id: old_id,name: first_name,surname: last_name})", false)])
+                  TOPIC,
+                  "(:User{!id: old_id,name: first_name,surname: last_name})",
+                  mergeNodeProperties = false)])
   @Test
   fun `should create node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -197,7 +210,7 @@ abstract class Neo4jNodePatternIT {
               NodePatternStrategy(
                   TOPIC,
                   "(:User{!id: __value.old_id,name: __key.first_name,surname: last_name})",
-                  false)])
+                  mergeNodeProperties = false)])
   @Test
   fun `should create and delete node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -233,24 +246,26 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = false)])
   @Test
-  fun `should create and delete node in the same kafka transaction`(
+  fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
 
+    session
+        .run(
+            "CREATE (n:User) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+        )
+        .consume()
+
     producer.publish(
-        KafkaMessage(
-            keySchema = Schema.STRING_SCHEMA,
-            key = """{"id": 1}""",
-            valueSchema = Schema.STRING_SCHEMA,
-            value = """{"name": "john", "surname": "doe"}"""),
-        KafkaMessage(
-            keySchema = Schema.STRING_SCHEMA,
-            key = """{"id": 1}""",
-        ))
+        keySchema = Schema.STRING_SCHEMA,
+        key = """{"id": 1}""",
+    )
 
     eventually(30.seconds) {
       session
@@ -261,7 +276,9 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create, delete and recreate node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -291,7 +308,9 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [NodePatternStrategy(TOPIC, "(:User{!id,name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create multiple nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -325,13 +344,15 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id,!name,surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [NodePatternStrategy(TOPIC, "(:User{!id,!name,surname})", mergeNodeProperties = false)])
   @Test
   fun `should create node with composite key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE (n.id, n.name) IS KEY").consume()
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -348,7 +369,8 @@ abstract class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = false)])
   @Test
   fun `should create node with nested properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -376,7 +398,11 @@ abstract class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id, -name, -surname})", false)])
+  @Neo4jSink(
+      nodePattern =
+          [
+              NodePatternStrategy(
+                  TOPIC, "(:User{!id, -name, -surname})", mergeNodeProperties = false)])
   @Test
   fun `should create node with excluded properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -404,7 +430,10 @@ abstract class Neo4jNodePatternIT {
   }
 
   @Neo4jSink(
-      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id, created_at: __timestamp})", false)])
+      nodePattern =
+          [
+              NodePatternStrategy(
+                  TOPIC, "(:User{!id, created_at: __timestamp})", mergeNodeProperties = false)])
   @Test
   fun `should create node with timestamp`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -434,7 +463,7 @@ abstract class Neo4jNodePatternIT {
               NodePatternStrategy(
                   TOPIC,
                   "(:User{!id: __key.old_id, name: __key.first_name, surname: __key.last_name})",
-                  false)])
+                  mergeNodeProperties = false)])
   @Test
   fun `should create and delete node with explicit properties from message key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -470,7 +499,8 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = false)])
   @Test
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -504,7 +534,9 @@ abstract class Neo4jNodePatternIT {
       nodePattern =
           [
               NodePatternStrategy(
-                  TOPIC, "(:User{!id: old_id, name: first_name, surname: last_name})", false)])
+                  TOPIC,
+                  "(:User{!id: old_id, name: first_name, surname: last_name})",
+                  mergeNodeProperties = false)])
   @Test
   fun `should update node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -535,8 +567,8 @@ abstract class Neo4jNodePatternIT {
   @Neo4jSink(
       nodePattern =
           [
-              NodePatternStrategy(TOPIC_1, "(:User{!id})", false),
-              NodePatternStrategy(TOPIC_2, "(:Account{!id})", false)])
+              NodePatternStrategy(TOPIC_1, "(:User{!id})", mergeNodeProperties = false),
+              NodePatternStrategy(TOPIC_2, "(:Account{!id})", mergeNodeProperties = false)])
   @Test
   fun `should create nodes from multiple topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
@@ -575,7 +607,8 @@ abstract class Neo4jNodePatternIT {
         }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = false)])
   @Test
   fun `should create 1000 nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -604,7 +637,7 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", true)])
+  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = true)])
   @Test
   fun `should merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -633,7 +666,8 @@ abstract class Neo4jNodePatternIT {
     }
   }
 
-  @Neo4jSink(nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", false)])
+  @Neo4jSink(
+      nodePattern = [NodePatternStrategy(TOPIC, "(:User{!id})", mergeNodeProperties = false)])
   @Test
   fun `should not merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
