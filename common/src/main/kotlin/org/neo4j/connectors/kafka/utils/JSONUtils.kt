@@ -45,7 +45,6 @@ import org.neo4j.connectors.kafka.events.Schema
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.events.StreamsTransactionNodeEvent
 import org.neo4j.connectors.kafka.events.StreamsTransactionRelationshipEvent
-import org.neo4j.connectors.kafka.extensions.asStreamsMap
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.neo4j.driver.internal.value.PointValue
@@ -117,6 +116,22 @@ class TemporalAccessorSerializer : JsonSerializer<TemporalAccessor>() {
   ) {
     value?.let { jgen.writeString(it.toString()) }
   }
+}
+
+fun Node.asStreamsMap(): Map<String, Any?> {
+  val nodeMap = this.asMap().toMutableMap()
+  nodeMap["<id>"] = this.id()
+  nodeMap["<labels>"] = this.labels()
+  return nodeMap
+}
+
+fun Relationship.asStreamsMap(): Map<String, Any?> {
+  val relMap = this.asMap().toMutableMap()
+  relMap["<id>"] = this.id()
+  relMap["<type>"] = this.type()
+  relMap["<source.id>"] = this.startNodeId()
+  relMap["<target.id>"] = this.endNodeId()
+  return relMap
 }
 
 class DriverNodeSerializer : JsonSerializer<Node>() {

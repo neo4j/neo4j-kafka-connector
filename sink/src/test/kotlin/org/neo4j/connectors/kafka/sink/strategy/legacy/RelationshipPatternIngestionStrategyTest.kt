@@ -14,11 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
 class RelationshipPatternIngestionStrategyTest {
@@ -29,10 +30,8 @@ class RelationshipPatternIngestionStrategyTest {
     val startPattern = "LabelA{!idStart}"
     val endPattern = "LabelB{!idEnd}"
     val pattern = "(:$startPattern)-[:REL_TYPE]->(:$endPattern)"
-    val config =
-        RelationshipPatternConfiguration.parse(
-            pattern, mergeNodeProps = false, mergeRelProps = true)
-    val strategy = RelationshipPatternIngestionStrategy(config)
+    val config = Pattern.parse(pattern) as RelationshipPattern
+    val strategy = RelationshipPatternIngestionStrategy(config, false, true)
     val data = mapOf("idStart" to 1, "idEnd" to 2, "foo" to "foo", "bar" to "bar")
 
     // when
@@ -45,10 +44,10 @@ class RelationshipPatternIngestionStrategyTest {
         """
             |${StreamsUtils.UNWIND}
             |MERGE (start:LabelA{idStart: event.start.keys.idStart})
-            |SET start += event.start.properties
+            |SET start = event.start.properties
             |SET start += event.start.keys
             |MERGE (end:LabelB{idEnd: event.end.keys.idEnd})
-            |SET end += event.end.properties
+            |SET end = event.end.properties
             |SET end += event.end.keys
             |MERGE (start)-[r:REL_TYPE]->(end)
             |SET r += event.properties
@@ -73,10 +72,8 @@ class RelationshipPatternIngestionStrategyTest {
     val startPattern = "LabelA{!idStart}"
     val endPattern = "LabelB{!idEnd}"
     val pattern = "$startPattern REL_TYPE $endPattern"
-    val config =
-        RelationshipPatternConfiguration.parse(
-            pattern, mergeNodeProps = false, mergeRelProps = false)
-    val strategy = RelationshipPatternIngestionStrategy(config)
+    val config = Pattern.parse(pattern) as RelationshipPattern
+    val strategy = RelationshipPatternIngestionStrategy(config, false, false)
     val data = mapOf("idStart" to 1, "idEnd" to 2, "foo" to "foo", "bar" to "bar")
 
     // when
@@ -117,10 +114,8 @@ class RelationshipPatternIngestionStrategyTest {
     val startPattern = "LabelA{!idStart}"
     val endPattern = "LabelB{!idEnd}"
     val pattern = "(:$endPattern)<-[:REL_TYPE]-(:$startPattern)"
-    val config =
-        RelationshipPatternConfiguration.parse(
-            pattern, mergeNodeProps = false, mergeRelProps = false)
-    val strategy = RelationshipPatternIngestionStrategy(config)
+    val config = Pattern.parse(pattern) as RelationshipPattern
+    val strategy = RelationshipPatternIngestionStrategy(config, false, false)
     val data = mapOf("idStart" to 1, "idEnd" to 2, "foo" to "foo", "bar" to "bar")
 
     // when
@@ -161,10 +156,8 @@ class RelationshipPatternIngestionStrategyTest {
     val startPattern = "LabelA{!idStart, foo.mapFoo}"
     val endPattern = "LabelB{!idEnd, bar.mapBar}"
     val pattern = "(:$startPattern)-[:REL_TYPE]->(:$endPattern)"
-    val config =
-        RelationshipPatternConfiguration.parse(
-            pattern, mergeNodeProps = false, mergeRelProps = true)
-    val strategy = RelationshipPatternIngestionStrategy(config)
+    val config = Pattern.parse(pattern) as RelationshipPattern
+    val strategy = RelationshipPatternIngestionStrategy(config, false, true)
     val data =
         mapOf(
             "idStart" to 1,
@@ -184,10 +177,10 @@ class RelationshipPatternIngestionStrategyTest {
         """
             |${StreamsUtils.UNWIND}
             |MERGE (start:LabelA{idStart: event.start.keys.idStart})
-            |SET start += event.start.properties
+            |SET start = event.start.properties
             |SET start += event.start.keys
             |MERGE (end:LabelB{idEnd: event.end.keys.idEnd})
-            |SET end += event.end.properties
+            |SET end = event.end.properties
             |SET end += event.end.keys
             |MERGE (start)-[r:REL_TYPE]->(end)
             |SET r += event.properties
@@ -218,10 +211,8 @@ class RelationshipPatternIngestionStrategyTest {
     val startPattern = "LabelA{!idStart}"
     val endPattern = "LabelB{!idEnd}"
     val pattern = "(:$startPattern)-[:REL_TYPE]->(:$endPattern)"
-    val config =
-        RelationshipPatternConfiguration.parse(
-            pattern, mergeNodeProps = false, mergeRelProps = false)
-    val strategy = RelationshipPatternIngestionStrategy(config)
+    val config = Pattern.parse(pattern) as RelationshipPattern
+    val strategy = RelationshipPatternIngestionStrategy(config, false, false)
     val data = mapOf("idStart" to 1, "idEnd" to 2, "foo" to "foo", "bar" to "bar")
 
     // when

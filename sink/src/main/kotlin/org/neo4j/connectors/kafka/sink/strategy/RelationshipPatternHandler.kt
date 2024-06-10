@@ -23,6 +23,9 @@ import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Literal
+import org.neo4j.cypherdsl.core.Node
+import org.neo4j.cypherdsl.core.Relationship
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -72,27 +75,31 @@ class RelationshipPatternHandler(
           val flattened = flattenMessage(it)
 
           val used = mutableSetOf<String>()
-          val startKeys = extractKeys(pattern.start, flattened, used, bindValueAs, bindKeyAs)
-          val endKeys = extractKeys(pattern.end, flattened, used, bindValueAs, bindKeyAs)
-          val keys = extractKeys(pattern, flattened, used, bindValueAs, bindKeyAs)
+          val startKeys =
+              extractKeys(
+                  pattern.start, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
+          val endKeys =
+              extractKeys(pattern.end, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
+          val keys =
+              extractKeys(pattern, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
                 listOf(
-                    "D",
+                    DELETE,
                     mapOf(
-                        "start" to mapOf("keys" to startKeys),
-                        "end" to mapOf("keys" to endKeys),
-                        "keys" to keys))
+                        START to mapOf(KEYS to startKeys),
+                        END to mapOf(KEYS to endKeys),
+                        KEYS to keys))
               } else {
                 val startProperties = computeProperties(pattern.start, flattened, used)
                 val endProperties = computeProperties(pattern.end, flattened, used)
                 listOf(
-                    "C",
+                    CREATE,
                     mapOf(
-                        "start" to mapOf("keys" to startKeys, "properties" to startProperties),
-                        "end" to mapOf("keys" to endKeys, "properties" to endProperties),
-                        "keys" to keys,
-                        "properties" to computeProperties(pattern, flattened, used)))
+                        START to mapOf(KEYS to startKeys, PROPERTIES to startProperties),
+                        END to mapOf(KEYS to endKeys, PROPERTIES to endProperties),
+                        KEYS to keys,
+                        PROPERTIES to computeProperties(pattern, flattened, used)))
               }
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
@@ -100,114 +107,134 @@ class RelationshipPatternHandler(
           mapped
         }
         .chunked(batchSize)
-        .map { listOf(ChangeQuery(null, null, Query(query, mapOf("events" to it)))) }
+        .map { listOf(ChangeQuery(null, null, Query(query, mapOf(EVENTS to it)))) }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }
 
   private fun buildStatement(): String {
-    val event = Cypher.name("event")
-    val created = Cypher.name("created")
-    val deleted = Cypher.name("deleted")
-    val createOperation = Cypher.literalOf<String>("C")
-    val deleteOperation = Cypher.literalOf<String>("D")
+    val createOperation = Cypher.literalOf<String>(CREATE)
+    val deleteOperation = Cypher.literalOf<String>(DELETE)
 
     val startNode =
         Cypher.node(pattern.start.labels.first(), pattern.start.labels.drop(1))
             .withProperties(
                 pattern.start.keyProperties.associate {
-                  it.to to event.property("start", "keys").property(it.to)
+                  it.to to NAME_EVENT.property(START, KEYS).property(it.to)
                 },
             )
-            .named("start")
+            .named(START)
     val endNode =
         Cypher.node(pattern.end.labels.first(), pattern.end.labels.drop(1))
             .withProperties(
                 pattern.end.keyProperties.associate {
-                  it.to to event.property("end", "keys").property(it.to)
+                  it.to to NAME_EVENT.property(END, KEYS).property(it.to)
                 },
             )
-            .named("end")
+            .named(END)
     val relationship =
         startNode
             .relationshipTo(endNode, pattern.type)
             .withProperties(
-                pattern.keyProperties.associate { it.to to event.property("keys").property(it.to) })
+                pattern.keyProperties.associate {
+                  it.to to NAME_EVENT.property(KEYS).property(it.to)
+                })
             .named("relationship")
 
     return renderer.render(
-        Cypher.unwind(Cypher.parameter("messages"))
-            .`as`(event)
+        Cypher.unwind(Cypher.parameter(EVENTS))
+            .`as`(NAME_EVENT)
             .call(
-                Cypher.with(event)
-                    .with(event)
-                    .where(Cypher.valueAt(event, 0).eq(createOperation))
-                    .with(Cypher.valueAt(event, 1).`as`(event))
-                    .merge(startNode)
-                    .let {
-                      if (mergeNodeProperties) {
-                        it.mutate(
-                            startNode.asExpression(),
-                            Cypher.property("event", "start", "properties"),
-                        )
-                      } else {
-                        it.set(
-                                startNode.asExpression(),
-                                Cypher.property("event", "start", "properties"),
-                            )
-                            .mutate(
-                                startNode.asExpression(), Cypher.property("event", "start", "keys"))
-                      }
-                    }
-                    .merge(endNode)
-                    .let {
-                      if (mergeNodeProperties) {
-                        it.mutate(
-                            endNode.asExpression(),
-                            Cypher.property("event", "end", "properties"),
-                        )
-                      } else {
-                        it.set(
-                                endNode.asExpression(),
-                                Cypher.property("event", "end", "properties"),
-                            )
-                            .mutate(endNode.asExpression(), Cypher.property("event", "end", "keys"))
-                      }
-                    }
-                    .merge(relationship)
-                    .let {
-                      if (mergeRelationshipProperties) {
-                        it.mutate(
-                            relationship.asExpression(),
-                            Cypher.property("event", "properties"),
-                        )
-                      } else {
-                        it.set(
-                                relationship.asExpression(),
-                                Cypher.property("event", "properties"),
-                            )
-                            .mutate(relationship.asExpression(), Cypher.property("event", "keys"))
-                      }
-                    }
-                    .returning(
-                        Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName)
-                            .`as`(created))
-                    .build())
-            .call(
-                Cypher.with(event)
-                    .with(event)
-                    .where(Cypher.valueAt(event, 0).eq(deleteOperation))
-                    .with(Cypher.valueAt(event, 1).`as`(event))
-                    .match(relationship)
-                    .delete(relationship)
-                    .returning(
-                        Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName)
-                            .`as`(deleted))
-                    .build())
+                Cypher.call(buildCreateStatement(startNode, endNode, relationship, createOperation))
+                    .call(buildDeleteStatement(relationship, deleteOperation))
+                    .returning(NAME_CREATED, NAME_DELETED)
+                    .build(),
+                NAME_EVENT)
             .returning(
-                Cypher.raw("sum(${'$'}E)", created).`as`(created),
-                Cypher.raw("sum(${'$'}E)", deleted).`as`(deleted))
+                Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
+                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))
             .build(),
     )
   }
+
+  private fun buildDeleteStatement(
+      relationship: Relationship,
+      deleteOperation: Literal<String>,
+  ) =
+      Cypher.with(NAME_EVENT)
+          .with(NAME_EVENT)
+          .where(Cypher.valueAt(NAME_EVENT, 0).eq(deleteOperation))
+          .with(Cypher.valueAt(NAME_EVENT, 1).`as`(NAME_EVENT))
+          .match(relationship)
+          .delete(relationship)
+          .returning(
+              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_DELETED),
+          )
+          .build()
+
+  private fun buildCreateStatement(
+      startNode: Node,
+      endNode: Node,
+      relationship: Relationship,
+      createOperation: Literal<String>,
+  ) =
+      Cypher.with(NAME_EVENT)
+          .with(NAME_EVENT)
+          .where(Cypher.valueAt(NAME_EVENT, 0).eq(createOperation))
+          .with(Cypher.valueAt(NAME_EVENT, 1).`as`(NAME_EVENT))
+          .merge(startNode)
+          .let {
+            if (mergeNodeProperties) {
+              it.mutate(
+                  startNode.asExpression(),
+                  Cypher.property(NAME_EVENT, START, PROPERTIES),
+              )
+            } else {
+              it.set(
+                      startNode.asExpression(),
+                      Cypher.property(NAME_EVENT, START, PROPERTIES),
+                  )
+                  .mutate(
+                      startNode.asExpression(),
+                      Cypher.property(NAME_EVENT, START, KEYS),
+                  )
+            }
+          }
+          .merge(endNode)
+          .let {
+            if (mergeNodeProperties) {
+              it.mutate(
+                  endNode.asExpression(),
+                  Cypher.property(NAME_EVENT, END, PROPERTIES),
+              )
+            } else {
+              it.set(
+                      endNode.asExpression(),
+                      Cypher.property(NAME_EVENT, END, PROPERTIES),
+                  )
+                  .mutate(
+                      endNode.asExpression(),
+                      Cypher.property(NAME_EVENT, END, KEYS),
+                  )
+            }
+          }
+          .merge(relationship)
+          .let {
+            if (mergeRelationshipProperties) {
+              it.mutate(
+                  relationship.asExpression(),
+                  Cypher.property(NAME_EVENT, PROPERTIES),
+              )
+            } else {
+              it.set(
+                      relationship.asExpression(),
+                      Cypher.property(NAME_EVENT, PROPERTIES),
+                  )
+                  .mutate(relationship.asExpression(), Cypher.property(NAME_EVENT, KEYS))
+            }
+          }
+          .returning(
+              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_CREATED),
+          )
+          .build()
 }

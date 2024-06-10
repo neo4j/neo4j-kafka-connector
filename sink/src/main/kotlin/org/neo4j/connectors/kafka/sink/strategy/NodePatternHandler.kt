@@ -23,6 +23,9 @@ import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Literal
+import org.neo4j.cypherdsl.core.Node
+import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -71,16 +74,15 @@ class NodePatternHandler(
           val flattened = flattenMessage(it)
 
           val used = mutableSetOf<String>()
-          val keys = extractKeys(pattern, flattened, used, bindValueAs, bindKeyAs)
+          val keys =
+              extractKeys(pattern, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
           val mapped =
               if (isTombstoneMessage) {
-                listOf("D", mapOf("keys" to keys))
+                listOf(DELETE, mapOf(KEYS to keys))
               } else {
                 listOf(
-                    "C",
-                    mapOf(
-                        "keys" to keys,
-                        "properties" to computeProperties(pattern, flattened, used)))
+                    CREATE,
+                    mapOf(KEYS to keys, PROPERTIES to computeProperties(pattern, flattened, used)))
               }
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
@@ -88,65 +90,78 @@ class NodePatternHandler(
           mapped
         }
         .chunked(batchSize)
-        .map { listOf(ChangeQuery(null, null, Query(query, mapOf("events" to it)))) }
+        .map { listOf(ChangeQuery(null, null, Query(query, mapOf(EVENTS to it)))) }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }
 
   private fun buildStatement(): String {
-    val event = Cypher.name("event")
-    val created = Cypher.name("created")
-    val deleted = Cypher.name("deleted")
-    val createOperation = Cypher.literalOf<String>("C")
-    val deleteOperation = Cypher.literalOf<String>("D")
+    val createOperation = Cypher.literalOf<String>(CREATE)
+    val deleteOperation = Cypher.literalOf<String>(DELETE)
 
     val node =
         Cypher.node(pattern.labels.first(), pattern.labels.drop(1))
             .withProperties(
-                pattern.keyProperties.associate { it.to to event.property("keys").property(it.to) },
+                pattern.keyProperties.associate {
+                  it.to to NAME_EVENT.property(KEYS).property(it.to)
+                },
             )
             .named("n")
 
     return renderer.render(
-        Cypher.unwind(Cypher.parameter("messages"))
-            .`as`(event)
+        Cypher.unwind(Cypher.parameter(EVENTS))
+            .`as`(NAME_EVENT)
             .call(
-                Cypher.with(event)
-                    .with(event)
-                    .where(Cypher.valueAt(event, 0).eq(createOperation))
-                    .with(Cypher.valueAt(event, 1).`as`(event))
-                    .merge(node)
-                    .let {
-                      if (mergeProperties) {
-                        it.mutate(
-                            node.asExpression(),
-                            Cypher.property("event", "properties"),
-                        )
-                      } else {
-                        it.set(
-                                node.asExpression(),
-                                Cypher.property("event", "properties"),
-                            )
-                            .mutate(node.asExpression(), Cypher.property("event", "keys"))
-                      }
-                    }
-                    .returning(
-                        Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(created))
-                    .build())
-            .call(
-                Cypher.with(event)
-                    .with(event)
-                    .where(Cypher.valueAt(event, 0).eq(deleteOperation))
-                    .with(Cypher.valueAt(event, 1).`as`(event))
-                    .match(node)
-                    .detachDelete(node)
-                    .returning(
-                        Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(deleted))
-                    .build())
+                Cypher.call(buildCreateStatement(NAME_EVENT, createOperation, node))
+                    .call(buildDeleteStatement(NAME_EVENT, deleteOperation, node))
+                    .returning(NAME_CREATED, NAME_DELETED)
+                    .build(),
+                NAME_EVENT)
             .returning(
-                Cypher.raw("sum(${'$'}E)", created).`as`(created),
-                Cypher.raw("sum(${'$'}E)", deleted).`as`(deleted))
+                Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
+                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))
             .build(),
     )
   }
+
+  private fun buildDeleteStatement(
+      event: SymbolicName,
+      deleteOperation: Literal<String>,
+      node: Node,
+  ) =
+      Cypher.with(event)
+          .with(event)
+          .where(Cypher.valueAt(event, 0).eq(deleteOperation))
+          .with(Cypher.valueAt(event, 1).`as`(event))
+          .match(node)
+          .detachDelete(node)
+          .returning(Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(NAME_DELETED))
+          .build()
+
+  private fun buildCreateStatement(
+      event: SymbolicName,
+      createOperation: Literal<String>,
+      node: Node,
+  ) =
+      Cypher.with(event)
+          .with(event)
+          .where(Cypher.valueAt(event, 0).eq(createOperation))
+          .with(Cypher.valueAt(event, 1).`as`(event))
+          .merge(node)
+          .let {
+            if (mergeProperties) {
+              it.mutate(
+                  node.asExpression(),
+                  Cypher.property(NAME_EVENT, PROPERTIES),
+              )
+            } else {
+              it.set(
+                      node.asExpression(),
+                      Cypher.property(NAME_EVENT, PROPERTIES),
+                  )
+                  .mutate(node.asExpression(), Cypher.property(NAME_EVENT, KEYS))
+            }
+          }
+          .returning(Cypher.raw("count(${'$'}E)", node.requiredSymbolicName).`as`(NAME_CREATED))
+          .build()
 }

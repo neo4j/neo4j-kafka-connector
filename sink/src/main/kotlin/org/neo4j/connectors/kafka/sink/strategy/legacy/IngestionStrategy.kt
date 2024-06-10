@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import org.neo4j.connectors.kafka.events.Constraint
 import org.neo4j.connectors.kafka.events.RelationshipPayload
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
 
 data class QueryEvents(val query: String, val events: List<Map<String, Any?>>)
 
