@@ -131,36 +131,51 @@ class Neo4jQueryService(
         currentOffset.get()
       }
 
-  private fun checkError() {
-    val fatalError = error.getAndSet(null)
-    if (fatalError != null) {
-      throw ConnectException(fatalError)
-    }
-  }
-
   fun poll(): List<SourceRecord>? {
     if (isClose.get()) {
       return null
     }
+
+    return errorOr {
+      // Block until at least one item is available or until the
+      // courtesy timeout expires, giving the framework a chance
+      // to pause the connector.
+      val firstEvent = queue.poll(1, TimeUnit.SECONDS)
+      if (firstEvent == null) {
+        log.debug("Poll returns 0 results")
+        return@errorOr null // Looks weird, but caller expects it.
+      }
+
+      val events = mutableListOf<SourceRecord>()
+      return@errorOr try {
+        events.add(firstEvent)
+        queue.drainTo(events, config.batchSize - 1)
+        log.info("Poll returns {} result(s)", events.size)
+        events
+      } catch (e: Exception) {
+        setError(e)
+        null
+      }
+    }
+  }
+
+  private fun <T> errorOr(action: () -> T): T {
+    // throw any exception that has been stored until now
     checkError()
-    // Block until at least one item is available or until the
-    // courtesy timeout expires, giving the framework a chance
-    // to pause the connector.
-    val firstEvent = queue.poll(1, TimeUnit.SECONDS)
-    if (firstEvent == null) {
-      log.debug("Poll returns 0 results")
-      return null // Looks weird, but caller expects it.
+
+    val result = action()
+    if (result == null) {
+      // if we don't get any data from action, check the stored error again
+      checkError()
     }
 
-    val events = mutableListOf<SourceRecord>()
-    return try {
-      events.add(firstEvent)
-      queue.drainTo(events, config.batchSize - 1)
-      log.info("Poll returns {} result(s)", events.size)
-      events
-    } catch (e: Exception) {
-      setError(e)
-      null
+    return result
+  }
+
+  private fun checkError() {
+    val stored = error.getAndSet(null)
+    if (stored != null) {
+      throw ConnectException(stored)
     }
   }
 
