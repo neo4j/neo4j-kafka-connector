@@ -87,10 +87,17 @@ class NodePatternHandler(
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
-          mapped
+          it to mapped
         }
         .chunked(batchSize)
-        .map { listOf(ChangeQuery(null, null, Query(query, mapOf(EVENTS to it)))) }
+        .map {
+          listOf(
+              ChangeQuery(
+                  null,
+                  null,
+                  it.map { x -> x.first },
+                  Query(query, mapOf(EVENTS to it.map { x -> x.second }))))
+        }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }

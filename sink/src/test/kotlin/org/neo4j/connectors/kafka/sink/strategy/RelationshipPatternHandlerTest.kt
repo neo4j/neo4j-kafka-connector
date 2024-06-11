@@ -843,9 +843,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeRelationshipProperties = mergeRelationshipProperties,
             renderer = Renderer.getDefaultRenderer(),
             batchSize = 1)
+    val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
     handler.handle(
         listOf(
-            newMessage(valueSchema, value, keySchema = keySchema, key = key),
+            sinkMessage,
         ),
     ) shouldBe
         listOf(
@@ -853,6 +854,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """

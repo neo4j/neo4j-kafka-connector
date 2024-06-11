@@ -33,11 +33,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should create node`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "node",
                   "op": "create",
@@ -47,12 +46,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse("CREATE (n:`Foo`:`Bar` {}) SET n = ${'$'}properties")
                             .cypher,
@@ -63,11 +64,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should create node without labels`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "node",
                   "op": "create",
@@ -76,12 +76,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse("CREATE (n {}) SET n = ${'$'}properties").cypher,
                         mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
@@ -91,11 +93,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should update node`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "node",
                   "op": "UPDATE",
@@ -108,12 +109,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
@@ -127,11 +130,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should update node without labels`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "node",
                   "op": "UPDATE",
@@ -143,12 +145,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
@@ -162,11 +166,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should merge node`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "NODE",
                   "op": "merge",
@@ -179,12 +182,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 "MERGE (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
@@ -198,11 +203,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should merge node without labels`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "NODE",
                   "op": "merge",
@@ -214,12 +218,14 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
@@ -233,11 +239,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should delete node`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "NODE",
                   "op": "delete",
@@ -247,12 +252,14 @@ class CudHandlerTest : HandlerTest() {
                   },
                   "detach": true
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DETACH DELETE n")
@@ -264,11 +271,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should delete node without labels`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "NODE",
                   "op": "delete",
@@ -277,12 +283,14 @@ class CudHandlerTest : HandlerTest() {
                   },
                   "detach": true
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse("MATCH (n {id: ${'$'}keys.id}) DETACH DELETE n").cypher,
                         mapOf("keys" to mapOf("id" to 0))))))
@@ -292,11 +300,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should delete node without detach`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "NODE",
                   "op": "delete",
@@ -305,12 +312,14 @@ class CudHandlerTest : HandlerTest() {
                     "id": 0
                   }                
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse("MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DELETE n")
                             .cypher,
@@ -321,11 +330,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should create relationship`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "create",
@@ -346,12 +354,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -371,11 +381,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should create relationship by merging nodes`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "create",
@@ -398,12 +407,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -423,11 +434,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should update relationship`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "update",
@@ -449,12 +459,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -475,11 +487,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should update relationship with ids`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "update",
@@ -504,12 +515,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -530,11 +543,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should merge relationship`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "merge",
@@ -556,12 +568,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -582,11 +596,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should merge relationship with ids`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "MERGE",
@@ -611,12 +624,14 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -637,11 +652,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should delete relationship`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "delete",
@@ -659,12 +673,14 @@ class CudHandlerTest : HandlerTest() {
                     }
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -684,11 +700,10 @@ class CudHandlerTest : HandlerTest() {
   fun `should delete relationship with ids`() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                """
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
                 {
                   "type": "relationship",
                   "op": "DELETE",
@@ -709,12 +724,14 @@ class CudHandlerTest : HandlerTest() {
                     "id": 5
                   }
                 }
-                """))) shouldBe
+                """)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -783,6 +800,7 @@ class CudHandlerTest : HandlerTest() {
               ChangeQuery(
                   null,
                   null,
+                  listOf(messages[it]),
                   when (it % modulo) {
                     0 ->
                         Query(
@@ -869,6 +887,7 @@ class CudHandlerTest : HandlerTest() {
               ChangeQuery(
                   null,
                   null,
+                  listOf(messages[it]),
                   when (it % modulo) {
                     0 ->
                         Query(

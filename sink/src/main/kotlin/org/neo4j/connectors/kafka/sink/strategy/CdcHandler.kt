@@ -38,16 +38,18 @@ abstract class CdcHandler : SinkStrategyHandler {
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return messages
         .onEach { logger.trace("received message: {}", it) }
-        .map { it.toChangeEvent() }
-        .map { it.txId to it }
-        .onEach { logger.trace("converted message: {} to {}", it.first, it.second) }
+        .map { (it to it.toChangeEvent()) }
+        .map { it.first to (it.second.txId to it.second) }
+        .onEach { logger.trace("converted message: {} to {}", it.first, it.second.second) }
         .groupBy(
-            { it.first },
+            { it.second.first },
             {
+              val valEvent = it.second.second
               ChangeQuery(
-                  it.second.txId,
-                  it.second.seq,
-                  when (val event = it.second.event) {
+                  valEvent.txId,
+                  valEvent.seq,
+                  listOf(it.first),
+                  when (val event = valEvent.event) {
                     is NodeEvent ->
                         when (event.operation) {
                           EntityOperation.CREATE -> transformCreate(event)

@@ -44,10 +44,10 @@ class CudHandler(val topic: String, private val renderer: Renderer, private val 
                 else -> throw ConnectException("Message value must be convertible to a Map.")
               }
           val cud = Operation.from(value)
-          cud.toQuery(renderer)
+          it to cud.toQuery(renderer)
         }
         .chunked(batchSize)
-        .map { it.map { q -> ChangeQuery(null, null, q) } }
+        .map { it.map { q -> ChangeQuery(null, null, listOf(q.first), q.second) } }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }

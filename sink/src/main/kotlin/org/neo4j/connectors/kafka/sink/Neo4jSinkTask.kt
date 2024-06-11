@@ -48,15 +48,32 @@ class Neo4jSinkTask : SinkTask() {
         ?.map { SinkMessage(it) }
         ?.groupBy { it.topic }
         ?.mapKeys { topicHandlers.getValue(it.key) }
-        ?.forEach { (handler, messages) ->
-          val txGroups = handler.handle(messages)
+        ?.forEach { (handler, messages) -> processMessages(handler, messages) }
+  }
 
-          txGroups.forEach { group ->
-            config.session().use { session ->
-              session.writeTransaction(
-                  { tx -> group.forEach { tx.run(it.query).consume() } }, config.txConfig())
-            }
-          }
+  private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
+    val handled = mutableSetOf<SinkMessage>()
+    try {
+      val txGroups = handler.handle(messages)
+
+      txGroups.forEach { group ->
+        config.session().use { session ->
+          session.writeTransaction(
+              { tx -> group.forEach { tx.run(it.query).consume() } },
+              config.txConfig(),
+          )
         }
+
+        handled.addAll(group.flatMap { it.messages })
+      }
+    } catch (e: Throwable) {
+      val unhandled = messages.minus(handled)
+
+      if (unhandled.size > 1) {
+        unhandled.forEach { m -> processMessages(handler, listOf(m)) }
+      } else {
+        unhandled.forEach { m -> context.errantRecordReporter()?.report(m.record, e)?.get() }
+      }
+    }
   }
 }

@@ -642,9 +642,10 @@ class NodePatternHandlerTest : HandlerTest() {
       expected: List<List<Any>> = emptyList()
   ) {
     val handler = NodePatternHandler("my-topic", pattern, false, Renderer.getDefaultRenderer(), 1)
+    val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
     handler.handle(
         listOf(
-            newMessage(valueSchema, value, keySchema = keySchema, key = key),
+            sinkMessage,
         ),
     ) shouldBe
         listOf(
@@ -652,6 +653,7 @@ class NodePatternHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """

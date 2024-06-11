@@ -39,51 +39,53 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for node creation events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.CREATE,
+                emptyList(),
+                emptyMap(),
+                null,
+                NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe"))),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.CREATE,
-                    emptyList(),
-                    emptyMap(),
-                    null,
-                    NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe"))),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
                             "nElementId" to "node-element-id",
                             "nProps" to mapOf("name" to "john", "surname" to "doe")))))))
 
-    verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.CREATE,
+    val sinkMessage1 =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.CREATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
+                null,
+                NodeState(
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
-                    null,
-                    NodeState(
-                        listOf("Person"),
-                        mapOf(
-                            "name" to "john",
-                            "surname" to "doe",
-                            "dob" to LocalDate.of(1990, 1, 1)))),
-                0,
-                1)),
+                    mapOf(
+                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+            0,
+            1)
+    verify(
+        listOf(sinkMessage1),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage1),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Person`",
                         mapOf(
@@ -94,28 +96,28 @@ class CdcSourceIdHandlerTest {
                                     "surname" to "doe",
                                     "dob" to LocalDate.of(1990, 1, 1))))))))
 
-    verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.CREATE,
+    val sinkMessage2 =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.CREATE,
+                listOf("Person", "Employee"),
+                mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
+                null,
+                NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
-                    null,
-                    NodeState(
-                        listOf("Person", "Employee"),
-                        mapOf(
-                            "name" to "john",
-                            "surname" to "doe",
-                            "dob" to LocalDate.of(1990, 1, 1)))),
-                0,
-                1)),
+                    mapOf(
+                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+            0,
+            1)
+    verify(
+        listOf(sinkMessage2),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage2),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Person`:`Employee`",
                         mapOf(
@@ -129,24 +131,25 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for node update events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.UPDATE,
+                emptyList(),
+                emptyMap(),
+                NodeState(emptyList(), mapOf("name" to "john")),
+                NodeState(emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)))),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.UPDATE,
-                    emptyList(),
-                    emptyMap(),
-                    NodeState(emptyList(), mapOf("name" to "john")),
-                    NodeState(
-                        emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)))),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
@@ -154,29 +157,28 @@ class CdcSourceIdHandlerTest {
                             "nProps" to
                                 mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))))))))
 
-    verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.UPDATE,
+    val sinkMessage1 =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.UPDATE,
+                listOf("Person", "Employee"),
+                mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
+                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
+                NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
-                    NodeState(
-                        listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
-                    NodeState(
-                        listOf("Person", "Employee"),
-                        mapOf(
-                            "name" to "john",
-                            "surname" to "doe",
-                            "dob" to LocalDate.of(1990, 1, 1)))),
-                0,
-                1)),
+                    mapOf(
+                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+            0,
+            1)
+    verify(
+        listOf(sinkMessage1),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage1),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
@@ -184,30 +186,30 @@ class CdcSourceIdHandlerTest {
                             "nProps" to
                                 mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1))))))))
 
-    verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.UPDATE,
+    val sinkMessage2 =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.UPDATE,
+                listOf("Person", "Employee"),
+                mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
+                NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
-                    NodeState(
-                        listOf("Person", "Employee"),
-                        mapOf("name" to "joe", "surname" to "doe", "married" to true)),
-                    NodeState(
-                        listOf("Person", "Manager"),
-                        mapOf(
-                            "name" to "john",
-                            "surname" to "doe",
-                            "dob" to LocalDate.of(1990, 1, 1)))),
-                0,
-                1)),
+                    mapOf("name" to "joe", "surname" to "doe", "married" to true)),
+                NodeState(
+                    listOf("Person", "Manager"),
+                    mapOf(
+                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+            0,
+            1)
+    verify(
+        listOf(sinkMessage2),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage2),
                     Query(
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
                         mapOf(
@@ -221,24 +223,25 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for node deletion events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.DELETE,
+                emptyList(),
+                emptyMap(),
+                NodeState(emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))),
+                null),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                NodeEvent(
-                    "node-element-id",
-                    EntityOperation.DELETE,
-                    emptyList(),
-                    emptyMap(),
-                    NodeState(
-                        emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))),
-                    null),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MATCH (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) DETACH DELETE n",
                         mapOf("nElementId" to "node-element-id"))))))
@@ -246,25 +249,27 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for relationship creation events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node("start-element-id", emptyList(), emptyMap()),
+                Node("end-element-id", emptyList(), emptyMap()),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                RelationshipEvent(
-                    "rel-element-id",
-                    "REL",
-                    Node("start-element-id", emptyList(), emptyMap()),
-                    Node("end-element-id", emptyList(), emptyMap()),
-                    emptyList(),
-                    EntityOperation.CREATE,
-                    null,
-                    RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
                             "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
@@ -279,25 +284,27 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for relationship update events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node("start-element-id", emptyList(), emptyMap()),
+                Node("end-element-id", emptyList(), emptyMap()),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(emptyMap()),
+                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                RelationshipEvent(
-                    "rel-element-id",
-                    "REL",
-                    Node("start-element-id", emptyList(), emptyMap()),
-                    Node("end-element-id", emptyList(), emptyMap()),
-                    emptyList(),
-                    EntityOperation.UPDATE,
-                    RelationshipState(emptyMap()),
-                    RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
                             "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
@@ -309,25 +316,27 @@ class CdcSourceIdHandlerTest {
                             "rElementId" to "rel-element-id",
                             "rProps" to mapOf("name" to "john", "surname" to "doe")))))))
 
+    val sinkMessage1 =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node("start-element-id", emptyList(), emptyMap()),
+                Node("end-element-id", emptyList(), emptyMap()),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+                RelationshipState(mapOf("name" to "joe", "surname" to "doe"))),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                RelationshipEvent(
-                    "rel-element-id",
-                    "REL",
-                    Node("start-element-id", emptyList(), emptyMap()),
-                    Node("end-element-id", emptyList(), emptyMap()),
-                    emptyList(),
-                    EntityOperation.UPDATE,
-                    RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                    RelationshipState(mapOf("name" to "joe", "surname" to "doe"))),
-                0,
-                1)),
+        listOf(sinkMessage1),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage1),
                     Query(
                         "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
                             "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
@@ -342,25 +351,27 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for relationship deletion events`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node("start-element-id", emptyList(), emptyMap()),
+                Node("end-element-id", emptyList(), emptyMap()),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(emptyMap()),
+                null),
+            0,
+            1)
     verify(
-        listOf(
-            newChangeEventMessage(
-                RelationshipEvent(
-                    "rel-element-id",
-                    "REL",
-                    Node("start-element-id", emptyList(), emptyMap()),
-                    Node("end-element-id", emptyList(), emptyMap()),
-                    emptyList(),
-                    EntityOperation.DELETE,
-                    RelationshipState(emptyMap()),
-                    null),
-                0,
-                1)),
+        listOf(sinkMessage),
         listOf(
             listOf(
                 ChangeQuery(
                     0,
                     1,
+                    listOf(sinkMessage),
                     Query(
                         "MATCH ()-[r:`REL` {sourceElementId: ${'$'}rElementId}]->() DELETE r",
                         mapOf("rElementId" to "rel-element-id"))))))

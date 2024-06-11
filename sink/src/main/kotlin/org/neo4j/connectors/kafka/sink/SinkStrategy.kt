@@ -102,7 +102,12 @@ enum class SinkStrategy(val description: String) {
   RELATIONSHIP_PATTERN("relationship-pattern")
 }
 
-data class ChangeQuery(val txId: Long?, val seq: Int?, val query: Query)
+data class ChangeQuery(
+    val txId: Long?,
+    val seq: Int?,
+    val messages: Iterable<SinkMessage>,
+    val query: Query
+)
 
 interface SinkStrategyHandler {
 

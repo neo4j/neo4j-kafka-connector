@@ -96,10 +96,17 @@ class CypherHandler(
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
-          mapped
+          it to mapped
         }
         .chunked(batchSize)
-        .map { listOf(ChangeQuery(null, null, Query(rewrittenQuery, mapOf("events" to it)))) }
+        .map {
+          listOf(
+              ChangeQuery(
+                  null,
+                  null,
+                  it.map { x -> x.first },
+                  Query(rewrittenQuery, mapOf("events" to it.map { x -> x.second }))))
+        }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }
