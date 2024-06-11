@@ -6,16 +6,20 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 Apache Software License, Version 2.0
   Apache Commons Collections
   Apache Commons Lang
+  Internet Time Utility
   Jackson-annotations
   Jackson-core
   jackson-databind
+  Jackson-dataformat-YAML
   jackson-module-kotlin
   JetBrains Java Annotations
+  JsonSchemaValidator
   Kotlin Reflect
   Kotlin Stdlib
   kotlinx-coroutines-core
   Non-Blocking Reactive Foundation for the JVM
   org.apiguardian:apiguardian-api
+  SnakeYAML
 ------------------------------------------------------------------------------
 
                                  Apache License

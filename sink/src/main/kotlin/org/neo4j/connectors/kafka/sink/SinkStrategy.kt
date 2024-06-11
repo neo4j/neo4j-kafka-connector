@@ -185,7 +185,7 @@ interface SinkStrategyHandler {
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
       if (cudTopics.contains(topic)) {
-        return CudHandler(topic, config.batchSize)
+        return CudHandler(topic, config.renderer, config.batchSize)
       }
 
       throw ConfigException("Topic $topic is not assigned a sink strategy")
