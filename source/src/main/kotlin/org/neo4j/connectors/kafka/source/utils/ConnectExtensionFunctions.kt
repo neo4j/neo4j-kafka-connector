@@ -102,40 +102,55 @@ private fun neo4jToKafka(schema: Schema, value: Any?): Any? =
       }
     }
 
+private val NULL_SCHEMA = SchemaBuilder.struct().optional().build()
+
+private fun Any?.notNullOrEmpty(): Boolean =
+    when (val value = this) {
+      null -> false
+      is Collection<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
+      is Array<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
+      is Map<*, *> -> value.isNotEmpty() && value.values.any { it.notNullOrEmpty() }
+      else -> true
+    }
+
 private fun neo4jValueSchema(value: Any?): Schema? =
     when (value) {
-      null -> null
+      null -> NULL_SCHEMA
       is Long -> Schema.OPTIONAL_INT64_SCHEMA
       is Double -> Schema.OPTIONAL_FLOAT64_SCHEMA
       is Boolean -> Schema.OPTIONAL_BOOLEAN_SCHEMA
       is Collection<*> -> {
-        val schema = value.firstNotNullOfOrNull { neo4jValueSchema(it) }
-        if (schema == null) null else SchemaBuilder.array(schema).optional()
+        // locate the first element that is a good (not null, not empty and has not null or not
+        // empty contents)
+        // candidate to derive the schema
+        val first = value.firstOrNull { it.notNullOrEmpty() }
+        val schema = neo4jValueSchema(first)
+        SchemaBuilder.array(schema).optional().build()
       }
       is Array<*> -> {
-        val schema = value.firstNotNullOfOrNull { neo4jValueSchema(it) }
-        if (schema == null) null else SchemaBuilder.array(schema).optional()
+        // locate the first element that is a good (not null, not empty and has not null or not
+        // empty contents)
+        // candidate to derive the schema
+        val first = value.firstOrNull { it.notNullOrEmpty() }
+        val schema = neo4jValueSchema(first)
+        SchemaBuilder.array(schema).optional().build()
       }
       is Map<*, *> -> {
         if (value.isEmpty()) {
           SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA).optional().build()
         } else {
           val valueTypes =
-              value.values
-                  .mapNotNull { elem -> elem?.let { it::class.java.simpleName } }
-                  .filter { !it.lowercase().startsWith("empty") }
-                  .toSet()
+              value.values.filter { it.notNullOrEmpty() }.mapNotNull { it!!.javaClass.name }.toSet()
           if (valueTypes.size == 1) {
             neo4jValueSchema(value.values.first())?.let {
               SchemaBuilder.map(Schema.STRING_SCHEMA, it).optional().build()
             }
           } else {
             val structMap = SchemaBuilder.struct().optional()
-            value.forEach {
-              val entry = it
+            value.forEach { entry ->
               neo4jValueSchema(entry.value)?.let { structMap.field(entry.key.toString(), it) }
             }
-            if (structMap.fields().isEmpty()) null else structMap.build()
+            if (structMap.fields().isEmpty()) NULL_SCHEMA else structMap.build()
           }
         }
       }

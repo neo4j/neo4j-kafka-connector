@@ -16,8 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.nondeterministic.until
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.shouldBe
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -40,6 +42,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -436,6 +439,52 @@ class Neo4jQueryTaskTest {
     task.start(props)
 
     pollAndAssertReceived(expected)
+  }
+
+  @Test
+  fun `should support null values returned from query`() = runTest {
+    val props = mutableMapOf<String, String>()
+    props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "1s"
+    props[SourceConfiguration.ENFORCE_SCHEMA] = "true"
+    props[SourceConfiguration.QUERY] =
+        """
+                |RETURN {
+                |   prop1: 1,
+                |   prop2: "string",
+                |   prop3: true,
+                |   prop4: null,
+                |   prop5: {
+                |       prop: null
+                |   },
+                |   prop6: [1],
+                |   prop7: [null]
+                |} AS data, 1717773205 AS timestamp
+            """
+            .trimMargin()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+
+    task.start(props)
+
+    val expected =
+        mapOf(
+            "data" to
+                mapOf(
+                    "prop1" to 1L,
+                    "prop2" to "string",
+                    "prop3" to true,
+                    "prop4" to null,
+                    "prop5" to mapOf("prop" to null),
+                    "prop6" to listOf(1L),
+                    "prop7" to listOf<Any?>(null)),
+            "timestamp" to 1717773205L)
+
+    eventually(30.seconds) {
+      val first = task.poll()?.map { (it.value() as Struct).toMap() }?.first()
+
+      first!! shouldBe expected
+    }
   }
 
   private fun insertRecords(
