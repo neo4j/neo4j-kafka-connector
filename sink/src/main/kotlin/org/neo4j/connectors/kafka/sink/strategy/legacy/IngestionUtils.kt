@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.utils
-
-import org.neo4j.connectors.kafka.extensions.quote
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 object IngestionUtils {
   const val labelSeparator = ":"
@@ -44,7 +42,7 @@ object IngestionUtils {
           }
           .joinToString(keySeparator)
 
-  fun containsProp(key: String, properties: List<String>): Boolean =
+  fun containsProp(key: String, properties: Collection<String>): Boolean =
       if (key.contains(".")) {
         properties.contains(key) || properties.any { key.startsWith("$it.") }
       } else {

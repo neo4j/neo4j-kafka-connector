@@ -14,16 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import java.util.Locale
 import org.neo4j.connectors.kafka.events.EntityType
-import org.neo4j.connectors.kafka.extensions.quote
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy.Companion.FROM_KEY
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy.Companion.TO_KEY
-import org.neo4j.connectors.kafka.utils.IngestionUtils.getLabelsAsString
-import org.neo4j.connectors.kafka.utils.IngestionUtils.getNodeKeysAsString
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy.Companion.FROM_KEY
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy.Companion.TO_KEY
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.getLabelsAsString
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.getNodeKeysAsString
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 

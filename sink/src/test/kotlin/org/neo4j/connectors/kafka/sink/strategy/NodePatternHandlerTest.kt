@@ -46,21 +46,24 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel` {id: event.keys.id})
-                  SET n += event.properties
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel` {id: event.keys.id})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel` {id: event.keys.id})
+                    SET n += event.properties
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel` {id: event.keys.id})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -80,21 +83,24 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel` {id: event.keys.id})
-                  SET n += event.properties
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel` {id: event.keys.id})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel` {id: event.keys.id})
+                    SET n += event.properties
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel` {id: event.keys.id})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -114,21 +120,24 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB})
-                  SET n += event.properties
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB})
+                    SET n += event.properties
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel` {idA: event.keys.idA, idB: event.keys.idB})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -148,22 +157,25 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel` {id: event.keys.id})
-                  SET n = event.properties
-                  SET n += event.keys
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel` {id: event.keys.id})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel` {id: event.keys.id})
+                    SET n = event.properties
+                    SET n += event.keys
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel` {id: event.keys.id})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -183,22 +195,25 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel`:`BLabel` {id: event.keys.id})
-                  SET n = event.properties
-                  SET n += event.keys
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel`:`BLabel` {id: event.keys.id})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel`:`BLabel` {id: event.keys.id})
+                    SET n = event.properties
+                    SET n += event.keys
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel`:`BLabel` {id: event.keys.id})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -218,22 +233,25 @@ class NodePatternHandlerTest : HandlerTest() {
     handler.query shouldBe
         CypherParser.parse(
                 """
-                UNWIND ${'$'}messages AS event 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'C'
-                  WITH event[1] AS event
-                  MERGE (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
-                  SET n = event.properties
-                  SET n += event.keys
-                  RETURN count(n) AS created
-                } 
-                CALL { WITH event
-                  WITH event WHERE event[0] = 'D'
-                  WITH event[1] AS event 
-                  MATCH (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
-                  DETACH DELETE n
-                  RETURN count(n) AS deleted
-                } 
+                UNWIND ${'$'}events AS event 
+                CALL { WITH event 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'C'
+                    WITH event[1] AS event
+                    MERGE (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
+                    SET n = event.properties
+                    SET n += event.keys
+                    RETURN count(n) AS created
+                  } 
+                  CALL { WITH event
+                    WITH event WHERE event[0] = 'D'
+                    WITH event[1] AS event 
+                    MATCH (n:`ALabel With Space`:`BLabel` {id: event.keys.id, `another id`: event.keys.`another id`})
+                    DETACH DELETE n
+                    RETURN count(n) AS deleted
+                  } 
+                  RETURN created, deleted
+                }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
                     .trimIndent())
@@ -254,6 +272,14 @@ class NodePatternHandlerTest : HandlerTest() {
                         "properties" to
                             mapOf<String, Any?>(
                                 "name" to "john", "surname" to "doe", "dob" to "2000-01-01")))))
+  }
+
+  @Test
+  fun `should remap key properties from message value fields to message key fields for tombstone messages`() {
+    assertQueryAndParameters(
+        "(:ALabel{!id: __value.old_id})",
+        key = """{"old_id": 1}""",
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))))
   }
 
   @Test
@@ -629,22 +655,25 @@ class NodePatternHandlerTest : HandlerTest() {
                     Query(
                         CypherParser.parse(
                                 """
-                            UNWIND ${'$'}messages AS event 
-                            CALL { WITH event
-                              WITH event WHERE event[0] = 'C'
-                              WITH event[1] AS event
-                              MERGE (n:`ALabel` {id: event.keys.id})
-                              SET n = event.properties
-                              SET n += event.keys
-                              RETURN count(n) AS created
-                            } 
-                            CALL { WITH event
-                              WITH event WHERE event[0] = 'D'
-                              WITH event[1] AS event 
-                              MATCH (n:`ALabel` {id: event.keys.id})
-                              DETACH DELETE n
-                              RETURN count(n) AS deleted
-                            } 
+                            UNWIND ${'$'}events AS event 
+                            CALL { WITH event 
+                              CALL { WITH event
+                                WITH event WHERE event[0] = 'C'
+                                WITH event[1] AS event
+                                MERGE (n:`ALabel` {id: event.keys.id})
+                                SET n = event.properties
+                                SET n += event.keys
+                                RETURN count(n) AS created
+                              } 
+                              CALL { WITH event
+                                WITH event WHERE event[0] = 'D'
+                                WITH event[1] AS event 
+                                MATCH (n:`ALabel` {id: event.keys.id})
+                                DETACH DELETE n
+                                RETURN count(n) AS deleted
+                              } 
+                              RETURN created, deleted
+                            }
                             RETURN sum(created) AS created, sum(deleted) AS deleted
                           """
                                     .trimIndent(),

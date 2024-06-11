@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.utils
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.events.Constraint
 import org.neo4j.connectors.kafka.events.RelKeyStrategy
 import org.neo4j.connectors.kafka.events.StreamsConstraintType
-import org.neo4j.connectors.kafka.utils.SchemaUtils.getNodeKeys
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SchemaUtils.getNodeKeys
 
 class SchemaUtilsTest {
 

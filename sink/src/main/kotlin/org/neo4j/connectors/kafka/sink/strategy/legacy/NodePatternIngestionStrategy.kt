@@ -14,26 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.service.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
-import org.neo4j.connectors.kafka.extensions.flatten
-import org.neo4j.connectors.kafka.service.StreamsSinkEntity
-import org.neo4j.connectors.kafka.utils.IngestionUtils.containsProp
-import org.neo4j.connectors.kafka.utils.IngestionUtils.getLabelsAsString
-import org.neo4j.connectors.kafka.utils.IngestionUtils.getNodeMergeKeys
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.containsProp
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.getLabelsAsString
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionUtils.getNodeMergeKeys
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.connectors.kafka.utils.StreamsUtils
 
-class NodePatternIngestionStrategy(private val nodePatternConfiguration: NodePatternConfiguration) :
+class NodePatternIngestionStrategy(private val pattern: NodePattern, mergeProperties: Boolean) :
     IngestionStrategy {
 
   private val mergeNodeTemplate: String =
       """
                 |${StreamsUtils.UNWIND}
-                |MERGE (n${getLabelsAsString(nodePatternConfiguration.labels)}{${
-                    getNodeMergeKeys("keys", nodePatternConfiguration.keys)
+                |MERGE (n${getLabelsAsString(pattern.labels)}{${
+                    getNodeMergeKeys("keys", pattern.keyProperties.map { it.from }.toSet())
                 }})
-                |SET n ${if (nodePatternConfiguration.mergeProperties) "+" else ""}= event.properties
+                |SET n ${if (mergeProperties) "+" else ""}= event.properties
                 |SET n += event.keys
             """
           .trimMargin()
@@ -41,8 +40,8 @@ class NodePatternIngestionStrategy(private val nodePatternConfiguration: NodePat
   private val deleteNodeTemplate: String =
       """
                 |${StreamsUtils.UNWIND}
-                |MATCH (n${getLabelsAsString(nodePatternConfiguration.labels)}{${
-                    getNodeMergeKeys("keys", nodePatternConfiguration.keys)
+                |MATCH (n${getLabelsAsString(pattern.labels)}{${
+                    getNodeMergeKeys("keys", pattern.keyProperties.map { it.from }.toSet())
                 }})
                 |DETACH DELETE n
             """
@@ -52,7 +51,7 @@ class NodePatternIngestionStrategy(private val nodePatternConfiguration: NodePat
     val data =
         events
             .mapNotNull { if (it.value != null) JSONUtils.asMap(it.value) else null }
-            .mapNotNull { toData(nodePatternConfiguration, it) }
+            .mapNotNull { toData(pattern, it) }
     return if (data.isEmpty()) {
       emptyList()
     } else {
@@ -65,7 +64,7 @@ class NodePatternIngestionStrategy(private val nodePatternConfiguration: NodePat
         events
             .filter { it.value == null && it.key != null }
             .mapNotNull { if (it.key != null) JSONUtils.asMap(it.key) else null }
-            .mapNotNull { toData(nodePatternConfiguration, it, false) }
+            .mapNotNull { toData(pattern, it, false) }
     return if (data.isEmpty()) {
       emptyList()
     } else {
@@ -83,34 +82,47 @@ class NodePatternIngestionStrategy(private val nodePatternConfiguration: NodePat
 
   companion object {
     fun toData(
-        nodePatternConfiguration: NodePatternConfiguration,
+        pattern: NodePattern,
         props: Map<String, Any?>,
         withProperties: Boolean = true
     ): Map<String, Map<String, Any?>>? {
       val properties = props.flatten()
-      val containsKeys = nodePatternConfiguration.keys.all { properties.containsKey(it) }
+      val keyProperties = pattern.keyProperties.map { it.from }.toSet()
+      val containsKeys = keyProperties.all { properties.containsKey(it) }
       return if (containsKeys) {
         val filteredProperties =
-            when (nodePatternConfiguration.type) {
-              PatternConfigurationType.ALL ->
-                  properties.filterKeys { !nodePatternConfiguration.keys.contains(it) }
-              PatternConfigurationType.EXCLUDE ->
-                  properties.filterKeys { key ->
-                    val containsProp = containsProp(key, nodePatternConfiguration.properties)
-                    !nodePatternConfiguration.keys.contains(key) && !containsProp
-                  }
-              PatternConfigurationType.INCLUDE ->
-                  properties.filterKeys { key ->
-                    val containsProp = containsProp(key, nodePatternConfiguration.properties)
-                    !nodePatternConfiguration.keys.contains(key) && containsProp
-                  }
+            buildMap<String, Any?> {
+              if (pattern.includeAllValueProperties) {
+                putAll(properties.filterKeys { key -> !keyProperties.contains(key) })
+              }
+
+              if (pattern.includeProperties.isNotEmpty()) {
+                putAll(
+                    properties.filterKeys { key ->
+                      val containsProp =
+                          containsProp(
+                              key,
+                              pattern.includeProperties.map { include -> include.from }.toSet())
+                      !keyProperties.contains(key) && containsProp
+                    })
+              }
+
+              if (pattern.excludeProperties.isNotEmpty()) {
+                keys
+                    .filter { key ->
+                      val excluded = containsProp(key, pattern.excludeProperties)
+                      !keyProperties.contains(key) && excluded
+                    }
+                    .forEach { remove(it) }
+              }
             }
+
         if (withProperties) {
           mapOf(
-              "keys" to properties.filterKeys { nodePatternConfiguration.keys.contains(it) },
+              "keys" to properties.filterKeys { keyProperties.contains(it) },
               "properties" to filteredProperties)
         } else {
-          mapOf("keys" to properties.filterKeys { nodePatternConfiguration.keys.contains(it) })
+          mapOf("keys" to properties.filterKeys { keyProperties.contains(it) })
         }
       } else {
         null

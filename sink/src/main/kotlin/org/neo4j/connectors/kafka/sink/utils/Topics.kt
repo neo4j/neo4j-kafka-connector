@@ -17,17 +17,18 @@
 package org.neo4j.connectors.kafka.sink.utils
 
 import kotlin.reflect.jvm.javaType
-import org.neo4j.connectors.kafka.service.TopicType
-import org.neo4j.connectors.kafka.service.TopicTypeGroup
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternConfiguration
-import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternConfiguration
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicType
+import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicTypeGroup
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 
 @Suppress("UNCHECKED_CAST")
 data class Topics(
@@ -36,8 +37,10 @@ data class Topics(
         (emptySet<String>() to SourceIdIngestionStrategyConfig()),
     val cdcSchemaTopics: Set<String> = emptySet(),
     val cudTopics: Set<String> = emptySet(),
-    val nodePatternTopics: Map<String, NodePatternConfiguration> = emptyMap(),
-    val relPatternTopics: Map<String, RelationshipPatternConfiguration> = emptyMap(),
+    val nodePatternTopics: Map<String, NodePattern> = emptyMap(),
+    val relPatternTopics: Map<String, RelationshipPattern> = emptyMap(),
+    val mergeNodeProperties: Boolean = false,
+    val mergeRelationshipProperties: Boolean = false,
     val invalid: List<String> = emptyList()
 ) {
 
@@ -76,13 +79,24 @@ data class Topics(
       val nodePatternTopics =
           TopicUtils.filterByPrefix(
                   config, SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX, invalidTopics)
-              .mapValues { NodePatternConfiguration.parse(it.value, mergeNodeProperties) }
+              .mapValues {
+                val pattern = Pattern.parse(it.value)
+                if (pattern !is NodePattern) {
+                  throw IllegalArgumentException(
+                      "Unsupported pattern type for node strategy: $pattern")
+                }
+                pattern
+              }
       val relPatternTopics =
           TopicUtils.filterByPrefix(
                   config, SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX, invalidTopics)
               .mapValues {
-                RelationshipPatternConfiguration.parse(
-                    it.value, mergeNodeProperties, mergeRelProperties)
+                val pattern = Pattern.parse(it.value)
+                if (pattern !is RelationshipPattern) {
+                  throw IllegalArgumentException(
+                      "Unsupported pattern type for relationship strategy: $pattern")
+                }
+                pattern
               }
       val cdcSourceIdTopics =
           TopicUtils.splitTopics(
@@ -110,7 +124,9 @@ data class Topics(
           cdcSchemaTopics,
           cudTopics,
           nodePatternTopics,
-          relPatternTopics)
+          relPatternTopics,
+          mergeNodeProperties,
+          mergeRelProperties)
     }
   }
 }
@@ -170,12 +186,15 @@ object TopicUtils {
             TopicType.CDC_SCHEMA -> SchemaIngestionStrategy()
             TopicType.CUD -> CUDIngestionStrategy()
             TopicType.PATTERN_NODE -> {
-              val map = config as Map<String, NodePatternConfiguration>
-              map.mapValues { NodePatternIngestionStrategy(it.value) }
+              val map = config as Map<String, NodePattern>
+              map.mapValues { NodePatternIngestionStrategy(it.value, topics.mergeNodeProperties) }
             }
             TopicType.PATTERN_RELATIONSHIP -> {
-              val map = config as Map<String, RelationshipPatternConfiguration>
-              map.mapValues { RelationshipPatternIngestionStrategy(it.value) }
+              val map = config as Map<String, RelationshipPattern>
+              map.mapValues {
+                RelationshipPatternIngestionStrategy(
+                    it.value, topics.mergeNodeProperties, topics.mergeRelationshipProperties)
+              }
             }
             else -> throw RuntimeException("Unsupported topic type $type")
           }

@@ -50,12 +50,11 @@ import org.neo4j.connectors.kafka.events.StreamsConstraintType
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.service.errors.ErrorService
 import org.neo4j.connectors.kafka.service.errors.ProcessingError
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDNodeRel
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDRelationship
-import org.neo4j.connectors.kafka.sink.DeprecatedNeo4jSinkTaskTest.Companion.session
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverterTest
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDNode
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDNodeRel
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDOperations
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDRelationship
 import org.neo4j.connectors.kafka.sink.utils.allLabels
 import org.neo4j.connectors.kafka.sink.utils.allNodes
 import org.neo4j.connectors.kafka.sink.utils.allRelationships

@@ -41,8 +41,8 @@ import org.neo4j.connectors.kafka.events.RelationshipChange
 import org.neo4j.connectors.kafka.events.RelationshipNodeChange
 import org.neo4j.connectors.kafka.events.RelationshipPayload
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDNode
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDOperations
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDNode
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDOperations
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver

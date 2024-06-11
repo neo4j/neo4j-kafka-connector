@@ -16,22 +16,22 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import org.neo4j.connectors.kafka.service.StreamsStrategyStorage
-import org.neo4j.connectors.kafka.service.TopicType
-import org.neo4j.connectors.kafka.service.sink.strategy.CUDIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.CypherTemplateStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.IngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.NodePatternIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.RelationshipPatternIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SchemaIngestionStrategy
-import org.neo4j.connectors.kafka.service.sink.strategy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.CypherTemplateStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.IngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.sink.strategy.legacy.StreamsStrategyStorage
+import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicType
 
 class Neo4jStrategyStorage(val config: SinkConfiguration) : StreamsStrategyStorage() {
   private val topicConfigMap = config.topics.asMap()
 
   @Suppress("UNCHECKED_CAST")
   override fun getTopicType(topic: String): TopicType? =
-      TopicType.values().firstOrNull { topicType ->
+      TopicType.entries.firstOrNull { topicType ->
         when (val topicConfig = topicConfigMap.getOrDefault(topicType, emptyList<Any>())) {
           is Collection<*> -> topicConfig.contains(topic)
           is Map<*, *> -> topicConfig.containsKey(topic)
@@ -46,9 +46,13 @@ class Neo4jStrategyStorage(val config: SinkConfiguration) : StreamsStrategyStora
         TopicType.CDC_SCHEMA -> SchemaIngestionStrategy()
         TopicType.CUD -> CUDIngestionStrategy()
         TopicType.PATTERN_NODE ->
-            NodePatternIngestionStrategy(config.topics.nodePatternTopics.getValue(topic))
+            NodePatternIngestionStrategy(
+                config.topics.nodePatternTopics.getValue(topic), config.topics.mergeNodeProperties)
         TopicType.PATTERN_RELATIONSHIP ->
-            RelationshipPatternIngestionStrategy(config.topics.relPatternTopics.getValue(topic))
+            RelationshipPatternIngestionStrategy(
+                config.topics.relPatternTopics.getValue(topic),
+                config.topics.mergeNodeProperties,
+                config.topics.mergeRelationshipProperties)
         TopicType.CYPHER -> CypherTemplateStrategy(config.topics.cypherTopics.getValue(topic))
         null -> throw RuntimeException("Topic Type not Found")
       }
