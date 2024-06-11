@@ -895,6 +895,9 @@ abstract class Neo4jCudIT {
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Foo) REQUIRE n.id IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:Bar) REQUIRE n.id IS KEY").consume()
+    session
+        .run("CREATE CONSTRAINT FOR ()-[r:RELATED_TO]-() REQUIRE r.id IS RELATIONSHIP KEY")
+        .consume()
 
     session
         .run(
@@ -1159,6 +1162,8 @@ abstract class Neo4jCudIT {
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Foo) REQUIRE n.id IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:Bar) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR ()-[r:RELATED_TO]-() REQUIRE r.id IS RELATIONSHIP KEY")
+        .consume()
 
     session
         .run(
@@ -1285,6 +1290,8 @@ abstract class Neo4jCudIT {
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Foo) REQUIRE n.id IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:Bar) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR ()-[r:RELATED_TO]-() REQUIRE r.id IS RELATIONSHIP KEY")
+        .consume()
 
     session
         .run(
