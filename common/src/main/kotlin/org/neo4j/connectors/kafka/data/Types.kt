@@ -63,6 +63,7 @@ const val THREE_D: Byte = 3
 
 @Suppress("SpellCheckingInspection")
 enum class SimpleTypes(builder: () -> SchemaBuilder) {
+  NULL({ SchemaBuilder.struct().optional().namespaced("NULL") }),
   BOOLEAN({ SchemaBuilder.bool() }),
   LONG({ SchemaBuilder.int64() }),
   FLOAT({ SchemaBuilder.float64() }),
@@ -454,7 +455,7 @@ object DynamicTypes {
       forceMapsAsStruct: Boolean = false
   ): Schema =
       when (value) {
-        null -> SchemaBuilder.struct().optional().build()
+        null -> SimpleTypes.NULL.schema(true)
         is Boolean -> SimpleTypes.BOOLEAN.schema(optional)
         is Float,
         is Double -> SimpleTypes.FLOAT.schema(optional)
@@ -473,11 +474,11 @@ object DynamicTypes {
             SchemaBuilder.array(Schema.FLOAT64_SCHEMA).apply { if (optional) optional() }.build()
         is BooleanArray ->
             SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).apply { if (optional) optional() }.build()
-        is Array<*> ->
-            value
-                .firstNotNullOfOrNull { toConnectSchema(it, false, forceMapsAsStruct) }
-                ?.run { SchemaBuilder.array(this).apply { if (optional) optional() }.build() }
-                ?: SchemaBuilder.struct().apply { if (optional) optional() }.build()
+        is Array<*> -> {
+          val first = value.firstOrNull { it.notNullOrEmpty() }
+          val schema = toConnectSchema(first, optional, forceMapsAsStruct)
+          SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
+        }
         is LocalDate -> SimpleTypes.LOCALDATE_STRUCT.schema(optional)
         is LocalDateTime -> SimpleTypes.LOCALDATETIME_STRUCT.schema(optional)
         is LocalTime -> SimpleTypes.LOCALTIME_STRUCT.schema(optional)
@@ -517,15 +518,27 @@ object DynamicTypes {
                 }
                 .build()
         is Collection<*> -> {
-          val elementTypes = value.map { toConnectSchema(it, false, forceMapsAsStruct) }
+          val nonEmptyElementTypes =
+              value
+                  .filter { it.notNullOrEmpty() }
+                  .map { toConnectSchema(it, optional, forceMapsAsStruct) }
 
-          when (elementTypes.toSet().size) {
-            0 -> SchemaBuilder.struct().also { if (optional) it.optional() }.build()
+          when (nonEmptyElementTypes.toSet().size) {
+            0 ->
+                SchemaBuilder.array(SimpleTypes.NULL.schema(true))
+                    .apply { if (optional) optional() }
+                    .build()
             1 ->
-                SchemaBuilder.array(elementTypes.first()).apply { if (optional) optional() }.build()
+                SchemaBuilder.array(nonEmptyElementTypes.first())
+                    .apply { if (optional) optional() }
+                    .build()
             else ->
                 SchemaBuilder.struct()
-                    .apply { elementTypes.forEachIndexed { i, v -> this.field("e${i}", v) } }
+                    .apply {
+                      value.forEachIndexed { i, v ->
+                        this.field("e${i}", toConnectSchema(v, optional, forceMapsAsStruct))
+                      }
+                    }
                     .apply { if (optional) optional() }
                     .build()
           }
@@ -541,22 +554,48 @@ object DynamicTypes {
                               "unsupported map key type ${key?.javaClass?.name}")
                     }
                   }
+                  .filter { e -> e.value.notNullOrEmpty() }
                   .mapValues { e -> toConnectSchema(e.value, optional, forceMapsAsStruct) }
 
           val valueSet = elementTypes.values.toSet()
           when {
-            valueSet.isEmpty() -> SchemaBuilder.struct().apply { if (optional) optional() }.build()
+            valueSet.isEmpty() ->
+                SchemaBuilder.struct()
+                    .apply {
+                      value.forEach {
+                        this.field(
+                            it.key as String,
+                            toConnectSchema(it.value, optional, forceMapsAsStruct))
+                      }
+                    }
+                    .apply { if (optional) optional() }
+                    .build()
             valueSet.singleOrNull() != null && !forceMapsAsStruct ->
                 SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
                     .apply { if (optional) optional() }
                     .build()
             else ->
                 SchemaBuilder.struct()
-                    .apply { elementTypes.forEach { (k, v) -> this.field(k, v) } }
+                    .apply {
+                      value.forEach {
+                        this.field(
+                            it.key as String,
+                            toConnectSchema(it.value, optional, forceMapsAsStruct))
+                      }
+                    }
                     .apply { if (optional) optional() }
                     .build()
           }
         }
         else -> throw IllegalArgumentException("unsupported type ${value.javaClass.name}")
+      }
+
+  fun Any?.notNullOrEmpty(): Boolean =
+      when (val value = this) {
+        null -> false
+        is Collection<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
+        is Array<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
+        is Map<*, *> -> value.isNotEmpty() && value.values.any { it.notNullOrEmpty() }
+        else -> true
       }
 }

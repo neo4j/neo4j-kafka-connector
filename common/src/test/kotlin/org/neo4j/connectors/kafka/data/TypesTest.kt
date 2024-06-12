@@ -87,9 +87,9 @@ class TypesTest {
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(SimpleDriverValues::class)
   fun `should build schema and values out of simple driver values and convert them back`(
-      input: Any,
+      input: Any?,
       expectedSchema: Schema,
-      expectedValue: Any
+      expectedValue: Any?
   ) {
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
@@ -107,6 +107,7 @@ class TypesTest {
 
     override fun provideArguments(p0: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
+          Arguments.of(Named.of("null", null), SimpleTypes.NULL.schema(), null),
           Arguments.of(Named.of("boolean", true), SimpleTypes.BOOLEAN.schema(), true),
           Arguments.of(Named.of("long", 1), SimpleTypes.LONG.schema(), 1L),
           Arguments.of(Named.of("float", 1.0), SimpleTypes.FLOAT.schema(), 1.0),
@@ -414,6 +415,116 @@ class TypesTest {
         reverted shouldBe change
       }
     }
+  }
+
+  @Test
+  fun `should build schema for a complex value`() {
+    val returned =
+        driver.session().use {
+          val record =
+              it.run(
+                      """
+                      WITH
+                      {
+                         id: 'ROOT_ID',
+                         root: [
+                             { children: [] },
+                             { children: [{ name: "child" }] }
+                         ],
+                         arr: [null, {foo: "bar"}],
+                         arr_mixed: [{foo: "bar"}, null, {foo: 1}]
+                      } AS data
+                      RETURN data, data.id AS id
+                    """)
+                  .single()
+
+          buildMap {
+            this["id"] = record["id"].asString()
+            this["data"] = record["data"].asMap().toSortedMap()
+          }
+        }
+
+    val expectedSchema =
+        SchemaBuilder.struct()
+            .field("id", Schema.OPTIONAL_STRING_SCHEMA)
+            .field(
+                "data",
+                SchemaBuilder.struct()
+                    .field(
+                        "arr",
+                        SchemaBuilder.array(
+                                SchemaBuilder.map(
+                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                                    .optional()
+                                    .build())
+                            .optional()
+                            .build())
+                    .field(
+                        "arr_mixed",
+                        SchemaBuilder.struct()
+                            .field(
+                                "e0",
+                                SchemaBuilder.map(
+                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                                    .optional()
+                                    .build())
+                            .field("e1", SimpleTypes.NULL.schema())
+                            .field(
+                                "e2",
+                                SchemaBuilder.map(
+                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_INT64_SCHEMA)
+                                    .optional()
+                                    .build())
+                            .optional()
+                            .build())
+                    .field("id", Schema.OPTIONAL_STRING_SCHEMA)
+                    .field(
+                        "root",
+                        SchemaBuilder.array(
+                                SchemaBuilder.map(
+                                        Schema.STRING_SCHEMA,
+                                        SchemaBuilder.array(
+                                                SchemaBuilder.map(
+                                                        Schema.STRING_SCHEMA,
+                                                        Schema.OPTIONAL_STRING_SCHEMA)
+                                                    .optional()
+                                                    .build())
+                                            .optional()
+                                            .build())
+                                    .optional()
+                                    .build())
+                            .optional()
+                            .build())
+                    .optional()
+                    .build())
+            .optional()
+            .build()
+    val schema = DynamicTypes.toConnectSchema(returned, optional = true)
+    schema shouldBe expectedSchema
+
+    val converted = DynamicTypes.toConnectValue(schema, returned)
+    converted shouldBe
+        Struct(schema)
+            .put("id", "ROOT_ID")
+            .put(
+                "data",
+                Struct(schema.field("data").schema())
+                    .put("arr", listOf(null, mapOf("foo" to "bar")))
+                    .put(
+                        "arr_mixed",
+                        Struct(schema.field("data").schema().field("arr_mixed").schema())
+                            .put("e0", mapOf("foo" to "bar"))
+                            .put("e1", null)
+                            .put("e2", mapOf("foo" to 1L)))
+                    .put("id", "ROOT_ID")
+                    .put(
+                        "root",
+                        listOf(
+                            mapOf("children" to listOf<Any>()),
+                            mapOf("children" to listOf(mapOf("name" to "child"))))))
+
+    val reverted = DynamicTypes.fromConnectValue(schema, converted)
+    reverted shouldBe returned
   }
 
   private fun schemaAndValue(value: Any): Triple<Schema, Any?, Any?> {

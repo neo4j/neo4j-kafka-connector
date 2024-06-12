@@ -50,8 +50,8 @@ class DynamicTypesTest {
   @Test
   fun `should derive schema for simple types correctly`() {
     // NULL
-    DynamicTypes.toConnectSchema(null, false) shouldBe SchemaBuilder.struct().optional().build()
-    DynamicTypes.toConnectSchema(null, true) shouldBe SchemaBuilder.struct().optional().build()
+    DynamicTypes.toConnectSchema(null, false) shouldBe SimpleTypes.NULL.schema()
+    DynamicTypes.toConnectSchema(null, true) shouldBe SimpleTypes.NULL.schema()
 
     // Integer, Long, etc.
     listOf<Any>(8.toByte(), 8.toShort(), 8.toInt(), 8.toLong()).forEach { number ->
@@ -100,8 +100,8 @@ class DynamicTypesTest {
       }
     }
 
-    // Boolean Array
-    listOf<Any>(BooleanArray(0), Array(1) { true }).forEach { array ->
+    // Boolean Array (boolean[])
+    listOf<Any>(BooleanArray(0), BooleanArray(1) { true }).forEach { array ->
       withClue(array) {
         DynamicTypes.toConnectSchema(array, false) shouldBe
             SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).build()
@@ -110,43 +110,62 @@ class DynamicTypesTest {
       }
     }
 
-    // Int Arrays
-    listOf(
-            ShortArray(1),
-            IntArray(1),
-            LongArray(1),
-            Array(1) { i -> i },
-            Array(1) { i -> i.toShort() },
-            Array(1) { i -> i.toLong() })
+    // Array of Boolean (Boolean[])
+    listOf<Any>(Array(1) { true }).forEach { array ->
+      withClue(array) {
+        DynamicTypes.toConnectSchema(array, false) shouldBe
+            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).build()
+        DynamicTypes.toConnectSchema(array, true) shouldBe
+            SchemaBuilder.array(Schema.OPTIONAL_BOOLEAN_SCHEMA).optional().build()
+      }
+    }
+
+    // Int Arrays (short[], int[], long[])
+    listOf(ShortArray(1), IntArray(1), LongArray(1)).forEach { array ->
+      withClue(array) {
+        DynamicTypes.toConnectSchema(array, false) shouldBe
+            SchemaBuilder.array(Schema.INT64_SCHEMA).build()
+        DynamicTypes.toConnectSchema(array, true) shouldBe
+            SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build()
+      }
+    }
+
+    // Array of Integer (Short[], Integer[], Long[])
+    listOf(Array(1) { i -> i }, Array(1) { i -> i.toShort() }, Array(1) { i -> i.toLong() })
         .forEach { array ->
           withClue(array) {
             DynamicTypes.toConnectSchema(array, false) shouldBe
                 SchemaBuilder.array(Schema.INT64_SCHEMA).build()
             DynamicTypes.toConnectSchema(array, true) shouldBe
-                SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build()
+                SchemaBuilder.array(Schema.OPTIONAL_INT64_SCHEMA).optional().build()
           }
         }
 
-    // Float Arrays
-    listOf(
-            FloatArray(1),
-            DoubleArray(1),
-            Array(1) { i -> i.toFloat() },
-            Array(1) { i -> i.toDouble() })
-        .forEach { array ->
-          withClue(array) {
-            DynamicTypes.toConnectSchema(array, false) shouldBe
-                SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
-            DynamicTypes.toConnectSchema(array, true) shouldBe
-                SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build()
-          }
-        }
+    // Float Arrays (float[], double[])
+    listOf(FloatArray(1), DoubleArray(1)).forEach { array ->
+      withClue(array) {
+        DynamicTypes.toConnectSchema(array, false) shouldBe
+            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
+        DynamicTypes.toConnectSchema(array, true) shouldBe
+            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build()
+      }
+    }
+
+    // Float Arrays (Float[], Double[])
+    listOf(Array(1) { i -> i.toFloat() }, Array(1) { i -> i.toDouble() }).forEach { array ->
+      withClue(array) {
+        DynamicTypes.toConnectSchema(array, false) shouldBe
+            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
+        DynamicTypes.toConnectSchema(array, true) shouldBe
+            SchemaBuilder.array(Schema.OPTIONAL_FLOAT64_SCHEMA).optional().build()
+      }
+    }
 
     // String Array
     DynamicTypes.toConnectSchema(Array(1) { "a" }, false) shouldBe
         SchemaBuilder.array(Schema.STRING_SCHEMA).build()
     DynamicTypes.toConnectSchema(Array(1) { "a" }, true) shouldBe
-        SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build()
+        SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build()
 
     // Temporal Types
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), false) shouldBe
@@ -246,28 +265,30 @@ class DynamicTypesTest {
   }
 
   @Test
-  fun `empty collections should map to an empty struct schema`() {
-    listOf<Any>(listOf<Any>(), setOf<Any>()).forEach { collection ->
+  fun `empty collections or arrays should map to an array schema`() {
+    listOf(listOf<Any>(), setOf<Any>(), arrayOf<Any>()).forEach { collection ->
       withClue(collection) {
-        DynamicTypes.toConnectSchema(collection, false) shouldBe SchemaBuilder.struct().build()
+        DynamicTypes.toConnectSchema(collection, false) shouldBe
+            SchemaBuilder.array(SimpleTypes.NULL.schema()).build()
         DynamicTypes.toConnectSchema(collection, true) shouldBe
-            SchemaBuilder.struct().optional().build()
+            SchemaBuilder.array(SimpleTypes.NULL.schema()).optional().build()
       }
     }
   }
 
   @Test
   fun `collections with elements of single type should map to an array schema`() {
-    listOf<Pair<Any, Schema>>(
-            listOf(1, 2, 3) to Schema.INT64_SCHEMA,
-            listOf("a", "b", "c") to Schema.STRING_SCHEMA,
-            setOf(true) to Schema.BOOLEAN_SCHEMA)
-        .forEach { (collection, elementSchema) ->
+    listOf<Triple<Any, Schema, Schema>>(
+            Triple(listOf(1, 2, 3), Schema.INT64_SCHEMA, Schema.OPTIONAL_INT64_SCHEMA),
+            Triple(listOf("a", "b", "c"), Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA),
+            Triple(setOf(true), Schema.BOOLEAN_SCHEMA, Schema.OPTIONAL_BOOLEAN_SCHEMA),
+        )
+        .forEach { (collection, elementSchema, elementOptionalSchema) ->
           withClue(collection) {
             DynamicTypes.toConnectSchema(collection, false) shouldBe
                 SchemaBuilder.array(elementSchema).build()
             DynamicTypes.toConnectSchema(collection, true) shouldBe
-                SchemaBuilder.array(elementSchema).optional().build()
+                SchemaBuilder.array(elementOptionalSchema).optional().build()
           }
         }
   }
@@ -284,10 +305,10 @@ class DynamicTypesTest {
 
     DynamicTypes.toConnectSchema(listOf(1, true, "a", 5.toFloat()), true) shouldBe
         SchemaBuilder.struct()
-            .field("e0", Schema.INT64_SCHEMA)
-            .field("e1", Schema.BOOLEAN_SCHEMA)
-            .field("e2", Schema.STRING_SCHEMA)
-            .field("e3", Schema.FLOAT64_SCHEMA)
+            .field("e0", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("e1", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+            .field("e2", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("e3", Schema.OPTIONAL_FLOAT64_SCHEMA)
             .optional()
             .build()
   }
