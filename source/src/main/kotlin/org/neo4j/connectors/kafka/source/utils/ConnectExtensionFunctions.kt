@@ -20,6 +20,7 @@ import java.time.temporal.TemporalAccessor
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.neo4j.connectors.kafka.data.DynamicTypes.notNullOrEmpty
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.connectors.kafka.utils.asStreamsMap
 import org.neo4j.driver.Record
@@ -103,15 +104,6 @@ private fun neo4jToKafka(schema: Schema, value: Any?): Any? =
     }
 
 private val NULL_SCHEMA = SchemaBuilder.struct().optional().build()
-
-private fun Any?.notNullOrEmpty(): Boolean =
-    when (val value = this) {
-      null -> false
-      is Collection<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
-      is Array<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
-      is Map<*, *> -> value.isNotEmpty() && value.values.any { it.notNullOrEmpty() }
-      else -> true
-    }
 
 private fun neo4jValueSchema(value: Any?): Schema? =
     when (value) {
