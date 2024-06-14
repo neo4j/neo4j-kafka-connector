@@ -41,6 +41,9 @@ annotation class Neo4jSink(
     val nodePattern: Array<NodePatternStrategy> = [],
     val relationshipPattern: Array<RelationshipPatternStrategy> = [],
     val cud: Array<CudStrategy> = [],
+    val errorTolerance: String = "all",
+    val errorDlqTopic: String = "",
+    val errorDlqContextHeadersEnable: Boolean = true,
 )
 
 enum class SchemaCompatibilityMode {
