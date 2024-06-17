@@ -32,7 +32,7 @@ internal class Neo4jSinkRegistration(
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "all",
     errorDlqTopic: String = "",
-    errorDlqContextHeadersEnable: Boolean = true,
+    errorDlqContextHeadersEnable: Boolean = false,
     enableErrorLog: Boolean = true,
     includeMessagesInErrorLog: Boolean = true,
     schemaControlRegistryUri: String,
@@ -65,12 +65,12 @@ internal class Neo4jSinkRegistration(
                       if (errorDlqTopic.trim().isNotEmpty()) {
                         put("errors.deadletterqueue.topic.name", errorDlqTopic)
                         put(
-                            "errors.deadletterqueue.context.headers.enable",
-                            errorDlqContextHeadersEnable)
-                        put(
                             "errors.deadletterqueue.topic.replication.factor",
                             DLQ_TOPIC_REPLICATION_FACTOR)
                       }
+                      put(
+                          "errors.deadletterqueue.context.headers.enable",
+                          errorDlqContextHeadersEnable)
                       put("errors.log.enable", enableErrorLog)
                       put("errors.log.include.messages", includeMessagesInErrorLog)
                       put("neo4j.uri", neo4jUri)
