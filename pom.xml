@@ -76,7 +76,7 @@
         <maven-jar-plugin.version>3.4.1</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-site-plugin.version>3.12.1</maven-site-plugin.version>
-        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.3.0</maven-surefire-plugin.version>
         <mockito-kotlin.version>5.3.1</mockito-kotlin.version>
         <mockito.version>5.12.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
