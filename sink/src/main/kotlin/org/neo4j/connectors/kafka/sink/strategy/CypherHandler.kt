@@ -81,6 +81,8 @@ class CypherHandler(
 
   override fun strategy() = SinkStrategy.CYPHER
 
+  data class MessageToEventMap(val message: SinkMessage, val eventMap: Map<String, Any?>)
+
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return messages
         .asSequence()
@@ -96,7 +98,7 @@ class CypherHandler(
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
-          it to mapped
+          MessageToEventMap(it, mapped)
         }
         .chunked(batchSize)
         .map {
@@ -104,8 +106,8 @@ class CypherHandler(
               ChangeQuery(
                   null,
                   null,
-                  it.map { x -> x.first },
-                  Query(rewrittenQuery, mapOf("events" to it.map { x -> x.second }))))
+                  it.map { data -> data.message },
+                  Query(rewrittenQuery, mapOf("events" to it.map { data -> data.eventMap }))))
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()

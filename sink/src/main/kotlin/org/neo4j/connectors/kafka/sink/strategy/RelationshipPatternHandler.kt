@@ -66,6 +66,8 @@ class RelationshipPatternHandler(
 
   override fun strategy() = SinkStrategy.RELATIONSHIP_PATTERN
 
+  data class MessageToEventList(val message: SinkMessage, val eventList: List<Any>)
+
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return messages
         .asSequence()
@@ -104,7 +106,7 @@ class RelationshipPatternHandler(
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
-          it to mapped
+          MessageToEventList(it, mapped)
         }
         .chunked(batchSize)
         .map {
@@ -112,8 +114,8 @@ class RelationshipPatternHandler(
               ChangeQuery(
                   null,
                   null,
-                  it.map { x -> x.first },
-                  Query(query, mapOf(EVENTS to it.map { x -> x.second }))))
+                  it.map { data -> data.message },
+                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList }))))
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()

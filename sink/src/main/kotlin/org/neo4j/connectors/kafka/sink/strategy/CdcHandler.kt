@@ -35,21 +35,21 @@ import org.slf4j.LoggerFactory
 abstract class CdcHandler : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
+  data class MessageToEvent(val message: SinkMessage, val changeEvent: ChangeEvent)
+
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return messages
         .onEach { logger.trace("received message: {}", it) }
-        .map { (it to it.toChangeEvent()) }
-        .map { it.first to (it.second.txId to it.second) }
-        .onEach { logger.trace("converted message: {} to {}", it.first, it.second.second) }
+        .map { MessageToEvent(it, it.toChangeEvent()) }
+        .onEach { logger.trace("converted message: {} to {}", it.changeEvent.txId, it.changeEvent) }
         .groupBy(
-            { it.second.first },
+            { it.changeEvent.txId },
             {
-              val valEvent = it.second.second
               ChangeQuery(
-                  valEvent.txId,
-                  valEvent.seq,
-                  listOf(it.first),
-                  when (val event = valEvent.event) {
+                  it.changeEvent.txId,
+                  it.changeEvent.seq,
+                  listOf(it.message),
+                  when (val event = it.changeEvent.event) {
                     is NodeEvent ->
                         when (event.operation) {
                           EntityOperation.CREATE -> transformCreate(event)

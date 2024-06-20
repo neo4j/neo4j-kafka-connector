@@ -48,6 +48,13 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
   }
 
   override fun transformUpdate(event: NodeEvent): Query {
+    if (event.before == null) {
+      throw IllegalArgumentException("update operation requires 'before' field in the event object")
+    }
+    if (event.after == null) {
+      throw IllegalArgumentException("update operation requires 'after' field in the event object")
+    }
+
     val node = buildNode(event.keys, "n")
     val stmt =
         Cypher.merge(node)
@@ -93,6 +100,13 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
   }
 
   override fun transformUpdate(event: RelationshipEvent): Query {
+    if (event.before == null) {
+      throw IllegalArgumentException("update operation requires 'before' field in the event object")
+    }
+    if (event.after == null) {
+      throw IllegalArgumentException("update operation requires 'after' field in the event object")
+    }
+
     val (start, end, rel) = buildRelationship(event, "r")
     val stmt =
         Cypher.merge(start)
