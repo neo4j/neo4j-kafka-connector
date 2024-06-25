@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package org.neo4j.connectors.kafka.sink
 
 import io.kotest.matchers.shouldBe
@@ -28,7 +30,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.legacy.DeprecatedNeo4jSinkConfiguration
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SourceIdIngestionStrategyConfig
 import org.neo4j.driver.TransactionConfig
 
 class SinkConfigurationTest {
@@ -165,7 +168,6 @@ class SinkConfigurationTest {
     assertEquals(setOf("foo", "bar"), config.topics.cudTopics)
   }
 
-  @Suppress("DEPRECATION")
   @Test
   fun `migrateSettings should replace deprecated settings with up-to-date equivalent`() {
     val originals =

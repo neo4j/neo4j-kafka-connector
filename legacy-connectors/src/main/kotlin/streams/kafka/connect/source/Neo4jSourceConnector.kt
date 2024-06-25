@@ -22,9 +22,9 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.source.DeprecatedNeo4jSourceConfiguration
-import org.neo4j.connectors.kafka.source.Neo4jQueryTask
 import org.neo4j.connectors.kafka.source.SourceConfiguration
+import org.neo4j.connectors.kafka.source.legacy.DeprecatedNeo4jSourceConfiguration
+import org.neo4j.connectors.kafka.source.legacy.Neo4jQueryTask
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 @Deprecated("Use org.neo4j.connectors.kafka.source.Neo4jConnector instead")

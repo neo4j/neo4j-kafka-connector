@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package org.neo4j.connectors.kafka.sink
 
 import java.util.function.Predicate
@@ -33,8 +35,9 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
-import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicType
+import org.neo4j.connectors.kafka.sink.legacy.DeprecatedNeo4jSinkConfiguration
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.legacy.strategy.TopicType
 import org.neo4j.connectors.kafka.sink.utils.TopicUtils
 import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
@@ -179,7 +182,6 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val DEFAULT_BIND_VALUE_ALIAS = "__value"
     const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
 
-    @Suppress("DEPRECATION")
     @JvmStatic
     val KEY_REPLACEMENTS =
         mapOf(
@@ -188,7 +190,6 @@ class SinkConfiguration(originals: Map<String, *>) :
             DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX to
                 PATTERN_RELATIONSHIP_TOPIC_PREFIX)
 
-    @Suppress("DEPRECATION")
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
       val migratedBase = migrateSettings(oldSettings, false)
       val migrated = HashMap<String, String>(migratedBase.size)

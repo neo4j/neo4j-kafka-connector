@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package org.neo4j.connectors.kafka.source
 
 import java.util.function.Predicate
@@ -41,6 +43,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.source.legacy.DeprecatedNeo4jSourceConfiguration
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
@@ -432,7 +435,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
 
-    @Suppress("DEPRECATION")
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
       val migrated = migrateSettings(oldSettings, true).toMutableMap()
 
