@@ -19,14 +19,17 @@ package org.neo4j.connectors.kafka.sink.strategy
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldMatchInOrder
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
@@ -379,7 +382,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should split changes into transactional boundaries`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
 
     val result =
         handler.handle(
@@ -432,6 +440,157 @@ class CdcSourceIdHandlerTest {
                     q1.seq shouldBe 0
                   })
             })
+  }
+
+  @Test
+  fun `should fail on null 'after' field with create operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
+
+    val nodeChangeEventMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "person1",
+                EntityOperation.CREATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("id" to 1L))),
+                null,
+                null),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(nodeChangeEventMessage))
+    } shouldHaveMessage "create operation requires 'after' field in the event object"
+
+    val relationshipChangeEventMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                null),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(relationshipChangeEventMessage))
+    } shouldHaveMessage "create operation requires 'after' field in the event object"
+  }
+
+  @Test
+  fun `should fail on null 'before' field with update operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
+
+    val nodeChangeEventMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "person1",
+                EntityOperation.UPDATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("id" to 1L))),
+                null,
+                NodeState(
+                    listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe"))),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(nodeChangeEventMessage))
+    } shouldHaveMessage "update operation requires 'before' field in the event object"
+
+    val relationshipChangeEventMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.UPDATE,
+                null,
+                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(relationshipChangeEventMessage))
+    } shouldHaveMessage "update operation requires 'before' field in the event object"
+  }
+
+  @Test
+  fun `should fail on null 'after' field with update operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
+
+    val nodeChangeEventMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "person1",
+                EntityOperation.UPDATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("id" to 1L))),
+                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
+                null),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(nodeChangeEventMessage))
+    } shouldHaveMessage "update operation requires 'after' field in the event object"
+
+    val relationshipChangeEventMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "REL",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+                null),
+            1,
+            0)
+
+    assertThrows<InvalidDataException> {
+      handler.handle(listOf(relationshipChangeEventMessage))
+    } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {

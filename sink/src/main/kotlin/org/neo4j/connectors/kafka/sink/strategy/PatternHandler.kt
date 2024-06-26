@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 import java.time.Instant
 import java.time.ZoneOffset
 import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
@@ -96,17 +97,31 @@ abstract class PatternHandler<T : Pattern>(
           .mapValues { (_, mapping) ->
             if (isExplicit(mapping.from)) {
               val newKey = if (isTombstone) replaceValueWithKey(mapping.from) else mapping.from
-              usedTracker += newKey
-              return@mapValues flattened[newKey]
-            }
-
-            for (prefix in prefixes) {
-              val key = "$prefix.${mapping.from}"
-
-              if (flattened.containsKey(key)) {
-                usedTracker += key
-                return@mapValues flattened[key]
+              if (flattened.containsKey(newKey)) {
+                usedTracker += newKey
+                return@mapValues flattened[newKey]
               }
+              if (mapping.from.startsWith("$bindKeyAs.")) {
+                throw InvalidDataException(
+                    "Key '${mapping.from.replace("$bindKeyAs.", "")}' could not be located in the keys.",
+                )
+              } else {
+                throw InvalidDataException(
+                    "Key '${mapping.from.replace("$bindValueAs.", "")}' could not be located in the values.",
+                )
+              }
+            } else {
+              for (prefix in prefixes) {
+                val key = "$prefix.${mapping.from}"
+
+                if (flattened.containsKey(key)) {
+                  usedTracker += key
+                  return@mapValues flattened[key]
+                }
+              }
+              throw InvalidDataException(
+                  "Key '${mapping.from}' could not be located in the message.",
+              )
             }
           }
 

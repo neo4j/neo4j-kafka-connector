@@ -17,12 +17,15 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.Instant
 import java.time.ZoneOffset
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.cypherdsl.parser.CypherParser
@@ -825,6 +828,78 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "keys" to mapOf<String, Any?>("id" to 3)))))
   }
 
+  @Test
+  fun `should fail when the source node key is not located in the message`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
+        key = """{"rel_id": 1, "end": 1}""",
+        message = "Key 'start' could not be located in the message.")
+  }
+
+  @Test
+  fun `should fail when the relationship key is not located in the message`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
+        key = """{"start": 1, "end": 1}""",
+        message = "Key 'rel_id' could not be located in the message.")
+  }
+
+  @Test
+  fun `should fail when the target node key is not located in the message`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
+        key = """{"start": 1, "rel_id": 1}""",
+        message = "Key 'end' could not be located in the message.")
+  }
+
+  @Test
+  fun `should fail when the explicit source node key is not located in the keys`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
+        key = """{"rel_id": 1, "end": 1}""",
+        message = "Key 'start' could not be located in the keys.")
+  }
+
+  @Test
+  fun `should fail when the explicit relationship key is not located in the keys`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: __key.rel_id}]->(:LabelB{!id: end})",
+        key = """{"start": 1, "end": 1}""",
+        message = "Key 'rel_id' could not be located in the keys.")
+  }
+
+  @Test
+  fun `should fail when the explicit target node key is not located in the keys`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: __key.end})",
+        key = """{"start": 1, "rel_id": 1}""",
+        message = "Key 'end' could not be located in the keys.")
+  }
+
+  @Test
+  fun `should fail when the explicit source node key is not located in the values`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: __value.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
+        value = """{"rel_id": 1, "end": 1}""",
+        message = "Key 'start' could not be located in the values.")
+  }
+
+  @Test
+  fun `should fail when the explicit relationship key is not located in the values`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: __value.rel_id}]->(:LabelB{!id: end})",
+        value = """{"start": 1, "end": 1}""",
+        message = "Key 'rel_id' could not be located in the values.")
+  }
+
+  @Test
+  fun `should fail when the explicit target node key is not located in the values`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: __value.end})",
+        value = """{"start": 1, "rel_id": 1}""",
+        message = "Key 'end' could not be located in the values.")
+  }
+
   private fun assertQueryAndParameters(
       pattern: String,
       keySchema: Schema = Schema.STRING_SCHEMA,
@@ -892,5 +967,30 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 ),
             ),
         )
+  }
+
+  private inline fun <reified T : Throwable> assertThrowsHandler(
+      pattern: String,
+      keySchema: Schema = Schema.STRING_SCHEMA,
+      key: Any? = null,
+      valueSchema: Schema = Schema.STRING_SCHEMA,
+      value: Any? = null,
+      message: String? = null
+  ) {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            pattern,
+            mergeNodeProperties = false,
+            mergeRelationshipProperties = false,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+    val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
+
+    if (message != null) {
+      assertThrows<T> { handler.handle(listOf(sinkMessage)) } shouldHaveMessage message
+    } else {
+      assertThrows<T> { handler.handle(listOf(sinkMessage)) }
+    }
   }
 }

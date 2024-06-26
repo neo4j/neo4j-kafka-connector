@@ -113,7 +113,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report an error with all error headers when headers enabled`(
+  fun `should report an error with all error headers when headers are enabled`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
@@ -162,7 +162,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when cypher strategy with multiple events`(
+  fun `should report failed events with cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session,
@@ -244,7 +244,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when node pattern strategy with multiple events`(
+  fun `should report failed events with node pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session,
@@ -297,9 +297,9 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 3
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "Unable to convert kotlin.Unit to Neo4j Value."
+              "Key 'id' could not be located in the message."
 
           it.value shouldBe message4ToFail.value
         }
@@ -317,7 +317,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when relationship pattern strategy with multiple events`(
+  fun `should report failed events with relationship pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session,
@@ -418,9 +418,9 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 4
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "Unable to convert kotlin.Unit to Neo4j Value."
+              "Key 'itemId' could not be located in the message."
 
           it.value shouldBe message5ToFail.value
         }
@@ -430,7 +430,7 @@ abstract class Neo4jSinkErrorIT {
   @Neo4jSink(
       cud = [CudStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when cud strategy with multiple events`(
+  fun `should report failed events with cud strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session,
@@ -548,7 +548,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when cdc schema strategy with multiple events`(
+  fun `should report failed events with cdc schema strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
@@ -661,7 +661,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should report errors when cdc source id strategy with multiple events`(
+  fun `should report failed events with cdc source id strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
@@ -782,7 +782,7 @@ abstract class Neo4jSinkErrorIT {
       errorTolerance = "none",
       errorDlqTopic = DLQ_TOPIC)
   @Test
-  fun `should report an error when tolerance none with multiple events`(
+  fun `should stop the process and only report first failed event when error tolerance is none`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session,
@@ -798,7 +798,7 @@ abstract class Neo4jSinkErrorIT {
     val message3 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 3, "name": "Mary", "surname": "Doe"}""")
+            value = """{"id": 3, name: "Mary", "surname": "Doe"}""")
 
     producer.publish(message1, message2ToFail, message3)
 
@@ -829,7 +829,7 @@ abstract class Neo4jSinkErrorIT {
       errorDlqTopic = DLQ_TOPIC,
       errorDlqContextHeadersEnable = true)
   @Test
-  fun `should be able to report from different topics with headers`(
+  fun `should report failed events from different topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_3) producer3: ConvertingKafkaProducer,
@@ -885,9 +885,9 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer3.topic
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "Unable to convert kotlin.Unit to Neo4j Value."
+              "Key 'id' could not be located in the message."
 
           it.value shouldBe nodePatternMessageToFail.value
         }
