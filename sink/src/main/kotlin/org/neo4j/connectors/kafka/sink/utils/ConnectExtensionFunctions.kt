@@ -22,7 +22,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverter
-import org.neo4j.connectors.kafka.sink.strategy.legacy.StreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.legacy.strategy.StreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.connectors.kafka.utils.asStreamsMap
 import org.neo4j.driver.Record

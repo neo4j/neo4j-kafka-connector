@@ -26,7 +26,7 @@ import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChang
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SchemaUtils
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SchemaUtils
 import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
 import org.neo4j.driver.Query
 import org.slf4j.Logger
