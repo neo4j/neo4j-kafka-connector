@@ -22,7 +22,7 @@ import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.legacy.flatten
+import org.neo4j.connectors.kafka.sink.legacy.strategy.flatten
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.cypherdsl.core.Cypher
 

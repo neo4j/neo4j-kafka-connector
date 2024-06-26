@@ -21,6 +21,7 @@ import io.kotest.matchers.collections.shouldHaveSingleElement
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.source.legacy.Neo4jQueryTask
 
 class Neo4jConnectorTest {
 

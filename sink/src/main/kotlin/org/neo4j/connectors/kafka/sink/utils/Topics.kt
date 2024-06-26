@@ -18,14 +18,14 @@ package org.neo4j.connectors.kafka.sink.utils
 
 import kotlin.reflect.jvm.javaType
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import org.neo4j.connectors.kafka.sink.strategy.legacy.CUDIngestionStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.NodePatternIngestionStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.RelationshipPatternIngestionStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SchemaIngestionStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategy
-import org.neo4j.connectors.kafka.sink.strategy.legacy.SourceIdIngestionStrategyConfig
-import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicType
-import org.neo4j.connectors.kafka.sink.strategy.legacy.TopicTypeGroup
+import org.neo4j.connectors.kafka.sink.legacy.strategy.CUDIngestionStrategy
+import org.neo4j.connectors.kafka.sink.legacy.strategy.NodePatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.legacy.strategy.RelationshipPatternIngestionStrategy
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SchemaIngestionStrategy
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SourceIdIngestionStrategy
+import org.neo4j.connectors.kafka.sink.legacy.strategy.SourceIdIngestionStrategyConfig
+import org.neo4j.connectors.kafka.sink.legacy.strategy.TopicType
+import org.neo4j.connectors.kafka.sink.legacy.strategy.TopicTypeGroup
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
