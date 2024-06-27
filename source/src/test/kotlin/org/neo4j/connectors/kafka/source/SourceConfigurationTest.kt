@@ -38,6 +38,7 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.driver.TransactionConfig
 
+@Suppress("DEPRECATION")
 class SourceConfigurationTest {
 
   @Test
@@ -166,32 +167,25 @@ class SourceConfigurationTest {
           it shouldHaveMessage
               "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false"
         }
-  }
 
-  @Test
-  fun `valid config without streaming property`() {
-    val config =
-        SourceConfiguration(
-            mapOf(
-                Neo4jConfiguration.URI to "neo4j://localhost",
-                SourceConfiguration.STRATEGY to "QUERY",
-                SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                SourceConfiguration.TOPIC to "my-topic",
-                SourceConfiguration.START_FROM to "EARLIEST",
-                SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
-                SourceConfiguration.QUERY_TIMEOUT to "5m",
-                SourceConfiguration.BATCH_SIZE to "50",
-                SourceConfiguration.ENFORCE_SCHEMA to "true"))
-
-    assertEquals(SourceType.QUERY, config.strategy)
-    assertEquals("MATCH (n) RETURN n", config.query)
-    assertEquals("", config.queryStreamingProperty)
-    assertEquals("my-topic", config.topic)
-    assertEquals(StartFrom.EARLIEST, config.startFrom)
-    assertEquals(1.minutes, config.queryPollingInterval)
-    assertEquals(5.minutes, config.queryTimeout)
-    assertEquals(50, config.batchSize)
-    assertTrue(config.enforceSchema)
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+              mapOf(
+                  Neo4jConfiguration.URI to "neo4j://localhost",
+                  SourceConfiguration.STRATEGY to "QUERY",
+                  SourceConfiguration.QUERY to "MATCH (n) RETURN n",
+                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.START_FROM to "EARLIEST",
+                  SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
+                  SourceConfiguration.QUERY_STREAMING_PROPERTY to "",
+                  SourceConfiguration.QUERY_TIMEOUT to "5m",
+                  SourceConfiguration.BATCH_SIZE to "50",
+                  SourceConfiguration.ENFORCE_SCHEMA to "true"))
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value  for configuration neo4j.query.streaming-property: Must not be blank."
+        }
   }
 
   @Test

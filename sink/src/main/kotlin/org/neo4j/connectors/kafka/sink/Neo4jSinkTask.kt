@@ -57,7 +57,7 @@ class Neo4jSinkTask : SinkTask() {
       val txGroups = handler.handle(messages)
 
       txGroups.forEach { group ->
-        config.session().use { session ->
+        config.driver.session(config.sessionConfig()).use { session ->
           session.writeTransaction(
               { tx -> group.forEach { tx.run(it.query).consume() } },
               config.txConfig(),

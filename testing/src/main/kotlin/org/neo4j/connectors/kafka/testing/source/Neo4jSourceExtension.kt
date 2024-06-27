@@ -153,6 +153,7 @@ internal class Neo4jSourceExtension(
             topic = topicRegistry.resolveTopic(sourceAnnotation.topic),
             streamingProperty = sourceAnnotation.streamingProperty,
             startFrom = sourceAnnotation.startFrom,
+            startFromValue = sourceAnnotation.startFromValue,
             query = sourceAnnotation.query,
             strategy = sourceAnnotation.strategy,
             keyConverter = keyValueConverterResolver.resolveKeyConverter(context),

@@ -21,7 +21,6 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.source.legacy.Neo4jQueryTask
 
 class Neo4jConnector : SourceConnector() {
   private lateinit var props: Map<String, String>
