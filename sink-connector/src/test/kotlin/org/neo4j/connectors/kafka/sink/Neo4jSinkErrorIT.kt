@@ -637,7 +637,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "update operation requires 'before' field in the event object"
 
@@ -647,7 +647,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "update operation requires 'before' field in the event object"
 
@@ -757,7 +757,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "update operation requires 'before' field in the event object"
 
@@ -767,7 +767,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 4
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "update operation requires 'before' field in the event object"
 
