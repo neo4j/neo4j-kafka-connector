@@ -128,6 +128,24 @@ data class ConvertingKafkaProducer(
         headers = Headers.from(event).associate { it.key() to it.value() })
   }
 
+  fun publish(vararg events: ChangeEvent) {
+    val kafkaMessages = mutableListOf<KafkaMessage>()
+
+    events.forEach {
+      val connectValue = it.toConnectValue()
+      kafkaMessages.add(
+          KafkaMessage(
+              keySchema = connectValue.schema(),
+              key = connectValue.value(),
+              valueSchema = connectValue.schema(),
+              value = connectValue.value(),
+              timestamp = it.metadata.txCommitTime.toInstant(),
+              headers = Headers.from(it).associate { header -> header.key() to header.value() }))
+    }
+
+    publish(*kafkaMessages.toTypedArray())
+  }
+
   fun publish(event: StreamsTransactionEvent) {
     publish(valueSchema = Schema.STRING_SCHEMA, value = JSONUtils.writeValueAsString(event))
   }

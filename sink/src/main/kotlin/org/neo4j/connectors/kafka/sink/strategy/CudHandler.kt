@@ -23,14 +23,18 @@ import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.cud.Operation
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class CudHandler(val topic: String, private val renderer: Renderer, private val batchSize: Int) :
     SinkStrategyHandler {
+
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   override fun strategy() = SinkStrategy.CUD
+
+  data class MessageToQuery(val message: SinkMessage, val query: Query)
 
   @Suppress("UNCHECKED_CAST")
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
@@ -44,10 +48,10 @@ class CudHandler(val topic: String, private val renderer: Renderer, private val 
                 else -> throw ConnectException("Message value must be convertible to a Map.")
               }
           val cud = Operation.from(value)
-          cud.toQuery(renderer)
+          MessageToQuery(it, cud.toQuery(renderer))
         }
         .chunked(batchSize)
-        .map { it.map { q -> ChangeQuery(null, null, q) } }
+        .map { it.map { data -> ChangeQuery(null, null, listOf(data.message), data.query) } }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }

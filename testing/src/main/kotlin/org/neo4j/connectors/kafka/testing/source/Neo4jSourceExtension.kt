@@ -16,11 +16,9 @@
  */
 package org.neo4j.connectors.kafka.testing.source
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.KProperty1
-import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -37,6 +35,7 @@ import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.enableCdc
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
+import org.neo4j.connectors.kafka.testing.kafka.ConsumerResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
@@ -52,8 +51,9 @@ internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<*, *> =
-        ::getSubscribedConsumer,
+    consumerFactory: (Properties, String) -> KafkaConsumer<*, *> = { properties, topic ->
+      ConsumerResolver.getSubscribedConsumer(properties, topic)
+    },
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
@@ -108,6 +108,16 @@ internal class Neo4jSourceExtension(
   private val topicRegistry = TopicRegistry()
 
   private val keyValueConverterResolver = KeyValueConverterResolver()
+
+  private val consumerResolver =
+      ConsumerResolver(
+          keyValueConverterResolver,
+          topicRegistry,
+          brokerExternalHostProvider = { brokerExternalHost.resolve(sourceAnnotation) },
+          schemaControlRegistryExternalUriProvider = {
+            schemaControlRegistryExternalUri.resolve(sourceAnnotation)
+          },
+          consumerFactory)
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
@@ -171,43 +181,6 @@ internal class Neo4jSourceExtension(
     }
   }
 
-  private fun resolveConsumer(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
-  ): KafkaConsumer<*, *> {
-    val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
-    val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
-    val properties = Properties()
-    properties.setProperty(
-        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHost.resolve(sourceAnnotation),
-    )
-    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
-    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
-    if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
-      properties.setProperty(
-          KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-          schemaControlRegistryExternalUri.resolve(sourceAnnotation),
-      )
-    }
-    properties.setProperty(
-        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        keyConverter.deserializerClass.name,
-    )
-    properties.setProperty(
-        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-        valueConverter.deserializerClass.name,
-    )
-    properties.setProperty(
-        ConsumerConfig.GROUP_ID_CONFIG,
-        // note: ExtensionContext#getUniqueId() returns null in the CLI
-        "${topic}@${extensionContext?.testClass ?: ""}#${extensionContext?.displayName}",
-    )
-
-    properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, consumerAnnotation.offset)
-    return consumerFactory(properties, topic)
-  }
-
   private fun resolveSession(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
@@ -250,11 +223,7 @@ internal class Neo4jSourceExtension(
       parameterContext: ParameterContext?,
       context: ExtensionContext?
   ): ConvertingKafkaConsumer {
-    val kafkaConsumer = resolveConsumer(parameterContext, context)
-    return ConvertingKafkaConsumer(
-        keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
-        valueConverter = keyValueConverterResolver.resolveValueConverter(context),
-        kafkaConsumer = kafkaConsumer)
+    return consumerResolver.resolveGenericConsumer(parameterContext, context)
   }
 
   private fun CdcSource.paramAsMap(
@@ -291,14 +260,6 @@ internal class Neo4jSourceExtension(
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
         .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
-  }
-
-  companion object {
-    private fun getSubscribedConsumer(properties: Properties, topic: String): KafkaConsumer<*, *> {
-      val consumer = KafkaConsumer<Any, Any>(properties)
-      consumer.subscribe(listOf(topic))
-      return consumer
-    }
   }
 
   override fun supportsParameter(

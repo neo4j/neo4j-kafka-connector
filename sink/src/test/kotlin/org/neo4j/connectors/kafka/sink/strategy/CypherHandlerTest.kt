@@ -45,12 +45,14 @@ class CypherHandlerTest : HandlerTest() {
             "",
             true)
 
-    handler.handle(listOf(newMessage(Schema.STRING_SCHEMA, "{}"))) shouldBe
+    val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}")
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
@@ -79,12 +81,14 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             true)
 
-    handler.handle(listOf(newMessage(Schema.STRING_SCHEMA, "{}"))) shouldBe
+    val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}")
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __value}",
                         mapOf(
@@ -113,13 +117,14 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             true)
 
-    handler.handle(
-        listOf(newMessage(Schema.STRING_SCHEMA, "{}", Schema.INT64_SCHEMA, 32L))) shouldBe
+    val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}", Schema.INT64_SCHEMA, 32L)
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __key}",
                         mapOf(
@@ -148,19 +153,20 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             true)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                "{}",
-                Schema.INT64_SCHEMA,
-                32L,
-                listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24)))))) shouldBe
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            "{}",
+            Schema.INT64_SCHEMA,
+            32L,
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
                         mapOf(
@@ -189,19 +195,21 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             false)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                "{}",
-                Schema.INT64_SCHEMA,
-                32L,
-                listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24)))))) shouldBe
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            "{}",
+            Schema.INT64_SCHEMA,
+            32L,
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
                         mapOf(
@@ -230,19 +238,20 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             false)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                "{}",
-                Schema.INT64_SCHEMA,
-                32L,
-                listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24)))))) shouldBe
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            "{}",
+            Schema.INT64_SCHEMA,
+            32L,
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
                         mapOf(
@@ -288,7 +297,8 @@ class CypherHandlerTest : HandlerTest() {
             "__value",
             false)
 
-    val result = handler.handle((1..13).map { newMessage(Schema.INT64_SCHEMA, it.toLong()) })
+    val messages = (1..13).map { newMessage(Schema.INT64_SCHEMA, it.toLong()) }
+    val result = handler.handle(messages)
 
     result shouldBe
         listOf(
@@ -296,6 +306,7 @@ class CypherHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    messages.slice(0..4),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
@@ -312,6 +323,7 @@ class CypherHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    messages.slice(5..9),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
@@ -328,6 +340,7 @@ class CypherHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    messages.slice(10..12),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
                         mapOf(
@@ -347,14 +360,14 @@ class CypherHandlerTest : HandlerTest() {
     val handler =
         CypherHandler("my-topic", "CREATE (n:Node) SET n = event", Renderer.getDefaultRenderer(), 1)
 
-    handler.handle(
-        listOf(
-            newMessage(Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}"))) shouldBe
+    val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}")
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
@@ -378,18 +391,15 @@ class CypherHandlerTest : HandlerTest() {
     val handler =
         CypherHandler("my-topic", "CREATE (n:Node) SET n = event", Renderer.getDefaultRenderer(), 1)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                null,
-                null,
-                Schema.STRING_SCHEMA,
-                "{\"x\": 123, \"y\": [1,2,3], \"z\": true}"))) shouldBe
+    val sinkMessage =
+        newMessage(null, null, Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}")
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
@@ -410,25 +420,25 @@ class CypherHandlerTest : HandlerTest() {
     val handler =
         CypherHandler("my-topic", "CREATE (n:Node) SET n = event", Renderer.getDefaultRenderer(), 1)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                null,
-                null,
-                Schema.INT64_SCHEMA,
-                32L,
-                listOf(
-                    ConnectHeader("number", SchemaAndValue(Schema.INT32_SCHEMA, 24)),
-                    ConnectHeader(
-                        "test",
-                        SchemaAndValue(
-                            Schema.STRING_SCHEMA,
-                            "{\"x\": 123, \"y\": [1,2,3], \"z\": true}")))))) shouldBe
+    val sinkMessage =
+        newMessage(
+            null,
+            null,
+            Schema.INT64_SCHEMA,
+            32L,
+            listOf(
+                ConnectHeader("number", SchemaAndValue(Schema.INT32_SCHEMA, 24)),
+                ConnectHeader(
+                    "test",
+                    SchemaAndValue(
+                        Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}"))))
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(
@@ -455,19 +465,20 @@ class CypherHandlerTest : HandlerTest() {
     val handler =
         CypherHandler("my-topic", "CREATE (n:Node) SET n = event", Renderer.getDefaultRenderer(), 1)
 
-    handler.handle(
-        listOf(
-            newMessage(
-                Schema.STRING_SCHEMA,
-                "{]",
-                Schema.BYTES_SCHEMA,
-                "{a: b}".toByteArray(),
-                listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b")))))) shouldBe
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            "{]",
+            Schema.BYTES_SCHEMA,
+            "{a: b}".toByteArray(),
+            listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b"))))
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
                         mapOf(

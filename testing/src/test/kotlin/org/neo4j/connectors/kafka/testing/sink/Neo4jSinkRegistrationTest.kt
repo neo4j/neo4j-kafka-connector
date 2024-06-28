@@ -36,6 +36,7 @@ class Neo4jSinkRegistrationTest {
             "errors.retry.timeout" to -1L,
             "errors.retry.delay.max.ms" to 1000L,
             "errors.tolerance" to "all",
+            "errors.deadletterqueue.context.headers.enable" to false,
             "errors.log.enable" to true,
             "errors.log.include.messages" to true,
             "neo4j.uri" to "neo4j://example.com",
@@ -53,6 +54,49 @@ class Neo4jSinkRegistrationTest {
             schemaControlRegistryUri = "http://example.com",
             keyConverter = KafkaConverter.AVRO,
             valueConverter = KafkaConverter.AVRO,
+            topics = listOf("my-topic"),
+            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"))
+
+    val payload = registration.getPayload()
+
+    assertTrue((payload["name"] as String).startsWith("Neo4jSinkConnector"))
+    assertEquals(expectedConfig, payload["config"])
+  }
+
+  @Test
+  fun `creates payload with dlq topic`() {
+    val expectedConfig =
+        mapOf(
+            "topics" to "my-topic",
+            "connector.class" to "org.neo4j.connectors.kafka.sink.Neo4jConnector",
+            "key.converter" to "io.confluent.connect.avro.AvroConverter",
+            "key.converter.schema.registry.url" to "http://example.com",
+            "value.converter" to "io.confluent.connect.avro.AvroConverter",
+            "value.converter.schema.registry.url" to "http://example.com",
+            "errors.retry.timeout" to -1L,
+            "errors.retry.delay.max.ms" to 1000L,
+            "errors.tolerance" to "all",
+            "errors.deadletterqueue.topic.name" to "dlq-topic",
+            "errors.deadletterqueue.topic.replication.factor" to 1,
+            "errors.deadletterqueue.context.headers.enable" to false,
+            "errors.log.enable" to true,
+            "errors.log.include.messages" to true,
+            "neo4j.uri" to "neo4j://example.com",
+            "neo4j.database" to "database",
+            "neo4j.authentication.type" to "BASIC",
+            "neo4j.authentication.basic.username" to "user",
+            "neo4j.authentication.basic.password" to "password",
+            "neo4j.cypher.topic.my-topic" to "MERGE ()")
+    val registration =
+        Neo4jSinkRegistration(
+            neo4jUri = "neo4j://example.com",
+            neo4jUser = "user",
+            neo4jPassword = "password",
+            neo4jDatabase = "database",
+            schemaControlRegistryUri = "http://example.com",
+            keyConverter = KafkaConverter.AVRO,
+            valueConverter = KafkaConverter.AVRO,
+            errorDlqTopic = "dlq-topic",
             topics = listOf("my-topic"),
             strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"))
 

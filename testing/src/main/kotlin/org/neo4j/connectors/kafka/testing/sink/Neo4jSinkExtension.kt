@@ -16,13 +16,8 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
-import java.net.URI
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerConfig
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -37,7 +32,10 @@ import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
+import org.neo4j.connectors.kafka.testing.kafka.ConsumerResolver
+import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
+import org.neo4j.connectors.kafka.testing.kafka.ProducerResolver
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
@@ -61,6 +59,7 @@ internal class Neo4jSinkExtension(
           mapOf(
               Session::class.java to ::resolveSession,
               ConvertingKafkaProducer::class.java to ::resolveGenericProducer,
+              ConvertingKafkaConsumer::class.java to ::resolveGenericConsumer,
           ))
 
   private lateinit var sinkAnnotation: Neo4jSink
@@ -93,6 +92,10 @@ internal class Neo4jSinkExtension(
 
   private val neo4jPassword = AnnotationValueResolver(Neo4jSink::neo4jPassword, envAccessor)
 
+  private val errorTolerance = AnnotationValueResolver(Neo4jSink::errorTolerance, envAccessor)
+
+  private val errorDlqTopic = AnnotationValueResolver(Neo4jSink::errorDlqTopic, envAccessor)
+
   private val mandatorySettings =
       listOf(
           kafkaConnectExternalUri,
@@ -105,6 +108,29 @@ internal class Neo4jSinkExtension(
   private val topicRegistry = TopicRegistry()
 
   private val keyValueConverterResolver = KeyValueConverterResolver()
+
+  private val producerResolver =
+      ProducerResolver(
+          keyValueConverterResolver,
+          topicRegistry,
+          brokerExternalHostProvider = { brokerExternalHost.resolve(sinkAnnotation) },
+          schemaControlRegistryExternalUriProvider = {
+            schemaControlRegistryExternalUri.resolve(sinkAnnotation)
+          },
+          schemaControlKeyCompatibilityProvider = { sinkAnnotation.schemaControlKeyCompatibility },
+          schemaControlValueCompatibilityProvider = {
+            sinkAnnotation.schemaControlValueCompatibility
+          })
+
+  private val consumerResolver =
+      ConsumerResolver(
+          keyValueConverterResolver,
+          topicRegistry,
+          brokerExternalHostProvider = { brokerExternalHost.resolve(sinkAnnotation) },
+          schemaControlRegistryExternalUriProvider = {
+            schemaControlRegistryExternalUri.resolve(sinkAnnotation)
+          },
+          consumerFactory = ConsumerResolver::getSubscribedConsumer)
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
@@ -219,7 +245,10 @@ internal class Neo4jSinkExtension(
             keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
             valueConverter = keyValueConverterResolver.resolveValueConverter(context),
             topics = topics.distinct(),
-            strategies = strategies)
+            strategies = strategies,
+            errorTolerance = errorTolerance.resolve(sinkAnnotation),
+            errorDlqTopic = topicRegistry.resolveTopic(errorDlqTopic.resolve(sinkAnnotation)),
+            enableErrorHeaders = sinkAnnotation.enableErrorHeaders)
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }
@@ -294,49 +323,17 @@ internal class Neo4jSinkExtension(
     }
   }
 
-  private fun resolveProducer(
-      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
-  ): KafkaProducer<Any, Any> {
-    val properties = Properties()
-    properties.setProperty(
-        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHost.resolve(sinkAnnotation),
-    )
-    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
-    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
-    if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
-      properties.setProperty(
-          KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-          schemaControlRegistryExternalUri.resolve(sinkAnnotation),
-      )
-    }
-    properties.setProperty(
-        ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-        keyConverter.serializerClass.name,
-    )
-    properties.setProperty(
-        ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-        valueConverter.serializerClass.name,
-    )
-    properties.setProperty(ProducerConfig.TRANSACTIONAL_ID_CONFIG, UUID.randomUUID().toString())
-    val producer = KafkaProducer<Any, Any>(properties)
-    producer.initTransactions()
-    return producer
-  }
-
   private fun resolveGenericProducer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
   ): Any {
-    val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
-    return ConvertingKafkaProducer(
-        schemaRegistryURI = URI(schemaControlRegistryExternalUri.resolve(sinkAnnotation)),
-        keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext),
-        keyCompatibilityMode = sinkAnnotation.schemaControlKeyCompatibility,
-        valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
-        valueCompatibilityMode = sinkAnnotation.schemaControlValueCompatibility,
-        kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
+    return producerResolver.resolveGenericProducer(parameterContext, extensionContext)
+  }
+
+  private fun resolveGenericConsumer(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    return consumerResolver.resolveGenericConsumer(parameterContext, extensionContext)
   }
 }

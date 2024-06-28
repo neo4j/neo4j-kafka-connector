@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -24,8 +25,10 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.cypherdsl.parser.CypherParser
@@ -633,6 +636,42 @@ class NodePatternHandlerTest : HandlerTest() {
                     ))))
   }
 
+  @Test
+  fun `should fail when the key is not located in the message`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:Person{!id, !secondary_id, name, surname})",
+        key = """{}""",
+        value = """{"name": "John", "surname": "Doe"}""",
+        message = "Key 'id' could not be located in the message.")
+  }
+
+  @Test
+  fun `should fail when explicit key is not located in the keys`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:Person{!id: __key.old_id, name, surname})",
+        key = """{}""",
+        value = """{"name": "John", "surname": "Doe"}""",
+        message = "Key 'old_id' could not be located in the keys.")
+  }
+
+  @Test
+  fun `should fail when explicit key is not located in the values`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:Person{!id: __value.old_id, name, surname})",
+        key = """{}""",
+        value = """{"name": "John", "surname": "Doe"}""",
+        message = "Key 'old_id' could not be located in the values.")
+  }
+
+  @Test
+  fun `should fail when the key is not located in the keys with composite key pattern`() {
+    assertThrowsHandler<InvalidDataException>(
+        pattern = "(:Person{!id, !second_id, name, surname})",
+        key = """{"id": 1}""",
+        value = """{"name": "John", "surname": "Doe"}""",
+        message = "Key 'second_id' could not be located in the message.")
+  }
+
   private fun assertQueryAndParameters(
       pattern: String,
       keySchema: Schema = Schema.STRING_SCHEMA,
@@ -642,9 +681,10 @@ class NodePatternHandlerTest : HandlerTest() {
       expected: List<List<Any>> = emptyList()
   ) {
     val handler = NodePatternHandler("my-topic", pattern, false, Renderer.getDefaultRenderer(), 1)
+    val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
     handler.handle(
         listOf(
-            newMessage(valueSchema, value, keySchema = keySchema, key = key),
+            sinkMessage,
         ),
     ) shouldBe
         listOf(
@@ -652,6 +692,7 @@ class NodePatternHandlerTest : HandlerTest() {
                 ChangeQuery(
                     null,
                     null,
+                    listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
                                 """
@@ -684,5 +725,23 @@ class NodePatternHandlerTest : HandlerTest() {
                 ),
             ),
         )
+  }
+
+  private inline fun <reified T : Throwable> assertThrowsHandler(
+      pattern: String,
+      keySchema: Schema = Schema.STRING_SCHEMA,
+      key: Any? = null,
+      valueSchema: Schema = Schema.STRING_SCHEMA,
+      value: Any? = null,
+      message: String? = null
+  ) {
+    val handler = NodePatternHandler("my-topic", pattern, false, Renderer.getDefaultRenderer(), 1)
+    val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
+
+    if (message != null) {
+      assertThrows<T> { handler.handle(listOf(sinkMessage)) } shouldHaveMessage message
+    } else {
+      assertThrows<T> { handler.handle(listOf(sinkMessage)) }
+    }
   }
 }

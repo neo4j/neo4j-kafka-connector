@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
@@ -35,6 +36,10 @@ class CdcSourceIdHandler(
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID
 
   override fun transformCreate(event: NodeEvent): Query {
+    if (event.after == null) {
+      throw InvalidDataException("create operation requires 'after' field in the event object")
+    }
+
     val node = buildNode(event.elementId, "n")
     val stmt =
         Cypher.merge(node)
@@ -52,6 +57,13 @@ class CdcSourceIdHandler(
   }
 
   override fun transformUpdate(event: NodeEvent): Query {
+    if (event.before == null) {
+      throw InvalidDataException("update operation requires 'before' field in the event object")
+    }
+    if (event.after == null) {
+      throw InvalidDataException("update operation requires 'after' field in the event object")
+    }
+
     val node = buildNode(event.elementId, "n")
     val stmt =
         Cypher.merge(node)
@@ -85,6 +97,10 @@ class CdcSourceIdHandler(
   }
 
   override fun transformCreate(event: RelationshipEvent): Query {
+    if (event.after == null) {
+      throw InvalidDataException("create operation requires 'after' field in the event object")
+    }
+
     val (start, end, rel) = buildRelationship(event, "r")
     val stmt =
         Cypher.merge(start)
@@ -97,6 +113,13 @@ class CdcSourceIdHandler(
   }
 
   override fun transformUpdate(event: RelationshipEvent): Query {
+    if (event.before == null) {
+      throw InvalidDataException("update operation requires 'before' field in the event object")
+    }
+    if (event.after == null) {
+      throw InvalidDataException("update operation requires 'after' field in the event object")
+    }
+
     val (start, end, rel) = buildRelationship(event, "r")
     val stmt =
         Cypher.merge(start)

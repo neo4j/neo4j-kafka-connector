@@ -31,6 +31,8 @@ internal class Neo4jSinkRegistration(
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "all",
+    errorDlqTopic: String = "",
+    enableErrorHeaders: Boolean = false,
     enableErrorLog: Boolean = true,
     includeMessagesInErrorLog: Boolean = true,
     schemaControlRegistryUri: String,
@@ -42,6 +44,10 @@ internal class Neo4jSinkRegistration(
 
   private val name: String = randomizedName("Neo4jSinkConnector")
   private val payload: Map<String, Any>
+
+  companion object {
+    private const val DLQ_TOPIC_REPLICATION_FACTOR = 1
+  }
 
   init {
     payload =
@@ -56,6 +62,13 @@ internal class Neo4jSinkRegistration(
                       put("errors.retry.timeout", retryTimeout.inWholeMilliseconds)
                       put("errors.retry.delay.max.ms", retryMaxDelay.inWholeMilliseconds)
                       put("errors.tolerance", errorTolerance)
+                      if (errorDlqTopic.trim().isNotEmpty()) {
+                        put("errors.deadletterqueue.topic.name", errorDlqTopic)
+                        put(
+                            "errors.deadletterqueue.topic.replication.factor",
+                            DLQ_TOPIC_REPLICATION_FACTOR)
+                      }
+                      put("errors.deadletterqueue.context.headers.enable", enableErrorHeaders)
                       put("errors.log.enable", enableErrorLog)
                       put("errors.log.include.messages", includeMessagesInErrorLog)
                       put("neo4j.uri", neo4jUri)

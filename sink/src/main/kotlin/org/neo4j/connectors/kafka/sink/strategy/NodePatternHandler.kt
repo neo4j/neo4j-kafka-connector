@@ -65,6 +65,8 @@ class NodePatternHandler(
 
   override fun strategy() = SinkStrategy.NODE_PATTERN
 
+  data class MessageToEventList(val message: SinkMessage, val eventList: List<Any>)
+
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return messages
         .asSequence()
@@ -87,10 +89,17 @@ class NodePatternHandler(
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
-          mapped
+          MessageToEventList(it, mapped)
         }
         .chunked(batchSize)
-        .map { listOf(ChangeQuery(null, null, Query(query, mapOf(EVENTS to it)))) }
+        .map {
+          listOf(
+              ChangeQuery(
+                  null,
+                  null,
+                  it.map { data -> data.message },
+                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList }))))
+        }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
   }
