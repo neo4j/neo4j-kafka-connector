@@ -51,7 +51,7 @@ abstract class Neo4jSourceQueryIT {
   fun `reads latest changes from Neo4j source starting from EARLIEST`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
-  ) {
+  ) = runTest {
     session.run("CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: 0})").consume()
     session
         .run(
