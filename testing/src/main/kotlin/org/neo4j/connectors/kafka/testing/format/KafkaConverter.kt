@@ -89,7 +89,7 @@ class KeyValueConverterResolver {
 
   fun resolveValueConverter(context: ExtensionContext?): KafkaConverter {
     initializeKeyValueConverters(context)
-    return keyConverter
+    return valueConverter
   }
 
   private fun initializeKeyValueConverters(context: ExtensionContext?) {
