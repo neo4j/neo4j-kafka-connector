@@ -23,7 +23,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.ConfigException
@@ -141,46 +140,9 @@ class SourceConfigurationTest {
                   SourceConfiguration.TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
-                  SourceConfiguration.QUERY_TIMEOUT to "5m",
-                  SourceConfiguration.BATCH_SIZE to "50",
-                  SourceConfiguration.ENFORCE_SCHEMA to "disabled"))
-        }
-        .also {
-          it shouldHaveMessage
-              "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false"
-        }
-
-    assertFailsWith(ConfigException::class) {
-          SourceConfiguration(
-              mapOf(
-                  Neo4jConfiguration.URI to "neo4j://localhost",
-                  SourceConfiguration.STRATEGY to "QUERY",
-                  SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.START_FROM to "USER_PROVIDED",
-                  SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
-                  SourceConfiguration.QUERY_TIMEOUT to "5m",
-                  SourceConfiguration.BATCH_SIZE to "50",
-                  SourceConfiguration.ENFORCE_SCHEMA to "disabled"))
-        }
-        .also {
-          it shouldHaveMessage
-              "Invalid value disabled for configuration neo4j.enforce-schema: Expected value to be either true or false"
-        }
-
-    assertFailsWith(ConfigException::class) {
-          SourceConfiguration(
-              mapOf(
-                  Neo4jConfiguration.URI to "neo4j://localhost",
-                  SourceConfiguration.STRATEGY to "QUERY",
-                  SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
-                  SourceConfiguration.START_FROM to "EARLIEST",
-                  SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_STREAMING_PROPERTY to "",
                   SourceConfiguration.QUERY_TIMEOUT to "5m",
-                  SourceConfiguration.BATCH_SIZE to "50",
-                  SourceConfiguration.ENFORCE_SCHEMA to "true"))
+                  SourceConfiguration.BATCH_SIZE to "50"))
         }
         .also {
           it shouldHaveMessage
@@ -201,8 +163,7 @@ class SourceConfigurationTest {
                 SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                 SourceConfiguration.QUERY_TIMEOUT to "5m",
-                SourceConfiguration.BATCH_SIZE to "50",
-                SourceConfiguration.ENFORCE_SCHEMA to "true"))
+                SourceConfiguration.BATCH_SIZE to "50"))
 
     assertEquals(SourceType.QUERY, config.strategy)
     assertEquals("MATCH (n) RETURN n", config.query)
@@ -212,7 +173,6 @@ class SourceConfigurationTest {
     assertEquals(1.minutes, config.queryPollingInterval)
     assertEquals(5.minutes, config.queryTimeout)
     assertEquals(50, config.batchSize)
-    assertTrue(config.enforceSchema)
   }
 
   @Test
@@ -224,7 +184,6 @@ class SourceConfigurationTest {
                 SourceConfiguration.STRATEGY to "CDC",
                 SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.BATCH_SIZE to "10000",
-                SourceConfiguration.ENFORCE_SCHEMA to "true",
                 SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                 "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()"))
 
@@ -232,7 +191,6 @@ class SourceConfigurationTest {
     config.startFrom shouldBe StartFrom.EARLIEST
     config.batchSize shouldBe 10000
     config.cdcPollingInterval shouldBe 5.seconds
-    config.enforceSchema shouldBe true
     config.cdcSelectorsToTopics shouldContainExactly
         mapOf(
             NodeSelector(null, emptySet(), emptySet(), emptyMap(), emptyMap()) to listOf("topic-1"),
@@ -255,7 +213,6 @@ class SourceConfigurationTest {
                 SourceConfiguration.STRATEGY to "CDC",
                 SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.BATCH_SIZE to "10000",
-                SourceConfiguration.ENFORCE_SCHEMA to "true",
                 SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                 "neo4j.cdc.topic.people.patterns" to "(:Person)",
                 "neo4j.cdc.topic.company.patterns" to "(:Company)",
@@ -274,7 +231,6 @@ class SourceConfigurationTest {
     config.startFrom shouldBe StartFrom.EARLIEST
     config.batchSize shouldBe 10000
     config.cdcPollingInterval shouldBe 5.seconds
-    config.enforceSchema shouldBe true
     config.cdcSelectorsToTopics shouldContainAll
         mapOf(
             NodeSelector(null, emptySet(), setOf("Person"), emptyMap(), emptyMap()) to
@@ -313,7 +269,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns" to "(:Person)",
                       "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)",
@@ -336,7 +291,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns" to "(:Person)",
                       "neo4j.cdc.topic.people.patterns.0.operation" to "create",
@@ -359,7 +313,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns" to "(:Person)",
                       "neo4j.cdc.topic.people.patterns.0.changesTo" to "name",
@@ -382,7 +335,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns" to "(:Person)",
                       "neo4j.cdc.topic.people.patterns.0.metadata.authenticatedUser" to "neo4j",
@@ -405,7 +357,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)-[]-(),()",
                       "neo4j.cdc.topic.people.patterns.0.operation" to "create",
@@ -428,7 +379,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.1.pattern" to "(:User)",
                   ))
@@ -450,7 +400,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.1.changesTo" to "name",
                   ))
@@ -472,7 +421,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.1.operation" to "create",
                   ))
@@ -494,7 +442,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.1.metadata.authenticatedUser" to "neo4j",
                   ))
@@ -516,7 +463,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.people.patterns.0.pattern" to "(:User)",
                       "neo4j.cdc.topic.people.patterns.0.operation" to "wurstsalat",
@@ -671,7 +617,6 @@ class SourceConfigurationTest {
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
-                      SourceConfiguration.ENFORCE_SCHEMA to "true",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
                       "neo4j.cdc.topic.topic-1.key-strategy" to "INVALID"))

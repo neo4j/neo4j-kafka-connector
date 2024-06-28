@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("DEPRECATION")
-
 package org.neo4j.connectors.kafka.source
 
 import java.util.function.Predicate
@@ -34,7 +32,6 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.cdc.client.selector.Selector
 import org.neo4j.connectors.kafka.configuration.ConnectorType
-import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
@@ -43,7 +40,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.source.legacy.DeprecatedNeo4jSourceConfiguration
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
@@ -68,11 +64,6 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   val ignoreStoredOffset
     get(): Boolean = getBoolean(IGNORE_STORED_OFFSET)
-
-  @Suppress("DeprecatedCallableAddReplaceWith")
-  @Deprecated("No longer supported with newer versions of source connectors")
-  val enforceSchema
-    get(): Boolean = getBoolean(ENFORCE_SCHEMA)
 
   val strategy
     get(): SourceType = SourceType.valueOf(getString(STRATEGY))
@@ -410,7 +401,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_POLL_DURATION = "neo4j.query.poll-duration"
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
     const val TOPIC = "topic"
-    const val ENFORCE_SCHEMA = "neo4j.enforce-schema"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
     private const val GROUP_NAME_TOPIC = "topic"
@@ -442,43 +432,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
     private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
-
-    fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migrated = migrateSettings(oldSettings, true).toMutableMap()
-
-      oldSettings.forEach {
-        when (it.key) {
-          DeprecatedNeo4jSourceConfiguration.STREAMING_FROM ->
-              migrated[START_FROM] =
-                  when (DeprecatedNeo4jSourceConfiguration.StreamingFrom.valueOf(
-                      it.value.toString())) {
-                    DeprecatedNeo4jSourceConfiguration.StreamingFrom.ALL -> StartFrom.EARLIEST.name
-                    DeprecatedNeo4jSourceConfiguration.StreamingFrom.NOW -> StartFrom.NOW.name
-                    DeprecatedNeo4jSourceConfiguration.StreamingFrom.LAST_COMMITTED ->
-                        StartFrom.NOW.name
-                  }
-          DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE -> migrated[STRATEGY] = it.value.toString()
-          DeprecatedNeo4jSourceConfiguration.SOURCE_TYPE_QUERY ->
-              migrated[QUERY] = it.value.toString()
-          DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY ->
-              migrated[QUERY_STREAMING_PROPERTY] = it.value.toString()
-          DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL ->
-              migrated[QUERY_POLL_DURATION] = "${it.value}ms"
-          DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA ->
-              migrated[ENFORCE_SCHEMA] = it.value.toString()
-          DeprecatedNeo4jSourceConfiguration.TOPIC -> migrated[TOPIC] = it.value.toString()
-          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value.toString()
-          DeprecatedNeo4jConfiguration.BATCH_TIMEOUT_MSECS ->
-              migrated[QUERY_TIMEOUT] = "${it.value}ms"
-          else ->
-              if (!migrated.containsKey(it.key)) {
-                migrated[it.key] = it.value.toString()
-              }
-        }
-      }
-
-      return migrated
-    }
 
     fun validate(config: Config, originals: Map<String, String>) {
       validate(config)
@@ -633,13 +586,6 @@ class SourceConfiguration(originals: Map<*, *>) :
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                   defaultValue = DEFAULT_CDC_POLL_DURATION.toSimpleString()
-                })
-            .define(
-                ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.LOW
-                  defaultValue = "false"
-                  recommender = Recommenders.hidden()
-                  validator = ConfigDef.NonNullValidator()
                 })
   }
 }
