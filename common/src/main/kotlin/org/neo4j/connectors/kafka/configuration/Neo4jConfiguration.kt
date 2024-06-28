@@ -39,7 +39,6 @@ import org.neo4j.driver.Config.TrustStrategy
 import org.neo4j.driver.Config.TrustStrategy.Strategy
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.net.ServerAddress
@@ -188,7 +187,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     GraphDatabase.driver(mainUri, authenticationToken, config.build())
   }
 
-  fun session(vararg bookmarks: Bookmark): Session {
+  fun sessionConfig(vararg bookmarks: Bookmark): SessionConfig {
     val config = SessionConfig.builder()
 
     if (database.isNotBlank()) {
@@ -205,7 +204,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
           ConnectorType.SINK -> AccessMode.WRITE
         })
 
-    return driver.session(config.build())
+    return config.build()
   }
 
   open fun txConfig(): TransactionConfig =

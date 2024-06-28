@@ -53,7 +53,7 @@ class DeprecatedNeo4jSinkService(private val config: SinkConfiguration) :
 
   override fun write(query: String, events: Collection<Any>) {
     val data = mapOf<String, Any>("events" to events)
-    config.session(*bookmarks.toTypedArray()).use { session ->
+    config.driver.session(config.sessionConfig(*bookmarks.toTypedArray())).use { session ->
       try {
         runBlocking {
           retryForException(

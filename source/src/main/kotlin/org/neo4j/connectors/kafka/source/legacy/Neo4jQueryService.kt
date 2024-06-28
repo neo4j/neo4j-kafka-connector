@@ -42,6 +42,7 @@ import org.neo4j.driver.Values
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@Suppress("DEPRECATION")
 class Neo4jQueryService(
     private val config: SourceConfiguration,
     private val offsetStorageReader: OffsetStorageReader
@@ -78,22 +79,22 @@ class Neo4jQueryService(
                 currentOffset.set(System.currentTimeMillis() - pollInterval)
               }
             }
-            config
-                .session()
-                .readTransaction(
-                    { tx ->
-                      val result = tx.run(config.query, mapOf("lastCheck" to currentOffset.get()))
-                      lastCheckHadResult = result.hasNext()
-                      result.forEach { record ->
-                        try {
-                          val sourceRecord = toSourceRecord(record)
-                          queue.put(sourceRecord)
-                        } catch (e: Exception) {
-                          setError(e)
-                        }
+            config.driver.session(config.sessionConfig()).use {
+              it.readTransaction(
+                  { tx ->
+                    val result = tx.run(config.query, mapOf("lastCheck" to currentOffset.get()))
+                    lastCheckHadResult = result.hasNext()
+                    result.forEach { record ->
+                      try {
+                        val sourceRecord = toSourceRecord(record)
+                        queue.put(sourceRecord)
+                      } catch (e: Exception) {
+                        setError(e)
                       }
-                    },
-                    config.txConfig())
+                    }
+                  },
+                  config.txConfig())
+            }
             delay(pollInterval)
           } catch (e: Exception) {
             setError(e)

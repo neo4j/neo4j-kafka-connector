@@ -105,4 +105,13 @@ object Recommenders {
       }
     }
   }
+
+  fun hidden(): ConfigDef.Recommender {
+    return object : ConfigDef.Recommender {
+      override fun validValues(name: String?, parsedConfig: MutableMap<String, Any>?): List<Any> =
+          emptyList()
+
+      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean = false
+    }
+  }
 }

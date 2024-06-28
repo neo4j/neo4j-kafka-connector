@@ -69,6 +69,8 @@ class SourceConfiguration(originals: Map<*, *>) :
   val ignoreStoredOffset
     get(): Boolean = getBoolean(IGNORE_STORED_OFFSET)
 
+  @Suppress("DeprecatedCallableAddReplaceWith")
+  @Deprecated("No longer supported with newer versions of source connectors")
   val enforceSchema
     get(): Boolean = getBoolean(ENFORCE_SCHEMA)
 
@@ -83,6 +85,9 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   val queryPollingInterval
     get(): Duration = Duration.parseSimpleString(getString(QUERY_POLL_INTERVAL))
+
+  val queryPollingDuration
+    get(): Duration = Duration.parseSimpleString(getString(QUERY_POLL_DURATION))
 
   val batchSize
     get(): Int = getInt(BATCH_SIZE)
@@ -402,6 +407,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY = "neo4j.query"
     const val QUERY_STREAMING_PROPERTY = "neo4j.query.streaming-property"
     const val QUERY_POLL_INTERVAL = "neo4j.query.poll-interval"
+    const val QUERY_POLL_DURATION = "neo4j.query.poll-duration"
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
     const val TOPIC = "topic"
     const val ENFORCE_SCHEMA = "neo4j.enforce-schema"
@@ -429,11 +435,13 @@ class SourceConfiguration(originals: Map<*, *>) :
         Regex(
             "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$")
 
-    private val DEFAULT_POLL_INTERVAL = 10.seconds
+    private val DEFAULT_QUERY_POLL_INTERVAL = 1.seconds
+    private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_QUERY_TIMEOUT = 0.seconds
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
+    private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
 
     fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
       val migrated = migrateSettings(oldSettings, true).toMutableMap()
@@ -455,7 +463,7 @@ class SourceConfiguration(originals: Map<*, *>) :
           DeprecatedNeo4jSourceConfiguration.STREAMING_PROPERTY ->
               migrated[QUERY_STREAMING_PROPERTY] = it.value.toString()
           DeprecatedNeo4jSourceConfiguration.STREAMING_POLL_INTERVAL ->
-              migrated[QUERY_POLL_INTERVAL] = "${it.value}ms"
+              migrated[QUERY_POLL_DURATION] = "${it.value}ms"
           DeprecatedNeo4jSourceConfiguration.ENFORCE_SCHEMA ->
               migrated[ENFORCE_SCHEMA] = it.value.toString()
           DeprecatedNeo4jSourceConfiguration.TOPIC -> migrated[TOPIC] = it.value.toString()
@@ -573,9 +581,10 @@ class SourceConfiguration(originals: Map<*, *>) :
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
+                  defaultValue = DEFAULT_STREAMING_PROPERTY
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                  defaultValue = ""
+                  validator = Validators.notBlankOrEmpty()
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
@@ -583,7 +592,15 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_POLL_INTERVAL.toSimpleString()
+                  defaultValue = DEFAULT_QUERY_POLL_INTERVAL.toSimpleString()
+                })
+            .define(
+                ConfigKeyBuilder.of(QUERY_POLL_DURATION, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.HIGH
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                  defaultValue = DEFAULT_QUERY_POLL_DURATION.toSimpleString()
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
@@ -619,8 +636,9 @@ class SourceConfiguration(originals: Map<*, *>) :
                 })
             .define(
                 ConfigKeyBuilder.of(ENFORCE_SCHEMA, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.HIGH
-                  defaultValue = false
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = "false"
+                  recommender = Recommenders.hidden()
                   validator = ConfigDef.NonNullValidator()
                 })
   }

@@ -94,7 +94,7 @@ class SinkConfiguration(originals: Map<String, *>) :
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
   val dialect: Dialect by lazy {
-    session().use {
+    driver.session(sessionConfig()).use {
       val name = Cypher.name("name")
       val versions = Cypher.name("versions")
       val stmt =

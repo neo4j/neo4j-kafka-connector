@@ -31,11 +31,11 @@ internal class Neo4jSourceRegistration(
     neo4jUser: String = "neo4j",
     neo4jPassword: String,
     neo4jDatabase: String,
-    pollInterval: Duration = Duration.ofMillis(5000),
-    pollDuration: Duration = Duration.ofMillis(1000),
-    enforceSchema: Boolean = true,
+    pollInterval: Duration = Duration.ofMillis(1000),
+    pollDuration: Duration = Duration.ofMillis(5000),
     streamingProperty: String,
     startFrom: String,
+    startFromValue: String,
     query: String,
     keyConverter: KafkaConverter,
     valueConverter: KafkaConverter,
@@ -63,6 +63,9 @@ internal class Neo4jSourceRegistration(
       put("neo4j.authentication.basic.password", neo4jPassword)
       put("neo4j.database", neo4jDatabase)
       put("neo4j.start-from", startFrom)
+      if (startFromValue.isNotBlank()) {
+        put("neo4j.start-from.value", startFromValue)
+      }
       put("neo4j.source-strategy", strategy.name.uppercase())
 
       if (keyConverter.supportsSchemaRegistry) {
@@ -80,7 +83,7 @@ internal class Neo4jSourceRegistration(
         put("neo4j.query", query)
         put("neo4j.query.streaming-property", streamingProperty)
         put("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms")
-        put("neo4j.enforce-schema", enforceSchema)
+        put("neo4j.query.poll-duration", "${pollDuration.toMillis()}ms")
       }
 
       if (strategy == CDC) {

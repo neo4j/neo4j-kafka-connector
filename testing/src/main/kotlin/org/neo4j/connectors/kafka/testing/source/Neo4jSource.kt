@@ -32,7 +32,8 @@ annotation class Neo4jSource(
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val neo4jDatabase: String = "",
-    val startFrom: String,
+    val startFrom: String = "NOW",
+    val startFromValue: String = "",
     val strategy: SourceStrategy = SourceStrategy.QUERY,
 
     // QUERY strategy
