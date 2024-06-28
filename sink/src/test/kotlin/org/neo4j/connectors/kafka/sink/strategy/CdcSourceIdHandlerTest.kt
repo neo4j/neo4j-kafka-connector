@@ -443,7 +443,7 @@ class CdcSourceIdHandlerTest {
   }
 
   @Test
-  fun `should fail on null 'after' field with create operation`() {
+  fun `should fail on null 'after' field with node create operation`() {
     val handler =
         CdcSourceIdHandler(
             "my-topic",
@@ -466,6 +466,16 @@ class CdcSourceIdHandlerTest {
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
     } shouldHaveMessage "create operation requires 'after' field in the event object"
+  }
+
+  @Test
+  fun `should fail on null 'after' field with relationship create operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -493,7 +503,7 @@ class CdcSourceIdHandlerTest {
   }
 
   @Test
-  fun `should fail on null 'before' field with update operation`() {
+  fun `should fail on null 'before' field with node update operation`() {
     val handler =
         CdcSourceIdHandler(
             "my-topic",
@@ -517,6 +527,16 @@ class CdcSourceIdHandlerTest {
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
     } shouldHaveMessage "update operation requires 'before' field in the event object"
+  }
+
+  @Test
+  fun `should fail on null 'before' field with relationship update operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -544,7 +564,7 @@ class CdcSourceIdHandlerTest {
   }
 
   @Test
-  fun `should fail on null 'after' field with update operation`() {
+  fun `should fail on null 'after' field with node update operation`() {
     val handler =
         CdcSourceIdHandler(
             "my-topic",
@@ -567,6 +587,16 @@ class CdcSourceIdHandlerTest {
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
     } shouldHaveMessage "update operation requires 'after' field in the event object"
+  }
+
+  @Test
+  fun `should fail on null 'after' field with relationship update operation`() {
+    val handler =
+        CdcSourceIdHandler(
+            "my-topic",
+            Renderer.getRenderer(Configuration.defaultConfig()),
+            "SourceEvent",
+            "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(

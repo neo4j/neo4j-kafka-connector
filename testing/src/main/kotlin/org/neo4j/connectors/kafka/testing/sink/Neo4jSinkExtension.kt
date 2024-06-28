@@ -248,7 +248,7 @@ internal class Neo4jSinkExtension(
             strategies = strategies,
             errorTolerance = errorTolerance.resolve(sinkAnnotation),
             errorDlqTopic = topicRegistry.resolveTopic(errorDlqTopic.resolve(sinkAnnotation)),
-            errorDlqContextHeadersEnable = sinkAnnotation.errorDlqContextHeadersEnable)
+            enableErrorHeaders = sinkAnnotation.enableErrorHeaders)
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }

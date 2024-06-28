@@ -43,7 +43,7 @@ annotation class Neo4jSink(
     val cud: Array<CudStrategy> = [],
     val errorTolerance: String = "all",
     val errorDlqTopic: String = "",
-    val errorDlqContextHeadersEnable: Boolean = false,
+    val enableErrorHeaders: Boolean = false,
 )
 
 enum class SchemaCompatibilityMode {

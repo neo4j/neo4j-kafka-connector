@@ -111,26 +111,26 @@ abstract class Neo4jSinkErrorIT {
                   TOPIC,
                   "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report an error with all error headers when headers are enabled`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session
   ) {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
 
-    val schema =
+    val schemaWithMissingSurname =
         SchemaBuilder.struct()
             .field("id", Schema.INT64_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
             .build()
-    val struct = Struct(schema)
+    val struct = Struct(schemaWithMissingSurname)
     struct.put("id", 1L)
     struct.put("name", "John")
-    producer.publish(valueSchema = schema, value = struct)
+    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
-    TopicVerifier.createForMap(consumer)
+    TopicVerifier.createForMap(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer.topic
@@ -160,11 +160,11 @@ abstract class Neo4jSinkErrorIT {
                   TOPIC,
                   "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -212,7 +212,7 @@ abstract class Neo4jSinkErrorIT {
               (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
     }
 
-    TopicVerifier.createForMap(consumer)
+    TopicVerifier.createForMap(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
@@ -242,11 +242,11 @@ abstract class Neo4jSinkErrorIT {
               NodePatternStrategy(
                   TOPIC, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with node pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -282,7 +282,7 @@ abstract class Neo4jSinkErrorIT {
               (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
     }
 
-    TopicVerifier.create<String, String>(consumer)
+    TopicVerifier.create<String, String>(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
@@ -315,11 +315,11 @@ abstract class Neo4jSinkErrorIT {
                   mergeNodeProperties = false,
                   mergeRelationshipProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with relationship pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -403,7 +403,7 @@ abstract class Neo4jSinkErrorIT {
           }
     }
 
-    TopicVerifier.create<String, String>(consumer)
+    TopicVerifier.create<String, String>(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
@@ -427,12 +427,11 @@ abstract class Neo4jSinkErrorIT {
         .verifyWithin(Duration.ofSeconds(30))
   }
 
-  @Neo4jSink(
-      cud = [CudStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, errorDlqContextHeadersEnable = true)
+  @Neo4jSink(cud = [CudStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, enableErrorHeaders = true)
   @Test
   fun `should report failed events with cud strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -519,7 +518,7 @@ abstract class Neo4jSinkErrorIT {
               (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
     }
 
-    TopicVerifier.create<String, String>(consumer)
+    TopicVerifier.create<String, String>(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
@@ -544,13 +543,11 @@ abstract class Neo4jSinkErrorIT {
   }
 
   @Neo4jSink(
-      cdcSchema = [CdcSchemaStrategy(TOPIC)],
-      errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      cdcSchema = [CdcSchemaStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, enableErrorHeaders = true)
   @Test
   fun `should report failed events with cdc schema strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -632,7 +629,7 @@ abstract class Neo4jSinkErrorIT {
               (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
     }
 
-    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
@@ -659,11 +656,11 @@ abstract class Neo4jSinkErrorIT {
   @Neo4jSink(
       cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with cdc source id strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
@@ -752,7 +749,7 @@ abstract class Neo4jSinkErrorIT {
                       "sourceId" to "person4", "id" to 4L, "name" to "Martin", "surname" to "Doe")))
     }
 
-    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
         .assertMessage {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
@@ -784,7 +781,7 @@ abstract class Neo4jSinkErrorIT {
   @Test
   fun `should stop the process and only report first failed event when error tolerance is none`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
   ) = runTest {
     val message1 =
@@ -810,7 +807,7 @@ abstract class Neo4jSinkErrorIT {
           }
     }
 
-    TopicVerifier.create<String, String>(consumer)
+    TopicVerifier.create<String, String>(errorConsumer)
         .assertMessageValue { it shouldBe message2ToFail.value }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -827,7 +824,7 @@ abstract class Neo4jSinkErrorIT {
               NodePatternStrategy(
                   TOPIC_3, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
-      errorDlqContextHeadersEnable = true)
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events from different topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
