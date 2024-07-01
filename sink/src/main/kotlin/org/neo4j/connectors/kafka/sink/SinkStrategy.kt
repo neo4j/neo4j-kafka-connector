@@ -129,71 +129,95 @@ interface SinkStrategyHandler {
     }
 
     private fun createForTopic(topic: String, config: SinkConfiguration): SinkStrategyHandler {
+      var handler: SinkStrategyHandler? = null
       val originals = config.originalsStrings()
 
       val query = originals[SinkConfiguration.CYPHER_TOPIC_PREFIX + topic]
       if (query != null) {
-        return CypherHandler(
-            topic,
-            query,
-            config.renderer,
-            config.batchSize,
-            bindTimestampAs = config.cypherBindTimestampAs,
-            bindHeaderAs = config.cypherBindHeaderAs,
-            bindKeyAs = config.cypherBindKeyAs,
-            bindValueAs = config.cypherBindValueAs,
-            bindValueAsEvent = config.cypherBindValueAsEvent)
+        handler =
+            CypherHandler(
+                topic,
+                query,
+                config.renderer,
+                config.batchSize,
+                bindTimestampAs = config.cypherBindTimestampAs,
+                bindHeaderAs = config.cypherBindHeaderAs,
+                bindKeyAs = config.cypherBindKeyAs,
+                bindValueAs = config.cypherBindValueAs,
+                bindValueAsEvent = config.cypherBindValueAsEvent)
       }
 
       val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]
       if (nodePattern != null) {
-        return NodePatternHandler(
-            topic,
-            nodePattern,
-            config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
-            config.renderer,
-            config.batchSize,
-            bindTimestampAs = config.patternBindTimestampAs,
-            bindHeaderAs = config.patternBindHeaderAs,
-            bindKeyAs = config.patternBindKeyAs,
-            bindValueAs = config.patternBindValueAs)
+        if (handler != null) {
+          throw ConfigException("Topic '${topic}' has multiple strategies defined")
+        }
+
+        handler =
+            NodePatternHandler(
+                topic,
+                nodePattern,
+                config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
+                config.renderer,
+                config.batchSize,
+                bindTimestampAs = config.patternBindTimestampAs,
+                bindHeaderAs = config.patternBindHeaderAs,
+                bindKeyAs = config.patternBindKeyAs,
+                bindValueAs = config.patternBindValueAs)
       }
 
       val relationshipPattern =
           originals[SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + topic]
       if (relationshipPattern != null) {
-        return RelationshipPatternHandler(
-            topic,
-            relationshipPattern,
-            config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
-            config.getBoolean(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES),
-            config.renderer,
-            config.batchSize,
-            bindTimestampAs = config.patternBindTimestampAs,
-            bindHeaderAs = config.patternBindHeaderAs,
-            bindKeyAs = config.patternBindKeyAs,
-            bindValueAs = config.patternBindValueAs)
+        if (handler != null) {
+          throw ConfigException("Topic '${topic}' has multiple strategies defined")
+        }
+
+        handler =
+            RelationshipPatternHandler(
+                topic,
+                relationshipPattern,
+                config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
+                config.getBoolean(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES),
+                config.renderer,
+                config.batchSize,
+                bindTimestampAs = config.patternBindTimestampAs,
+                bindHeaderAs = config.patternBindHeaderAs,
+                bindKeyAs = config.patternBindKeyAs,
+                bindValueAs = config.patternBindValueAs)
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
       if (cdcSourceIdTopics.contains(topic)) {
+        if (handler != null) {
+          throw ConfigException("Topic '${topic}' has multiple strategies defined")
+        }
+
         val labelName = config.getString(SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME)
         val propertyName = config.getString(SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME)
 
-        return CdcSourceIdHandler(topic, config.renderer, labelName, propertyName)
+        handler = CdcSourceIdHandler(topic, config.renderer, labelName, propertyName)
       }
 
       val cdcSchemaTopics = config.getList(SinkConfiguration.CDC_SCHEMA_TOPICS)
       if (cdcSchemaTopics.contains(topic)) {
-        return CdcSchemaHandler(topic, config.renderer)
+        if (handler != null) {
+          throw ConfigException("Topic '${topic}' has multiple strategies defined")
+        }
+
+        handler = CdcSchemaHandler(topic, config.renderer)
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
       if (cudTopics.contains(topic)) {
-        return CudHandler(topic, config.renderer, config.batchSize)
+        if (handler != null) {
+          throw ConfigException("Topic '${topic}' has multiple strategies defined")
+        }
+
+        handler = CudHandler(topic, config.renderer, config.batchSize)
       }
 
-      throw ConfigException("Topic $topic is not assigned a sink strategy")
+      return handler ?: throw ConfigException("Topic '$topic' is not assigned a sink strategy")
     }
 
     fun configuredStrategies(config: SinkConfiguration): Set<String> {

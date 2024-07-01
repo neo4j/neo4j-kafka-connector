@@ -26,8 +26,8 @@ import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChang
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.legacy.strategy.SchemaUtils
-import org.neo4j.connectors.kafka.sink.utils.toStreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsSinkEntity
+import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -103,7 +103,7 @@ internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
 
 internal fun parseStreamsChangeEvent(message: SinkMessage): ChangeEvent {
   val event =
-      SchemaUtils.toStreamsTransactionEvent(message.record.toStreamsSinkEntity()) { _ -> true }
+      message.record.toStreamsSinkEntity().toStreamsTransactionEvent { _ -> true }
           ?: throw IllegalArgumentException("unsupported change event message in $message")
 
   return event.toChangeEvent()

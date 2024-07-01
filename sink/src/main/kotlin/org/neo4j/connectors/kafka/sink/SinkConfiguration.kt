@@ -14,57 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("DEPRECATION")
-
 package org.neo4j.connectors.kafka.sink
 
 import java.util.function.Predicate
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
-import org.neo4j.connectors.kafka.configuration.ConfigGroup
 import org.neo4j.connectors.kafka.configuration.ConnectorType
-import org.neo4j.connectors.kafka.configuration.DeprecatedNeo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
-import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.sink.legacy.DeprecatedNeo4jSinkConfiguration
-import org.neo4j.connectors.kafka.sink.legacy.strategy.SourceIdIngestionStrategyConfig
-import org.neo4j.connectors.kafka.sink.legacy.strategy.TopicType
-import org.neo4j.connectors.kafka.sink.utils.TopicUtils
-import org.neo4j.connectors.kafka.sink.utils.Topics
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Dialect
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
-class SinkConfiguration(originals: Map<String, *>) :
-    Neo4jConfiguration(config(), originals, ConnectorType.SINK) {
+class SinkConfiguration : Neo4jConfiguration {
+  private var fixedRenderer: Renderer? = null
 
-  val parallelBatches
-    get(): Boolean = getBoolean(BATCH_PARALLELIZE)
+  constructor(original: Map<String, *>) : this(original, null) {}
+
+  constructor(
+      originals: Map<String, *>,
+      renderer: Renderer?
+  ) : super(config(), originals, ConnectorType.SINK) {
+    fixedRenderer = renderer
+
+    validateAllTopics()
+  }
 
   val batchSize
     get(): Int = getInt(BATCH_SIZE)
-
-  val batchTimeout
-    get(): Duration = Duration.parseSimpleString(getString(BATCH_TIMEOUT))
-
-  val topics: Topics by lazy { Topics.from(originals()) }
-
-  val strategyMap: Map<TopicType, Any> by lazy { TopicUtils.toStrategyMap(topics) }
-
-  val kafkaBrokerProperties: Map<String, Any?> by lazy {
-    originals().filterKeys { it.startsWith("kafka.") }.mapKeys { it.key.substring("kafka.".length) }
-  }
 
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
@@ -116,7 +102,7 @@ class SinkConfiguration(originals: Map<String, *>) :
   }
 
   val renderer: Renderer by lazy {
-    Renderer.getRenderer(Configuration.newConfig().withDialect(dialect).build())
+    fixedRenderer ?: Renderer.getRenderer(Configuration.newConfig().withDialect(dialect).build())
   }
 
   val topicNames: List<String>
@@ -124,32 +110,26 @@ class SinkConfiguration(originals: Map<String, *>) :
         originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
             ?: emptyList()
 
-  init {
-    validateAllTopics(originals)
+  val topicHandlers: Map<String, SinkStrategyHandler> by lazy {
+    SinkStrategyHandler.createFrom(this)
   }
 
   override fun userAgentComment(): String =
       SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 
-  private fun validateAllTopics(originals: Map<*, *>) {
-    TopicUtils.validate<ConfigException>(this.topics)
-    val topics =
-        if (originals.containsKey(SinkTask.TOPICS_CONFIG)) {
-          originals[SinkTask.TOPICS_CONFIG].toString().split(",").map { it.trim() }.sorted()
-        } else { // TODO manage regexp
-          emptyList()
-        }
-    val allTopics = this.topics.allTopics().sorted()
-    if (topics != allTopics) {
+  private fun validateAllTopics() {
+    val sourceTopics = topicNames.toSet()
+    val configuredTopics = topicHandlers.keys
+
+    if (sourceTopics != configuredTopics) {
       throw ConfigException(
-          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($topics) and configured topics ($allTopics)")
+          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($sourceTopics) and configured strategies ($configuredTopics)")
     }
   }
 
   companion object {
     const val BATCH_SIZE = "neo4j.batch-size"
     const val BATCH_TIMEOUT = "neo4j.batch-timeout"
-    const val BATCH_PARALLELIZE = "neo4j.batch-parallelize"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
     const val CYPHER_BIND_TIMESTAMP_AS = "neo4j.cypher.bind-timestamp-as"
@@ -181,51 +161,8 @@ class SinkConfiguration(originals: Map<String, *>) :
     const val DEFAULT_BIND_KEY_ALIAS = "__key"
     const val DEFAULT_BIND_VALUE_ALIAS = "__value"
     const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
-
-    @JvmStatic
-    val KEY_REPLACEMENTS =
-        mapOf(
-            DeprecatedNeo4jSinkConfiguration.TOPIC_CYPHER_PREFIX to CYPHER_TOPIC_PREFIX,
-            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_NODE_PREFIX to PATTERN_NODE_TOPIC_PREFIX,
-            DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_RELATIONSHIP_PREFIX to
-                PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-
-    fun migrateSettings(oldSettings: Map<String, Any>): Map<String, String> {
-      val migratedBase = migrateSettings(oldSettings, false)
-      val migrated = HashMap<String, String>(migratedBase.size)
-
-      migratedBase.forEach {
-        when (it.key) {
-          DeprecatedNeo4jConfiguration.BATCH_SIZE -> migrated[BATCH_SIZE] = it.value
-          DeprecatedNeo4jConfiguration.BATCH_TIMEOUT_MSECS ->
-              migrated[BATCH_TIMEOUT] = "${it.value}ms"
-          DeprecatedNeo4jSinkConfiguration.BATCH_PARALLELIZE ->
-              migrated[BATCH_PARALLELIZE] = it.value
-          DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_NODE_PROPERTIES_ENABLED ->
-              migrated[PATTERN_NODE_MERGE_PROPERTIES] = it.value
-          DeprecatedNeo4jSinkConfiguration.TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES_ENABLED ->
-              migrated[PATTERN_RELATIONSHIP_MERGE_PROPERTIES] = it.value
-          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID ->
-              migrated[CDC_SOURCE_ID_TOPICS] = it.value.replaceLegacyDelimiter()
-          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_LABEL_NAME ->
-              migrated[CDC_SOURCE_ID_LABEL_NAME] = it.value
-          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SOURCE_ID_ID_NAME ->
-              migrated[CDC_SOURCE_ID_PROPERTY_NAME] = it.value
-          DeprecatedNeo4jSinkConfiguration.TOPIC_CDC_SCHEMA ->
-              migrated[CDC_SCHEMA_TOPICS] = it.value.replaceLegacyDelimiter()
-          DeprecatedNeo4jSinkConfiguration.TOPIC_CUD ->
-              migrated[CUD_TOPICS] = it.value.replaceLegacyDelimiter()
-          else -> {
-            val migratedKey = replaceLegacyPropertyKeys(it.key)
-            if (!migrated.containsKey(migratedKey)) {
-              migrated[migratedKey] = it.value
-            }
-          }
-        }
-      }
-
-      return migrated
-    }
+    const val DEFAULT_SOURCE_ID_LABEL_NAME = "SourceEvent"
+    const val DEFAULT_SOURCE_ID_PROPERTY_NAME = "sourceId"
 
     fun validate(config: Config) {
       Neo4jConfiguration.validate(config)
@@ -270,21 +207,21 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
-                  defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.labelName
-                  group = ConfigGroup.STRATEGIES
+                  defaultValue = DEFAULT_SOURCE_ID_LABEL_NAME
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_PROPERTY_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
-                  defaultValue = SourceIdIngestionStrategyConfig.DEFAULT.idName
-                  group = ConfigGroup.STRATEGIES
+                  defaultValue = DEFAULT_SOURCE_ID_PROPERTY_NAME
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
@@ -292,19 +229,19 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                 })
             .define(
                 ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -316,7 +253,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                   documentation = PropertiesUtil.getProperty(PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -336,16 +273,10 @@ class SinkConfiguration(originals: Map<String, *>) :
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                 })
             .define(
-                ConfigKeyBuilder.of(BATCH_PARALLELIZE, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_BATCH_PARALLELIZE
-                  group = ConfigGroup.BATCH
-                })
-            .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
@@ -353,7 +284,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
@@ -361,7 +292,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CYPHER_BIND_KEY_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
@@ -369,7 +300,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
@@ -378,7 +309,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
                   validator = ConfigDef.NonNullValidator()
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
                 })
@@ -386,7 +317,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(PATTERN_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -397,7 +328,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(PATTERN_BIND_HEADER_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -408,7 +339,7 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(PATTERN_BIND_KEY_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
@@ -419,19 +350,12 @@ class SinkConfiguration(originals: Map<String, *>) :
                 ConfigKeyBuilder.of(PATTERN_BIND_VALUE_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
-                  group = ConfigGroup.STRATEGIES
+                  group = "Neo4j"
                   recommender =
                       Recommenders.visibleIfNotEmpty { k ->
                         k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
                             k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
                       }
                 })
-
-    private fun replaceLegacyPropertyKeys(key: String) =
-        KEY_REPLACEMENTS.entries.fold(key) { k, replacement ->
-          k.replace(replacement.key, replacement.value)
-        }
-
-    private fun String.replaceLegacyDelimiter() = this.replace(';', ',')
   }
 }

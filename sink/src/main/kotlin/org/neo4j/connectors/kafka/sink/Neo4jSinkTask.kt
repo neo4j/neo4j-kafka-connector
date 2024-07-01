@@ -27,7 +27,6 @@ class Neo4jSinkTask : SinkTask() {
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SinkConfiguration
-  private lateinit var topicHandlers: Map<String, SinkStrategyHandler>
 
   override fun version(): String = VersionUtil.version(Neo4jSinkTask::class.java)
 
@@ -36,7 +35,6 @@ class Neo4jSinkTask : SinkTask() {
 
     settings = props!!
     config = SinkConfiguration(settings)
-    topicHandlers = SinkStrategyHandler.createFrom(config)
   }
 
   override fun stop() {
@@ -47,7 +45,7 @@ class Neo4jSinkTask : SinkTask() {
     records
         ?.map { SinkMessage(it) }
         ?.groupBy { it.topic }
-        ?.mapKeys { topicHandlers.getValue(it.key) }
+        ?.mapKeys { config.topicHandlers.getValue(it.key) }
         ?.forEach { (handler, messages) -> processMessages(handler, messages) }
   }
 

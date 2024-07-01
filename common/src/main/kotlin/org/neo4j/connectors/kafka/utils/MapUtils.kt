@@ -67,4 +67,22 @@ object MapUtils {
 
     throw InvalidDataException("Map element '$key' is not an instance of ${T::class.simpleName}")
   }
+
+  @Suppress("UNCHECKED_CAST")
+  fun Map<String, Any?>.flatten(
+      map: Map<String, Any?> = this,
+      prefix: String = ""
+  ): Map<String, Any?> {
+    return map.flatMap {
+          val key = it.key
+          val value = it.value
+          val newKey = if (prefix != "") "$prefix.$key" else key
+          if (value is Map<*, *>) {
+            flatten(value as Map<String, Any?>, newKey).toList()
+          } else {
+            listOf(newKey to value)
+          }
+        }
+        .toMap()
+  }
 }
