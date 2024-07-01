@@ -14,21 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.utils
+package org.neo4j.connectors.kafka.sink.strategy.legacy
 
-import java.time.temporal.TemporalAccessor
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.sink.converters.Neo4jValueConverter
-import org.neo4j.connectors.kafka.sink.legacy.strategy.StreamsSinkEntity
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.connectors.kafka.utils.asStreamsMap
 import org.neo4j.driver.Record
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
+
+data class StreamsSinkEntity(val key: Any?, val value: Any?)
+
+fun StreamsSinkEntity.toStreamsTransactionEvent(
+    evaluation: (StreamsTransactionEvent) -> Boolean
+): StreamsTransactionEvent? =
+    if (this.value != null) {
+      val data = JSONUtils.asStreamsTransactionEvent(this.value)
+      if (evaluation(data)) data else null
+    } else {
+      null
+    }
 
 fun SinkRecord.toStreamsSinkEntity(): StreamsSinkEntity =
     StreamsSinkEntity(convertData(this.key(), true), convertData(this.value()))
@@ -42,80 +53,11 @@ private fun convertData(data: Any?, stringWhenFailure: Boolean = false) =
       else -> JSONUtils.readValue<Any>(data, stringWhenFailure)
     }
 
-fun Record.asJsonString(): String = JSONUtils.writeValueAsString(this.asMap())
-
 fun Record.schema(asMap: Map<String, Any> = this.asMap()): Schema {
   val structBuilder = SchemaBuilder.struct()
   asMap.forEach { structBuilder.field(it.key, neo4jValueSchema(it.value)) }
   return structBuilder.build()
 }
-
-fun Record.asStruct(): Struct {
-  val asMap = this.asMap()
-  val schema = schema(asMap)
-  val struct = Struct(schema)
-  schema.fields().forEach { struct.put(it, neo4jToKafka(it.schema(), asMap[it.name()])) }
-  return struct
-}
-
-private fun neo4jToKafka(schema: Schema, value: Any?): Any? =
-    if (value == null) {
-      null
-    } else {
-      when (schema.type()) {
-        Schema.Type.ARRAY ->
-            when (value) {
-              is Collection<*> -> value.map { neo4jToKafka(schema.valueSchema(), it) }
-              is Array<*> -> value.map { neo4jToKafka(schema.valueSchema(), it) }.toTypedArray()
-              else ->
-                  throw IllegalArgumentException(
-                      "For Schema.Type.ARRAY we support only Collection and Array")
-            }
-        Schema.Type.MAP ->
-            when (value) {
-              is Map<*, *> -> value.mapValues { neo4jToKafka(schema.valueSchema(), it.value) }
-              else -> throw IllegalArgumentException("For Schema.Type.MAP we support only Map")
-            }
-        Schema.Type.STRUCT ->
-            when (value) {
-              is Map<*, *> -> {
-                val struct = Struct(schema)
-                schema.fields().forEach {
-                  val field = it
-                  neo4jToKafka(field.schema(), value[field.name()])?.let { struct.put(field, it) }
-                }
-                struct
-              }
-              is Point -> {
-                val map = JSONUtils.readValue<Map<String, Any>>(value)
-                neo4jToKafka(schema, map)
-              }
-              is Node -> {
-                val map = value.asStreamsMap()
-                neo4jToKafka(schema, map)
-              }
-              is Relationship -> {
-                val map = value.asStreamsMap()
-                neo4jToKafka(schema, map)
-              }
-              else ->
-                  throw IllegalArgumentException(
-                      "For Schema.Type.STRUCT we support only Map and Point")
-            }
-        else ->
-            when (value) {
-              is TemporalAccessor -> {
-                val temporalValue = JSONUtils.readValue<String>(value)
-                neo4jToKafka(schema, temporalValue)
-              }
-              else ->
-                  when {
-                    Schema.Type.STRING == schema.type() && value !is String -> value.toString()
-                    else -> value
-                  }
-            }
-      }
-    }
 
 private fun neo4jValueSchema(value: Any?): Schema? =
     when (value) {

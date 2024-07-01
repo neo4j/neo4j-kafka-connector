@@ -38,6 +38,9 @@
   "logo": "assets/kafka-connect-neo4j.png",
   "documentation_url": "#{product.docs.url}",
   "docker_image": {},
-  "component_types": [ #{product.components} ],
+  "component_types": [
+    "sink",
+    "source"
+  ],
   "release_date": "#{timestamp}"
 }

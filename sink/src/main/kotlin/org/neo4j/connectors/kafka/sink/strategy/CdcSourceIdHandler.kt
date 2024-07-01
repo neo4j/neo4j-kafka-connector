@@ -29,8 +29,8 @@ import org.neo4j.driver.Query
 class CdcSourceIdHandler(
     val topic: String,
     private val renderer: Renderer,
-    private val labelName: String,
-    private val propertyName: String
+    val labelName: String,
+    val propertyName: String
 ) : CdcHandler() {
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID

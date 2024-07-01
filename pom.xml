@@ -35,7 +35,6 @@
         <module>source-connector</module>
         <module>sink</module>
         <module>sink-connector</module>
-        <module>legacy-connectors</module>
         <module>packaging</module>
         <module>testing</module>
     </modules>

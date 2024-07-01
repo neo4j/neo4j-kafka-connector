@@ -24,4 +24,4 @@ data class RelationshipPattern(
     override val keyProperties: Set<PropertyMapping>,
     override val includeProperties: Set<PropertyMapping>,
     override val excludeProperties: Set<String>
-) : Pattern {}
+) : Pattern

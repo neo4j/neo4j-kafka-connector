@@ -23,8 +23,8 @@ import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.legacy.strategy.flatten
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.utils.MapUtils.flatten
 import org.neo4j.cypherdsl.core.Cypher
 
 abstract class PatternHandler<T : Pattern>(

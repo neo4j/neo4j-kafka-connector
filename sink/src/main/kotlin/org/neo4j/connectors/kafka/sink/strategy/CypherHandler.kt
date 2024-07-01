@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory
 
 class CypherHandler(
     val topic: String,
-    query: String,
+    val query: String,
     renderer: Renderer,
     val batchSize: Int,
     bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,

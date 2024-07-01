@@ -67,22 +67,16 @@ class TelemetryTest {
   fun `should return connector information with kafka`() {
     val provider = mock<EnvironmentProvider> { on { get(CONFLUENT_ENV) } doReturn null }
 
-    connectorInformation("sink", false, "", "", provider) shouldBe "kafka-sink"
-    connectorInformation("sink", false, "5.1.0", "", provider) shouldBe "kafka-sink/5.1.0"
-    connectorInformation("source", false, "", "", provider) shouldBe "kafka-source"
-    connectorInformation("source", false, "5.1.0", "", provider) shouldBe "kafka-source/5.1.0"
-    connectorInformation("sink", true, "", "", provider) shouldBe "kafka-legacy-sink"
-    connectorInformation("source", true, "", "", provider) shouldBe "kafka-legacy-source"
-    connectorInformation("sink", false, "", "cypher; node-pattern", provider) shouldBe
+    connectorInformation("sink", "", "", provider) shouldBe "kafka-sink"
+    connectorInformation("sink", "5.1.0", "", provider) shouldBe "kafka-sink/5.1.0"
+    connectorInformation("source", "", "", provider) shouldBe "kafka-source"
+    connectorInformation("source", "5.1.0", "", provider) shouldBe "kafka-source/5.1.0"
+    connectorInformation("sink", "", "cypher; node-pattern", provider) shouldBe
         "kafka-sink (cypher; node-pattern)"
-    connectorInformation("sink", false, "5.1.0", "cypher; node-pattern", provider) shouldBe
+    connectorInformation("sink", "5.1.0", "cypher; node-pattern", provider) shouldBe
         "kafka-sink/5.1.0 (cypher; node-pattern)"
-    connectorInformation("source", false, "", "cdc", provider) shouldBe "kafka-source (cdc)"
-    connectorInformation("source", false, "5.1.0", "cdc", provider) shouldBe
-        "kafka-source/5.1.0 (cdc)"
-    connectorInformation("sink", true, "", "cypher", provider) shouldBe "kafka-legacy-sink (cypher)"
-    connectorInformation("source", true, "", "query", provider) shouldBe
-        "kafka-legacy-source (query)"
+    connectorInformation("source", "", "cdc", provider) shouldBe "kafka-source (cdc)"
+    connectorInformation("source", "5.1.0", "cdc", provider) shouldBe "kafka-source/5.1.0 (cdc)"
   }
 
   @Test
@@ -90,24 +84,16 @@ class TelemetryTest {
     val provider =
         mock<EnvironmentProvider> { on { get(CONFLUENT_ENV) } doReturn CONFLUENT_ENV_VALUE }
 
-    connectorInformation("sink", false, "", "", provider) shouldBe "confluent-cloud-sink"
-    connectorInformation("sink", false, "5.1.0", "", provider) shouldBe "confluent-cloud-sink/5.1.0"
-    connectorInformation("source", false, "", "", provider) shouldBe "confluent-cloud-source"
-    connectorInformation("source", false, "5.1.0", "", provider) shouldBe
-        "confluent-cloud-source/5.1.0"
-    connectorInformation("sink", true, "", "", provider) shouldBe "confluent-cloud-legacy-sink"
-    connectorInformation("source", true, "", "", provider) shouldBe "confluent-cloud-legacy-source"
-    connectorInformation("sink", false, "", "cypher; node-pattern", provider) shouldBe
+    connectorInformation("sink", "", "", provider) shouldBe "confluent-cloud-sink"
+    connectorInformation("sink", "5.1.0", "", provider) shouldBe "confluent-cloud-sink/5.1.0"
+    connectorInformation("source", "", "", provider) shouldBe "confluent-cloud-source"
+    connectorInformation("source", "5.1.0", "", provider) shouldBe "confluent-cloud-source/5.1.0"
+    connectorInformation("sink", "", "cypher; node-pattern", provider) shouldBe
         "confluent-cloud-sink (cypher; node-pattern)"
-    connectorInformation("sink", false, "5.1.0", "cypher; node-pattern", provider) shouldBe
+    connectorInformation("sink", "5.1.0", "cypher; node-pattern", provider) shouldBe
         "confluent-cloud-sink/5.1.0 (cypher; node-pattern)"
-    connectorInformation("source", false, "", "cdc", provider) shouldBe
-        "confluent-cloud-source (cdc)"
-    connectorInformation("source", false, "5.1.0", "cdc", provider) shouldBe
+    connectorInformation("source", "", "cdc", provider) shouldBe "confluent-cloud-source (cdc)"
+    connectorInformation("source", "5.1.0", "cdc", provider) shouldBe
         "confluent-cloud-source/5.1.0 (cdc)"
-    connectorInformation("sink", true, "", "cypher", provider) shouldBe
-        "confluent-cloud-legacy-sink (cypher)"
-    connectorInformation("source", true, "", "query", provider) shouldBe
-        "confluent-cloud-legacy-source (query)"
   }
 }

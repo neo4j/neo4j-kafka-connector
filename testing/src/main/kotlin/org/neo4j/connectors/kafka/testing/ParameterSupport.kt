@@ -39,5 +39,5 @@ internal class ParameterResolvers(
     return resolver(parameterContext, extensionContext)
   }
 
-  companion object {}
+  companion object
 }

@@ -1,7 +1,7 @@
 <assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
-    <id>kc-oss-source-jar</id>
+    <id>kc-oss-sink-jar</id>
 
     <formats>
         <format>jar</format>
@@ -32,13 +32,19 @@
             <useTransitiveDependencies>true</useTransitiveDependencies>
             <includes>
                 <include>
-                    org.neo4j.connectors.kafka:source-connector
-                </include>
-                <include>
                     org.neo4j.connectors.kafka:common
                 </include>
                 <include>
+                    org.neo4j.connectors.kafka:sink
+                </include>
+                <include>
+                    org.neo4j.connectors.kafka:sink-connector
+                </include>
+                <include>
                     org.neo4j.connectors.kafka:source
+                </include>
+                <include>
+                    org.neo4j.connectors.kafka:source-connector
                 </include>
             </includes>
         </dependencySet>

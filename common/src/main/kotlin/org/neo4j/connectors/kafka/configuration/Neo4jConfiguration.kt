@@ -62,10 +62,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     AbstractConfig(configDef, originals), Closeable {
   private val logger: Logger = LoggerFactory.getLogger(Neo4jConfiguration::class.java)
 
-  private val deprecated: Boolean by lazy {
-    originalsStrings().getOrElse(DEPRECATED) { "false" }.toBoolean()
-  }
-
   val database
     get(): String = getString(DATABASE)
 
@@ -164,7 +160,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       }
     }
 
-    config.withUserAgent(userAgent(type.description, deprecated, userAgentComment()))
+    config.withUserAgent(userAgent(type.description, userAgentComment()))
     config.withConnectionAcquisitionTimeout(
         connectionAcquisitionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
     config.withConnectionTimeout(connectionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
@@ -211,7 +207,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       TransactionConfig.builder()
           .withMetadata(
               buildMap {
-                this["app"] = connectorInformation(type.description, deprecated)
+                this["app"] = connectorInformation(type.description)
 
                 val metadata = telemetryData()
                 if (metadata.isNotEmpty()) {
@@ -225,8 +221,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   open fun userAgentComment(): String = ""
 
   companion object {
-    const val DEPRECATED = "neo4j.deprecated"
-
     const val DEFAULT_MAX_RETRY_ATTEMPTS = 5
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
 
@@ -259,47 +253,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         "neo4j.security.hostname-verification-enabled"
     const val SECURITY_TRUST_STRATEGY = "neo4j.security.trust-strategy"
     const val SECURITY_CERT_FILES = "neo4j.security.cert-files"
-
-    fun migrateSettings(oldSettings: Map<String, Any>, onlyKnown: Boolean): Map<String, String> {
-      val migrated = mutableMapOf<String, String>()
-
-      oldSettings.forEach {
-        @Suppress("DEPRECATION")
-        when (it.key) {
-          DeprecatedNeo4jConfiguration.SERVER_URI -> migrated[URI] = it.value.toString()
-          DeprecatedNeo4jConfiguration.CONNECTION_LIVENESS_CHECK_TIMEOUT_MSECS ->
-              migrated[POOL_IDLE_TIME_BEFORE_TEST] = "${it.value}ms"
-          DeprecatedNeo4jConfiguration.CONNECTION_MAX_CONNECTION_LIFETIME_MSECS ->
-              migrated[POOL_MAX_CONNECTION_LIFETIME] = "${it.value}ms"
-          DeprecatedNeo4jConfiguration.CONNECTION_POOL_MAX_SIZE ->
-              migrated[POOL_MAX_CONNECTION_POOL_SIZE] = it.value.toString()
-          DeprecatedNeo4jConfiguration.RETRY_MAX_ATTEMPTS ->
-              migrated[MAX_TRANSACTION_RETRY_ATTEMPTS] = it.value.toString()
-          DeprecatedNeo4jConfiguration.RETRY_BACKOFF_MSECS ->
-              migrated[MAX_TRANSACTION_RETRY_TIMEOUT] = "${it.value}ms"
-          DeprecatedNeo4jConfiguration.CONNECTION_MAX_CONNECTION_ACQUISITION_TIMEOUT_MSECS ->
-              migrated[POOL_CONNECTION_ACQUISITION_TIMEOUT] = "${it.value}ms"
-          DeprecatedNeo4jConfiguration.ENCRYPTION_ENABLED ->
-              migrated[SECURITY_ENCRYPTED] = it.value.toString()
-          DeprecatedNeo4jConfiguration.ENCRYPTION_CA_CERTIFICATE_PATH ->
-              migrated[SECURITY_CERT_FILES] = it.value.toString()
-          DeprecatedNeo4jConfiguration.ENCRYPTION_TRUST_STRATEGY ->
-              migrated[SECURITY_TRUST_STRATEGY] = it.value.toString()
-          DeprecatedNeo4jConfiguration.AUTHENTICATION_TYPE,
-          DeprecatedNeo4jConfiguration.AUTHENTICATION_BASIC_USERNAME,
-          DeprecatedNeo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD,
-          DeprecatedNeo4jConfiguration.AUTHENTICATION_BASIC_REALM,
-          DeprecatedNeo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET ->
-              migrated[it.key] = it.value.toString()
-          else ->
-              if (!onlyKnown) {
-                migrated[it.key] = it.value.toString()
-              }
-        }
-      }
-
-      return migrated
-    }
 
     /** Perform validation on dependent configuration items */
     fun validate(config: org.apache.kafka.common.config.Config) {
