@@ -79,7 +79,7 @@ internal class Neo4jSourceRegistration(
       putAll(valueConverter.additionalProperties.mapKeys { "value.converter.${it.key}" })
 
       if (strategy == QUERY) {
-        put("topic", topic)
+        put("neo4j.query.topic", topic)
         put("neo4j.query", query)
         put("neo4j.query.streaming-property", streamingProperty)
         put("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms")

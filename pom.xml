@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
     <name>parent</name>
     <description>Neo4j Connector for Kafka</description>
-    <url>http://github.com/neo4j/neo4j-kafka-connector</url>
+    <url>https://github.com/neo4j/neo4j-kafka-connector</url>
     <inceptionYear>2023</inceptionYear>
     <organization>
         <name>Neo4j, Neo4j Sweden AB</name>

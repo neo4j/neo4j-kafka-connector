@@ -101,7 +101,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         kotlin.time.Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
 
   internal val encrypted
-    get(): Boolean = getBoolean(SECURITY_ENCRYPTED)
+    get(): Boolean = getString(SECURITY_ENCRYPTED).toBoolean()
 
   internal val certFiles
     get(): List<File> = getList(SECURITY_CERT_FILES).map { File(it) }
@@ -142,7 +142,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
                 TrustStrategy.trustCustomCertificateSignedBy(*certFiles.toTypedArray())
           }
 
-      return if (getBoolean(SECURITY_HOST_NAME_VERIFICATION_ENABLED)) {
+      return if (getString(SECURITY_HOST_NAME_VERIFICATION_ENABLED).toBoolean()) {
         strategy.withHostnameVerification()
       } else {
         strategy.withoutHostnameVerification()
@@ -220,6 +220,14 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
   open fun userAgentComment(): String = ""
 
+  override fun close() {
+    try {
+      driver.close()
+    } catch (t: Throwable) {
+      logger.warn("unable to close driver", t)
+    }
+  }
+
   companion object {
     const val DEFAULT_MAX_RETRY_ATTEMPTS = 5
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
@@ -278,13 +286,5 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
             .defineEncryptionSettings()
             .definePoolSettings()
             .defineRetrySettings()
-  }
-
-  override fun close() {
-    try {
-      driver.close()
-    } catch (t: Throwable) {
-      logger.warn("unable to close driver", t)
-    }
   }
 }

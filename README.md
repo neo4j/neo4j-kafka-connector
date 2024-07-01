@@ -4,7 +4,7 @@ The project provides Neo4j sink and source connector implementations for Kafka C
 
 ## Documentation & Articles
 
-Read more at https://neo4j.com/docs/kafka/
+Read more at https://neo4j.com/docs/kafka/.
 
 ## Feedback & Suggestions
 
@@ -12,22 +12,6 @@ Please raise [issues on Github](https://github.com/neo4j/neo4j-kafka-connector/i
 don't be shy to send a Pull Request.
 
 ## Development & Contributions
-
-### Internal Maven Repository
-
-For the build to succeed, it needs the package [build-resources](https://github.com/neo4j/connectors-build-resources)
-that is being published to Github Packages.
-In order to access it, create a personal access token in Github and give it a permission to read packages.
-Then add the following content into `settings/servers` inside ~/.m2/settings.xml.
-
-```xml
-
-<server>
-    <id>github</id>
-    <username>your-github-user-name</username>
-    <password>your-personal-access-token</password>
-</server>
-```
 
 ### Build locally
 
@@ -41,6 +25,7 @@ dip provision
 ```
 
 Make sure `direnv` exports environment variables by running:
+
 ```shell
 direnv allow .
 ```
@@ -52,7 +37,7 @@ mvn verify
 ```
 
 You'll find the connector archive
-at `kafka-connect-neo4j/target/components/packages/neo4j-kafka-connect-neo4j-{version}.zip`.
+at `packaging/target/neo4j-kafka-connect-{version}.zip`.
 
 ### Code Format
 

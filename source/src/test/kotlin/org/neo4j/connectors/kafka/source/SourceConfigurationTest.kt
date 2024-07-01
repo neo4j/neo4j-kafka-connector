@@ -37,7 +37,6 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.driver.TransactionConfig
 
-@Suppress("DEPRECATION")
 class SourceConfigurationTest {
 
   @Test
@@ -75,7 +74,7 @@ class SourceConfigurationTest {
                   Neo4jConfiguration.URI to "neo4j://localhost",
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "none"))
         }
         .also {
@@ -89,7 +88,7 @@ class SourceConfigurationTest {
                   Neo4jConfiguration.URI to "neo4j://localhost",
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1k"))
         }
@@ -104,7 +103,7 @@ class SourceConfigurationTest {
                   Neo4jConfiguration.URI to "neo4j://localhost",
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_TIMEOUT to "1k"))
@@ -120,7 +119,7 @@ class SourceConfigurationTest {
                   Neo4jConfiguration.URI to "neo4j://localhost",
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_TIMEOUT to "5m",
@@ -137,7 +136,7 @@ class SourceConfigurationTest {
                   Neo4jConfiguration.URI to "neo4j://localhost",
                   SourceConfiguration.STRATEGY to "QUERY",
                   SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                  SourceConfiguration.TOPIC to "my-topic",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                   SourceConfiguration.QUERY_STREAMING_PROPERTY to "",
@@ -159,7 +158,7 @@ class SourceConfigurationTest {
                 SourceConfiguration.STRATEGY to "QUERY",
                 SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                 SourceConfiguration.QUERY_STREAMING_PROPERTY to "timestamp",
-                SourceConfiguration.TOPIC to "my-topic",
+                SourceConfiguration.QUERY_TOPIC to "my-topic",
                 SourceConfiguration.START_FROM to "EARLIEST",
                 SourceConfiguration.QUERY_POLL_INTERVAL to "1m",
                 SourceConfiguration.QUERY_TIMEOUT to "5m",

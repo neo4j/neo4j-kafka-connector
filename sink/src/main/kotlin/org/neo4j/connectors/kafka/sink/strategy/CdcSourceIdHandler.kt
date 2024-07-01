@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
@@ -29,8 +30,8 @@ import org.neo4j.driver.Query
 class CdcSourceIdHandler(
     val topic: String,
     private val renderer: Renderer,
-    val labelName: String,
-    val propertyName: String
+    val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
+    val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME
 ) : CdcHandler() {
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID
