@@ -50,65 +50,34 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>confluent-source</id>
+                        <id>confluent</id>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
                         <configuration>
                             <filters>
-                                <filter>src/main/assemblies/confluent-source.properties</filter>
+                                <filter>src/main/assemblies/confluent.properties</filter>
                             </filters>
                             <descriptors>
-                                <descriptor>src/main/assemblies/confluent-source-zip.xml</descriptor>
+                                <descriptor>src/main/assemblies/confluent-zip.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-source-${project.version}</finalName>
+                            <finalName>neo4j-kafka-connect-${project.version}</finalName>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>confluent-sink</id>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <filters>
-                                <filter>src/main/assemblies/confluent-sink.properties</filter>
-                            </filters>
-                            <descriptors>
-                                <descriptor>src/main/assemblies/confluent-sink-zip.xml</descriptor>
-                            </descriptors>
-                            <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-sink-${project.version}</finalName>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>source</id>
+                        <id>jar</id>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
                         <configuration>
                             <descriptors>
-                                <descriptor>src/main/assemblies/source-jar.xml</descriptor>
+                                <descriptor>src/main/assemblies/jar.xml</descriptor>
                             </descriptors>
                             <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-source-${project.version}</finalName>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>sink</id>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>src/main/assemblies/sink-jar.xml</descriptor>
-                            </descriptors>
-                            <appendAssemblyId>false</appendAssemblyId>
-                            <finalName>neo4j-kafka-connect-sink-${project.version}</finalName>
+                            <finalName>neo4j-kafka-connect-${project.version}</finalName>
                         </configuration>
                     </execution>
                 </executions>
@@ -173,16 +142,10 @@
                                 <files>
                                     <artifacts>
                                         <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-source-${project.version}.zip</path>
+                                            <path>${packaging.directory}/neo4j-kafka-connect-${project.version}.zip</path>
                                         </artifact>
                                         <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-source-${project.version}.jar</path>
-                                        </artifact>
-                                        <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-sink-${project.version}.zip</path>
-                                        </artifact>
-                                        <artifact>
-                                            <path>${packaging.directory}/neo4j-kafka-connect-sink-${project.version}.jar</path>
+                                            <path>${packaging.directory}/neo4j-kafka-connect-${project.version}.jar</path>
                                         </artifact>
                                     </artifacts>
                                 </files>
