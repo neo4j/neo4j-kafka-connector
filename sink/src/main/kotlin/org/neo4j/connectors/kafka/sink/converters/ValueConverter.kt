@@ -138,7 +138,7 @@ abstract class ValueConverter<T> {
         } else if (fieldValue is Boolean) {
           log.trace("convertMap() - Processing '{}' as boolean.", fieldName)
           setBooleanField(result, fieldName, fieldValue)
-        } else if (fieldValue is java.util.Date) {
+        } else if (fieldValue is Date) {
           log.trace("convertMap() - Processing '{}' as timestamp.", fieldName)
           setTimestampField(result, fieldName, fieldValue)
         } else if (fieldValue is ByteArray) {
@@ -201,10 +201,10 @@ abstract class ValueConverter<T> {
           Schema.Type.INT32 ->
               if (org.apache.kafka.connect.data.Date.LOGICAL_NAME == field.schema().name()) {
                 log.trace("convertStruct() - Processing '{}' as date.", fieldName)
-                setDateField(result, fieldName, fieldValue as java.util.Date)
+                setDateField(result, fieldName, fieldValue as Date)
               } else if (Time.LOGICAL_NAME == field.schema().name()) {
                 log.trace("convertStruct() - Processing '{}' as time.", fieldName)
-                setTimeField(result, fieldName, fieldValue as java.util.Date)
+                setTimeField(result, fieldName, fieldValue as Date)
               } else {
                 val int32Value = fieldValue as Int
                 log.trace("convertStruct() - Processing '{}' as int32.", fieldName)
@@ -213,7 +213,7 @@ abstract class ValueConverter<T> {
           Schema.Type.INT64 ->
               if (Timestamp.LOGICAL_NAME == field.schema().name()) {
                 log.trace("convertStruct() - Processing '{}' as timestamp.", fieldName)
-                setTimestampField(result, fieldName, fieldValue as java.util.Date)
+                setTimestampField(result, fieldName, fieldValue as Date)
               } else {
                 val int64Value = fieldValue as Long
                 log.trace("convertStruct() - Processing '{}' as int64.", fieldName)

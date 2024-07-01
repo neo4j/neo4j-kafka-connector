@@ -38,7 +38,7 @@ import org.neo4j.cypherdsl.core.renderer.Renderer
 class SinkConfiguration : Neo4jConfiguration {
   private var fixedRenderer: Renderer? = null
 
-  constructor(original: Map<String, *>) : this(original, null) {}
+  constructor(original: Map<String, *>) : this(original, null)
 
   constructor(
       originals: Map<String, *>,
