@@ -61,6 +61,14 @@ class RecommendersTest {
   }
 
   @Test
+  fun `should return bool entries`() {
+    Recommenders.bool().apply {
+      assertTrue(this.visible("my.property", emptyMap()))
+      assertEquals(listOf("true", "false"), this.validValues("my.property", mapOf()))
+    }
+  }
+
+  @Test
   fun `should return visible if predicate matches`() {
     Recommenders.visibleIf("test.1", Predicate.isEqual("value")).apply {
       assertFalse(this.visible("my.property", emptyMap()))

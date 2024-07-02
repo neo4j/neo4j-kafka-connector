@@ -61,6 +61,23 @@ object Recommenders {
     }
   }
 
+  fun bool(): ConfigDef.Recommender {
+    val values = listOf("true", "false")
+
+    return object : ConfigDef.Recommender {
+      override fun validValues(
+          name: String?,
+          parsedConfig: MutableMap<String, Any>?
+      ): MutableList<Any> {
+        return values.toMutableList()
+      }
+
+      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
+        return true
+      }
+    }
+  }
+
   fun visibleIf(dependent: String, valueMatcher: Predicate<Any?>): ConfigDef.Recommender {
     return object : ConfigDef.Recommender, DependentRecommender {
       override fun validValues(
@@ -103,15 +120,6 @@ object Recommenders {
               }
             } ?: false
       }
-    }
-  }
-
-  fun hidden(): ConfigDef.Recommender {
-    return object : ConfigDef.Recommender {
-      override fun validValues(name: String?, parsedConfig: MutableMap<String, Any>?): List<Any> =
-          emptyList()
-
-      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean = false
     }
   }
 }

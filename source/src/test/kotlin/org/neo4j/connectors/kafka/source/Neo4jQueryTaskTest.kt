@@ -133,7 +133,7 @@ class Neo4jQueryTaskTest {
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
-            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to sourceQuery))
 
     // expect to see all data
@@ -158,7 +158,7 @@ class Neo4jQueryTaskTest {
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
-            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to sourceQuery))
 
     // expect to see only the data created after task is started
@@ -189,7 +189,7 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
             SourceConfiguration.START_FROM_VALUE to
                 Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
-            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to sourceQuery))
 
     // expect to see only the data created after the provided timestamp
@@ -221,7 +221,7 @@ class Neo4jQueryTaskTest {
           put(Neo4jConfiguration.URI, neo4j.boltUrl)
           put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
           put(SourceConfiguration.STRATEGY, SourceType.QUERY.toString())
-          put(SourceConfiguration.TOPIC, UUID.randomUUID().toString())
+          put(SourceConfiguration.QUERY_TOPIC, UUID.randomUUID().toString())
           put(SourceConfiguration.QUERY, sourceQuery)
           put(SourceConfiguration.QUERY_STREAMING_PROPERTY, "timestamp")
 
@@ -254,7 +254,7 @@ class Neo4jQueryTaskTest {
                 Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
                 SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
                 SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
-                SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+                SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
                 SourceConfiguration.QUERY to sourceQuery,
                 SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
@@ -281,7 +281,7 @@ class Neo4jQueryTaskTest {
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
-            SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+            SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to sourceQuery,
             SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
@@ -315,7 +315,7 @@ class Neo4jQueryTaskTest {
                 SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
                 SourceConfiguration.START_FROM_VALUE to
                     Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
-                SourceConfiguration.TOPIC to UUID.randomUUID().toString(),
+                SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
                 SourceConfiguration.QUERY to sourceQuery,
                 SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
 
@@ -327,7 +327,7 @@ class Neo4jQueryTaskTest {
   fun `should support null values returned from query`() = runTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "1s"
     props[SourceConfiguration.QUERY] =
         """
@@ -373,7 +373,7 @@ class Neo4jQueryTaskTest {
   fun `should source data with complex type with custom QUERY`() = runTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+    props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY] =
         """
@@ -423,7 +423,7 @@ class Neo4jQueryTaskTest {
     assertFailsWith(ClientException::class) {
       val props = mutableMapOf<String, String>()
       props[Neo4jConfiguration.URI] = neo4j.boltUrl
-      props[SourceConfiguration.TOPIC] = UUID.randomUUID().toString()
+      props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
       props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
       props[SourceConfiguration.QUERY] = "WRONG QUERY".trimMargin()
       props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()

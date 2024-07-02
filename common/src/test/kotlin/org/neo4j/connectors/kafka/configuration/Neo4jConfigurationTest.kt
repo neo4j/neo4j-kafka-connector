@@ -16,10 +16,12 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
+import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.throwable.shouldHaveMessage
 import java.io.File
 import java.net.URI
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
@@ -27,7 +29,6 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.ConfigException
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.neo4j.driver.AuthTokens
@@ -37,271 +38,213 @@ class Neo4jConfigurationTest {
 
   @Test
   fun `config should be successful`() {
-    assertDoesNotThrow { Neo4jConfiguration.config() }
+    shouldNotThrowAny { Neo4jConfiguration.config() }
   }
 
   @ParameterizedTest
   @EnumSource(ConnectorType::class)
   fun `invalid config`(type: ConnectorType) {
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(Neo4jConfiguration.URI to "bolt+routing://localhost"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value bolt+routing://localhost for configuration neo4j.uri: Scheme must be one of: 'neo4j', 'neo4j+s', 'neo4j+ssc', 'bolt', 'bolt+s', 'bolt+ssc'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(Neo4jConfiguration.URI to "bolt+routing://localhost"),
+          type)
+    } shouldHaveMessage
+        "Invalid value bolt+routing://localhost for configuration neo4j.uri: Scheme must be one of: 'neo4j', 'neo4j+s', 'neo4j+ssc', 'bolt', 'bolt+s', 'bolt+ssc'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(Neo4jConfiguration.URI to "neo4j://localhost,https://localhost"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value https://localhost for configuration neo4j.uri: Scheme must be one of: 'neo4j', 'neo4j+s', 'neo4j+ssc', 'bolt', 'bolt+s', 'bolt+ssc'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(Neo4jConfiguration.URI to "neo4j://localhost,https://localhost"),
+          type)
+    } shouldHaveMessage
+        "Invalid value https://localhost for configuration neo4j.uri: Scheme must be one of: 'neo4j', 'neo4j+s', 'neo4j+ssc', 'bolt', 'bolt+s', 'bolt+ssc'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "unsupported"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value unsupported for configuration neo4j.authentication.type: Must be one of: 'NONE', 'BASIC', 'KERBEROS', 'BEARER', 'CUSTOM'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "unsupported"),
+          type)
+    } shouldHaveMessage
+        "Invalid value unsupported for configuration neo4j.authentication.type: Must be one of: 'NONE', 'BASIC', 'KERBEROS', 'BEARER', 'CUSTOM'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 5 for configuration neo4j.max-retry-time: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5"),
+          type)
+    } shouldHaveMessage
+        "Invalid value 5 for configuration neo4j.max-retry-time: Must match pattern '(\\d+(ms|s|m|h|d))+'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 0),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 0 for configuration neo4j.max-retry-attempts: Value must be at least 1",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 0),
+          type)
+    } shouldHaveMessage
+        "Invalid value 0 for configuration neo4j.max-retry-attempts: Value must be at least 1"
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 1 for configuration neo4j.connection-timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1"),
+          type)
+    } shouldHaveMessage
+        "Invalid value 1 for configuration neo4j.connection-timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 0),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 0 for configuration neo4j.pool.max-connection-pool-size: Value must be at least 1",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 0),
+          type)
+    } shouldHaveMessage
+        "Invalid value 0 for configuration neo4j.pool.max-connection-pool-size: Value must be at least 1"
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5k"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 5k for configuration neo4j.pool.connection-acquisition-timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5k"),
+          type)
+    } shouldHaveMessage
+        "Invalid value 5k for configuration neo4j.pool.connection-acquisition-timeout: Must match pattern '(\\d+(ms|s|m|h|d))+'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1ns"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 1ns for configuration neo4j.pool.idle-time-before-connection-test: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1ns"),
+          type)
+    } shouldHaveMessage
+        "Invalid value 1ns for configuration neo4j.pool.idle-time-before-connection-test: Must match pattern '(\\d+(ms|s|m|h|d))+'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "1w"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value 1w for configuration neo4j.pool.max-connection-lifetime: Must match pattern '(\\d+(ms|s|m|h|d))+'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "1w"),
+          type)
+    } shouldHaveMessage
+        "Invalid value 1w for configuration neo4j.pool.max-connection-lifetime: Must match pattern '(\\d+(ms|s|m|h|d))+'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
-                  Neo4jConfiguration.SECURITY_ENCRYPTED to "enabled"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value enabled for configuration neo4j.security.encrypted: Expected value to be either true or false",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
+              Neo4jConfiguration.SECURITY_ENCRYPTED to "enabled"),
+          type)
+    } shouldHaveMessage
+        "Invalid value enabled for configuration neo4j.security.encrypted: Must be one of: 'true', 'false'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
-                  Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
-                  Neo4jConfiguration.SECURITY_TRUST_STRATEGY to "unknown"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value unknown for configuration neo4j.security.trust-strategy: Must be one of: 'TRUST_ALL_CERTIFICATES', 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES', 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES'.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
+              Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
+              Neo4jConfiguration.SECURITY_TRUST_STRATEGY to "unknown"),
+          type)
+    } shouldHaveMessage
+        "Invalid value unknown for configuration neo4j.security.trust-strategy: Must be one of: 'TRUST_ALL_CERTIFICATES', 'TRUST_CUSTOM_CA_SIGNED_CERTIFICATES', 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
-                  Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
-                  Neo4jConfiguration.SECURITY_TRUST_STRATEGY to
-                      "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES",
-                  Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED to "disabled"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value disabled for configuration neo4j.security.hostname-verification-enabled: Expected value to be either true or false",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
+              Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
+              Neo4jConfiguration.SECURITY_TRUST_STRATEGY to "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES",
+              Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED to "disabled"),
+          type)
+    } shouldHaveMessage
+        "Invalid value disabled for configuration neo4j.security.hostname-verification-enabled: Must be one of: 'true', 'false'."
 
-    assertFailsWith(ConfigException::class) {
-          Neo4jConfiguration(
-              Neo4jConfiguration.config(),
-              mapOf(
-                  Neo4jConfiguration.URI to "bolt://localhost",
-                  Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                  Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
-                  Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
-                  Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
-                  Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
-                  Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
-                  Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
-                  Neo4jConfiguration.SECURITY_TRUST_STRATEGY to
-                      "TRUST_CUSTOM_CA_SIGNED_CERTIFICATES",
-                  Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED to "false",
-                  Neo4jConfiguration.SECURITY_CERT_FILES to "non-existing-file.txt"),
-              type)
-        }
-        .also {
-          assertEquals(
-              "Invalid value non-existing-file.txt for configuration neo4j.security.cert-files: Must be an absolute path.",
-              it.message)
-        }
+    shouldThrow<ConfigException> {
+      Neo4jConfiguration(
+          Neo4jConfiguration.config(),
+          mapOf(
+              Neo4jConfiguration.URI to "bolt://localhost",
+              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
+              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
+              Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
+              Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
+              Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST to "1h",
+              Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME to "8h",
+              Neo4jConfiguration.SECURITY_ENCRYPTED to "true",
+              Neo4jConfiguration.SECURITY_TRUST_STRATEGY to "TRUST_CUSTOM_CA_SIGNED_CERTIFICATES",
+              Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED to "false",
+              Neo4jConfiguration.SECURITY_CERT_FILES to "non-existing-file.txt"),
+          type)
+    } shouldHaveMessage
+        "Invalid value non-existing-file.txt for configuration neo4j.security.cert-files: Must be an absolute path."
   }
 
   @ParameterizedTest

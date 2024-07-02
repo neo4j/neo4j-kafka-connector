@@ -32,6 +32,7 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.cdc.client.selector.Selector
 import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
@@ -63,7 +64,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     get(): String = getString(START_FROM_VALUE)
 
   val ignoreStoredOffset
-    get(): Boolean = getBoolean(IGNORE_STORED_OFFSET)
+    get(): Boolean = getString(IGNORE_STORED_OFFSET).toBoolean()
 
   val strategy
     get(): SourceType = SourceType.valueOf(getString(STRATEGY))
@@ -87,7 +88,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     get(): Duration = Duration.parseSimpleString(getString(QUERY_TIMEOUT))
 
   val topic
-    get(): String = getString(TOPIC)
+    get(): String = getString(QUERY_TOPIC)
 
   val partition
     get(): Map<String, Any> {
@@ -400,7 +401,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_POLL_INTERVAL = "neo4j.query.poll-interval"
     const val QUERY_POLL_DURATION = "neo4j.query.poll-duration"
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
-    const val TOPIC = "topic"
+    const val QUERY_TOPIC = "neo4j.query.topic"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
     private const val GROUP_NAME_TOPIC = "topic"
@@ -443,7 +444,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       config.validateNonEmptyIfVisible(BATCH_SIZE)
 
       // QUERY strategy validation
-      config.validateNonEmptyIfVisible(TOPIC)
+      config.validateNonEmptyIfVisible(QUERY_TOPIC)
       config.validateNonEmptyIfVisible(QUERY)
       config.validateNonEmptyIfVisible(QUERY_TIMEOUT)
       config.validateNonEmptyIfVisible(QUERY_POLL_INTERVAL)
@@ -494,6 +495,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(STRATEGY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = SourceType.QUERY.name
+                  group = Groups.CONNECTOR.title
                   validator = Validators.enum(SourceType::class.java)
                   recommender = Recommenders.enum(SourceType::class.java)
                 })
@@ -501,6 +503,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(START_FROM, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = StartFrom.NOW.toString()
+                  group = Groups.CONNECTOR.title
                   validator = Validators.enum(StartFrom::class.java)
                   recommender = Recommenders.enum(StartFrom::class.java)
                 })
@@ -508,84 +511,97 @@ class SourceConfiguration(originals: Map<*, *>) :
                 ConfigKeyBuilder.of(START_FROM_VALUE, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
+                  group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(
                           START_FROM, Predicate.isEqual(StartFrom.USER_PROVIDED.name))
                 })
             .define(
-                ConfigKeyBuilder.of(IGNORE_STORED_OFFSET, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.HIGH
-                  defaultValue = false
-                })
-            .define(
-                ConfigKeyBuilder.of(TOPIC, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
-                  defaultValue = ""
-                  recommender =
-                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                ConfigKeyBuilder.of(IGNORE_STORED_OFFSET, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = "false"
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
+                  group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_STREAMING_PROPERTY
+                  group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.notBlankOrEmpty()
                 })
             .define(
-                ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(QUERY_TOPIC, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                  group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_QUERY_POLL_INTERVAL.toSimpleString()
-                })
-            .define(
-                ConfigKeyBuilder.of(QUERY_POLL_DURATION, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
-                  recommender =
-                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_QUERY_POLL_DURATION.toSimpleString()
-                })
-            .define(
-                ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
-                  importance = ConfigDef.Importance.HIGH
-                  recommender =
-                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                  validator = Range.atLeast(1)
-                  defaultValue = DEFAULT_BATCH_SIZE
                 })
             .define(
                 ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_QUERY_TIMEOUT.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_QUERY_TIMEOUT.toSimpleString()
+                })
+            .define(
+                ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_QUERY_POLL_INTERVAL.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                })
+            .define(
+                ConfigKeyBuilder.of(QUERY_POLL_DURATION, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_QUERY_POLL_DURATION.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                })
+            .define(
+                ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BATCH_SIZE
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
+                  validator = Range.atLeast(1)
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_INTERVAL, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CDC_POLL_INTERVAL.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_CDC_POLL_INTERVAL.toSimpleString()
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_DURATION, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CDC_POLL_DURATION.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_CDC_POLL_DURATION.toSimpleString()
                 })
   }
 }

@@ -23,13 +23,13 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.utils.PropertiesUtil
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Dialect
@@ -65,7 +65,7 @@ class SinkConfiguration : Neo4jConfiguration {
     get(): String = getString(CYPHER_BIND_VALUE_AS)
 
   val cypherBindValueAsEvent
-    get(): Boolean = getBoolean(CYPHER_BIND_VALUE_AS_EVENT)
+    get(): Boolean = getString(CYPHER_BIND_VALUE_AS_EVENT).toBoolean()
 
   val patternBindTimestampAs
     get(): String = getString(PATTERN_BIND_TIMESTAMP_AS)
@@ -152,8 +152,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val CUD_TOPICS = "neo4j.cud.topics"
 
     private const val DEFAULT_BATCH_SIZE = 1000
-    val DEFAULT_BATCH_TIMEOUT = 0.seconds
-    private const val DEFAULT_BATCH_PARALLELIZE = true
+    private val DEFAULT_BATCH_TIMEOUT = 0.seconds
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
     const val DEFAULT_BIND_TIMESTAMP_ALIAS = "__timestamp"
@@ -172,7 +171,8 @@ class SinkConfiguration : Neo4jConfiguration {
       val cypherAliasForHeader = config.value<String>(CYPHER_BIND_HEADER_AS).isNullOrEmpty()
       val cypherAliasForKey = config.value<String>(CYPHER_BIND_KEY_AS).isNullOrEmpty()
       val cypherAliasForValue = config.value<String>(CYPHER_BIND_VALUE_AS).isNullOrEmpty()
-      val cypherUseEventForValue = config.value<Boolean>(CYPHER_BIND_VALUE_AS_EVENT) ?: true
+      val cypherUseEventForValue =
+          config.value<String>(CYPHER_BIND_VALUE_AS_EVENT)?.toBoolean() ?: true
       if (!cypherUseEventForValue &&
           (cypherAliasForHeader &&
               cypherAliasForKey &&
@@ -205,157 +205,123 @@ class SinkConfiguration : Neo4jConfiguration {
         Neo4jConfiguration.config()
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_TOPICS, ConfigDef.Type.LIST) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.MEDIUM
                   defaultValue = ""
-                  group = "Neo4j"
+                  group = Groups.CONNECTOR.title
+                })
+            .define(
+                ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = ""
+                  group = Groups.CONNECTOR.title
+                })
+            .define(
+                ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = ""
+                  group = Groups.CONNECTOR.title
+                })
+            .define(
+                ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BATCH_SIZE
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = ConfigDef.Range.atLeast(1)
+                })
+            .define(
+                ConfigKeyBuilder.of(BATCH_TIMEOUT, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_SOURCE_ID_LABEL_NAME
-                  group = "Neo4j"
+                  group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 })
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_PROPERTY_NAME, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_SOURCE_ID_PROPERTY_NAME
-                  group = "Neo4j"
+                  group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
-                })
-            .define(
-                ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
-                  importance = ConfigDef.Importance.HIGH
-                  defaultValue = ""
-                  group = "Neo4j"
-                })
-            .define(
-                ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
-                  importance = ConfigDef.Importance.HIGH
-                  defaultValue = ""
-                  group = "Neo4j"
-                })
-            .define(
-                ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
-                })
-            .define(
-                ConfigKeyBuilder.of(PATTERN_RELATIONSHIP_MERGE_PROPERTIES, ConfigDef.Type.BOOLEAN) {
-                  documentation = PropertiesUtil.getProperty(PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
-                  importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
-                })
-            .define(
-                ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
-                  importance = ConfigDef.Importance.HIGH
-                  validator = ConfigDef.Range.atLeast(1)
-                  defaultValue = DEFAULT_BATCH_SIZE
-                })
-            .define(
-                ConfigKeyBuilder.of(BATCH_TIMEOUT, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.HIGH
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                 })
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_KEY_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
-                ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS_EVENT, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
-                  validator = ConfigDef.NonNullValidator()
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k -> k.startsWith(CYPHER_TOPIC_PREFIX) }
+                ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS_EVENT, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_CYPHER_BIND_VALUE_AS_EVENT.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_HEADER_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_KEY_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
+                  group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_VALUE_AS, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
+                  importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
-                  group = "Neo4j"
-                  recommender =
-                      Recommenders.visibleIfNotEmpty { k ->
-                        k.startsWith(PATTERN_NODE_TOPIC_PREFIX) ||
-                            k.startsWith(PATTERN_RELATIONSHIP_TOPIC_PREFIX)
-                      }
+                  group = Groups.CONNECTOR_ADVANCED.title
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
+                })
+            .define(
+                ConfigKeyBuilder.of(PATTERN_RELATIONSHIP_MERGE_PROPERTIES, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
                 })
   }
 }

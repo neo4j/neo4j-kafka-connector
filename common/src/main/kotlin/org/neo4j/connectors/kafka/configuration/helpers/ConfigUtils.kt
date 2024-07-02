@@ -41,7 +41,7 @@ class ConfigKeyBuilder private constructor(val name: String, val type: ConfigDef
   var displayName: String = name
   var dependents: Set<String> = emptySet()
   var recommender: ConfigDef.Recommender? = null
-  var internalConfig: Boolean = true
+  var internalConfig: Boolean = false
 
   fun build(): ConfigDef.ConfigKey {
     return ConfigDef.ConfigKey(

@@ -123,7 +123,7 @@ class Neo4jConnectorTest {
         .validate(
             mutableMapOf(
                 Neo4jConfiguration.URI to "neo4j://localhost",
-                SourceConfiguration.TOPIC to "topic",
+                SourceConfiguration.QUERY_TOPIC to "topic",
                 SourceConfiguration.STRATEGY to "QUERY"))
         .apply {
           this.configValues()
@@ -140,9 +140,9 @@ class Neo4jConnectorTest {
                 SourceConfiguration.STRATEGY to "QUERY"))
         .apply {
           this.configValues()
-              .first { it.name() == SourceConfiguration.TOPIC }
+              .first { it.name() == SourceConfiguration.QUERY_TOPIC }
               .errorMessages() shouldContain
-              "Invalid value for configuration topic: Must not be blank."
+              "Invalid value for configuration neo4j.query.topic: Must not be blank."
         }
   }
 
@@ -207,7 +207,7 @@ class Neo4jConnectorTest {
         mutableMapOf(
             Neo4jConfiguration.URI to "neo4j://localhost",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-            SourceConfiguration.TOPIC to "my-topic",
+            SourceConfiguration.QUERY_TOPIC to "my-topic",
             SourceConfiguration.STRATEGY to "QUERY",
             SourceConfiguration.QUERY to "MATCH (n) RETURN n.timestamp, n"))
 

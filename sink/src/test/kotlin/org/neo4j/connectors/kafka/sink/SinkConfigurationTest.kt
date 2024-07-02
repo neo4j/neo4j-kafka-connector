@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@file:Suppress("DEPRECATION")
-
 package org.neo4j.connectors.kafka.sink
 
 import io.kotest.assertions.throwables.shouldThrow

@@ -157,7 +157,7 @@ interface SinkStrategyHandler {
             NodePatternHandler(
                 topic,
                 nodePattern,
-                config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
+                config.getString(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES).toBoolean(),
                 config.renderer,
                 config.batchSize,
                 bindTimestampAs = config.patternBindTimestampAs,
@@ -177,8 +177,10 @@ interface SinkStrategyHandler {
             RelationshipPatternHandler(
                 topic,
                 relationshipPattern,
-                config.getBoolean(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES),
-                config.getBoolean(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES),
+                config.getString(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES).toBoolean(),
+                config
+                    .getString(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
+                    .toBoolean(),
                 config.renderer,
                 config.batchSize,
                 bindTimestampAs = config.patternBindTimestampAs,

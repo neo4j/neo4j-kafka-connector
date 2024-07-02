@@ -104,6 +104,10 @@ object Validators {
         *cls.enumConstants.filterNot { exclude.contains(it) }.map { it.name }.toTypedArray())
   }
 
+  fun bool(): ConfigDef.Validator {
+    return string("true", "false")
+  }
+
   fun pattern(pattern: String): ConfigDef.Validator {
     return pattern(Pattern.compile(pattern))
   }
