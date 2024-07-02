@@ -114,16 +114,6 @@ class SinkConfiguration : Neo4jConfiguration {
     SinkStrategyHandler.createFrom(this)
   }
 
-  override fun typeOf(key: String?): ConfigDef.Type {
-    return super.typeOf(key)
-  }
-
-  override fun postProcessParsedConfig(
-      parsedValues: MutableMap<String, Any>?
-  ): MutableMap<String, Any> {
-    return super.postProcessParsedConfig(parsedValues)
-  }
-
   override fun userAgentComment(): String =
       SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 

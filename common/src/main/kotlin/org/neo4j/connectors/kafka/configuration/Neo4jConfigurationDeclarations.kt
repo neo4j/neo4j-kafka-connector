@@ -90,7 +90,6 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(
                 Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET, ConfigDef.Type.PASSWORD) {
-                  displayName = "Kerberos Ticket"
                   group = Groups.CONNECTION.title
                   importance = Importance.HIGH
                   defaultValue = ""
