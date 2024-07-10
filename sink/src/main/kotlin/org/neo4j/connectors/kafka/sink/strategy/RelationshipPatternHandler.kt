@@ -16,11 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.PatternConstraintValidator
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Literal
@@ -119,6 +121,23 @@ class RelationshipPatternHandler(
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
+  }
+
+  fun validate(constraints: List<ConstraintData>) {
+    val warningMessages = checkConstraints(constraints)
+    warningMessages.forEach { logger.warn(it) }
+  }
+
+  fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+    val warningMessages = mutableListOf<String>()
+    warningMessages.addAll(PatternConstraintValidator.checkNodeWarnings(constraints, pattern.start))
+    val relationshipWarning =
+        PatternConstraintValidator.checkRelationshipWarnings(constraints, pattern)
+    if (relationshipWarning != null) {
+      warningMessages.add(relationshipWarning)
+    }
+    warningMessages.addAll(PatternConstraintValidator.checkNodeWarnings(constraints, pattern.end))
+    return warningMessages
   }
 
   private fun buildStatement(): String {

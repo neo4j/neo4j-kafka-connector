@@ -16,12 +16,14 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.PatternConstraintValidator
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Literal
 import org.neo4j.cypherdsl.core.Node
@@ -102,6 +104,15 @@ class NodePatternHandler(
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
+  }
+
+  fun validate(constraints: List<ConstraintData>) {
+    val warningMessages = checkConstraints(constraints)
+    warningMessages.forEach { logger.warn(it) }
+  }
+
+  fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+    return PatternConstraintValidator.checkNodeWarnings(constraints, pattern)
   }
 
   private fun buildStatement(): String {

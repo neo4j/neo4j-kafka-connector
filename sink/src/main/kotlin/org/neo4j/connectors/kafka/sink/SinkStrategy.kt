@@ -24,6 +24,7 @@ import org.apache.kafka.connect.sink.SinkRecord
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
+import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
@@ -164,6 +165,8 @@ interface SinkStrategyHandler {
                 bindHeaderAs = config.patternBindHeaderAs,
                 bindKeyAs = config.patternBindKeyAs,
                 bindValueAs = config.patternBindValueAs)
+
+        handler.validate(fetchConstraintData(config.driver.session(config.sessionConfig())))
       }
 
       val relationshipPattern =
@@ -187,6 +190,8 @@ interface SinkStrategyHandler {
                 bindHeaderAs = config.patternBindHeaderAs,
                 bindKeyAs = config.patternBindKeyAs,
                 bindValueAs = config.patternBindValueAs)
+
+        handler.validate(fetchConstraintData(config.driver.session(config.sessionConfig())))
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
