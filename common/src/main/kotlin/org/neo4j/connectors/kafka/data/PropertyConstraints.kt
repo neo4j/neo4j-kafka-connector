@@ -52,11 +52,15 @@ data class ConstraintData(
 )
 
 fun fetchConstraintData(session: Session): List<ConstraintData> {
-  return session.run("SHOW CONSTRAINTS").list().map {
-    ConstraintData(
-        entityType = it.get("entityType").asString(),
-        constraintType = it.get("type").asString(),
-        labelOrType = it.get("labelOrTypes").asList()[0].toString(),
-        properties = it.get("properties").asList().map { property -> property.toString() })
+  return try {
+    session.run("SHOW CONSTRAINTS").list().map {
+      ConstraintData(
+          entityType = it.get("entityType").asString(),
+          constraintType = it.get("type").asString(),
+          labelOrType = it.get("labelOrTypes").asList()[0].toString(),
+          properties = it.get("properties").asList().map { property -> property.toString() })
+    }
+  } catch (e: Exception) {
+    emptyList()
   }
 }
