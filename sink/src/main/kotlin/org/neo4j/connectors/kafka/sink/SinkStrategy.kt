@@ -166,7 +166,7 @@ interface SinkStrategyHandler {
                 bindKeyAs = config.patternBindKeyAs,
                 bindValueAs = config.patternBindValueAs)
 
-        handler.validate(fetchConstraintData(config.driver.session(config.sessionConfig())))
+        handler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
       }
 
       val relationshipPattern =
@@ -191,7 +191,7 @@ interface SinkStrategyHandler {
                 bindKeyAs = config.patternBindKeyAs,
                 bindValueAs = config.patternBindValueAs)
 
-        handler.validate(fetchConstraintData(config.driver.session(config.sessionConfig())))
+        handler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)

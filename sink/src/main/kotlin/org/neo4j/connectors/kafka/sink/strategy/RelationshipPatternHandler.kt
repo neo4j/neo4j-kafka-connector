@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory
 
 class RelationshipPatternHandler(
     val topic: String,
-    patternString: String,
+    private val patternString: String,
     private val mergeNodeProperties: Boolean,
     private val mergeRelationshipProperties: Boolean,
     private val renderer: Renderer,
@@ -128,15 +128,25 @@ class RelationshipPatternHandler(
     warningMessages.forEach { logger.warn(it) }
   }
 
-  fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+  override fun checkConstraints(constraints: List<ConstraintData>): List<String> {
     val warningMessages = mutableListOf<String>()
-    warningMessages.addAll(PatternConstraintValidator.checkNodeWarnings(constraints, pattern.start))
+
+    val startNodeWarning =
+        PatternConstraintValidator.checkNodeWarnings(constraints, pattern.start, patternString)
     val relationshipWarning =
-        PatternConstraintValidator.checkRelationshipWarnings(constraints, pattern)
+        PatternConstraintValidator.checkRelationshipWarnings(constraints, pattern, patternString)
+    val endNodeWarning =
+        PatternConstraintValidator.checkNodeWarnings(constraints, pattern.end, patternString)
+
+    if (startNodeWarning != null) {
+      warningMessages.add(startNodeWarning)
+    }
     if (relationshipWarning != null) {
       warningMessages.add(relationshipWarning)
     }
-    warningMessages.addAll(PatternConstraintValidator.checkNodeWarnings(constraints, pattern.end))
+    if (endNodeWarning != null) {
+      warningMessages.add(endNodeWarning)
+    }
     return warningMessages
   }
 

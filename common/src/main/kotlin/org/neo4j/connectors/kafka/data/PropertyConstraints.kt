@@ -16,7 +16,8 @@
  */
 package org.neo4j.connectors.kafka.data
 
-import org.neo4j.driver.Session
+import org.neo4j.driver.Driver
+import org.neo4j.driver.SessionConfig
 
 enum class ConstraintEntityType(val value: String) {
   NODE("NODE"),
@@ -28,7 +29,7 @@ enum class ConstraintType(val value: String) {
   NODE_UNIQUENESS("UNIQUENESS"),
   NODE_EXISTENCE("NODE_PROPERTY_EXISTENCE"),
   RELATIONSHIP_KEY("RELATIONSHIP_KEY"),
-  RELATIONSHIP_UNIQUENESS("UNIQUENESS"),
+  RELATIONSHIP_UNIQUENESS("RELATIONSHIP_UNIQUENESS"),
   RELATIONSHIP_EXISTENCE("RELATIONSHIP_PROPERTY_EXISTENCE")
 }
 
@@ -51,14 +52,19 @@ data class ConstraintData(
     val properties: List<String>
 )
 
-fun fetchConstraintData(session: Session): List<ConstraintData> {
+fun fetchConstraintData(driver: Driver, sessionConfig: SessionConfig): List<ConstraintData> {
   return try {
-    session.run("SHOW CONSTRAINTS").list().map {
-      ConstraintData(
-          entityType = it.get("entityType").asString(),
-          constraintType = it.get("type").asString(),
-          labelOrType = it.get("labelOrTypes").asList()[0].toString(),
-          properties = it.get("properties").asList().map { property -> property.toString() })
+    driver.session(sessionConfig).use { session ->
+      session
+          .run("SHOW CONSTRAINTS YIELD entityType, type, labelsOrTypes, properties RETURN *")
+          .list()
+          .map {
+            ConstraintData(
+                entityType = it.get("entityType").asString(),
+                constraintType = it.get("type").asString(),
+                labelOrType = it.get("labelsOrTypes").asList()[0].toString(),
+                properties = it.get("properties").asList().map { property -> property.toString() })
+          }
     }
   } catch (e: Exception) {
     emptyList()

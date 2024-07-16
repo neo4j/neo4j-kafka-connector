@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory
 
 class NodePatternHandler(
     val topic: String,
-    patternString: String,
+    private val patternString: String,
     private val mergeProperties: Boolean,
     private val renderer: Renderer,
     private val batchSize: Int,
@@ -111,8 +111,11 @@ class NodePatternHandler(
     warningMessages.forEach { logger.warn(it) }
   }
 
-  fun checkConstraints(constraints: List<ConstraintData>): List<String> {
-    return PatternConstraintValidator.checkNodeWarnings(constraints, pattern)
+  override fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+    val nodeWarning =
+        PatternConstraintValidator.checkNodeWarnings(constraints, pattern, patternString)
+            ?: return emptyList()
+    return listOf(nodeWarning)
   }
 
   private fun buildStatement(): String {
