@@ -113,7 +113,7 @@ class NodePatternHandler(
 
   override fun checkConstraints(constraints: List<ConstraintData>): List<String> {
     val nodeWarning =
-        PatternConstraintValidator.checkNodeWarnings(constraints, pattern, patternString)
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern, patternString)
             ?: return emptyList()
     return listOf(nodeWarning)
   }

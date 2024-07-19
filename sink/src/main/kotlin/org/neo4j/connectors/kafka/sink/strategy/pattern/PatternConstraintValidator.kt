@@ -19,11 +19,11 @@ package org.neo4j.connectors.kafka.sink.strategy.pattern
 import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.data.ConstraintEntityType
 import org.neo4j.connectors.kafka.data.ConstraintType
-import org.neo4j.connectors.kafka.data.NODE_KEY_CONSTRAINTS
-import org.neo4j.connectors.kafka.data.RELATIONSHIP_KEY_CONSTRAINTS
+import org.neo4j.connectors.kafka.data.NODE_CONSTRAINTS
+import org.neo4j.connectors.kafka.data.RELATIONSHIP_CONSTRAINTS
 
 object PatternConstraintValidator {
-  fun checkNodeWarnings(
+  fun checkNodeWarning(
       constraints: List<ConstraintData>,
       pattern: NodePattern,
       patternString: String
@@ -32,7 +32,7 @@ object PatternConstraintValidator {
         constraints
             .filter {
               it.entityType == ConstraintEntityType.NODE.value &&
-                  NODE_KEY_CONSTRAINTS.contains(it.constraintType) &&
+                  NODE_CONSTRAINTS.contains(it.constraintType) &&
                   pattern.labels.contains(it.labelOrType)
             }
             .groupBy { "${it.constraintType}-${it.labelOrType}" }
@@ -53,7 +53,7 @@ object PatternConstraintValidator {
     return buildNodeWarningMessage(pattern, patternString, typeConstraintMap, keys)
   }
 
-  fun checkRelationshipWarnings(
+  fun checkRelationshipWarning(
       constraints: List<ConstraintData>,
       pattern: RelationshipPattern,
       patternString: String
@@ -62,7 +62,7 @@ object PatternConstraintValidator {
         constraints
             .filter {
               it.entityType == ConstraintEntityType.RELATIONSHIP.value &&
-                  RELATIONSHIP_KEY_CONSTRAINTS.contains(it.constraintType) &&
+                  RELATIONSHIP_CONSTRAINTS.contains(it.constraintType) &&
                   pattern.type == (it.labelOrType)
             }
             .groupBy { "${it.constraintType}-${it.labelOrType}" }

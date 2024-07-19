@@ -33,13 +33,13 @@ enum class ConstraintType(val value: String) {
   RELATIONSHIP_EXISTENCE("RELATIONSHIP_PROPERTY_EXISTENCE")
 }
 
-val NODE_KEY_CONSTRAINTS =
+val NODE_CONSTRAINTS =
     listOf(
         ConstraintType.NODE_KEY.value,
         ConstraintType.NODE_UNIQUENESS.value,
         ConstraintType.NODE_EXISTENCE.value)
 
-val RELATIONSHIP_KEY_CONSTRAINTS =
+val RELATIONSHIP_CONSTRAINTS =
     listOf(
         ConstraintType.RELATIONSHIP_KEY.value,
         ConstraintType.RELATIONSHIP_UNIQUENESS.value,

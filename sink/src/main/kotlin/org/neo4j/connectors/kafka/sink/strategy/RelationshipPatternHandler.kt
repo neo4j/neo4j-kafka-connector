@@ -132,11 +132,11 @@ class RelationshipPatternHandler(
     val warningMessages = mutableListOf<String>()
 
     val startNodeWarning =
-        PatternConstraintValidator.checkNodeWarnings(constraints, pattern.start, patternString)
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.start, patternString)
     val relationshipWarning =
-        PatternConstraintValidator.checkRelationshipWarnings(constraints, pattern, patternString)
+        PatternConstraintValidator.checkRelationshipWarning(constraints, pattern, patternString)
     val endNodeWarning =
-        PatternConstraintValidator.checkNodeWarnings(constraints, pattern.end, patternString)
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.end, patternString)
 
     if (startNodeWarning != null) {
       warningMessages.add(startNodeWarning)
