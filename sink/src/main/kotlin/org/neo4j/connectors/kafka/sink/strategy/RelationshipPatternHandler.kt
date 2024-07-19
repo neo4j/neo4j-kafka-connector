@@ -16,11 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.PatternConstraintValidator
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Literal
@@ -33,7 +35,7 @@ import org.slf4j.LoggerFactory
 
 class RelationshipPatternHandler(
     val topic: String,
-    patternString: String,
+    private val patternString: String,
     private val mergeNodeProperties: Boolean,
     private val mergeRelationshipProperties: Boolean,
     private val renderer: Renderer,
@@ -119,6 +121,33 @@ class RelationshipPatternHandler(
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
+  }
+
+  fun validate(constraints: List<ConstraintData>) {
+    val warningMessages = checkConstraints(constraints)
+    warningMessages.forEach { logger.warn(it) }
+  }
+
+  override fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+    val warningMessages = mutableListOf<String>()
+
+    val startNodeWarning =
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.start, patternString)
+    val relationshipWarning =
+        PatternConstraintValidator.checkRelationshipWarning(constraints, pattern, patternString)
+    val endNodeWarning =
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.end, patternString)
+
+    if (startNodeWarning != null) {
+      warningMessages.add(startNodeWarning)
+    }
+    if (relationshipWarning != null) {
+      warningMessages.add(relationshipWarning)
+    }
+    if (endNodeWarning != null) {
+      warningMessages.add(endNodeWarning)
+    }
+    return warningMessages
   }
 
   private fun buildStatement(): String {

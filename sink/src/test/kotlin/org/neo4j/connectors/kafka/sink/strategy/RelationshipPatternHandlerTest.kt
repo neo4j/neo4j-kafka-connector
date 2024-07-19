@@ -25,6 +25,9 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.neo4j.connectors.kafka.data.ConstraintData
+import org.neo4j.connectors.kafka.data.ConstraintEntityType
+import org.neo4j.connectors.kafka.data.ConstraintType
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -898,6 +901,234 @@ class RelationshipPatternHandlerTest : HandlerTest() {
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: __value.end})",
         value = """{"start": 1, "rel_id": 1}""",
         message = "Key 'end' could not be located in the values.")
+  }
+
+  @Test
+  fun `checkConstraints should not return warning messages if relationship key constraint provided with all keys`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelA",
+                properties = listOf("idStart")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_KEY.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id", "second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelB",
+                properties = listOf("idEnd")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe emptyList()
+  }
+
+  @Test
+  fun `checkConstraints should not return warning messages if relationship uniqueness and existence constraint provided with all keys`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelA",
+                properties = listOf("idStart")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_UNIQUENESS.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id", "second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelB",
+                properties = listOf("idEnd")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe emptyList()
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with empty list of constraints`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints = emptyList<ConstraintData>()
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    val startNode =
+        "Label 'LabelA' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+            "\nPlease fix the label constraint:" +
+            "\n\t'LabelA' has no key constraints" +
+            "\nExpected constraints:" +
+            "\n\t- NODE_KEY (idStart)" +
+            "\nor:" +
+            "\n\t- UNIQUENESS (idStart)" +
+            "\n\t- NODE_PROPERTY_EXISTENCE (idStart)"
+
+    warningMessages[0] shouldBe startNode
+
+    val relationship =
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+            "\nPlease fix the relationship constraints:" +
+            "\n\t'REL_TYPE' has no key constraints" +
+            "\nExpected constraints:" +
+            "\n\t- RELATIONSHIP_KEY (id)" +
+            "\nor:" +
+            "\n\t- RELATIONSHIP_UNIQUENESS (id)" +
+            "\n\t- RELATIONSHIP_PROPERTY_EXISTENCE (id)"
+
+    warningMessages[1] shouldBe relationship
+
+    val endNode =
+        "Label 'LabelB' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+            "\nPlease fix the label constraint:" +
+            "\n\t'LabelB' has no key constraints" +
+            "\nExpected constraints:" +
+            "\n\t- NODE_KEY (idEnd)" +
+            "\nor:" +
+            "\n\t- UNIQUENESS (idEnd)" +
+            "\n\t- NODE_PROPERTY_EXISTENCE (idEnd)"
+
+    warningMessages[2] shouldBe endNode
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with existing key constraints`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelA",
+                properties = listOf("idStart")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_KEY.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelB",
+                properties = listOf("idEnd")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    val relationship =
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})." +
+            "\nPlease fix the relationship constraints:" +
+            "\n\t'REL_TYPE' has:" +
+            "\n\t\t- RELATIONSHIP_KEY (id)" +
+            "\nExpected constraints:" +
+            "\n\t- RELATIONSHIP_KEY (id, second_id)" +
+            "\nor:" +
+            "\n\t- RELATIONSHIP_UNIQUENESS (id, second_id)" +
+            "\n\t- RELATIONSHIP_PROPERTY_EXISTENCE (id)" +
+            "\n\t- RELATIONSHIP_PROPERTY_EXISTENCE (second_id)"
+
+    warningMessages shouldBe listOf(relationship)
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with existing uniqueness and existence constraints`() {
+    val handler =
+        RelationshipPatternHandler(
+            "my-topic",
+            "(:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})",
+            mergeNodeProperties = true,
+            mergeRelationshipProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelA",
+                properties = listOf("idStart")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_UNIQUENESS.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id", "second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.RELATIONSHIP.value,
+                constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
+                labelOrType = "REL_TYPE",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "LabelB",
+                properties = listOf("idEnd")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    val relationship =
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})." +
+            "\nPlease fix the relationship constraints:" +
+            "\n\t'REL_TYPE' has:" +
+            "\n\t\t- RELATIONSHIP_UNIQUENESS (id, second_id)" +
+            "\n\t\t- RELATIONSHIP_PROPERTY_EXISTENCE (id)" +
+            "\nExpected constraints:" +
+            "\n\t- RELATIONSHIP_KEY (id, second_id)" +
+            "\nor:" +
+            "\n\t- RELATIONSHIP_UNIQUENESS (id, second_id)" +
+            "\n\t- RELATIONSHIP_PROPERTY_EXISTENCE (id)" +
+            "\n\t- RELATIONSHIP_PROPERTY_EXISTENCE (second_id)"
+
+    warningMessages shouldBe listOf(relationship)
   }
 
   private fun assertQueryAndParameters(

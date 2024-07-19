@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 import java.time.Instant
 import java.time.ZoneOffset
 import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -68,6 +69,8 @@ abstract class PatternHandler<T : Pattern>(
         }
         .flatten()
   }
+
+  abstract fun checkConstraints(constraints: List<ConstraintData>): List<String>
 
   /**
    * Checks if given <strong>from</strong> key is explicitly defined, i.e. something starting with
