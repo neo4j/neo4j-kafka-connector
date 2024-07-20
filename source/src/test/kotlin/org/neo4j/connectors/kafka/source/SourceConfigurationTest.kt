@@ -147,6 +147,17 @@ class SourceConfigurationTest {
           it shouldHaveMessage
               "Invalid value  for configuration neo4j.query.streaming-property: Must not be blank."
         }
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+              mapOf(
+                  Neo4jConfiguration.URI to "neo4j://localhost",
+                  SourceConfiguration.TEMPORAL_DATA_SCHEMA_TYPE to "none"))
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value none for configuration neo4j.temporal-schema.type: Must be one of: 'STRUCT', 'STRING'."
+        }
   }
 
   @Test

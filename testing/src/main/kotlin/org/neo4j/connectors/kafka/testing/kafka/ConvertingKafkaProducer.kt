@@ -25,7 +25,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Values
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.testing.SchemaRegistrySupport
@@ -55,6 +55,8 @@ data class ConvertingKafkaProducer(
   init {
     ensureSchemaCompatibility(topic)
   }
+
+  private val changeEventConverter = ChangeEventConverter()
 
   fun publish(vararg kafkaMessages: KafkaMessage) {
     kafkaProducer.beginTransaction()
@@ -117,7 +119,7 @@ data class ConvertingKafkaProducer(
   }
 
   fun publish(event: ChangeEvent) {
-    val connectValue = event.toConnectValue()
+    val connectValue = changeEventConverter.toConnectValue(event)
 
     publish(
         keySchema = connectValue.schema(),
@@ -132,7 +134,7 @@ data class ConvertingKafkaProducer(
     val kafkaMessages = mutableListOf<KafkaMessage>()
 
     events.forEach {
-      val connectValue = it.toConnectValue()
+      val connectValue = changeEventConverter.toConnectValue(it)
       kafkaMessages.add(
           KafkaMessage(
               keySchema = connectValue.schema(),

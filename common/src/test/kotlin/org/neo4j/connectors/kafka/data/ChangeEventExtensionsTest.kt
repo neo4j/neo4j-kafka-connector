@@ -34,13 +34,6 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toChangeEvent
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectSchema
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toMetadata
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toNode
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toNodeEvent
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toRelationshipEvent
 
 class ChangeEventExtensionsTest {
 
@@ -1013,8 +1006,10 @@ class ChangeEventExtensionsTest {
             commitTime,
             mapOf("user" to "app_user", "app" to "hr", "xyz" to mapOf("a" to 1L, "b" to 2L)),
             mapOf("new_field" to "abc", "another_field" to 1L))
-    val schema = metadata.toConnectSchema()
-    val converted = metadata.toConnectValue(schema)
+
+    val changeEventConverter = ChangeEventConverter()
+    val schema = changeEventConverter.metadataToConnectSchema(metadata)
+    val converted = changeEventConverter.metadataToConnectValue(metadata, schema)
 
     converted shouldBe
         Struct(schema)
@@ -1058,6 +1053,8 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `node events should be converted to struct and back`() {
+    val changeEventConverter = ChangeEventConverter()
+
     listOf(
             NodeEvent(
                 "rel-1",
@@ -1141,8 +1138,8 @@ class ChangeEventExtensionsTest {
                         "dob" to LocalDate.of(1990, 1, 1))),
                 null))
         .forEach { event ->
-          val schema = event.toConnectSchema()
-          val converted = event.toConnectValue(schema)
+          val schema = changeEventConverter.nodeEventToConnectSchema(event)
+          val converted = changeEventConverter.nodeEventToConnectValue(event, schema)
           val reverted = converted.toNodeEvent()
 
           reverted shouldBe event
@@ -1151,6 +1148,8 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `node should be converted to struct and back`() {
+    val changeEventConverter = ChangeEventConverter()
+
     val node =
         Node(
             "element-id-1",
@@ -1158,8 +1157,8 @@ class ChangeEventExtensionsTest {
             mapOf(
                 "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
                 "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L))))
-    val schema = node.toConnectSchema()
-    val converted = node.toConnectValue(schema)
+    val schema = changeEventConverter.nodeToConnectSchema(node)
+    val converted = changeEventConverter.nodeToConnectValue(node, schema)
 
     converted shouldBe
         Struct(schema)
@@ -1188,6 +1187,8 @@ class ChangeEventExtensionsTest {
 
   @Test
   fun `relationship events should be converted to struct and back`() {
+    val changeEventConverter = ChangeEventConverter()
+
     listOf(
             RelationshipEvent(
                 "rel-1",
@@ -1312,8 +1313,8 @@ class ChangeEventExtensionsTest {
                         "b" to "another")),
                 null))
         .forEach { event ->
-          val schema = event.toConnectSchema()
-          val converted = event.toConnectValue(schema)
+          val schema = changeEventConverter.relationshipEventToConnectSchema(event)
+          val converted = changeEventConverter.relationshipEventToConnectValue(event, schema)
           val reverted = converted.toRelationshipEvent()
 
           reverted shouldBe event
@@ -1328,6 +1329,7 @@ class ChangeEventExtensionsTest {
   )
 
   private fun <T : Event> newChangeEvent(event: T): ChangeEventResult<T> {
+    val changeEventConverter = ChangeEventConverter()
     val change =
         ChangeEvent(
             ChangeIdentifier("change-id"),
@@ -1346,7 +1348,7 @@ class ChangeEventExtensionsTest {
                 mapOf("user" to "app_user", "app" to "hr"),
                 emptyMap()),
             event)
-    val schemaAndValue = change.toConnectValue()
+    val schemaAndValue = changeEventConverter.toConnectValue(change)
 
     return ChangeEventResult(
         event, change, schemaAndValue.schema(), schemaAndValue.value() as Struct)

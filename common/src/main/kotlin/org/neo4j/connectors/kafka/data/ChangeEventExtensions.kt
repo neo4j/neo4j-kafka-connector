@@ -31,41 +31,39 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.TemporalDataSchemaType
+import org.neo4j.connectors.kafka.data.DynamicTypes.toConnectSchema
 
-object ChangeEventExtensions {
+class ChangeEventConverter(
+    val temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
+) {
 
-  fun ChangeEvent.toConnectValue(): SchemaAndValue {
-    val schema = this.toConnectSchema()
-    return SchemaAndValue(schema, this.toConnectValue(schema))
+  fun toConnectValue(changeEvent: ChangeEvent): SchemaAndValue {
+    val schema = toConnectSchema(changeEvent)
+    return SchemaAndValue(schema, toConnectValue(changeEvent, schema))
   }
 
-  fun Struct.toChangeEvent(): ChangeEvent =
-      ChangeEvent(
-          ChangeIdentifier(getString("id")),
-          getInt64("txId"),
-          getInt64("seq").toInt(),
-          getStruct("metadata").toMetadata(),
-          getStruct("event").toEvent())
-
-  private fun ChangeEvent.toConnectSchema(): Schema =
+  private fun toConnectSchema(changeEvent: ChangeEvent): Schema =
       SchemaBuilder.struct()
           .field("id", SimpleTypes.STRING.schema())
           .field("txId", SimpleTypes.LONG.schema())
           .field("seq", SimpleTypes.LONG.schema())
-          .field("metadata", this.metadata.toConnectSchema())
-          .field("event", this.event.toConnectSchema())
+          .field("metadata", metadataToConnectSchema(changeEvent.metadata))
+          .field("event", eventToConnectSchema(changeEvent.event))
           .build()
 
-  private fun ChangeEvent.toConnectValue(schema: Schema): Struct =
+  private fun toConnectValue(changeEvent: ChangeEvent, schema: Schema): Struct =
       Struct(schema).also {
-        it.put("id", this.id.id)
-        it.put("txId", this.txId)
-        it.put("seq", this.seq.toLong())
-        it.put("metadata", this.metadata.toConnectValue(schema.field("metadata").schema()))
-        it.put("event", this.event.toConnectValue(schema.field("event").schema()))
+        it.put("id", changeEvent.id.id)
+        it.put("txId", changeEvent.txId)
+        it.put("seq", changeEvent.seq.toLong())
+        it.put(
+            "metadata",
+            metadataToConnectValue(changeEvent.metadata, schema.field("metadata").schema()))
+        it.put("event", eventToConnectValue(changeEvent.event, schema.field("event").schema()))
       }
 
-  internal fun Metadata.toConnectSchema(): Schema =
+  internal fun metadataToConnectSchema(metadata: Metadata): Schema =
       SchemaBuilder.struct()
           .field("authenticatedUser", SimpleTypes.STRING.schema())
           .field("executingUser", SimpleTypes.STRING.schema())
@@ -78,109 +76,168 @@ object ChangeEventExtensions {
           .field("txCommitTime", SimpleTypes.ZONEDDATETIME_STRUCT.schema())
           .field(
               "txMetadata",
-              DynamicTypes.toConnectSchema(
-                      this.txMetadata, optional = true, forceMapsAsStruct = true)
+              toConnectSchema(
+                      metadata.txMetadata,
+                      optional = true,
+                      forceMapsAsStruct = true,
+                      temporalDataSchemaType = temporalDataSchemaType)
                   .schema())
           .also {
-            this.additionalEntries.forEach { entry ->
-              it.field(entry.key, DynamicTypes.toConnectSchema(entry.value, true))
+            metadata.additionalEntries.forEach { entry ->
+              it.field(
+                  entry.key,
+                  toConnectSchema(
+                      entry.value,
+                      optional = true,
+                      temporalDataSchemaType = temporalDataSchemaType))
             }
           }
           .build()
 
-  internal fun Metadata.toConnectValue(schema: Schema): Struct =
+  internal fun metadataToConnectValue(metadata: Metadata, schema: Schema): Struct =
       Struct(schema).also {
-        it.put("authenticatedUser", this.authenticatedUser)
-        it.put("executingUser", this.executingUser)
-        it.put("connectionType", this.connectionType)
-        it.put("connectionClient", this.connectionClient)
-        it.put("connectionServer", this.connectionServer)
-        it.put("serverId", this.serverId)
-        it.put("captureMode", this.captureMode.name)
+        it.put("authenticatedUser", metadata.authenticatedUser)
+        it.put("executingUser", metadata.executingUser)
+        it.put("connectionType", metadata.connectionType)
+        it.put("connectionClient", metadata.connectionClient)
+        it.put("connectionServer", metadata.connectionServer)
+        it.put("serverId", metadata.serverId)
+        it.put("captureMode", metadata.captureMode.name)
         it.put(
             "txStartTime",
             DynamicTypes.toConnectValue(
-                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), this.txStartTime))
+                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), metadata.txStartTime))
         it.put(
             "txCommitTime",
             DynamicTypes.toConnectValue(
-                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), this.txCommitTime))
+                SimpleTypes.ZONEDDATETIME_STRUCT.schema(), metadata.txCommitTime))
         it.put(
             "txMetadata",
-            DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), this.txMetadata))
+            DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), metadata.txMetadata))
 
-        this.additionalEntries.forEach { entry ->
+        metadata.additionalEntries.forEach { entry ->
           it.put(
               entry.key, DynamicTypes.toConnectValue(schema.field(entry.key).schema(), entry.value))
         }
       }
 
-  internal fun Struct.toMetadata(): Metadata =
-      Metadata.fromMap(DynamicTypes.fromConnectValue(schema(), this) as Map<*, *>)
-
-  private fun Event.toConnectSchema(): Schema =
-      when (val event = this) {
-        is NodeEvent -> event.toConnectSchema()
-        is RelationshipEvent -> event.toConnectSchema()
+  private fun eventToConnectSchema(event: Event): Schema =
+      when (event) {
+        is NodeEvent -> nodeEventToConnectSchema(event)
+        is RelationshipEvent -> relationshipEventToConnectSchema(event)
         else ->
             throw IllegalArgumentException(
                 "unsupported event type in change data: ${event.javaClass.name}")
       }
 
-  private fun Event.toConnectValue(schema: Schema): Struct =
-      when (val event = this) {
-        is NodeEvent -> event.toConnectValue(schema)
-        is RelationshipEvent -> event.toConnectValue(schema)
+  private fun eventToConnectValue(event: Event, schema: Schema): Struct =
+      when (event) {
+        is NodeEvent -> nodeEventToConnectValue(event, schema)
+        is RelationshipEvent -> relationshipEventToConnectValue(event, schema)
         else -> throw IllegalArgumentException("unsupported event type ${event.javaClass.name}")
       }
 
-  private fun Struct.toEvent(): Event =
-      when (val eventType = getString("eventType")) {
-        EventType.NODE.name,
-        EventType.NODE.shorthand -> {
-          toNodeEvent()
-        }
-        EventType.RELATIONSHIP.name,
-        EventType.RELATIONSHIP.shorthand -> {
-          toRelationshipEvent()
-        }
-        else -> throw IllegalArgumentException("unsupported event type $eventType")
-      }
-
-  internal fun NodeEvent.toConnectSchema(): Schema =
+  internal fun nodeEventToConnectSchema(nodeEvent: NodeEvent): Schema =
       SchemaBuilder.struct()
           .field("elementId", SimpleTypes.STRING.schema())
           .field("eventType", SimpleTypes.STRING.schema())
           .field("operation", SimpleTypes.STRING.schema())
           .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-          .field("keys", schemaForKeysByLabel(this.keys))
-          .field("state", nodeStateSchema(before, after))
+          .field("keys", schemaForKeysByLabel(nodeEvent.keys))
+          .field("state", nodeStateSchema(nodeEvent.before, nodeEvent.after))
           .build()
 
-  internal fun NodeEvent.toConnectValue(schema: Schema): Struct =
+  internal fun nodeEventToConnectValue(nodeEvent: NodeEvent, schema: Schema): Struct =
       Struct(schema).also {
-        val keys = DynamicTypes.toConnectValue(schema.field("keys").schema(), this.keys)
-        it.put("elementId", this.elementId)
-        it.put("eventType", this.eventType.name)
-        it.put("operation", this.operation.name)
-        it.put("labels", this.labels)
+        val keys = DynamicTypes.toConnectValue(schema.field("keys").schema(), nodeEvent.keys)
+        it.put("elementId", nodeEvent.elementId)
+        it.put("eventType", nodeEvent.eventType.name)
+        it.put("operation", nodeEvent.operation.name)
+        it.put("labels", nodeEvent.labels)
         it.put("keys", keys)
-        it.put("state", nodeStateValue(schema.field("state").schema(), this.before, this.after))
+        it.put(
+            "state",
+            nodeStateValue(schema.field("state").schema(), nodeEvent.before, nodeEvent.after))
       }
 
-  @Suppress("UNCHECKED_CAST")
-  internal fun Struct.toNodeEvent(): NodeEvent =
-      getStruct("state").toNodeState().let { (before, after) ->
-        NodeEvent(
-            getString("elementId"),
-            EntityOperation.valueOf(getString("operation")),
-            getArray("labels"),
-            DynamicTypes.fromConnectValue(
-                schema().field("keys").schema(), get("keys"), skipNullValuesInMaps = true)
-                as Map<String, List<MutableMap<String, Any>>>?,
-            before,
-            after)
+  internal fun relationshipEventToConnectSchema(relationshipEvent: RelationshipEvent): Schema =
+      SchemaBuilder.struct()
+          .field("elementId", SimpleTypes.STRING.schema())
+          .field("eventType", SimpleTypes.STRING.schema())
+          .field("operation", SimpleTypes.STRING.schema())
+          .field("type", SimpleTypes.STRING.schema())
+          .field("start", nodeToConnectSchema(relationshipEvent.start))
+          .field("end", nodeToConnectSchema(relationshipEvent.end))
+          .field("keys", schemaForKeys(relationshipEvent.keys))
+          .field(
+              "state", relationshipStateSchema(relationshipEvent.before, relationshipEvent.after))
+          .build()
+
+  internal fun relationshipEventToConnectValue(
+      relationshipEvent: RelationshipEvent,
+      schema: Schema
+  ): Struct =
+      Struct(schema).also {
+        val keys =
+            DynamicTypes.toConnectValue(schema.field("keys").schema(), relationshipEvent.keys)
+        it.put("elementId", relationshipEvent.elementId)
+        it.put("eventType", relationshipEvent.eventType.name)
+        it.put("operation", relationshipEvent.operation.name)
+        it.put("type", relationshipEvent.type)
+        it.put("start", nodeToConnectValue(relationshipEvent.start, schema.field("start").schema()))
+        it.put("end", nodeToConnectValue(relationshipEvent.end, schema.field("end").schema()))
+        it.put("keys", keys)
+        it.put(
+            "state",
+            relationshipStateValue(
+                schema.field("state").schema(), relationshipEvent.before, relationshipEvent.after))
       }
+
+  internal fun nodeToConnectSchema(node: Node): Schema {
+    return SchemaBuilder.struct()
+        .field("elementId", SimpleTypes.STRING.schema())
+        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
+        .field("keys", schemaForKeysByLabel(node.keys))
+        .build()
+  }
+
+  internal fun nodeToConnectValue(node: Node, schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("elementId", node.elementId)
+        it.put("labels", node.labels)
+        it.put("keys", DynamicTypes.toConnectValue(schema.field("keys").schema(), node.keys))
+      }
+
+  private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>?): Schema {
+    return SchemaBuilder.struct()
+        .apply { keys?.forEach { field(it.key, schemaForKeys(it.value)) } }
+        .optional()
+        .build()
+  }
+
+  private fun schemaForKeys(keys: List<Map<String, Any>>?): Schema {
+    return SchemaBuilder.array(
+            // We need to define a uniform structure of key array elements. Because all elements
+            // must have identical structure, we list all available keys as optional fields.
+            SchemaBuilder.struct()
+                .apply {
+                  keys?.forEach { key ->
+                    key.forEach {
+                      field(
+                          it.key,
+                          toConnectSchema(
+                              it.value,
+                              optional = true,
+                              forceMapsAsStruct = true,
+                              temporalDataSchemaType = temporalDataSchemaType))
+                    }
+                  }
+                }
+                .optional()
+                .build())
+        .optional()
+        .build()
+  }
 
   private fun nodeStateSchema(before: NodeState?, after: NodeState?): Schema {
     val stateSchema =
@@ -197,7 +254,12 @@ object ChangeEventExtensions {
                             (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
                         combinedProperties.toSortedMap().forEach { entry ->
                           if (it.field(entry.key) == null) {
-                            it.field(entry.key, DynamicTypes.toConnectSchema(entry.value, true))
+                            it.field(
+                                entry.key,
+                                toConnectSchema(
+                                    entry.value,
+                                    optional = true,
+                                    temporalDataSchemaType = temporalDataSchemaType))
                           }
                         }
                       }
@@ -236,93 +298,6 @@ object ChangeEventExtensions {
         }
       }
 
-  @Suppress("UNCHECKED_CAST")
-  internal fun Struct.toNodeState(): Pair<NodeState?, NodeState?> =
-      Pair(
-          getStruct("before")?.let {
-            val labels = it.getArray<String>("labels")
-            val properties = it.getStruct("properties")
-            NodeState(
-                labels,
-                DynamicTypes.fromConnectValue(properties.schema(), properties, true)
-                    as Map<String, Any?>)
-          },
-          getStruct("after")?.let {
-            val labels = it.getArray<String>("labels")
-            val properties = it.getStruct("properties")
-            NodeState(
-                labels,
-                DynamicTypes.fromConnectValue(properties.schema(), properties, true)
-                    as Map<String, Any?>)
-          })
-
-  internal fun RelationshipEvent.toConnectSchema(): Schema =
-      SchemaBuilder.struct()
-          .field("elementId", SimpleTypes.STRING.schema())
-          .field("eventType", SimpleTypes.STRING.schema())
-          .field("operation", SimpleTypes.STRING.schema())
-          .field("type", SimpleTypes.STRING.schema())
-          .field("start", this.start.toConnectSchema())
-          .field("end", this.end.toConnectSchema())
-          .field("keys", schemaForKeys(this.keys))
-          .field("state", relationshipStateSchema(this.before, this.after))
-          .build()
-
-  internal fun RelationshipEvent.toConnectValue(schema: Schema): Struct =
-      Struct(schema).also {
-        val keys = DynamicTypes.toConnectValue(schema.field("keys").schema(), this.keys)
-        it.put("elementId", this.elementId)
-        it.put("eventType", this.eventType.name)
-        it.put("operation", this.operation.name)
-        it.put("type", this.type)
-        it.put("start", this.start.toConnectValue(schema.field("start").schema()))
-        it.put("end", this.end.toConnectValue(schema.field("end").schema()))
-        it.put("keys", keys)
-        it.put(
-            "state",
-            relationshipStateValue(schema.field("state").schema(), this.before, this.after))
-      }
-
-  @Suppress("UNCHECKED_CAST")
-  internal fun Struct.toRelationshipEvent(): RelationshipEvent =
-      getStruct("state").toRelationshipState().let { (before, after) ->
-        RelationshipEvent(
-            getString("elementId"),
-            getString("type"),
-            getStruct("start").toNode(),
-            getStruct("end").toNode(),
-            DynamicTypes.fromConnectValue(
-                schema().field("keys").schema(), get("keys"), skipNullValuesInMaps = true)
-                as List<Map<String, Any>>?,
-            EntityOperation.valueOf(getString("operation")),
-            before,
-            after)
-      }
-
-  internal fun Node.toConnectSchema(): Schema {
-    return SchemaBuilder.struct()
-        .field("elementId", SimpleTypes.STRING.schema())
-        .field("labels", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-        .field("keys", schemaForKeysByLabel(this.keys))
-        .build()
-  }
-
-  internal fun Node.toConnectValue(schema: Schema): Struct =
-      Struct(schema).also {
-        it.put("elementId", this.elementId)
-        it.put("labels", this.labels)
-        it.put("keys", DynamicTypes.toConnectValue(schema.field("keys").schema(), this.keys))
-      }
-
-  @Suppress("UNCHECKED_CAST")
-  internal fun Struct.toNode(): Node =
-      Node(
-          this.getString("elementId"),
-          this.getArray("labels"),
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(), this.get("keys"), skipNullValuesInMaps = true)
-              as Map<String, List<Map<String, Any>>>)
-
   private fun relationshipStateSchema(
       before: RelationshipState?,
       after: RelationshipState?
@@ -340,7 +315,12 @@ object ChangeEventExtensions {
                             (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
                         combinedProperties.toSortedMap().forEach { entry ->
                           if (it.field(entry.key) == null) {
-                            it.field(entry.key, DynamicTypes.toConnectSchema(entry.value, true))
+                            it.field(
+                                entry.key,
+                                toConnectSchema(
+                                    entry.value,
+                                    optional = true,
+                                    temporalDataSchemaType = temporalDataSchemaType))
                           }
                         }
                       }
@@ -380,48 +360,116 @@ object ChangeEventExtensions {
               })
         }
       }
-
-  @Suppress("UNCHECKED_CAST")
-  internal fun Struct.toRelationshipState(): Pair<RelationshipState?, RelationshipState?> =
-      Pair(
-          getStruct("before")?.let {
-            val properties = it.getStruct("properties")
-            RelationshipState(
-                DynamicTypes.fromConnectValue(properties.schema(), properties, true)
-                    as Map<String, Any?>)
-          },
-          getStruct("after")?.let {
-            val properties = it.getStruct("properties")
-            RelationshipState(
-                DynamicTypes.fromConnectValue(properties.schema(), properties, true)
-                    as Map<String, Any?>)
-          })
-
-  private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>?): Schema {
-    return SchemaBuilder.struct()
-        .apply { keys?.forEach { field(it.key, schemaForKeys(it.value)) } }
-        .optional()
-        .build()
-  }
-
-  private fun schemaForKeys(keys: List<Map<String, Any>>?): Schema {
-    return SchemaBuilder.array(
-            // We need to define a uniform structure of key array elements. Because all elements
-            // must have identical structure, we list all available keys as optional fields.
-            SchemaBuilder.struct()
-                .apply {
-                  keys?.forEach { key ->
-                    key.forEach {
-                      field(
-                          it.key,
-                          DynamicTypes.toConnectSchema(
-                              it.value, optional = true, forceMapsAsStruct = true))
-                    }
-                  }
-                }
-                .optional()
-                .build())
-        .optional()
-        .build()
-  }
 }
+
+fun Struct.toChangeEvent(): ChangeEvent =
+    ChangeEvent(
+        ChangeIdentifier(getString("id")),
+        getInt64("txId"),
+        getInt64("seq").toInt(),
+        getStruct("metadata").toMetadata(),
+        getStruct("event").toEvent(),
+    )
+
+internal fun Struct.toMetadata(): Metadata =
+    Metadata.fromMap(DynamicTypes.fromConnectValue(schema(), this) as Map<*, *>)
+
+private fun Struct.toEvent(): Event =
+    when (val eventType = getString("eventType")) {
+      EventType.NODE.name,
+      EventType.NODE.shorthand -> {
+        toNodeEvent()
+      }
+      EventType.RELATIONSHIP.name,
+      EventType.RELATIONSHIP.shorthand -> {
+        toRelationshipEvent()
+      }
+      else -> throw IllegalArgumentException("unsupported event type $eventType")
+    }
+
+@Suppress("UNCHECKED_CAST")
+internal fun Struct.toNodeEvent(): NodeEvent =
+    getStruct("state").toNodeState().let { (before, after) ->
+      NodeEvent(
+          getString("elementId"),
+          EntityOperation.valueOf(getString("operation")),
+          getArray("labels"),
+          DynamicTypes.fromConnectValue(
+              schema().field("keys").schema(),
+              get("keys"),
+              skipNullValuesInMaps = true,
+          ) as Map<String, List<MutableMap<String, Any>>>?,
+          before,
+          after,
+      )
+    }
+
+@Suppress("UNCHECKED_CAST")
+internal fun Struct.toRelationshipEvent(): RelationshipEvent =
+    getStruct("state").toRelationshipState().let { (before, after) ->
+      RelationshipEvent(
+          getString("elementId"),
+          getString("type"),
+          getStruct("start").toNode(),
+          getStruct("end").toNode(),
+          DynamicTypes.fromConnectValue(
+              schema().field("keys").schema(), get("keys"), skipNullValuesInMaps = true)
+              as List<Map<String, Any>>?,
+          EntityOperation.valueOf(getString("operation")),
+          before,
+          after)
+    }
+
+@Suppress("UNCHECKED_CAST")
+internal fun Struct.toNodeState(): Pair<NodeState?, NodeState?> =
+    Pair(
+        getStruct("before")?.let {
+          val labels = it.getArray<String>("labels")
+          val properties = it.getStruct("properties")
+          NodeState(
+              labels,
+              DynamicTypes.fromConnectValue(properties.schema(), properties, true)
+                  as Map<String, Any?>,
+          )
+        },
+        getStruct("after")?.let {
+          val labels = it.getArray<String>("labels")
+          val properties = it.getStruct("properties")
+          NodeState(
+              labels,
+              DynamicTypes.fromConnectValue(properties.schema(), properties, true)
+                  as Map<String, Any?>,
+          )
+        },
+    )
+
+@Suppress("UNCHECKED_CAST")
+internal fun Struct.toRelationshipState(): Pair<RelationshipState?, RelationshipState?> =
+    Pair(
+        getStruct("before")?.let {
+          val properties = it.getStruct("properties")
+          RelationshipState(
+              DynamicTypes.fromConnectValue(properties.schema(), properties, true)
+                  as Map<String, Any?>,
+          )
+        },
+        getStruct("after")?.let {
+          val properties = it.getStruct("properties")
+          RelationshipState(
+              DynamicTypes.fromConnectValue(properties.schema(), properties, true)
+                  as Map<String, Any?>,
+          )
+        },
+    )
+
+@Suppress("UNCHECKED_CAST")
+internal fun Struct.toNode(): Node =
+    Node(
+        this.getString("elementId"),
+        this.getArray("labels"),
+        DynamicTypes.fromConnectValue(
+            schema().field("keys").schema(),
+            this.get("keys"),
+            skipNullValuesInMaps = true,
+        ) as Map<String, List<Map<String, Any>>>,
+    )

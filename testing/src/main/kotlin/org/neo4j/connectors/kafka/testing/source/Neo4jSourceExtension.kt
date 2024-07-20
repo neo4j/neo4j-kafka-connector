@@ -164,7 +164,7 @@ internal class Neo4jSourceExtension(
             cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
             cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
             cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
-        )
+            temporalDataSchemaType = sourceAnnotation.temporalDataSchemaType)
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     topicRegistry.log()
   }

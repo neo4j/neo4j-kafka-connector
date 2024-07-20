@@ -38,7 +38,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ELEMENT_ID
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ENTITY_KEYS
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.SKIP
@@ -156,36 +156,38 @@ object TestData {
               ))
 
   val nodeChange =
-      ChangeEvent(
-              ChangeIdentifier("a-node-change-id"),
-              aTransactionId(),
-              aSequenceNumber(),
-              someMetadata(),
-              NodeEvent(
-                  NODE_ELEMENT_ID,
-                  EntityOperation.CREATE,
-                  listOf(LABEL),
-                  mapOf(LABEL to listOf(mapOf("foo" to "fighters", "bar" to 42L))),
-                  NodeState(listOf(LABEL), mapOf()),
-                  NodeState(listOf(LABEL), mapOf("foo" to "fighters", "bar" to 42L))))
-          .toConnectValue()
+      ChangeEventConverter()
+          .toConnectValue(
+              ChangeEvent(
+                  ChangeIdentifier("a-node-change-id"),
+                  aTransactionId(),
+                  aSequenceNumber(),
+                  someMetadata(),
+                  NodeEvent(
+                      NODE_ELEMENT_ID,
+                      EntityOperation.CREATE,
+                      listOf(LABEL),
+                      mapOf(LABEL to listOf(mapOf("foo" to "fighters", "bar" to 42L))),
+                      NodeState(listOf(LABEL), mapOf()),
+                      NodeState(listOf(LABEL), mapOf("foo" to "fighters", "bar" to 42L)))))
 
   val relChange =
-      ChangeEvent(
-              ChangeIdentifier("a-rel-change-id"),
-              aTransactionId(),
-              aSequenceNumber(),
-              someMetadata(),
-              RelationshipEvent(
-                  REL_ELEMENT_ID,
-                  aRelationshipType(),
-                  aStartNode(),
-                  anEndNode(),
-                  listOf(mapOf("foo" to "fighters", "bar" to 42L)),
-                  EntityOperation.CREATE,
-                  RelationshipState(mapOf()),
-                  RelationshipState(mapOf("foo" to "fighters", "bar" to 42L))))
-          .toConnectValue()
+      ChangeEventConverter()
+          .toConnectValue(
+              ChangeEvent(
+                  ChangeIdentifier("a-rel-change-id"),
+                  aTransactionId(),
+                  aSequenceNumber(),
+                  someMetadata(),
+                  RelationshipEvent(
+                      REL_ELEMENT_ID,
+                      aRelationshipType(),
+                      aStartNode(),
+                      anEndNode(),
+                      listOf(mapOf("foo" to "fighters", "bar" to 42L)),
+                      EntityOperation.CREATE,
+                      RelationshipState(mapOf()),
+                      RelationshipState(mapOf("foo" to "fighters", "bar" to 42L)))))
 
   private fun aTransactionId(): Long {
     return 42

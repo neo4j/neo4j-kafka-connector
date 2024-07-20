@@ -19,7 +19,6 @@ package org.neo4j.connectors.kafka.source
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
@@ -27,7 +26,6 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
@@ -97,7 +95,12 @@ class Neo4jQueryTask : SourceTask() {
 
   private fun build(record: Record): SourceRecord {
     val recordAsMap = record.asMap()
-    val schema = DynamicTypes.toConnectSchema(recordAsMap, true, true)
+    val schema =
+        DynamicTypes.toConnectSchema(
+            recordAsMap,
+            optional = true,
+            forceMapsAsStruct = true,
+            temporalDataSchemaType = config.temporalDataSchemaType)
     val value = DynamicTypes.toConnectValue(schema, recordAsMap)
 
     return SourceRecord(
