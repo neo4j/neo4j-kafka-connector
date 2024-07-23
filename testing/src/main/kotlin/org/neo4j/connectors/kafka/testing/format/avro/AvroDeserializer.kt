@@ -18,12 +18,14 @@ package org.neo4j.connectors.kafka.testing.format.avro
 
 import org.apache.avro.generic.GenericArray
 import org.apache.avro.generic.GenericRecord
+import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordDeserializer
 import org.neo4j.connectors.kafka.testing.format.MappingException
 import org.neo4j.connectors.kafka.testing.format.avro.GenericRecordSupport.asList
 import org.neo4j.connectors.kafka.testing.format.avro.GenericRecordSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.avro.GenericRecordSupport.asStruct
 
 object AvroDeserializer : KafkaRecordDeserializer {
 
@@ -38,6 +40,7 @@ object AvroDeserializer : KafkaRecordDeserializer {
               when (targetClass) {
                 Map::class.java -> sourceValue.asMap()
                 ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
+                Struct::class.java -> sourceValue.asStruct()
                 else -> throw MappingException(sourceValue, targetClass)
               }
           is GenericArray<*> ->

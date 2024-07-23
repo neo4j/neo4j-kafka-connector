@@ -16,6 +16,9 @@
  */
 package org.neo4j.connectors.kafka.testing.format
 
+import io.confluent.connect.avro.AvroConverter
+import io.confluent.connect.json.JsonSchemaConverter
+import io.confluent.connect.protobuf.ProtobufConverter
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import io.confluent.kafka.serializers.KafkaAvroSerializer
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer
@@ -24,6 +27,8 @@ import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serializer
+import org.apache.kafka.connect.storage.Converter
+import org.apache.kafka.connect.storage.StringConverter
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroDeserializer
@@ -39,6 +44,7 @@ private val PROTOBUF_OPTIONS = mapOf("optional.for.nullables" to "true")
 
 enum class KafkaConverter(
     val className: String,
+    val converterProvider: () -> Converter,
     val deserializerClass: Class<out Deserializer<*>>,
     val serializerClass: Class<out Serializer<*>>,
     val testShimDeserializer: KafkaRecordDeserializer,
@@ -48,18 +54,21 @@ enum class KafkaConverter(
 ) {
   AVRO(
       className = "io.confluent.connect.avro.AvroConverter",
+      converterProvider = { AvroConverter() },
       deserializerClass = KafkaAvroDeserializer::class.java,
       serializerClass = KafkaAvroSerializer::class.java,
       testShimDeserializer = AvroDeserializer,
       testShimSerializer = AvroSerializer),
   JSON_SCHEMA(
       className = "io.confluent.connect.json.JsonSchemaConverter",
+      converterProvider = { JsonSchemaConverter() },
       deserializerClass = KafkaJsonSchemaDeserializer::class.java,
       serializerClass = KafkaJsonSchemaSerializer::class.java,
       testShimDeserializer = JsonSchemaDeserializer,
       testShimSerializer = JsonSchemaSerializer),
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
+      converterProvider = { ProtobufConverter() },
       deserializerClass = KafkaProtobufDeserializer::class.java,
       serializerClass = KafkaProtobufSerializer::class.java,
       testShimDeserializer = ProtobufDeserializer,
@@ -67,6 +76,7 @@ enum class KafkaConverter(
       additionalProperties = PROTOBUF_OPTIONS),
   STRING(
       className = "org.apache.kafka.connect.storage.StringConverter",
+      converterProvider = { StringConverter() },
       deserializerClass = org.apache.kafka.common.serialization.StringDeserializer::class.java,
       serializerClass = org.apache.kafka.common.serialization.StringSerializer::class.java,
       testShimDeserializer = StringDeserializer,

@@ -17,6 +17,10 @@
 package org.neo4j.connectors.kafka.testing.format.protobuf
 
 import com.google.protobuf.DynamicMessage
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.SchemaBuilder
+import org.apache.kafka.connect.data.Struct
+import org.neo4j.connectors.kafka.testing.format.MappingException
 
 object DynamicMessageSupport {
 
@@ -24,6 +28,23 @@ object DynamicMessageSupport {
     return this.allFields.entries
         .filter { field -> field.value != null }
         .associate { field -> field.key.name to castValue(field.value) }
+  }
+
+  fun DynamicMessage.asStruct(): Struct {
+    val schema = this.toSchema()
+    val struct = Struct(schema)
+
+    schema.fields().forEach { field ->
+      struct.put(field.name(), castValue(field.schema(), get(field.name())))
+    }
+
+    return struct
+  }
+
+  private fun DynamicMessage.toSchema(): Schema {
+    val builder = SchemaBuilder.struct()
+    this.allFields.entries.forEach { builder.field(it.key.name, valueToSchema(it.value)) }
+    return builder.build()
   }
 
   private fun castValue(value: Any): Any =
@@ -57,4 +78,53 @@ object DynamicMessageSupport {
       else -> list.mapNotNull { castValue(it!!) }
     }
   }
+
+  private fun castValue(schema: Schema, value: Any): Any =
+      when (schema.type()) {
+        Schema.Type.INT32 -> value as Int
+        Schema.Type.INT64 -> value as Long
+        Schema.Type.FLOAT32 -> value as Float
+        Schema.Type.FLOAT64 -> value as Double
+        Schema.Type.STRUCT -> {
+          when (value) {
+            is DynamicMessage -> {
+              val struct = Struct(schema)
+              schema.fields().forEach { field ->
+                castValue(field.schema(), value.get(field.name())).let { struct.put(field, it) }
+              }
+              struct
+            }
+            is Map<*, *> -> {
+              val struct = Struct(schema)
+              schema.fields().forEach { field ->
+                castValue(field.schema(), value[field.name()]!!).let { struct.put(field, it) }
+              }
+              struct
+            }
+            else -> throw MappingException(value)
+          }
+        }
+        else -> value.toString()
+      }
+
+  fun DynamicMessage.get(key: String): Any {
+    return this.asMap()[key]!!
+  }
+
+  private fun valueToSchema(value: Any): Schema =
+      when (value) {
+        is Int -> SchemaBuilder.int32()
+        is Long -> SchemaBuilder.int64()
+        is Float -> SchemaBuilder.float32()
+        is Double -> SchemaBuilder.float64()
+        is Map<*, *> -> {
+          val structMap = SchemaBuilder.struct().optional()
+          value.forEach { entry ->
+            valueToSchema(entry.value!!).let { structMap.field(entry.key.toString(), it) }
+          }
+          structMap.build()
+        }
+        is DynamicMessage -> value.toSchema()
+        else -> SchemaBuilder.string()
+      }
 }

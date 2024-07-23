@@ -23,7 +23,9 @@ import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 data class ConvertingKafkaConsumer(
     val keyConverter: KafkaConverter,
     val valueConverter: KafkaConverter,
-    val kafkaConsumer: KafkaConsumer<*, *>
+    val schemaRegistryUrlProvider: () -> String,
+    val isDlq: Boolean = false,
+    val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>
 )
 
 data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)

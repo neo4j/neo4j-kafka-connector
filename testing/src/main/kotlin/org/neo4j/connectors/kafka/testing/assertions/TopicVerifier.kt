@@ -16,11 +16,17 @@
  */
 package org.neo4j.connectors.kafka.testing.assertions
 
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.storage.Converter
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
 import org.slf4j.Logger
@@ -57,6 +63,55 @@ class TopicVerifier<K, V>(
     return this
   }
 
+  @Suppress("UNCHECKED_CAST")
+  private fun <V> convert(
+      converter: Converter,
+      assertionClass: Class<V>,
+      topic: String,
+      value: ByteArray?
+  ): Any? {
+    return when (val sourceValue = converter.toConnectData(topic, value).value()) {
+      is Struct ->
+          when (assertionClass) {
+            ChangeEvent::class.java -> sourceValue.toChangeEvent()
+            Map::class.java -> structToMap(sourceValue)
+            else -> sourceValue as V
+          }
+      is String ->
+          if (sourceValue == "null") null
+          else sourceValue // ByteArray deserializer is deserializing incoming null values from json
+      // schema to corresponding byte array of "null" string
+      else -> sourceValue
+    }
+  }
+
+  private fun structToMap(struct: Struct): Map<String, Any?> {
+    val map = mutableMapOf<String, Any?>()
+    struct
+        .schema()
+        .fields()
+        .filter { struct.get(it) != null }
+        .forEach { field ->
+          when (field.schema().type()) {
+            Schema.Type.STRUCT -> map[field.name()] = structToMap(struct.getStruct(field.name()))
+            Schema.Type.ARRAY -> map[field.name()] = convertList(struct.getArray<Any>(field.name()))
+            else -> map[field.name()] = struct.get(field)
+          }
+        }
+    return map
+  }
+
+  private fun convertList(list: Iterable<*>): List<Any?> {
+    return list.map {
+      when (it) {
+        is Struct -> structToMap(it)
+        is Iterable<*> -> convertList(it)
+        else -> it
+      }
+    }
+  }
+
+  @Suppress("UNCHECKED_CAST")
   fun verifyWithin(timeout: Duration) {
     val predicates = messagePredicates.toList()
     if (predicates.isEmpty()) {
@@ -64,19 +119,44 @@ class TopicVerifier<K, V>(
     }
     val receivedMessages = RingBuffer<GenericRecord<K, V>>(predicates.size)
     try {
+      val keyConverter = consumer.keyConverter.converterProvider()
+      keyConverter.configure(
+          mapOf(
+              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                  consumer.schemaRegistryUrlProvider()),
+          true)
+
+      val valueConverter = consumer.valueConverter.converterProvider()
+      valueConverter.configure(
+          mapOf(
+              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                  consumer.schemaRegistryUrlProvider()),
+          false)
+
       Awaitility.await().atMost(timeout).until {
         consumer.kafkaConsumer
             .poll(Duration.ofMillis(500))
             .map {
-              val value: V =
-                  consumer.valueConverter.testShimDeserializer.deserialize(
-                      it.value(), valueAssertionClass)!!
-              GenericRecord(
-                  raw = it,
-                  key =
-                      consumer.keyConverter.testShimDeserializer.deserialize(
-                          it.key(), keyAssertionClass),
-                  value = value)
+              val genericRecord: GenericRecord<K, V> =
+                  if (consumer.isDlq) {
+                    val value: V =
+                        consumer.valueConverter.testShimDeserializer.deserialize(
+                            it.value(), valueAssertionClass)!!
+                    GenericRecord(
+                        raw = it,
+                        key =
+                            consumer.keyConverter.testShimDeserializer.deserialize(
+                                it.key(), keyAssertionClass),
+                        value = value)
+                  } else {
+                    GenericRecord(
+                        raw = it,
+                        key = convert(keyConverter, keyAssertionClass, it.topic(), it.key()) as K,
+                        value =
+                            convert(valueConverter, valueAssertionClass, it.topic(), it.value())
+                                as V)
+                  }
+              genericRecord
             }
             .forEach { receivedMessages.add(it) }
         val messages = receivedMessages.toList()

@@ -17,11 +17,13 @@
 package org.neo4j.connectors.kafka.testing.format.protobuf
 
 import com.google.protobuf.DynamicMessage
+import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.testing.format.ChangeEventSupport.mapToChangeEvent
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordDeserializer
 import org.neo4j.connectors.kafka.testing.format.MappingException
 import org.neo4j.connectors.kafka.testing.format.protobuf.DynamicMessageSupport.asMap
+import org.neo4j.connectors.kafka.testing.format.protobuf.DynamicMessageSupport.asStruct
 
 object ProtobufDeserializer : KafkaRecordDeserializer {
 
@@ -38,6 +40,7 @@ object ProtobufDeserializer : KafkaRecordDeserializer {
                 Map::class.java -> sourceValue.asMap()
                 ChangeEvent::class.java -> mapToChangeEvent(sourceValue.asMap())
                 String::class.java -> sourceValue.allFields.entries.first().value.toString()
+                Struct::class.java -> sourceValue.asStruct()
                 else -> throw MappingException(sourceValue, targetClass)
               }
           else -> throw MappingException(sourceValue)
