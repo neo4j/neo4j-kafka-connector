@@ -18,4 +18,4 @@ package org.neo4j.connectors.kafka.testing.source
 
 @Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class TopicConsumer(val topic: String, val offset: String, val isDlq: Boolean = false)
+annotation class TopicConsumer(val topic: String, val offset: String)

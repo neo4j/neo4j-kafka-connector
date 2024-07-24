@@ -24,7 +24,6 @@ data class ConvertingKafkaConsumer(
     val keyConverter: KafkaConverter,
     val valueConverter: KafkaConverter,
     val schemaRegistryUrlProvider: () -> String,
-    val isDlq: Boolean = false,
     val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>
 )
 

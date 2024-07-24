@@ -20,6 +20,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.storage.Converter
@@ -34,26 +35,50 @@ import org.slf4j.LoggerFactory
 
 class TopicVerifier<K, V>(
     private val consumer: ConvertingKafkaConsumer,
+    private val keyConverter: Converter,
+    private val valueConverter: Converter,
     private val keyAssertionClass: Class<K>,
     private val valueAssertionClass: Class<V>
 ) {
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
-  private var messagePredicates = mutableListOf<Predicate<GenericRecord<K, V>>>()
+  private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<ByteArray, ByteArray>>>()
 
-  fun assertMessageKey(assertion: (K?) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { assertion(it.key) }
+  fun assertMessageKey(schemaTopic: String? = null, assertion: (K?) -> Unit): TopicVerifier<K, V> {
+    return assertMessage(schemaTopic) { assertion(it.key) }
   }
 
-  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { assertion(it.value) }
+  fun assertMessageValue(schemaTopic: String? = null, assertion: (V) -> Unit): TopicVerifier<K, V> {
+    return assertMessage(schemaTopic) { assertion(it.value) }
   }
 
-  fun assertMessage(assertion: (GenericRecord<K, V>) -> Unit): TopicVerifier<K, V> {
+  @Suppress("UNCHECKED_CAST")
+  fun assertMessage(
+      schemaTopic: String? = null,
+      assertion: (GenericRecord<K, V>) -> Unit
+  ): TopicVerifier<K, V> {
     messagePredicates.add { record ->
       try {
-        assertion(record)
+        val genericRecord =
+            GenericRecord(
+                raw = record,
+                key =
+                    convert(
+                        keyConverter,
+                        keyAssertionClass,
+                        schemaTopic ?: record.topic(),
+                        record.key())
+                        as K,
+                value =
+                    convert(
+                        valueConverter,
+                        valueAssertionClass,
+                        schemaTopic ?: record.topic(),
+                        record.value())
+                        as V)
+
+        assertion(genericRecord)
         true
       } catch (e: java.lang.AssertionError) {
         log.debug("Assertion has failed", e)
@@ -61,6 +86,27 @@ class TopicVerifier<K, V>(
       }
     }
     return this
+  }
+
+  fun verifyWithin(timeout: Duration) {
+    val predicates = messagePredicates.toList()
+    if (predicates.isEmpty()) {
+      throw AssertionError("expected at least 1 expected message predicate but got none")
+    }
+    val receivedMessages = RingBuffer<ConsumerRecord<ByteArray, ByteArray>>(predicates.size)
+    try {
+      Awaitility.await().atMost(timeout).until {
+        consumer.kafkaConsumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
+        val messages = receivedMessages.toList()
+        messages.size == predicates.size &&
+            predicates.foldIndexed(true) { i, prev, predicate ->
+              prev && predicate.test(messages[i])
+            }
+      }
+    } catch (e: ConditionTimeoutException) {
+      throw AssertionError(
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
+    }
   }
 
   @Suppress("UNCHECKED_CAST")
@@ -111,14 +157,10 @@ class TopicVerifier<K, V>(
     }
   }
 
-  @Suppress("UNCHECKED_CAST")
-  fun verifyWithin(timeout: Duration) {
-    val predicates = messagePredicates.toList()
-    if (predicates.isEmpty()) {
-      throw AssertionError("expected at least 1 expected message predicate but got none")
-    }
-    val receivedMessages = RingBuffer<GenericRecord<K, V>>(predicates.size)
-    try {
+  companion object {
+    inline fun <reified K, reified V> create(
+        consumer: ConvertingKafkaConsumer,
+    ): TopicVerifier<K, V> {
       val keyConverter = consumer.keyConverter.converterProvider()
       keyConverter.configure(
           mapOf(
@@ -133,49 +175,12 @@ class TopicVerifier<K, V>(
                   consumer.schemaRegistryUrlProvider()),
           false)
 
-      Awaitility.await().atMost(timeout).until {
-        consumer.kafkaConsumer
-            .poll(Duration.ofMillis(500))
-            .map {
-              val genericRecord: GenericRecord<K, V> =
-                  if (consumer.isDlq) {
-                    val value: V =
-                        consumer.valueConverter.testShimDeserializer.deserialize(
-                            it.value(), valueAssertionClass)!!
-                    GenericRecord(
-                        raw = it,
-                        key =
-                            consumer.keyConverter.testShimDeserializer.deserialize(
-                                it.key(), keyAssertionClass),
-                        value = value)
-                  } else {
-                    GenericRecord(
-                        raw = it,
-                        key = convert(keyConverter, keyAssertionClass, it.topic(), it.key()) as K,
-                        value =
-                            convert(valueConverter, valueAssertionClass, it.topic(), it.value())
-                                as V)
-                  }
-              genericRecord
-            }
-            .forEach { receivedMessages.add(it) }
-        val messages = receivedMessages.toList()
-        messages.size == predicates.size &&
-            predicates.foldIndexed(true) { i, prev, predicate ->
-              prev && predicate.test(messages[i])
-            }
-      }
-    } catch (e: ConditionTimeoutException) {
-      throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
-    }
-  }
-
-  companion object {
-    inline fun <reified K, reified V> create(
-        consumer: ConvertingKafkaConsumer
-    ): TopicVerifier<K, V> {
-      return TopicVerifier(consumer, K::class.java, V::class.java)
+      return TopicVerifier(
+          consumer = consumer,
+          keyConverter = keyConverter,
+          valueConverter = valueConverter,
+          keyAssertionClass = K::class.java,
+          valueAssertionClass = V::class.java)
     }
 
     fun createForMap(consumer: ConvertingKafkaConsumer) =
@@ -208,7 +213,7 @@ class RingBuffer<E>(capacity: Int) {
         return emptyList()
       }
       val start = if (this.size < this.data.size) 0 else this.index
-      val indices = (start ..< this.size) + (0 ..< start)
+      val indices = (start..<this.size) + (0..<start)
       return indices.map { i -> data[i] as E }.toList()
     }
   }

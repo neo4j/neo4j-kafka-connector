@@ -39,12 +39,10 @@ internal class ConsumerResolver(
       context: ExtensionContext?
   ): ConvertingKafkaConsumer {
     val kafkaConsumer = resolveConsumer(parameterContext, context)
-    val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     return ConvertingKafkaConsumer(
         keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
         valueConverter = keyValueConverterResolver.resolveValueConverter(context),
         schemaRegistryUrlProvider = schemaControlRegistryExternalUriProvider,
-        isDlq = consumerAnnotation.isDlq,
         kafkaConsumer = kafkaConsumer)
   }
 
@@ -65,29 +63,14 @@ internal class ConsumerResolver(
         schemaControlRegistryExternalUriProvider(),
     )
 
-    if (consumerAnnotation.isDlq) {
-      val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
-      val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
-      if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
-        properties.setProperty(
-            ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-            keyConverter.deserializerClass.name,
-        )
-        properties.setProperty(
-            ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-            valueConverter.deserializerClass.name,
-        )
-      }
-    } else {
-      properties.setProperty(
-          ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-          ByteArrayDeserializer::class.java.name,
-      )
-      properties.setProperty(
-          ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-          ByteArrayDeserializer::class.java.name,
-      )
-    }
+    properties.setProperty(
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+        ByteArrayDeserializer::class.java.name,
+    )
+    properties.setProperty(
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+        ByteArrayDeserializer::class.java.name,
+    )
 
     properties.setProperty(
         ConsumerConfig.GROUP_ID_CONFIG,
