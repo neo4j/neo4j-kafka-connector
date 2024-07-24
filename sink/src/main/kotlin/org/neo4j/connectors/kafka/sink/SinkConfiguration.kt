@@ -145,10 +145,9 @@ class SinkConfiguration : Neo4jConfiguration {
     const val PATTERN_BIND_HEADER_AS = "neo4j.pattern.bind-header-as"
     const val PATTERN_BIND_KEY_AS = "neo4j.pattern.bind-key-as"
     const val PATTERN_BIND_VALUE_AS = "neo4j.pattern.bind-value-as"
-    const val PATTERN_NODE_TOPIC_PREFIX = "neo4j.pattern.node.topic."
-    const val PATTERN_RELATIONSHIP_TOPIC_PREFIX = "neo4j.pattern.relationship.topic."
-    const val PATTERN_NODE_MERGE_PROPERTIES = "neo4j.pattern.node.merge-properties"
-    const val PATTERN_RELATIONSHIP_MERGE_PROPERTIES = "neo4j.pattern.relationship.merge-properties"
+    const val PATTERN_TOPIC_PREFIX = "neo4j.pattern.topic."
+    const val PATTERN_MERGE_NODE_PROPERTIES = "neo4j.pattern.merge-node-properties"
+    const val PATTERN_MERGE_RELATIONSHIP_PROPERTIES = "neo4j.pattern.merge-relationship-properties"
     const val CUD_TOPICS = "neo4j.cud.topics"
 
     private const val DEFAULT_BATCH_SIZE = 1000
@@ -308,7 +307,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                 })
             .define(
-                ConfigKeyBuilder.of(PATTERN_NODE_MERGE_PROPERTIES, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(PATTERN_MERGE_NODE_PROPERTIES, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES.toString()
                   group = Groups.CONNECTOR_ADVANCED.title
@@ -316,7 +315,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   recommender = Recommenders.bool()
                 })
             .define(
-                ConfigKeyBuilder.of(PATTERN_RELATIONSHIP_MERGE_PROPERTIES, ConfigDef.Type.STRING) {
+                ConfigKeyBuilder.of(PATTERN_MERGE_RELATIONSHIP_PROPERTIES, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES.toString()
                   group = Groups.CONNECTOR_ADVANCED.title

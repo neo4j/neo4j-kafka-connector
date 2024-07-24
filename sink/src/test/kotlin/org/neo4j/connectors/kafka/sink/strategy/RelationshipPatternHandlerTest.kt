@@ -997,7 +997,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     val warningMessages = handler.checkConstraints(constraints)
 
     val startNode =
-        "Label 'LabelA' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+        "Label 'LabelA' does not match the key(s) defined by the pattern (:LabelA {!idStart: idStart})-[:REL_TYPE {!id: id, *}]->(:LabelB {!idEnd: idEnd})." +
             "\nPlease fix the label constraint:" +
             "\n\t'LabelA' has no key constraints" +
             "\nExpected constraints:" +
@@ -1009,7 +1009,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     warningMessages[0] shouldBe startNode
 
     val relationship =
-        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA {!idStart: idStart})-[:REL_TYPE {!id: id, *}]->(:LabelB {!idEnd: idEnd})." +
             "\nPlease fix the relationship constraints:" +
             "\n\t'REL_TYPE' has no key constraints" +
             "\nExpected constraints:" +
@@ -1021,7 +1021,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     warningMessages[1] shouldBe relationship
 
     val endNode =
-        "Label 'LabelB' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id}]->(:LabelB{!idEnd})." +
+        "Label 'LabelB' does not match the key(s) defined by the pattern (:LabelA {!idStart: idStart})-[:REL_TYPE {!id: id, *}]->(:LabelB {!idEnd: idEnd})." +
             "\nPlease fix the label constraint:" +
             "\n\t'LabelB' has no key constraints" +
             "\nExpected constraints:" +
@@ -1065,7 +1065,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     val warningMessages = handler.checkConstraints(constraints)
 
     val relationship =
-        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})." +
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA {!idStart: idStart})-[:REL_TYPE {!id: id, !second_id: second_id, *}]->(:LabelB {!idEnd: idEnd})." +
             "\nPlease fix the relationship constraints:" +
             "\n\t'REL_TYPE' has:" +
             "\n\t\t- RELATIONSHIP_KEY (id)" +
@@ -1116,7 +1116,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     val warningMessages = handler.checkConstraints(constraints)
 
     val relationship =
-        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA{!idStart})-[:REL_TYPE{!id, !second_id}]->(:LabelB{!idEnd})." +
+        "Relationship 'REL_TYPE' does not match the key(s) defined by the pattern (:LabelA {!idStart: idStart})-[:REL_TYPE {!id: id, !second_id: second_id, *}]->(:LabelB {!idEnd: idEnd})." +
             "\nPlease fix the relationship constraints:" +
             "\n\t'REL_TYPE' has:" +
             "\n\t\t- RELATIONSHIP_UNIQUENESS (id, second_id)" +

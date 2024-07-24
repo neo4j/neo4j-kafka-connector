@@ -22,4 +22,21 @@ data class NodePattern(
     override val keyProperties: Set<PropertyMapping>,
     override val includeProperties: Set<PropertyMapping>,
     override val excludeProperties: Set<String>
-) : Pattern
+) : Pattern {
+  override val text: String
+    get() {
+      return StringBuilder()
+          .append("(")
+          .apply {
+            if (labels.isNotEmpty()) {
+              this.append(":")
+            }
+
+            this.append(labels.joinToString(":") { trySanitize(it) })
+          }
+          .append(" ")
+          .append(this.propertiesAsText())
+          .append(")")
+          .toString()
+    }
+}
