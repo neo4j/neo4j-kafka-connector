@@ -16,23 +16,8 @@
  */
 package org.neo4j.connectors.kafka.testing.format
 
-import java.security.InvalidParameterException
 import org.apache.kafka.connect.data.Schema
-
-interface KafkaRecordDeserializer {
-  fun <K> deserialize(sourceValue: Any?, targetClass: Class<K>): K?
-}
 
 interface KafkaRecordSerializer {
   fun serialize(value: Any, schema: Schema): Any
-}
-
-class MappingException(msg: String) : InvalidParameterException(msg) {
-
-  constructor(sourceObject: Any) : this("Unexpected ${sourceObject::class.java}")
-
-  constructor(
-      sourceObject: Any,
-      targetClass: Class<*>
-  ) : this("Cannot convert ${sourceObject::class.java} to $targetClass")
 }

@@ -123,10 +123,6 @@ class TopicVerifier<K, V>(
             Map::class.java -> structToMap(sourceValue)
             else -> sourceValue as V
           }
-      is String ->
-          if (sourceValue == "null") null
-          else sourceValue // ByteArray deserializer is deserializing incoming null values from json
-      // schema to corresponding byte array of "null" string
       else -> sourceValue
     }
   }
@@ -213,7 +209,7 @@ class RingBuffer<E>(capacity: Int) {
         return emptyList()
       }
       val start = if (this.size < this.data.size) 0 else this.index
-      val indices = (start..<this.size) + (0..<start)
+      val indices = (start ..< this.size) + (0 ..< start)
       return indices.map { i -> data[i] as E }.toList()
     }
   }
