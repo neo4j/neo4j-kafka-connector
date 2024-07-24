@@ -31,7 +31,6 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.data.DynamicTypes.toConnectSchema
 
 class ChangeEventConverter(

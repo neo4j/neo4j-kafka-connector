@@ -29,9 +29,9 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier

@@ -17,7 +17,7 @@
 package org.neo4j.connectors.kafka.testing.source
 
 import org.junit.jupiter.api.extension.ExtendWith
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)

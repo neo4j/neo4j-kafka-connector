@@ -18,7 +18,7 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector

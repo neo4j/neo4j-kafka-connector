@@ -34,11 +34,11 @@ import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -211,7 +211,8 @@ abstract class Neo4jCdcSourceIT {
                           patterns =
                               arrayOf(
                                   CdcSourceParam(
-                                      "(:TestSource{localDate, localDatetime, localTime, zonedDatetime, offsetDatetime, offsetTime})"))))))
+                                      "(:TestSource{localDate, localDatetime, localTime, zonedDatetime, offsetDatetime, offsetTime})"))))),
+      temporalDataSchemaType = TemporalDataSchemaType.STRUCT)
   @Test
   fun `should return struct temporal types`(
       @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")

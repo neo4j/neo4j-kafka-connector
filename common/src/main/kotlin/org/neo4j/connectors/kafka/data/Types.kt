@@ -31,7 +31,6 @@ import java.time.temporal.TemporalQueries
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
 import org.neo4j.driver.Values
 import org.neo4j.driver.types.IsoDuration
 import org.neo4j.driver.types.Node

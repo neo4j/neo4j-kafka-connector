@@ -31,7 +31,6 @@ import org.neo4j.cdc.client.selector.EntitySelector
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.cdc.client.selector.Selector
-import org.neo4j.connectors.kafka.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
@@ -42,6 +41,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
