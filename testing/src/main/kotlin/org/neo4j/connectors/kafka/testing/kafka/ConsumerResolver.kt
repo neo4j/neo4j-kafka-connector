@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.testing.kafka
 
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import java.util.*
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -56,11 +55,6 @@ internal class ConsumerResolver(
     properties.setProperty(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
         brokerExternalHostProvider(),
-    )
-
-    properties.setProperty(
-        AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        schemaControlRegistryExternalUriProvider(),
     )
 
     properties.setProperty(
