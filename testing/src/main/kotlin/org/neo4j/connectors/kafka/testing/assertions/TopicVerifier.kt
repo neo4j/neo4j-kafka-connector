@@ -21,7 +21,6 @@ import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.storage.Converter
 import org.awaitility.Awaitility
@@ -184,7 +183,7 @@ class RingBuffer<E>(capacity: Int) {
         return emptyList()
       }
       val start = if (this.size < this.data.size) 0 else this.index
-      val indices = (start..<this.size) + (0..<start)
+      val indices = (start ..< this.size) + (0 ..< start)
       return indices.map { i -> data[i] as E }.toList()
     }
   }
