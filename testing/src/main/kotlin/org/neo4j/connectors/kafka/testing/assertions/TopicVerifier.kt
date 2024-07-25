@@ -27,6 +27,7 @@ import org.apache.kafka.connect.storage.Converter
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
@@ -120,36 +121,10 @@ class TopicVerifier<K, V>(
       is Struct ->
           when (assertionClass) {
             ChangeEvent::class.java -> sourceValue.toChangeEvent()
-            Map::class.java -> structToMap(sourceValue)
+            Map::class.java -> DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue)
             else -> sourceValue as V
           }
       else -> sourceValue
-    }
-  }
-
-  private fun structToMap(struct: Struct): Map<String, Any?> {
-    val map = mutableMapOf<String, Any?>()
-    struct
-        .schema()
-        .fields()
-        .filter { struct.get(it) != null }
-        .forEach { field ->
-          when (field.schema().type()) {
-            Schema.Type.STRUCT -> map[field.name()] = structToMap(struct.getStruct(field.name()))
-            Schema.Type.ARRAY -> map[field.name()] = convertList(struct.getArray<Any>(field.name()))
-            else -> map[field.name()] = struct.get(field)
-          }
-        }
-    return map
-  }
-
-  private fun convertList(list: Iterable<*>): List<Any?> {
-    return list.map {
-      when (it) {
-        is Struct -> structToMap(it)
-        is Iterable<*> -> convertList(it)
-        else -> it
-      }
     }
   }
 
@@ -209,7 +184,7 @@ class RingBuffer<E>(capacity: Int) {
         return emptyList()
       }
       val start = if (this.size < this.data.size) 0 else this.index
-      val indices = (start ..< this.size) + (0 ..< start)
+      val indices = (start..<this.size) + (0..<start)
       return indices.map { i -> data[i] as E }.toList()
     }
   }
