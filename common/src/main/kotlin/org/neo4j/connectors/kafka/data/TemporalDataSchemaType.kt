@@ -14,17 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.kafka
+package org.neo4j.connectors.kafka.data
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter
-
-data class ConvertingKafkaConsumer(
-    val keyConverter: KafkaConverter,
-    val valueConverter: KafkaConverter,
-    val schemaRegistryUrlProvider: () -> String,
-    val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>
-)
-
-data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)
+enum class TemporalDataSchemaType(val description: String) {
+  STRUCT("struct"),
+  STRING("string")
+}

@@ -16,11 +16,18 @@
  */
 package org.neo4j.connectors.kafka.testing.assertions
 
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import java.time.Duration
 import java.util.function.Predicate
 import kotlin.math.min
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.storage.Converter
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
 import org.slf4j.Logger
@@ -28,26 +35,50 @@ import org.slf4j.LoggerFactory
 
 class TopicVerifier<K, V>(
     private val consumer: ConvertingKafkaConsumer,
+    private val keyConverter: Converter,
+    private val valueConverter: Converter,
     private val keyAssertionClass: Class<K>,
     private val valueAssertionClass: Class<V>
 ) {
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
-  private var messagePredicates = mutableListOf<Predicate<GenericRecord<K, V>>>()
+  private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<ByteArray, ByteArray>>>()
 
-  fun assertMessageKey(assertion: (K?) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { assertion(it.key) }
+  fun assertMessageKey(schemaTopic: String? = null, assertion: (K?) -> Unit): TopicVerifier<K, V> {
+    return assertMessage(schemaTopic) { assertion(it.key) }
   }
 
-  fun assertMessageValue(assertion: (V) -> Unit): TopicVerifier<K, V> {
-    return assertMessage { assertion(it.value) }
+  fun assertMessageValue(schemaTopic: String? = null, assertion: (V) -> Unit): TopicVerifier<K, V> {
+    return assertMessage(schemaTopic) { assertion(it.value) }
   }
 
-  fun assertMessage(assertion: (GenericRecord<K, V>) -> Unit): TopicVerifier<K, V> {
+  @Suppress("UNCHECKED_CAST")
+  fun assertMessage(
+      schemaTopic: String? = null,
+      assertion: (GenericRecord<K, V>) -> Unit
+  ): TopicVerifier<K, V> {
     messagePredicates.add { record ->
       try {
-        assertion(record)
+        val genericRecord =
+            GenericRecord(
+                raw = record,
+                key =
+                    convert(
+                        keyConverter,
+                        keyAssertionClass,
+                        schemaTopic ?: record.topic(),
+                        record.key())
+                        as K,
+                value =
+                    convert(
+                        valueConverter,
+                        valueAssertionClass,
+                        schemaTopic ?: record.topic(),
+                        record.value())
+                        as V)
+
+        assertion(genericRecord)
         true
       } catch (e: java.lang.AssertionError) {
         log.debug("Assertion has failed", e)
@@ -62,23 +93,10 @@ class TopicVerifier<K, V>(
     if (predicates.isEmpty()) {
       throw AssertionError("expected at least 1 expected message predicate but got none")
     }
-    val receivedMessages = RingBuffer<GenericRecord<K, V>>(predicates.size)
+    val receivedMessages = RingBuffer<ConsumerRecord<ByteArray, ByteArray>>(predicates.size)
     try {
       Awaitility.await().atMost(timeout).until {
-        consumer.kafkaConsumer
-            .poll(Duration.ofMillis(500))
-            .map {
-              val value: V =
-                  consumer.valueConverter.testShimDeserializer.deserialize(
-                      it.value(), valueAssertionClass)!!
-              GenericRecord(
-                  raw = it,
-                  key =
-                      consumer.keyConverter.testShimDeserializer.deserialize(
-                          it.key(), keyAssertionClass),
-                  value = value)
-            }
-            .forEach { receivedMessages.add(it) }
+        consumer.kafkaConsumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
         val messages = receivedMessages.toList()
         messages.size == predicates.size &&
             predicates.foldIndexed(true) { i, prev, predicate ->
@@ -91,11 +109,49 @@ class TopicVerifier<K, V>(
     }
   }
 
+  @Suppress("UNCHECKED_CAST")
+  private fun <V> convert(
+      converter: Converter,
+      assertionClass: Class<V>,
+      topic: String,
+      value: ByteArray?
+  ): Any? {
+    return when (val sourceValue = converter.toConnectData(topic, value).value()) {
+      is Struct ->
+          when (assertionClass) {
+            ChangeEvent::class.java -> sourceValue.toChangeEvent()
+            Map::class.java ->
+                DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue, true)
+            else -> sourceValue as V
+          }
+      else -> sourceValue
+    }
+  }
+
   companion object {
     inline fun <reified K, reified V> create(
-        consumer: ConvertingKafkaConsumer
+        consumer: ConvertingKafkaConsumer,
     ): TopicVerifier<K, V> {
-      return TopicVerifier(consumer, K::class.java, V::class.java)
+      val keyConverter = consumer.keyConverter.converterProvider()
+      keyConverter.configure(
+          mapOf(
+              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                  consumer.schemaRegistryUrlProvider()),
+          true)
+
+      val valueConverter = consumer.valueConverter.converterProvider()
+      valueConverter.configure(
+          mapOf(
+              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                  consumer.schemaRegistryUrlProvider()),
+          false)
+
+      return TopicVerifier(
+          consumer = consumer,
+          keyConverter = keyConverter,
+          valueConverter = valueConverter,
+          keyAssertionClass = K::class.java,
+          valueAssertionClass = V::class.java)
     }
 
     fun createForMap(consumer: ConvertingKafkaConsumer) =

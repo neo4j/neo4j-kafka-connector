@@ -16,10 +16,10 @@
  */
 package org.neo4j.connectors.kafka.testing.kafka
 
-import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
 import java.util.*
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
@@ -30,7 +30,7 @@ internal class ConsumerResolver(
     private val topicRegistry: TopicRegistry,
     private val brokerExternalHostProvider: () -> String,
     private val schemaControlRegistryExternalUriProvider: () -> String,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<*, *>
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray>
 ) {
 
   fun resolveGenericConsumer(
@@ -41,13 +41,14 @@ internal class ConsumerResolver(
     return ConvertingKafkaConsumer(
         keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
         valueConverter = keyValueConverterResolver.resolveValueConverter(context),
+        schemaRegistryUrlProvider = schemaControlRegistryExternalUriProvider,
         kafkaConsumer = kafkaConsumer)
   }
 
   private fun resolveConsumer(
       parameterContext: ParameterContext?,
       extensionContext: ExtensionContext?
-  ): KafkaConsumer<*, *> {
+  ): KafkaConsumer<ByteArray, ByteArray> {
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
     val properties = Properties()
@@ -55,22 +56,16 @@ internal class ConsumerResolver(
         ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
         brokerExternalHostProvider(),
     )
-    val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
-    val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
-    if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {
-      properties.setProperty(
-          KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG,
-          schemaControlRegistryExternalUriProvider(),
-      )
-    }
+
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-        keyConverter.deserializerClass.name,
+        ByteArrayDeserializer::class.java.name,
     )
     properties.setProperty(
         ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-        valueConverter.deserializerClass.name,
+        ByteArrayDeserializer::class.java.name,
     )
+
     properties.setProperty(
         ConsumerConfig.GROUP_ID_CONFIG,
         // note: ExtensionContext#getUniqueId() returns null in the CLI
@@ -82,8 +77,11 @@ internal class ConsumerResolver(
   }
 
   companion object {
-    internal fun getSubscribedConsumer(properties: Properties, topic: String): KafkaConsumer<*, *> {
-      val consumer = KafkaConsumer<Any, Any>(properties)
+    internal fun getSubscribedConsumer(
+        properties: Properties,
+        topic: String
+    ): KafkaConsumer<ByteArray, ByteArray> {
+      val consumer = KafkaConsumer<ByteArray, ByteArray>(properties)
       consumer.subscribe(listOf(topic))
       return consumer
     }

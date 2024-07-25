@@ -173,20 +173,64 @@ class DynamicTypesTest {
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), true) shouldBe
         SimpleTypes.LOCALDATE_STRUCT.schema(true)
 
+    DynamicTypes.toConnectSchema(
+        LocalDate.of(1999, 12, 31),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALDATE.schema()
+    DynamicTypes.toConnectSchema(
+        LocalDate.of(1999, 12, 31),
+        optional = true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALDATE.schema(true)
+
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), false) shouldBe
         SimpleTypes.LOCALTIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), true) shouldBe
         SimpleTypes.LOCALTIME_STRUCT.schema(true)
+
+    DynamicTypes.toConnectSchema(
+        LocalTime.of(23, 59, 59),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALTIME.schema()
+    DynamicTypes.toConnectSchema(
+        LocalTime.of(23, 59, 59),
+        optional = true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALTIME.schema(true)
 
     DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
         SimpleTypes.LOCALDATETIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), true) shouldBe
         SimpleTypes.LOCALDATETIME_STRUCT.schema(true)
 
+    DynamicTypes.toConnectSchema(
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALDATETIME.schema()
+    DynamicTypes.toConnectSchema(
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
+        optional = true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.LOCALDATETIME.schema(true)
+
     DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
         SimpleTypes.OFFSETTIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
         SimpleTypes.OFFSETTIME_STRUCT.schema(true)
+
+    DynamicTypes.toConnectSchema(
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.OFFSETTIME.schema()
+    DynamicTypes.toConnectSchema(
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
+        optional = true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.OFFSETTIME.schema(true)
 
     DynamicTypes.toConnectSchema(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
@@ -196,11 +240,33 @@ class DynamicTypesTest {
         SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
 
     DynamicTypes.toConnectSchema(
+        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.ZONEDDATETIME.schema()
+    DynamicTypes.toConnectSchema(
+        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
+        true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.ZONEDDATETIME.schema(true)
+
+    DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
         SimpleTypes.ZONEDDATETIME_STRUCT.schema()
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), true) shouldBe
         SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
+
+    DynamicTypes.toConnectSchema(
+        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
+        optional = false,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.ZONEDDATETIME.schema()
+    DynamicTypes.toConnectSchema(
+        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
+        optional = true,
+        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
+        SimpleTypes.ZONEDDATETIME.schema(true)
 
     DynamicTypes.toConnectSchema(
         Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe

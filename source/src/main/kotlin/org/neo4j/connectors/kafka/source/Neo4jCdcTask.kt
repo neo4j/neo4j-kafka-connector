@@ -34,7 +34,7 @@ import org.neo4j.cdc.client.CDCService
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
+import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
@@ -48,6 +48,7 @@ class Neo4jCdcTask : SourceTask() {
   private lateinit var sessionConfig: SessionConfig
   private lateinit var cdc: CDCService
   private lateinit var offset: AtomicReference<String>
+  private lateinit var changeEventConverter: ChangeEventConverter
 
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
 
@@ -72,6 +73,8 @@ class Neo4jCdcTask : SourceTask() {
 
     offset = AtomicReference(resumeFrom(config, cdc))
     log.info("resuming from offset: ${offset.get()}")
+
+    changeEventConverter = ChangeEventConverter(config.temporalDataSchemaType)
   }
 
   override fun stop() {
@@ -119,7 +122,7 @@ class Neo4jCdcTask : SourceTask() {
         result.addAll(
             it.value.map { topic ->
               val transformed = it.key.applyProperties(changeEvent)
-              val transformedValue = transformed.toConnectValue()
+              val transformedValue = changeEventConverter.toConnectValue(transformed)
               val keyStrategy =
                   config.cdcTopicsToKeyStrategy.getOrDefault(topic, Neo4jCdcKeyStrategy.WHOLE_VALUE)
               SourceRecord(

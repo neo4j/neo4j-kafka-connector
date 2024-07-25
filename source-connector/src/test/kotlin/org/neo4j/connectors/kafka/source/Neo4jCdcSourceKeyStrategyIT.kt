@@ -183,7 +183,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .consume()
 
     TopicVerifier.create<Map<String, Any>, Map<String, Any>>(consumer)
-        .assertMessage { it.raw.key().shouldBeNull() }
+        .assertMessageKey { it.shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
 
@@ -262,7 +262,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .consume()
 
     TopicVerifier.create<String, Map<String, Any>>(consumer)
-        .assertMessage { it.raw.key().shouldBeNull() }
+        .assertMessageKey { it.shouldBeNull() }
         .verifyWithin(Duration.ofSeconds(30))
   }
 

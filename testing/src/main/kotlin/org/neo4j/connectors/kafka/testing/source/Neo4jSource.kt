@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.source
 
 import org.junit.jupiter.api.extension.ExtendWith
+import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
@@ -35,6 +36,7 @@ annotation class Neo4jSource(
     val startFrom: String = "NOW",
     val startFromValue: String = "",
     val strategy: SourceStrategy = SourceStrategy.QUERY,
+    val temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
 
     // QUERY strategy
     val topic: String = "",

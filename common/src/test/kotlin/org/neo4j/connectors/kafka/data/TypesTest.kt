@@ -42,8 +42,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.cdc.client.CDCClient
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toChangeEvent
-import org.neo4j.connectors.kafka.data.ChangeEventExtensions.toConnectValue
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -383,8 +381,9 @@ class TypesTest {
 
       val changes = cdc.query(changeId).collectList().block()
 
+      val changeEventConverter = ChangeEventConverter()
       changes!!.take(2).forEach { change ->
-        val converted = change.toConnectValue()
+        val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
         val value = converted.value() as Struct
 
@@ -400,7 +399,7 @@ class TypesTest {
       }
 
       changes[2].also { change ->
-        val converted = change.toConnectValue()
+        val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
         val value = converted.value() as Struct
 

@@ -131,7 +131,7 @@ abstract class Neo4jSinkErrorIT {
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
     TopicVerifier.createForMap(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer.topic
           errorHeaders.getValue(ErrorHeaders.PARTITION) shouldBe 0
@@ -213,7 +213,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.createForMap(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -223,7 +223,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe mapOf("id" to 2L, "surname" to "Doe")
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 3
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -283,7 +283,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -293,7 +293,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe message2ToFail.value
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 3
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -404,7 +404,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -414,7 +414,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe message3ToFail.value
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 4
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -519,7 +519,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -529,7 +529,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe message1ToFail.value
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -630,7 +630,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -640,7 +640,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe event1ToFail
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -750,7 +750,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -760,7 +760,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe event2ToFail
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 4
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -808,7 +808,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
-        .assertMessageValue { it shouldBe message2ToFail.value }
+        .assertMessageValue(schemaTopic = producer.topic) { it shouldBe message2ToFail.value }
         .verifyWithin(Duration.ofSeconds(30))
   }
 
@@ -868,7 +868,7 @@ abstract class Neo4jSinkErrorIT {
     }
 
     TopicVerifier.create<String, String>(consumer)
-        .assertMessage {
+        .assertMessage(schemaTopic = producer1.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer1.topic
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
@@ -878,7 +878,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe cudMessageToFail.value
         }
-        .assertMessage {
+        .assertMessage(schemaTopic = producer3.topic) {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer3.topic
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe

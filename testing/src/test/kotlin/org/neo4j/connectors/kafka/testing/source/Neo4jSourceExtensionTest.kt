@@ -182,7 +182,7 @@ class Neo4jSourceExtensionTest {
   @MethodSource("validMethods")
   @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
   fun `resolves consumer parameter`(name: String, method: KFunction<Unit>) {
-    val consumer = mock<KafkaConsumer<Any, Any>>()
+    val consumer = mock<KafkaConsumer<ByteArray, ByteArray>>()
     val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
     val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)

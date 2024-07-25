@@ -51,9 +51,10 @@ internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    consumerFactory: (Properties, String) -> KafkaConsumer<*, *> = { properties, topic ->
-      ConsumerResolver.getSubscribedConsumer(properties, topic)
-    },
+    consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray> =
+        { properties, topic ->
+          ConsumerResolver.getSubscribedConsumer(properties, topic)
+        },
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
@@ -164,7 +165,7 @@ internal class Neo4jSourceExtension(
             cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
             cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
             cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
-        )
+            temporalDataSchemaType = sourceAnnotation.temporalDataSchemaType)
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     topicRegistry.log()
   }

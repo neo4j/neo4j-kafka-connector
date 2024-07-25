@@ -252,6 +252,12 @@ object DynamicTypes {
           }
       Schema.Type.STRING ->
           when (value) {
+            is LocalDate -> DateTimeFormatter.ISO_DATE.format(value)
+            is LocalDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
+            is LocalTime -> DateTimeFormatter.ISO_TIME.format(value)
+            is OffsetDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
+            is ZonedDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
+            is OffsetTime -> DateTimeFormatter.ISO_TIME.format(value)
             is String -> value
             is Char -> value.toString()
             is CharArray -> String(value)
@@ -452,7 +458,8 @@ object DynamicTypes {
   fun toConnectSchema(
       value: Any?,
       optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false
+      forceMapsAsStruct: Boolean = false,
+      temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
   ): Schema =
       when (value) {
         null -> SimpleTypes.NULL.schema(true)
@@ -476,15 +483,39 @@ object DynamicTypes {
             SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).apply { if (optional) optional() }.build()
         is Array<*> -> {
           val first = value.firstOrNull { it.notNullOrEmpty() }
-          val schema = toConnectSchema(first, optional, forceMapsAsStruct)
+          val schema = toConnectSchema(first, optional, forceMapsAsStruct, temporalDataSchemaType)
           SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
         }
-        is LocalDate -> SimpleTypes.LOCALDATE_STRUCT.schema(optional)
-        is LocalDateTime -> SimpleTypes.LOCALDATETIME_STRUCT.schema(optional)
-        is LocalTime -> SimpleTypes.LOCALTIME_STRUCT.schema(optional)
-        is OffsetDateTime -> SimpleTypes.ZONEDDATETIME_STRUCT.schema(optional)
-        is ZonedDateTime -> SimpleTypes.ZONEDDATETIME_STRUCT.schema(optional)
-        is OffsetTime -> SimpleTypes.OFFSETTIME_STRUCT.schema(optional)
+        is LocalDate ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.LOCALDATE_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.LOCALDATE.schema(optional)
+            }
+        is LocalDateTime ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.LOCALDATETIME_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.LOCALDATETIME.schema(optional)
+            }
+        is LocalTime ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.LOCALTIME_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.LOCALTIME.schema(optional)
+            }
+        is OffsetDateTime ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.ZONEDDATETIME_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.ZONEDDATETIME.schema(optional)
+            }
+        is ZonedDateTime ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.ZONEDDATETIME_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.ZONEDDATETIME.schema(optional)
+            }
+        is OffsetTime ->
+            when (temporalDataSchemaType) {
+              TemporalDataSchemaType.STRUCT -> SimpleTypes.OFFSETTIME_STRUCT.schema(optional)
+              TemporalDataSchemaType.STRING -> SimpleTypes.OFFSETTIME.schema(optional)
+            }
         is IsoDuration -> SimpleTypes.DURATION.schema(optional)
         is Point -> SimpleTypes.POINT.schema(optional)
         is Node ->
@@ -495,7 +526,12 @@ object DynamicTypes {
 
                   value.keys().forEach {
                     field(
-                        it, toConnectSchema(value.get(it).asObject(), optional, forceMapsAsStruct))
+                        it,
+                        toConnectSchema(
+                            value.get(it).asObject(),
+                            optional,
+                            forceMapsAsStruct,
+                            temporalDataSchemaType))
                   }
 
                   if (optional) optional()
@@ -511,7 +547,12 @@ object DynamicTypes {
 
                   value.keys().forEach {
                     field(
-                        it, toConnectSchema(value.get(it).asObject(), optional, forceMapsAsStruct))
+                        it,
+                        toConnectSchema(
+                            value.get(it).asObject(),
+                            optional,
+                            forceMapsAsStruct,
+                            temporalDataSchemaType))
                   }
 
                   if (optional) optional()
@@ -521,7 +562,7 @@ object DynamicTypes {
           val nonEmptyElementTypes =
               value
                   .filter { it.notNullOrEmpty() }
-                  .map { toConnectSchema(it, optional, forceMapsAsStruct) }
+                  .map { toConnectSchema(it, optional, forceMapsAsStruct, temporalDataSchemaType) }
 
           when (nonEmptyElementTypes.toSet().size) {
             0 ->
@@ -536,7 +577,9 @@ object DynamicTypes {
                 SchemaBuilder.struct()
                     .apply {
                       value.forEachIndexed { i, v ->
-                        this.field("e${i}", toConnectSchema(v, optional, forceMapsAsStruct))
+                        this.field(
+                            "e${i}",
+                            toConnectSchema(v, optional, forceMapsAsStruct, temporalDataSchemaType))
                       }
                     }
                     .apply { if (optional) optional() }
@@ -555,7 +598,9 @@ object DynamicTypes {
                     }
                   }
                   .filter { e -> e.value.notNullOrEmpty() }
-                  .mapValues { e -> toConnectSchema(e.value, optional, forceMapsAsStruct) }
+                  .mapValues { e ->
+                    toConnectSchema(e.value, optional, forceMapsAsStruct, temporalDataSchemaType)
+                  }
 
           val valueSet = elementTypes.values.toSet()
           when {
@@ -565,7 +610,8 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchema(it.value, optional, forceMapsAsStruct))
+                            toConnectSchema(
+                                it.value, optional, forceMapsAsStruct, temporalDataSchemaType))
                       }
                     }
                     .apply { if (optional) optional() }
@@ -580,7 +626,8 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchema(it.value, optional, forceMapsAsStruct))
+                            toConnectSchema(
+                                it.value, optional, forceMapsAsStruct, temporalDataSchemaType))
                       }
                     }
                     .apply { if (optional) optional() }
