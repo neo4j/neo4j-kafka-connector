@@ -120,7 +120,8 @@ class TopicVerifier<K, V>(
       is Struct ->
           when (assertionClass) {
             ChangeEvent::class.java -> sourceValue.toChangeEvent()
-            Map::class.java -> DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue)
+            Map::class.java ->
+                DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue, true)
             else -> sourceValue as V
           }
       else -> sourceValue
