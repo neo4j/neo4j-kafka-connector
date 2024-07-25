@@ -42,6 +42,7 @@ class PatternTest {
               setOf(PropertyMapping("id", "id")),
               emptySet(),
               emptySet())
+      result.text shouldBe "(:LabelA:LabelB {!id: id, *})"
     }
 
     @ParameterizedTest
@@ -56,6 +57,7 @@ class PatternTest {
               setOf(PropertyMapping("id", "id")),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("bar", "bar")),
               emptySet())
+      result.text shouldBe "(:LabelA {!id: id, foo: foo, bar: bar})"
     }
 
     @ParameterizedTest
@@ -77,6 +79,8 @@ class PatternTest {
                   PropertyMapping("b bar", "b bar"),
                   PropertyMapping("c bar", "c dar")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA:`Label B` {!id: id, `a foo`: `a foo`, `b bar`: `b bar`, `c dar`: `c bar`})"
     }
 
     @ParameterizedTest
@@ -91,6 +95,7 @@ class PatternTest {
               setOf(PropertyMapping("id", "id")),
               setOf(PropertyMapping("foo.bar", "foo.bar")),
               emptySet())
+      result.text shouldBe "(:LabelA {!id: id, `foo.bar`: `foo.bar`})"
     }
 
     @ParameterizedTest
@@ -105,6 +110,7 @@ class PatternTest {
               setOf(PropertyMapping("idA", "idA"), PropertyMapping("idB", "idB")),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("bar", "bar")),
               emptySet())
+      result.text shouldBe "(:LabelA {!idA: idA, !idB: idB, foo: foo, bar: bar})"
     }
 
     @ParameterizedTest
@@ -119,6 +125,7 @@ class PatternTest {
               setOf(PropertyMapping("id", "id")),
               emptySet(),
               setOf("foo", "bar"))
+      result.text shouldBe "(:LabelA {!id: id, -foo, -bar, *})"
     }
 
     @ParameterizedTest
@@ -134,6 +141,7 @@ class PatternTest {
               setOf(PropertyMapping("customer.id", "id")),
               emptySet(),
               emptySet())
+      result.text shouldBe "(:LabelA:LabelB {!id: `customer.id`, *})"
     }
 
     @ParameterizedTest
@@ -152,6 +160,7 @@ class PatternTest {
               setOf(PropertyMapping("product.id", "id")),
               setOf(PropertyMapping("product.foo", "foo"), PropertyMapping("product.bar", "bar")),
               emptySet())
+      result.text shouldBe "(:LabelA {!id: `product.id`, foo: `product.foo`, bar: `product.bar`})"
     }
 
     @ParameterizedTest
@@ -170,6 +179,7 @@ class PatternTest {
               setOf(PropertyMapping("product.id", "id")),
               setOf(PropertyMapping("product.foo.bar", "foo.bar")),
               emptySet())
+      result.text shouldBe "(:LabelA {!id: `product.id`, `foo.bar`: `product.foo.bar`})"
     }
 
     @ParameterizedTest
@@ -188,6 +198,8 @@ class PatternTest {
               setOf(PropertyMapping("product.id", "idA"), PropertyMapping("stock.id", "idB")),
               setOf(PropertyMapping("product.foo", "foo"), PropertyMapping("bar", "bar")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!idA: `product.id`, !idB: `stock.id`, foo: `product.foo`, bar: bar})"
     }
 
     @ParameterizedTest
@@ -203,6 +215,7 @@ class PatternTest {
               setOf(PropertyMapping("product.id", "id")),
               emptySet(),
               setOf("foo", "bar"))
+      result.text shouldBe "(:LabelA {!id: `product.id`, -foo, -bar, *})"
     }
 
     @ParameterizedTest
@@ -275,6 +288,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!idA: idA, aa: aa})-[:REL_TYPE {*}]->(:LabelB {!idB: idB, bb: bb})"
     }
 
     @Test
@@ -302,6 +317,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               emptySet())
+      result.text shouldBe
+          "(:LabelB {!idB: idB, bb: bb})-[:REL_TYPE {*}]->(:LabelA {!idA: idA, aa: aa})"
     }
 
     @ParameterizedTest
@@ -332,6 +349,8 @@ class PatternTest {
               emptySet(),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("BAR", "BAR")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!idA: idA})-[:REL_TYPE {foo: foo, BAR: BAR}]->(:LabelB {!idB: idB})"
     }
 
     @ParameterizedTest
@@ -362,6 +381,8 @@ class PatternTest {
               emptySet(),
               setOf(PropertyMapping("foo.BAR", "foo.BAR"), PropertyMapping("BAR.foo", "BAR.foo")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!idA: idA})-[:REL_TYPE {`foo.BAR`: `foo.BAR`, `BAR.foo`: `BAR.foo`}]->(:LabelB {!idB: idB})"
     }
 
     @ParameterizedTest
@@ -392,6 +413,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               setOf("foo", "BAR"))
+      result.text shouldBe
+          "(:LabelA {!idA: idA})-[:REL_TYPE {-foo, -BAR, *}]->(:LabelB {!idB: idB})"
     }
 
     @ParameterizedTest
@@ -422,6 +445,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!id: `start.id`, aa: `start.aa`})-[:REL_TYPE {*}]->(:LabelB {!id: `end.id`, bb: `end.bb`})"
     }
 
     @Test
@@ -450,6 +475,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               emptySet())
+      result.text shouldBe
+          "(:LabelB {!id: `start.id`, bb: `start.bb`})-[:REL_TYPE {*}]->(:LabelA {!id: `end.id`, aa: `end.aa`})"
     }
 
     @ParameterizedTest
@@ -480,6 +507,8 @@ class PatternTest {
               emptySet(),
               setOf(PropertyMapping("rel.foo", "foo"), PropertyMapping("rel.BAR", "BAR")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!id: `start.id`})-[:REL_TYPE {foo: `rel.foo`, BAR: `rel.BAR`}]->(:LabelB {!id: `end.id`})"
     }
 
     @ParameterizedTest
@@ -512,6 +541,8 @@ class PatternTest {
                   PropertyMapping("rel.foo.BAR", "foo.BAR"),
                   PropertyMapping("rel.BAR.foo", "BAR.foo")),
               emptySet())
+      result.text shouldBe
+          "(:LabelA {!id: `start.id`})-[:REL_TYPE {`foo.BAR`: `rel.foo.BAR`, `BAR.foo`: `rel.BAR.foo`}]->(:LabelB {!id: `end.id`})"
     }
 
     @ParameterizedTest
@@ -542,6 +573,8 @@ class PatternTest {
               emptySet(),
               emptySet(),
               setOf("foo", "BAR"))
+      result.text shouldBe
+          "(:LabelA {!id: `start.id`})-[:REL_TYPE {-foo, -BAR, *}]->(:LabelB {!id: `end.id`})"
     }
 
     @Test

@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory
 
 class RelationshipPatternHandler(
     val topic: String,
-    private val patternString: String,
+    pattern: RelationshipPattern,
     private val mergeNodeProperties: Boolean,
     private val mergeRelationshipProperties: Boolean,
     private val renderer: Renderer,
@@ -46,21 +46,44 @@ class RelationshipPatternHandler(
     bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
 ) :
     PatternHandler<RelationshipPattern>(
+        pattern,
         bindTimestampAs = bindTimestampAs,
         bindHeaderAs = bindHeaderAs,
         bindKeyAs = bindKeyAs,
         bindValueAs = bindValueAs) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  override val pattern: RelationshipPattern
   internal val query: String
 
+  constructor(
+      topic: String,
+      pattern: String,
+      mergeNodeProperties: Boolean,
+      mergeRelationshipProperties: Boolean,
+      renderer: Renderer,
+      batchSize: Int,
+      bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
+      bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
+      bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
+      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS
+  ) : this(
+      topic = topic,
+      pattern =
+          when (val parsed = Pattern.parse(pattern)) {
+            is RelationshipPattern -> parsed
+            else ->
+                throw IllegalArgumentException(
+                    "Invalid pattern provided for RelationshipPatternHandler: ${parsed.javaClass.name}")
+          },
+      mergeNodeProperties = mergeNodeProperties,
+      mergeRelationshipProperties = mergeRelationshipProperties,
+      renderer = renderer,
+      batchSize = batchSize,
+      bindTimestampAs = bindTimestampAs,
+      bindHeaderAs = bindHeaderAs,
+      bindKeyAs = bindKeyAs,
+      bindValueAs = bindValueAs)
+
   init {
-    val parsed = Pattern.parse(patternString)
-    if (parsed !is RelationshipPattern) {
-      throw IllegalArgumentException(
-          "Invalid pattern provided for RelationshipPatternHandler: ${parsed.javaClass.name}")
-    }
-    pattern = parsed
     query = buildStatement()
 
     logger.debug("using Cypher query '{}' for topic '{}'", query, topic)
@@ -123,20 +146,20 @@ class RelationshipPatternHandler(
         .toList()
   }
 
-  fun validate(constraints: List<ConstraintData>) {
+  override fun validate(constraints: List<ConstraintData>) {
     val warningMessages = checkConstraints(constraints)
     warningMessages.forEach { logger.warn(it) }
   }
 
-  override fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+  internal fun checkConstraints(constraints: List<ConstraintData>): List<String> {
     val warningMessages = mutableListOf<String>()
 
     val startNodeWarning =
-        PatternConstraintValidator.checkNodeWarning(constraints, pattern.start, patternString)
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.start, pattern.text)
     val relationshipWarning =
-        PatternConstraintValidator.checkRelationshipWarning(constraints, pattern, patternString)
+        PatternConstraintValidator.checkRelationshipWarning(constraints, pattern, pattern.text)
     val endNodeWarning =
-        PatternConstraintValidator.checkNodeWarning(constraints, pattern.end, patternString)
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern.end, pattern.text)
 
     if (startNodeWarning != null) {
       warningMessages.add(startNodeWarning)

@@ -747,7 +747,7 @@ class NodePatternHandlerTest : HandlerTest() {
 
     warningMessages shouldBe
         listOf(
-            "Label 'ALabel' does not match the key(s) defined by the pattern (:ALabel{!id, !second_id, name})." +
+            "Label 'ALabel' does not match the key(s) defined by the pattern (:ALabel {!id: id, !second_id: second_id, name: name})." +
                 "\nPlease fix the label constraint:" +
                 "\n\t'ALabel' has no key constraints" +
                 "\nExpected constraints:" +
@@ -774,7 +774,7 @@ class NodePatternHandlerTest : HandlerTest() {
 
     warningMessages shouldBe
         listOf(
-            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel{!id, !second_id, name})." +
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
                 "\nPlease fix at least one of the following label constraints:" +
                 "\n\t'ALabel' has no key constraints" +
                 "\n\t'BLabel' has no key constraints" +
@@ -813,7 +813,7 @@ class NodePatternHandlerTest : HandlerTest() {
 
     warningMessages shouldBe
         listOf(
-            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel{!id, !second_id, name})." +
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
                 "\nPlease fix at least one of the following label constraints:" +
                 "\n\t'ALabel' has:" +
                 "\n\t\t- NODE_KEY (id)" +
@@ -869,7 +869,7 @@ class NodePatternHandlerTest : HandlerTest() {
 
     warningMessages shouldBe
         listOf(
-            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel{!id, !second_id, name})." +
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
                 "\nPlease fix at least one of the following label constraints:" +
                 "\n\t'ALabel' has:" +
                 "\n\t\t- UNIQUENESS (id)" +

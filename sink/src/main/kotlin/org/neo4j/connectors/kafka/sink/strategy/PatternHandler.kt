@@ -29,6 +29,7 @@ import org.neo4j.connectors.kafka.utils.MapUtils.flatten
 import org.neo4j.cypherdsl.core.Cypher
 
 abstract class PatternHandler<T : Pattern>(
+    val pattern: T,
     protected val bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
     protected val bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
     protected val bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
@@ -47,8 +48,6 @@ abstract class PatternHandler<T : Pattern>(
     internal val NAME_CREATED = Cypher.name("created")
     internal val NAME_DELETED = Cypher.name("deleted")
   }
-
-  abstract val pattern: T
 
   @Suppress("UNCHECKED_CAST")
   protected fun flattenMessage(message: SinkMessage): Map<String, Any?> {
@@ -70,7 +69,7 @@ abstract class PatternHandler<T : Pattern>(
         .flatten()
   }
 
-  abstract fun checkConstraints(constraints: List<ConstraintData>): List<String>
+  abstract fun validate(constraints: List<ConstraintData>)
 
   /**
    * Checks if given <strong>from</strong> key is explicitly defined, i.e. something starting with

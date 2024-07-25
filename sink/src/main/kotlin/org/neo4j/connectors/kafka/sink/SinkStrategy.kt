@@ -32,6 +32,9 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
@@ -148,50 +151,47 @@ interface SinkStrategyHandler {
                 bindValueAsEvent = config.cypherBindValueAsEvent)
       }
 
-      val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]
-      if (nodePattern != null) {
+      val pattern = originals[SinkConfiguration.PATTERN_TOPIC_PREFIX + topic]
+      if (pattern != null) {
         if (handler != null) {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
-        handler =
-            NodePatternHandler(
-                topic,
-                nodePattern,
-                config.getString(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES).toBoolean(),
-                config.renderer,
-                config.batchSize,
-                bindTimestampAs = config.patternBindTimestampAs,
-                bindHeaderAs = config.patternBindHeaderAs,
-                bindKeyAs = config.patternBindKeyAs,
-                bindValueAs = config.patternBindValueAs)
+        val patternHandler =
+            when (val parsedPattern = Pattern.parse(pattern)) {
+              is NodePattern ->
+                  NodePatternHandler(
+                      topic,
+                      parsedPattern,
+                      config.getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES).toBoolean(),
+                      config.renderer,
+                      config.batchSize,
+                      bindTimestampAs = config.patternBindTimestampAs,
+                      bindHeaderAs = config.patternBindHeaderAs,
+                      bindKeyAs = config.patternBindKeyAs,
+                      bindValueAs = config.patternBindValueAs)
+              is RelationshipPattern ->
+                  RelationshipPatternHandler(
+                      topic,
+                      parsedPattern,
+                      config.getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES).toBoolean(),
+                      config
+                          .getString(SinkConfiguration.PATTERN_MERGE_RELATIONSHIP_PROPERTIES)
+                          .toBoolean(),
+                      config.renderer,
+                      config.batchSize,
+                      bindTimestampAs = config.patternBindTimestampAs,
+                      bindHeaderAs = config.patternBindHeaderAs,
+                      bindKeyAs = config.patternBindKeyAs,
+                      bindValueAs = config.patternBindValueAs)
+              else ->
+                  throw IllegalArgumentException(
+                      "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}")
+            }
 
-        handler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
-      }
+        patternHandler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
 
-      val relationshipPattern =
-          originals[SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + topic]
-      if (relationshipPattern != null) {
-        if (handler != null) {
-          throw ConfigException("Topic '${topic}' has multiple strategies defined")
-        }
-
-        handler =
-            RelationshipPatternHandler(
-                topic,
-                relationshipPattern,
-                config.getString(SinkConfiguration.PATTERN_NODE_MERGE_PROPERTIES).toBoolean(),
-                config
-                    .getString(SinkConfiguration.PATTERN_RELATIONSHIP_MERGE_PROPERTIES)
-                    .toBoolean(),
-                config.renderer,
-                config.batchSize,
-                bindTimestampAs = config.patternBindTimestampAs,
-                bindHeaderAs = config.patternBindHeaderAs,
-                bindKeyAs = config.patternBindKeyAs,
-                bindValueAs = config.patternBindValueAs)
-
-        handler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
+        handler = patternHandler
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
@@ -242,15 +242,15 @@ interface SinkStrategyHandler {
         return SinkStrategy.CYPHER
       }
 
-      val nodePattern = originals[SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + topic]
-      if (nodePattern != null) {
-        return SinkStrategy.NODE_PATTERN
-      }
-
-      val relationshipPattern =
-          originals[SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + topic]
-      if (relationshipPattern != null) {
-        return SinkStrategy.RELATIONSHIP_PATTERN
+      val pattern = originals[SinkConfiguration.PATTERN_TOPIC_PREFIX + topic]
+      if (pattern != null) {
+        return when (val parsedPattern = Pattern.parse(pattern)) {
+          is NodePattern -> SinkStrategy.NODE_PATTERN
+          is RelationshipPattern -> SinkStrategy.RELATIONSHIP_PATTERN
+          else ->
+              throw IllegalArgumentException(
+                  "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}")
+        }
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
