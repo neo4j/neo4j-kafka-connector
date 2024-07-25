@@ -17,11 +17,22 @@
 package org.neo4j.connectors.kafka.sink.strategy.pattern
 
 data class RelationshipPattern(
-    val type: String?,
+    val type: String,
     val start: NodePattern,
     val end: NodePattern,
     override val includeAllValueProperties: Boolean,
     override val keyProperties: Set<PropertyMapping>,
     override val includeProperties: Set<PropertyMapping>,
     override val excludeProperties: Set<String>
-) : Pattern
+) : Pattern {
+  override val text: String
+    get() {
+      return StringBuilder()
+          .append(start.text)
+          .append("-")
+          .append("[:${trySanitize(type)} ${this.propertiesAsText()}]")
+          .append("->")
+          .append(end.text)
+          .toString()
+    }
+}

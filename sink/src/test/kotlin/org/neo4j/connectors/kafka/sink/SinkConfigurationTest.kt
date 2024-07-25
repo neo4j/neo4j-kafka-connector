@@ -98,8 +98,8 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar,foo",
-            "${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}foo" to "(:Foo{!fooId,fooName})",
-            "${SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
+            "${SinkConfiguration.PATTERN_TOPIC_PREFIX}foo" to "(:Foo{!fooId,fooName})",
+            "${SinkConfiguration.PATTERN_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
             SinkConfiguration.BATCH_SIZE to "10")
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
@@ -230,7 +230,7 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar",
-            SinkConfiguration.PATTERN_NODE_TOPIC_PREFIX + "bar" to "Label{!id}")
+            SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to "Label{!id}")
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.userAgentComment() shouldBe "node-pattern"
@@ -245,7 +245,7 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar",
-            SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + "bar" to
+            SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
@@ -263,7 +263,7 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "foo,bar,baz",
             SinkConfiguration.CUD_TOPICS to "baz",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
-            SinkConfiguration.PATTERN_RELATIONSHIP_TOPIC_PREFIX + "bar" to
+            SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 

@@ -16,7 +16,10 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.pattern
 
+import org.neo4j.cypherdsl.core.internal.SchemaNames
+
 interface Pattern {
+  val text: String
   val includeAllValueProperties: Boolean
   val keyProperties: Set<PropertyMapping>
   val includeProperties: Set<PropertyMapping>
@@ -27,6 +30,52 @@ interface Pattern {
       return Visitors.parse(expression)
     }
   }
+}
+
+internal fun trySanitize(identifier: String): String {
+  return SchemaNames.sanitize(identifier).orElseThrow {
+    IllegalArgumentException("unable to escape identifier '$identifier'")
+  }
+}
+
+internal fun Pattern.propertiesAsText(): String {
+  return StringBuilder()
+      .append("{")
+      .apply {
+        this.append(
+            keyProperties.joinToString(", ") { m ->
+              "!${trySanitize(m.to)}: ${trySanitize(m.from)}"
+            })
+      }
+      .apply {
+        if (keyProperties.isNotEmpty() && includeProperties.isNotEmpty()) {
+          this.append(", ")
+        }
+        this.append(
+            includeProperties.joinToString(", ") { m ->
+              "${trySanitize(m.to)}: ${trySanitize(m.from)}"
+            })
+      }
+      .apply {
+        if ((keyProperties.isNotEmpty() || includeProperties.isNotEmpty()) &&
+            excludeProperties.isNotEmpty()) {
+          this.append(", ")
+        }
+        this.append(excludeProperties.joinToString(", ") { "-" + trySanitize(it) })
+      }
+      .apply {
+        if ((keyProperties.isNotEmpty() ||
+            includeProperties.isNotEmpty() ||
+            excludeProperties.isNotEmpty()) && includeAllValueProperties) {
+          this.append(", ")
+        }
+
+        if (includeAllValueProperties) {
+          this.append("*")
+        }
+      }
+      .append("}")
+      .toString()
 }
 
 data class PropertyMapping(val from: String, val to: String) {

@@ -16,12 +16,14 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.PatternConstraintValidator
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Literal
 import org.neo4j.cypherdsl.core.Node
@@ -33,7 +35,7 @@ import org.slf4j.LoggerFactory
 
 class NodePatternHandler(
     val topic: String,
-    patternString: String,
+    pattern: NodePattern,
     private val mergeProperties: Boolean,
     private val renderer: Renderer,
     private val batchSize: Int,
@@ -43,21 +45,42 @@ class NodePatternHandler(
     bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
 ) :
     PatternHandler<NodePattern>(
+        pattern,
         bindTimestampAs = bindTimestampAs,
         bindHeaderAs = bindHeaderAs,
         bindKeyAs = bindKeyAs,
         bindValueAs = bindValueAs) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  override val pattern: NodePattern
   internal val query: String
 
+  constructor(
+      topic: String,
+      pattern: String,
+      mergeProperties: Boolean,
+      renderer: Renderer,
+      batchSize: Int,
+      bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
+      bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
+      bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
+      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS
+  ) : this(
+      topic = topic,
+      pattern =
+          when (val parsed = Pattern.parse(pattern)) {
+            is NodePattern -> parsed
+            else ->
+                throw IllegalArgumentException(
+                    "Invalid pattern provided for NodePatternHandler: ${parsed.javaClass.name}")
+          },
+      mergeProperties = mergeProperties,
+      renderer = renderer,
+      batchSize = batchSize,
+      bindTimestampAs = bindTimestampAs,
+      bindHeaderAs = bindHeaderAs,
+      bindKeyAs = bindKeyAs,
+      bindValueAs = bindValueAs)
+
   init {
-    val parsed = Pattern.parse(patternString)
-    if (parsed !is NodePattern) {
-      throw IllegalArgumentException(
-          "Invalid pattern provided for NodePatternHandler: ${parsed.javaClass.name}")
-    }
-    pattern = parsed
     query = buildStatement()
 
     logger.debug("using Cypher query '{}' for topic '{}'", query, topic)
@@ -102,6 +125,18 @@ class NodePatternHandler(
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
+  }
+
+  override fun validate(constraints: List<ConstraintData>) {
+    val warningMessages = checkConstraints(constraints)
+    warningMessages.forEach { logger.warn(it) }
+  }
+
+  internal fun checkConstraints(constraints: List<ConstraintData>): List<String> {
+    val nodeWarning =
+        PatternConstraintValidator.checkNodeWarning(constraints, pattern, pattern.text)
+            ?: return emptyList()
+    return listOf(nodeWarning)
   }
 
   private fun buildStatement(): String {

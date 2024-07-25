@@ -209,16 +209,16 @@ internal class Neo4jSinkExtension(
     metadata.nodePattern.forEach {
       val resolved = topicRegistry.resolveTopic(it.topic)
       topics.add(resolved)
-      strategies["neo4j.pattern.node.topic.$resolved"] = it.pattern
-      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
+      strategies["neo4j.pattern.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.merge-node-properties"] = it.mergeNodeProperties
     }
 
     metadata.relationshipPattern.forEach {
       val resolved = topicRegistry.resolveTopic(it.topic)
       topics.add(resolved)
-      strategies["neo4j.pattern.relationship.topic.$resolved"] = it.pattern
-      strategies["neo4j.pattern.node.merge-properties"] = it.mergeNodeProperties
-      strategies["neo4j.pattern.relationship.merge-properties"] = it.mergeRelationshipProperties
+      strategies["neo4j.pattern.topic.$resolved"] = it.pattern
+      strategies["neo4j.pattern.merge-node-properties"] = it.mergeNodeProperties
+      strategies["neo4j.pattern.merge-relationship-properties"] = it.mergeRelationshipProperties
     }
 
     if (metadata.cud.isNotEmpty()) {

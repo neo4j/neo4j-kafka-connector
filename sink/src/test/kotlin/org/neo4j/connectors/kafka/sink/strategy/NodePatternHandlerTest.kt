@@ -26,6 +26,9 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.neo4j.connectors.kafka.data.ConstraintData
+import org.neo4j.connectors.kafka.data.ConstraintEntityType
+import org.neo4j.connectors.kafka.data.ConstraintType
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
@@ -670,6 +673,217 @@ class NodePatternHandlerTest : HandlerTest() {
         key = """{"id": 1}""",
         value = """{"name": "John", "surname": "Doe"}""",
         message = "Key 'second_id' could not be located in the message.")
+  }
+
+  @Test
+  fun `checkConstraints should not return warning messages if node key constraint provided with all keys`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "ALabel",
+                properties = listOf("id", "second_id")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe emptyList()
+  }
+
+  @Test
+  fun `checkConstraints should not return warning messages if node uniqueness and existence constraints provided with all keys`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_UNIQUENESS.value,
+                labelOrType = "ALabel",
+                properties = listOf("id", "second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_EXISTENCE.value,
+                labelOrType = "ALabel",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_EXISTENCE.value,
+                labelOrType = "ALabel",
+                properties = listOf("second_id")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe emptyList()
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with single label pattern`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints = emptyList<ConstraintData>()
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe
+        listOf(
+            "Label 'ALabel' does not match the key(s) defined by the pattern (:ALabel {!id: id, !second_id: second_id, name: name})." +
+                "\nPlease fix the label constraint:" +
+                "\n\t'ALabel' has no key constraints" +
+                "\nExpected constraints:" +
+                "\n\t- NODE_KEY (id, second_id)" +
+                "\nor:" +
+                "\n\t- UNIQUENESS (id, second_id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with empty list of constraints`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel:BLabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints = emptyList<ConstraintData>()
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe
+        listOf(
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
+                "\nPlease fix at least one of the following label constraints:" +
+                "\n\t'ALabel' has no key constraints" +
+                "\n\t'BLabel' has no key constraints" +
+                "\nExpected constraints:" +
+                "\n\t- NODE_KEY (id, second_id)" +
+                "\nor:" +
+                "\n\t- UNIQUENESS (id, second_id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with existing node key constraint`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel:BLabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "ALabel",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_KEY.value,
+                labelOrType = "BLabel",
+                properties = listOf("id")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe
+        listOf(
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
+                "\nPlease fix at least one of the following label constraints:" +
+                "\n\t'ALabel' has:" +
+                "\n\t\t- NODE_KEY (id)" +
+                "\n\t'BLabel' has:" +
+                "\n\t\t- NODE_KEY (id)" +
+                "\nExpected constraints:" +
+                "\n\t- NODE_KEY (id, second_id)" +
+                "\nor:" +
+                "\n\t- UNIQUENESS (id, second_id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+  }
+
+  @Test
+  fun `checkConstraints should return warning messages with existing uniqueness and existence constraints`() {
+    val handler =
+        NodePatternHandler(
+            "my-topic",
+            "(:ALabel:BLabel{!id, !second_id, name})",
+            mergeProperties = true,
+            renderer = Renderer.getDefaultRenderer(),
+            batchSize = 1)
+
+    val constraints =
+        listOf(
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_UNIQUENESS.value,
+                labelOrType = "ALabel",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_EXISTENCE.value,
+                labelOrType = "ALabel",
+                properties = listOf("id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_EXISTENCE.value,
+                labelOrType = "ALabel",
+                properties = listOf("second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_UNIQUENESS.value,
+                labelOrType = "BLabel",
+                properties = listOf("id", "second_id")),
+            ConstraintData(
+                entityType = ConstraintEntityType.NODE.value,
+                constraintType = ConstraintType.NODE_EXISTENCE.value,
+                labelOrType = "BLabel",
+                properties = listOf("id")))
+
+    val warningMessages = handler.checkConstraints(constraints)
+
+    warningMessages shouldBe
+        listOf(
+            "None of the labels 'ALabel', 'BLabel' match the key(s) defined by the pattern (:ALabel:BLabel {!id: id, !second_id: second_id, name: name})." +
+                "\nPlease fix at least one of the following label constraints:" +
+                "\n\t'ALabel' has:" +
+                "\n\t\t- UNIQUENESS (id)" +
+                "\n\t\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\n\t\t- NODE_PROPERTY_EXISTENCE (second_id)" +
+                "\n\t'BLabel' has:" +
+                "\n\t\t- UNIQUENESS (id, second_id)" +
+                "\n\t\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\nExpected constraints:" +
+                "\n\t- NODE_KEY (id, second_id)" +
+                "\nor:" +
+                "\n\t- UNIQUENESS (id, second_id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
   }
 
   private fun assertQueryAndParameters(
