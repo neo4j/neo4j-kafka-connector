@@ -30,7 +30,7 @@ import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.data.ConstraintEntityType
 import org.neo4j.connectors.kafka.data.ConstraintType
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -295,7 +295,7 @@ class NodePatternHandlerTest : HandlerTest() {
             .field("id", Schema.INT32_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
-            .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+            .field("dob", propertyType)
             .build()
 
     assertQueryAndParameters(
@@ -306,10 +306,7 @@ class NodePatternHandlerTest : HandlerTest() {
                 .put("id", 1)
                 .put("name", "john")
                 .put("surname", "doe")
-                .put(
-                    "dob",
-                    DynamicTypes.toConnectValue(
-                        SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(2000, 1, 1))),
+                .put("dob", DynamicTypes.toConnectValue(propertyType, LocalDate.of(2000, 1, 1))),
         expected =
             listOf(
                 listOf(

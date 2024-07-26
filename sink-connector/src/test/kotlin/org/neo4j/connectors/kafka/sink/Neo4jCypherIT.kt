@@ -43,7 +43,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -299,17 +299,7 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.OPTIONAL_BOOLEAN_SCHEMA),
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_BYTES_SCHEMA),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
-          Arguments.of(SimpleTypes.LOCALTIME.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
-          Arguments.of(SimpleTypes.OFFSETTIME.schema(true)),
-          Arguments.of(SimpleTypes.ZONEDDATETIME.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.LOCALTIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.OFFSETTIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.DURATION.schema(true)))
+          Arguments.of(propertyType))
     }
   }
 
@@ -339,49 +329,37 @@ abstract class Neo4jCypherIT {
   object KnownTypes : ArgumentsProvider {
     override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
-          Arguments.of(SimpleTypes.BOOLEAN.schema(false), true),
-          Arguments.of(SimpleTypes.BOOLEAN.schema(true), false),
-          Arguments.of(SimpleTypes.LONG.schema(false), Long.MAX_VALUE),
-          Arguments.of(SimpleTypes.LONG.schema(true), Long.MIN_VALUE),
-          Arguments.of(SimpleTypes.FLOAT.schema(false), Double.MAX_VALUE),
-          Arguments.of(SimpleTypes.FLOAT.schema(true), Double.MIN_VALUE),
-          Arguments.of(SimpleTypes.STRING.schema(false), "a string"),
-          Arguments.of(SimpleTypes.STRING.schema(true), "another string"),
-          Arguments.of(SimpleTypes.BYTES.schema(false), "a string".encodeToByteArray()),
-          Arguments.of(SimpleTypes.BYTES.schema(true), "another string".encodeToByteArray()),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(false), LocalDate.of(2019, 5, 1)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true), LocalDate.of(2019, 5, 1)),
+          Arguments.of(propertyType, true),
+          Arguments.of(propertyType, false),
+          Arguments.of(propertyType, Long.MAX_VALUE),
+          Arguments.of(propertyType, Long.MIN_VALUE),
+          Arguments.of(propertyType, Double.MAX_VALUE),
+          Arguments.of(propertyType, Double.MIN_VALUE),
+          Arguments.of(propertyType, "a string"),
+          Arguments.of(propertyType, "another string"),
+          Arguments.of(propertyType, "a string".encodeToByteArray()),
+          Arguments.of(propertyType, "another string".encodeToByteArray()),
+          Arguments.of(propertyType, LocalDate.of(2019, 5, 1)),
+          Arguments.of(propertyType, LocalDate.of(2019, 5, 1)),
+          Arguments.of(propertyType, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(propertyType, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(propertyType, LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(propertyType, LocalTime.of(23, 59, 59, 999999999)),
           Arguments.of(
-              SimpleTypes.LOCALDATETIME_STRUCT.schema(false),
-              LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALDATETIME_STRUCT.schema(true),
-              LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALTIME_STRUCT.schema(false), LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALTIME_STRUCT.schema(true), LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.ZONEDDATETIME_STRUCT.schema(false),
+              propertyType,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              SimpleTypes.ZONEDDATETIME_STRUCT.schema(true),
+              propertyType,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
+          Arguments.of(propertyType, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
           Arguments.of(
-              SimpleTypes.OFFSETTIME_STRUCT.schema(false),
-              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
-          Arguments.of(
-              SimpleTypes.OFFSETTIME_STRUCT.schema(true),
-              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
-          Arguments.of(
-              SimpleTypes.DURATION.schema(false), Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(
-              SimpleTypes.DURATION.schema(true), Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(SimpleTypes.POINT.schema(false), Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(SimpleTypes.POINT.schema(true), Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(
-              SimpleTypes.POINT.schema(false), Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
-          Arguments.of(SimpleTypes.POINT.schema(true), Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+              propertyType, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
+          Arguments.of(propertyType, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(propertyType, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(propertyType, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(propertyType, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(propertyType, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+          Arguments.of(propertyType, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
       )
     }
   }

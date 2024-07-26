@@ -30,8 +30,8 @@ import java.time.ZonedDateTime
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
+import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -215,37 +215,37 @@ abstract class Neo4jSourceQueryIT {
         .assertMessageValue { value ->
           value.getStruct("localDate") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALDATE_STRUCT.schema,
+                  propertyType,
                   LocalDate.of(2024, 1, 1),
               ) as Struct
 
           value.getStruct("localDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALDATETIME_STRUCT.schema,
+                  propertyType,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               ) as Struct
 
           value.getStruct("localTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALTIME_STRUCT.schema,
+                  propertyType,
                   LocalTime.of(12, 0, 0),
               ) as Struct
 
           value.getStruct("zonedDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.ZONEDDATETIME_STRUCT.schema,
+                  propertyType,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               ) as Struct
 
           value.getStruct("offsetDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.ZONEDDATETIME_STRUCT.schema,
+                  propertyType,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
 
           value.getStruct("offsetTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  SimpleTypes.OFFSETTIME_STRUCT.schema,
+                  propertyType,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
         }
@@ -288,37 +288,37 @@ abstract class Neo4jSourceQueryIT {
         .assertMessageValue { value ->
           value.getString("localDate") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALDATE.schema,
+                  propertyType,
                   LocalDate.of(2024, 1, 1),
               )
 
           value.getString("localDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALDATETIME.schema,
+                  propertyType,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               )
 
           value.getString("localTime") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.LOCALTIME.schema,
+                  propertyType,
                   LocalTime.of(12, 0, 0),
               )
 
           value.getString("zonedDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.ZONEDDATETIME.schema,
+                  propertyType,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               )
 
           value.getString("offsetDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.ZONEDDATETIME.schema,
+                  propertyType,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               )
 
           value.getString("offsetTime") shouldBe
               DynamicTypes.toConnectValue(
-                  SimpleTypes.OFFSETTIME.schema,
+                  propertyType,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               )
         }

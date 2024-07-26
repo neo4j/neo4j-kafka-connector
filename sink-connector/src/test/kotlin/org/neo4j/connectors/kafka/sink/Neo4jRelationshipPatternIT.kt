@@ -29,7 +29,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -68,8 +68,8 @@ abstract class Neo4jRelationshipPatternIT {
     SchemaBuilder.struct()
         .field("userId", Schema.INT64_SCHEMA)
         .field("productId", Schema.INT64_SCHEMA)
-        .field("at", SimpleTypes.LOCALDATE_STRUCT.schema)
-        .field("place", SimpleTypes.POINT.schema)
+        .field("at", propertyType)
+        .field("place", propertyType)
         .build()
         .let { schema ->
           producer.publish(
@@ -79,13 +79,11 @@ abstract class Neo4jRelationshipPatternIT {
                       .put("userId", 1L)
                       .put("productId", 2L)
                       .put(
-                          "at",
-                          DynamicTypes.toConnectValue(
-                              SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(1995, 1, 1)))
+                          "at", DynamicTypes.toConnectValue(propertyType, LocalDate.of(1995, 1, 1)))
                       .put(
                           "place",
                           DynamicTypes.toConnectValue(
-                              SimpleTypes.POINT.schema, Values.point(7203, 1.0, 2.5).asPoint())))
+                              propertyType, Values.point(7203, 1.0, 2.5).asPoint())))
         }
 
     eventually(30.seconds) {
