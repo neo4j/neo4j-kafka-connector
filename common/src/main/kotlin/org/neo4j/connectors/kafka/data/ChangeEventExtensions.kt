@@ -75,20 +75,11 @@ class ChangeEventConverter(
           .field("txCommitTime", PropertyType.schema)
           .field(
               "txMetadata",
-              toConnectSchema(
-                      metadata.txMetadata,
-                      optional = true,
-                      forceMapsAsStruct = true,
-                      temporalDataSchemaType = temporalDataSchemaType)
+              toConnectSchema(metadata.txMetadata, optional = true, forceMapsAsStruct = true)
                   .schema())
           .also {
             metadata.additionalEntries.forEach { entry ->
-              it.field(
-                  entry.key,
-                  toConnectSchema(
-                      entry.value,
-                      optional = true,
-                      temporalDataSchemaType = temporalDataSchemaType))
+              it.field(entry.key, toConnectSchema(entry.value, optional = true))
             }
           }
           .build()

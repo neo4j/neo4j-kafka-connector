@@ -536,7 +536,6 @@ object DynamicTypes {
       value: Any?,
       optional: Boolean = false,
       forceMapsAsStruct: Boolean = false,
-      temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
   ): Schema =
       when (value) {
         null -> PropertyType.schema
@@ -578,8 +577,7 @@ object DynamicTypes {
                   PropertyType.schema
                 } else {
                   val first = value.firstOrNull { it.notNullOrEmpty() }
-                  val schema =
-                      toConnectSchema(first, optional, forceMapsAsStruct, temporalDataSchemaType)
+                  val schema = toConnectSchema(first, optional, forceMapsAsStruct)
                   SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
                 }
           }
@@ -620,7 +618,7 @@ object DynamicTypes {
           val nonEmptyElementTypes =
               value
                   .filter { it.notNullOrEmpty() }
-                  .map { toConnectSchema(it, optional, forceMapsAsStruct, temporalDataSchemaType) }
+                  .map { toConnectSchema(it, optional, forceMapsAsStruct) }
 
           when (nonEmptyElementTypes.toSet().size) {
             0 -> SchemaBuilder.array(PropertyType.schema).apply { if (optional) optional() }.build()
@@ -632,9 +630,7 @@ object DynamicTypes {
                 SchemaBuilder.struct()
                     .apply {
                       value.forEachIndexed { i, v ->
-                        this.field(
-                            "e${i}",
-                            toConnectSchema(v, optional, forceMapsAsStruct, temporalDataSchemaType))
+                        this.field("e${i}", toConnectSchema(v, optional, forceMapsAsStruct))
                       }
                     }
                     .apply { if (optional) optional() }
@@ -653,9 +649,7 @@ object DynamicTypes {
                     }
                   }
                   .filter { e -> e.value.notNullOrEmpty() }
-                  .mapValues { e ->
-                    toConnectSchema(e.value, optional, forceMapsAsStruct, temporalDataSchemaType)
-                  }
+                  .mapValues { e -> toConnectSchema(e.value, optional, forceMapsAsStruct) }
 
           val valueSet = elementTypes.values.toSet()
           when {
@@ -665,8 +659,7 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchema(
-                                it.value, optional, forceMapsAsStruct, temporalDataSchemaType))
+                            toConnectSchema(it.value, optional, forceMapsAsStruct))
                       }
                     }
                     .apply { if (optional) optional() }
@@ -681,8 +674,7 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchema(
-                                it.value, optional, forceMapsAsStruct, temporalDataSchemaType))
+                            toConnectSchema(it.value, optional, forceMapsAsStruct))
                       }
                     }
                     .apply { if (optional) optional() }

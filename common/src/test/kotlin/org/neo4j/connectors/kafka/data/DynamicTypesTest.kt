@@ -172,26 +172,18 @@ class DynamicTypesTest {
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), false) shouldBe PropertyType.schema
     DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), true) shouldBe PropertyType.schema
 
-    DynamicTypes.toConnectSchema(
-        LocalDate.of(1999, 12, 31),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
-    DynamicTypes.toConnectSchema(
-        LocalDate.of(1999, 12, 31),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+    DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), optional = false) shouldBe
+        PropertyType.schema
+    DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), optional = true) shouldBe
+        PropertyType.schema
 
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), false) shouldBe PropertyType.schema
     DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), true) shouldBe PropertyType.schema
 
-    DynamicTypes.toConnectSchema(
-        LocalTime.of(23, 59, 59),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
-    DynamicTypes.toConnectSchema(
-        LocalTime.of(23, 59, 59),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+    DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), optional = false) shouldBe
+        PropertyType.schema
+    DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), optional = true) shouldBe
+        PropertyType.schema
 
     DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
         PropertyType.schema
@@ -199,13 +191,9 @@ class DynamicTypesTest {
         PropertyType.schema
 
     DynamicTypes.toConnectSchema(
-        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59), optional = false) shouldBe PropertyType.schema
     DynamicTypes.toConnectSchema(
-        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59), optional = true) shouldBe PropertyType.schema
 
     DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
         PropertyType.schema
@@ -213,13 +201,9 @@ class DynamicTypesTest {
         PropertyType.schema
 
     DynamicTypes.toConnectSchema(
-        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), optional = false) shouldBe PropertyType.schema
     DynamicTypes.toConnectSchema(
-        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), optional = true) shouldBe PropertyType.schema
 
     DynamicTypes.toConnectSchema(
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
@@ -229,13 +213,11 @@ class DynamicTypesTest {
         PropertyType.schema
 
     DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), optional = false) shouldBe
+        PropertyType.schema
     DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
-        true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
+        PropertyType.schema
 
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
@@ -246,12 +228,10 @@ class DynamicTypesTest {
 
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        optional = false) shouldBe PropertyType.schema
     DynamicTypes.toConnectSchema(
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe PropertyType.schema
+        optional = true) shouldBe PropertyType.schema
 
     DynamicTypes.toConnectSchema(
         Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe PropertyType.schema
