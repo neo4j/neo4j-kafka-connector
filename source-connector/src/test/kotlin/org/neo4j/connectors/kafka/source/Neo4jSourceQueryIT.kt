@@ -30,8 +30,9 @@ import java.time.ZonedDateTime
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
-import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -215,37 +216,37 @@ abstract class Neo4jSourceQueryIT {
         .assertMessageValue { value ->
           value.getStruct("localDate") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDate.of(2024, 1, 1),
               ) as Struct
 
           value.getStruct("localDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               ) as Struct
 
           value.getStruct("localTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalTime.of(12, 0, 0),
               ) as Struct
 
           value.getStruct("zonedDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               ) as Struct
 
           value.getStruct("offsetDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
 
           value.getStruct("offsetTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
         }
@@ -288,37 +289,37 @@ abstract class Neo4jSourceQueryIT {
         .assertMessageValue { value ->
           value.getString("localDate") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDate.of(2024, 1, 1),
               )
 
           value.getString("localDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               )
 
           value.getString("localTime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalTime.of(12, 0, 0),
               )
 
           value.getString("zonedDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               )
 
           value.getString("offsetDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               )
 
           value.getString("offsetTime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               )
         }

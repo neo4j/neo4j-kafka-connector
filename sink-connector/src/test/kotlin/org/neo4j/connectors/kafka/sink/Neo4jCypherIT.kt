@@ -43,7 +43,8 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.propertyType
+import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -299,7 +300,7 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.OPTIONAL_BOOLEAN_SCHEMA),
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_BYTES_SCHEMA),
-          Arguments.of(propertyType))
+          Arguments.of(PropertyType.schema))
     }
   }
 
@@ -329,37 +330,39 @@ abstract class Neo4jCypherIT {
   object KnownTypes : ArgumentsProvider {
     override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
-          Arguments.of(propertyType, true),
-          Arguments.of(propertyType, false),
-          Arguments.of(propertyType, Long.MAX_VALUE),
-          Arguments.of(propertyType, Long.MIN_VALUE),
-          Arguments.of(propertyType, Double.MAX_VALUE),
-          Arguments.of(propertyType, Double.MIN_VALUE),
-          Arguments.of(propertyType, "a string"),
-          Arguments.of(propertyType, "another string"),
-          Arguments.of(propertyType, "a string".encodeToByteArray()),
-          Arguments.of(propertyType, "another string".encodeToByteArray()),
-          Arguments.of(propertyType, LocalDate.of(2019, 5, 1)),
-          Arguments.of(propertyType, LocalDate.of(2019, 5, 1)),
-          Arguments.of(propertyType, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(propertyType, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(propertyType, LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(propertyType, LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, true),
+          Arguments.of(PropertyType.schema, false),
+          Arguments.of(PropertyType.schema, Long.MAX_VALUE),
+          Arguments.of(PropertyType.schema, Long.MIN_VALUE),
+          Arguments.of(PropertyType.schema, Double.MAX_VALUE),
+          Arguments.of(PropertyType.schema, Double.MIN_VALUE),
+          Arguments.of(PropertyType.schema, "a string"),
+          Arguments.of(PropertyType.schema, "another string"),
+          Arguments.of(PropertyType.schema, "a string".encodeToByteArray()),
+          Arguments.of(PropertyType.schema, "another string".encodeToByteArray()),
+          Arguments.of(PropertyType.schema, LocalDate.of(2019, 5, 1)),
+          Arguments.of(PropertyType.schema, LocalDate.of(2019, 5, 1)),
+          Arguments.of(PropertyType.schema, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalTime.of(23, 59, 59, 999999999)),
           Arguments.of(
-              propertyType,
+              PropertyType.schema,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              propertyType,
+              PropertyType.schema,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
-          Arguments.of(propertyType, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
           Arguments.of(
-              propertyType, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
-          Arguments.of(propertyType, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(propertyType, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(propertyType, Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(propertyType, Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(propertyType, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
-          Arguments.of(propertyType, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+              PropertyType.schema, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
+          Arguments.of(
+              PropertyType.schema,
+              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
+          Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(PropertyType.schema, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
       )
     }
   }

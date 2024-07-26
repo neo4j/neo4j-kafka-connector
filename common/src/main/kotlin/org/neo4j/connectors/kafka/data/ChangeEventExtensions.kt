@@ -71,8 +71,8 @@ class ChangeEventConverter(
           .field("connectionServer", Schema.OPTIONAL_STRING_SCHEMA)
           .field("serverId", Schema.STRING_SCHEMA)
           .field("captureMode", Schema.STRING_SCHEMA)
-          .field("txStartTime", propertyType)
-          .field("txCommitTime", propertyType)
+          .field("txStartTime", PropertyType.schema)
+          .field("txCommitTime", PropertyType.schema)
           .field(
               "txMetadata",
               toConnectSchema(
@@ -102,8 +102,10 @@ class ChangeEventConverter(
         it.put("connectionServer", metadata.connectionServer)
         it.put("serverId", metadata.serverId)
         it.put("captureMode", metadata.captureMode.name)
-        it.put("txStartTime", DynamicTypes.toConnectValue(propertyType, metadata.txStartTime))
-        it.put("txCommitTime", DynamicTypes.toConnectValue(propertyType, metadata.txCommitTime))
+        it.put(
+            "txStartTime", DynamicTypes.toConnectValue(PropertyType.schema, metadata.txStartTime))
+        it.put(
+            "txCommitTime", DynamicTypes.toConnectValue(PropertyType.schema, metadata.txCommitTime))
         it.put(
             "txMetadata",
             DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), metadata.txMetadata))
@@ -209,7 +211,7 @@ class ChangeEventConverter(
   }
 
   private fun schemaForKeys(): Schema {
-    return SchemaBuilder.array(SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType).build())
+    return SchemaBuilder.array(SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
         .optional()
         .build()
   }
@@ -220,7 +222,8 @@ class ChangeEventConverter(
             .apply {
               this.field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
               this.field(
-                  "properties", SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType).build())
+                  "properties",
+                  SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
             }
             .optional()
             .build()
@@ -238,7 +241,7 @@ class ChangeEventConverter(
                 it.put(
                     "properties",
                     before.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(propertyType, e.value)
+                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
                     })
               })
         }
@@ -251,7 +254,7 @@ class ChangeEventConverter(
                 it.put(
                     "properties",
                     after.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(propertyType, e.value)
+                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
                     })
               })
         }
@@ -265,7 +268,8 @@ class ChangeEventConverter(
         SchemaBuilder.struct()
             .apply {
               this.field(
-                  "properties", SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType).build())
+                  "properties",
+                  SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
             }
             .optional()
             .build()
@@ -286,7 +290,7 @@ class ChangeEventConverter(
                 it.put(
                     "properties",
                     before.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(propertyType, e.value)
+                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
                     })
               })
         }
@@ -298,7 +302,7 @@ class ChangeEventConverter(
                 it.put(
                     "properties",
                     after.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(propertyType, e.value)
+                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
                     })
               })
         }

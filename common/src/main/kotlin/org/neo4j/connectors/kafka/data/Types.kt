@@ -42,94 +42,325 @@ internal fun Schema.id(): String = this.name().orEmpty().ifEmpty { this.type().n
 
 internal fun Schema.shortId(): String = this.id().split('.').last()
 
-const val EPOCH_DAYS = "epochDays"
-const val NANOS_OF_DAY = "nanosOfDay"
-const val EPOCH_SECONDS = "epochSeconds"
-const val NANOS_OF_SECOND = "nanosOfSecond"
-const val ZONE_ID = "zoneId"
-const val MONTHS = "months"
-const val DAYS = "days"
-const val SECONDS = "seconds"
-const val NANOS = "nanoseconds"
-const val SR_ID = "srid"
-const val X = "x"
-const val Y = "y"
-const val Z = "z"
-const val DIMENSION = "dimension"
-const val TWO_D: Byte = 2
-const val THREE_D: Byte = 3
+@Suppress("UNCHECKED_CAST")
+object PropertyType {
+  const val MONTHS = "months"
+  const val DAYS = "days"
+  const val SECONDS = "seconds"
+  const val NANOS = "nanoseconds"
+  const val SR_ID = "srid"
+  const val X = "x"
+  const val Y = "y"
+  const val Z = "z"
+  const val DIMENSION = "dimension"
+  const val TWO_D: Byte = 2
+  const val THREE_D: Byte = 3
 
-val durationSchema: Schema =
-    SchemaBuilder(Schema.Type.STRUCT)
-        .field(MONTHS, Schema.INT64_SCHEMA)
-        .field(DAYS, Schema.INT64_SCHEMA)
-        .field(SECONDS, Schema.INT64_SCHEMA)
-        .field(NANOS, Schema.INT32_SCHEMA)
-        .optional()
-        .build()
+  const val BOOLEAN = "B"
+  const val BOOLEAN_LIST = "LB"
+  const val LONG = "I64"
+  const val LONG_LIST = "LI64"
+  const val FLOAT = "F64"
+  const val FLOAT_LIST = "LF64"
+  const val STRING = "S"
+  const val STRING_LIST = "LS"
+  const val BYTES = "BA"
+  const val LOCAL_DATE = "TLD"
+  const val LOCAL_DATE_LIST = "LTLD"
+  const val LOCAL_DATE_TIME = "TLDT"
+  const val LOCAL_DATE_TIME_LIST = "LTLDT"
+  const val LOCAL_TIME = "TLT"
+  const val LOCAL_TIME_LIST = "LTLT"
+  const val ZONED_DATE_TIME = "TZDT"
+  const val ZONED_DATE_TIME_LIST = "LZDT"
+  const val OFFSET_TIME = "TOT"
+  const val OFFSET_TIME_LIST = "LTOT"
+  const val DURATION = "TD"
+  const val DURATION_LIST = "LTD"
+  const val POINT = "SP"
+  const val POINT_LIST = "LSP"
 
-val pointSchema: Schema =
-    SchemaBuilder(Schema.Type.STRUCT)
-        .field(DIMENSION, Schema.INT8_SCHEMA)
-        .field(SR_ID, Schema.INT32_SCHEMA)
-        .field(X, Schema.FLOAT64_SCHEMA)
-        .field(Y, Schema.FLOAT64_SCHEMA)
-        .field(Z, Schema.OPTIONAL_FLOAT64_SCHEMA)
-        .optional()
-        .build()
+  val durationSchema: Schema =
+      SchemaBuilder(Schema.Type.STRUCT)
+          .field(MONTHS, Schema.INT64_SCHEMA)
+          .field(DAYS, Schema.INT64_SCHEMA)
+          .field(SECONDS, Schema.INT64_SCHEMA)
+          .field(NANOS, Schema.INT32_SCHEMA)
+          .optional()
+          .build()
 
-const val BOOLEAN = "B"
-const val BOOLEAN_LIST = "LB"
-const val LONG = "I64"
-const val LONG_LIST = "LI64"
-const val FLOAT = "F64"
-const val FLOAT_LIST = "LF64"
-const val STRING = "S"
-const val STRING_LIST = "LS"
-const val BYTES = "BA"
-const val LOCAL_DATE = "TLD"
-const val LOCAL_DATE_LIST = "LTLD"
-const val LOCAL_DATE_TIME = "TLDT"
-const val LOCAL_DATE_TIME_LIST = "LTLDT"
-const val LOCAL_TIME = "TLT"
-const val LOCAL_TIME_LIST = "LTLT"
-const val ZONED_DATE_TIME = "TZDT"
-const val ZONED_DATE_TIME_LIST = "LZDT"
-const val OFFSET_TIME = "TOT"
-const val OFFSET_TIME_LIST = "LTOT"
-const val DURATION = "TD"
-const val DURATION_LIST = "LTD"
-const val POINT = "SP"
-const val POINT_LIST = "LSP"
+  val pointSchema: Schema =
+      SchemaBuilder(Schema.Type.STRUCT)
+          .field(DIMENSION, Schema.INT8_SCHEMA)
+          .field(SR_ID, Schema.INT32_SCHEMA)
+          .field(X, Schema.FLOAT64_SCHEMA)
+          .field(Y, Schema.FLOAT64_SCHEMA)
+          .field(Z, Schema.OPTIONAL_FLOAT64_SCHEMA)
+          .optional()
+          .build()
 
-val propertyType: Schema =
-    SchemaBuilder.struct()
-        .namespaced("Neo4jSimpleType")
-        .field(BOOLEAN, Schema.OPTIONAL_BOOLEAN_SCHEMA)
-        .field(LONG, Schema.OPTIONAL_INT64_SCHEMA)
-        .field(FLOAT, Schema.OPTIONAL_FLOAT64_SCHEMA)
-        .field(STRING, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(BYTES, Schema.OPTIONAL_BYTES_SCHEMA)
-        .field(LOCAL_DATE, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(LOCAL_DATE_TIME, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(LOCAL_TIME, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(ZONED_DATE_TIME, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(OFFSET_TIME, Schema.OPTIONAL_STRING_SCHEMA)
-        .field(DURATION, durationSchema)
-        .field(POINT, pointSchema)
-        .field(BOOLEAN_LIST, SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).optional().build())
-        .field(LONG_LIST, SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build())
-        .field(FLOAT_LIST, SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build())
-        .field(STRING_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(LOCAL_DATE_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(LOCAL_DATE_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(LOCAL_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(ZONED_DATE_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(OFFSET_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-        .field(DURATION_LIST, SchemaBuilder.array(durationSchema).optional().build())
-        .field(POINT_LIST, SchemaBuilder.array(pointSchema).optional().build())
-        .optional()
-        .build()
+  val schema: Schema =
+      SchemaBuilder.struct()
+          .namespaced("Neo4jPropertyType")
+          .field(BOOLEAN, Schema.OPTIONAL_BOOLEAN_SCHEMA)
+          .field(LONG, Schema.OPTIONAL_INT64_SCHEMA)
+          .field(FLOAT, Schema.OPTIONAL_FLOAT64_SCHEMA)
+          .field(STRING, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(BYTES, Schema.OPTIONAL_BYTES_SCHEMA)
+          .field(LOCAL_DATE, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(LOCAL_DATE_TIME, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(LOCAL_TIME, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(ZONED_DATE_TIME, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(OFFSET_TIME, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(DURATION, durationSchema)
+          .field(POINT, pointSchema)
+          .field(BOOLEAN_LIST, SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).optional().build())
+          .field(LONG_LIST, SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build())
+          .field(FLOAT_LIST, SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build())
+          .field(STRING_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(LOCAL_DATE_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(LOCAL_DATE_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(LOCAL_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(ZONED_DATE_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(OFFSET_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(DURATION_LIST, SchemaBuilder.array(durationSchema).optional().build())
+          .field(POINT_LIST, SchemaBuilder.array(pointSchema).optional().build())
+          .optional()
+          .build()
+
+  fun toConnectValue(value: Any?): Struct? {
+    return when (value) {
+      is Boolean -> Struct(schema).put(BOOLEAN, value)
+      is Float -> Struct(schema).put(FLOAT, value.toDouble())
+      is Double -> Struct(schema).put(FLOAT, value)
+      is Number -> Struct(schema).put(LONG, value.toLong())
+      is String -> Struct(schema).put(STRING, value)
+      is Char -> Struct(schema).put(STRING, value.toString())
+      is CharArray -> Struct(schema).put(STRING, String(value))
+      is ByteArray -> Struct(schema).put(BYTES, value)
+      is ByteBuffer -> Struct(schema).put(BYTES, value.array())
+      is LocalDate -> Struct(schema).put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(value))
+      is LocalDateTime ->
+          Struct(schema).put(LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+      is LocalTime -> Struct(schema).put(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(value))
+      is OffsetDateTime ->
+          Struct(schema).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+      is ZonedDateTime ->
+          Struct(schema).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+      is OffsetTime -> Struct(schema).put(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(value))
+      is IsoDuration ->
+          Struct(schema)
+              .put(
+                  DURATION,
+                  Struct(durationSchema)
+                      .put(MONTHS, value.months())
+                      .put(DAYS, value.days())
+                      .put(SECONDS, value.seconds())
+                      .put(NANOS, value.nanoseconds()))
+      is Point ->
+          Struct(schema)
+              .put(
+                  POINT,
+                  Struct(pointSchema)
+                      .put(SR_ID, value.srid())
+                      .put(X, value.x())
+                      .put(Y, value.y())
+                      .also {
+                        it.put(DIMENSION, if (value.z().isNaN()) TWO_D else THREE_D)
+                        if (!value.z().isNaN()) {
+                          it.put(Z, value.z())
+                        }
+                      })
+      is ShortArray -> Struct(schema).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
+      is IntArray -> Struct(schema).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
+      is LongArray -> Struct(schema).put(LONG_LIST, value.toList())
+      is FloatArray -> Struct(schema).put(FLOAT_LIST, value.map { s -> s.toDouble() }.toList())
+      is DoubleArray -> Struct(schema).put(FLOAT_LIST, value.toList())
+      is BooleanArray -> Struct(schema).put(BOOLEAN_LIST, value.toList())
+      is Array<*> ->
+          when (val componentType = value::class.java.componentType.kotlin) {
+            Boolean::class -> Struct(schema).put(BOOLEAN_LIST, value.toList())
+            Byte::class -> Struct(schema).put(BYTES, (value as Array<Byte>).toByteArray())
+            Short::class ->
+                Struct(schema)
+                    .put(LONG_LIST, (value as Array<Short>).map { s -> s.toLong() }.toList())
+            Int::class ->
+                Struct(schema)
+                    .put(LONG_LIST, (value as Array<Int>).map { s -> s.toLong() }.toList())
+            Long::class -> Struct(schema).put(LONG_LIST, (value as Array<Long>).toList())
+            Float::class ->
+                Struct(schema)
+                    .put(FLOAT_LIST, (value as Array<Float>).map { s -> s.toDouble() }.toList())
+            Double::class -> Struct(schema).put(FLOAT_LIST, (value as Array<Double>).toList())
+            String::class -> Struct(schema).put(STRING_LIST, value.toList())
+            LocalDate::class ->
+                Struct(schema)
+                    .put(
+                        LOCAL_DATE_LIST,
+                        (value as Array<LocalDate>)
+                            .map { s -> DateTimeFormatter.ISO_DATE.format(s) }
+                            .toList())
+            LocalDateTime::class ->
+                Struct(schema)
+                    .put(
+                        LOCAL_DATE_TIME_LIST,
+                        (value as Array<LocalDateTime>)
+                            .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
+                            .toList())
+            LocalTime::class ->
+                Struct(schema)
+                    .put(
+                        LOCAL_TIME_LIST,
+                        (value as Array<LocalTime>)
+                            .map { s -> DateTimeFormatter.ISO_TIME.format(s) }
+                            .toList())
+            OffsetDateTime::class ->
+                Struct(schema)
+                    .put(
+                        ZONED_DATE_TIME_LIST,
+                        (value as Array<OffsetDateTime>)
+                            .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
+                            .toList())
+            ZonedDateTime::class ->
+                Struct(schema)
+                    .put(
+                        ZONED_DATE_TIME_LIST,
+                        (value as Array<ZonedDateTime>)
+                            .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
+                            .toList())
+            OffsetTime::class ->
+                Struct(schema)
+                    .put(
+                        OFFSET_TIME_LIST,
+                        (value as Array<OffsetTime>)
+                            .map { s -> DateTimeFormatter.ISO_TIME.format(s) }
+                            .toList())
+            else ->
+                if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
+                  Struct(schema)
+                      .put(
+                          DURATION_LIST,
+                          value
+                              .map { s -> s as IsoDuration }
+                              .map {
+                                Struct(durationSchema)
+                                    .put(MONTHS, it.months())
+                                    .put(DAYS, it.days())
+                                    .put(SECONDS, it.seconds())
+                                    .put(NANOS, it.nanoseconds())
+                              }
+                              .toList())
+                } else if (Point::class.java.isAssignableFrom(componentType.java)) {
+                  Struct(schema)
+                      .put(
+                          POINT_LIST,
+                          value
+                              .map { s -> s as Point }
+                              .map { s ->
+                                Struct(pointSchema)
+                                    .put(SR_ID, s.srid())
+                                    .put(X, s.x())
+                                    .put(Y, s.y())
+                                    .also {
+                                      it.put(DIMENSION, if (s.z().isNaN()) TWO_D else THREE_D)
+                                      if (!s.z().isNaN()) {
+                                        it.put(Z, s.z())
+                                      }
+                                    }
+                              }
+                              .toList())
+                } else {
+                  throw IllegalArgumentException(
+                      "unsupported array type: array of ${value.javaClass.componentType.name}")
+                }
+          }
+      else -> throw IllegalArgumentException("unsupported property type: ${value?.javaClass?.name}")
+    }
+  }
+
+  fun fromConnectValue(value: Struct?): Any? {
+    return value?.let {
+      for (f in it.schema().fields()) {
+        if (it.getWithoutDefault(f.name()) == null) {
+          continue
+        }
+
+        return when (f.name()) {
+          BOOLEAN -> it.get(f) as Boolean?
+          BOOLEAN_LIST -> it.get(f) as List<*>?
+          LONG -> it.get(f) as Long?
+          LONG_LIST -> it.get(f) as List<*>?
+          FLOAT -> it.get(f) as Double?
+          FLOAT_LIST -> it.get(f) as List<*>?
+          STRING -> it.get(f) as String?
+          STRING_LIST -> it.get(f) as List<*>?
+          BYTES -> it.get(f) as ByteArray?
+          LOCAL_DATE ->
+              (it.get(f) as String?)?.let { s ->
+                DateTimeFormatter.ISO_DATE.parse(s) { parsed -> LocalDate.from(parsed) }
+              }
+          LOCAL_DATE_LIST -> it.get(f) as List<*>?
+          LOCAL_TIME ->
+              (it.get(f) as String?)?.let { s ->
+                DateTimeFormatter.ISO_TIME.parse(s) { parsed -> LocalTime.from(parsed) }
+              }
+          LOCAL_TIME_LIST -> it.get(f) as List<*>?
+          LOCAL_DATE_TIME ->
+              (it.get(f) as String?)?.let { s ->
+                DateTimeFormatter.ISO_DATE_TIME.parse(s) { parsed -> LocalDateTime.from(parsed) }
+              }
+          LOCAL_DATE_TIME_LIST -> it.get(f) as List<*>?
+          ZONED_DATE_TIME ->
+              (it.get(f) as String?)?.let { s ->
+                DateTimeFormatter.ISO_DATE_TIME.parse(s) { parsed ->
+                  val zoneId = parsed.query(TemporalQueries.zone())
+
+                  if (zoneId is ZoneOffset) {
+                    OffsetDateTime.from(parsed)
+                  } else {
+                    ZonedDateTime.from(parsed)
+                  }
+                }
+              }
+          ZONED_DATE_TIME_LIST -> it.get(f) as List<*>?
+          OFFSET_TIME ->
+              (it.get(f) as String?)?.let { s ->
+                DateTimeFormatter.ISO_TIME.parse(s) { parsed -> OffsetTime.from(parsed) }
+              }
+          OFFSET_TIME_LIST -> it.get(f) as List<*>?
+          DURATION ->
+              (it.get(f) as Struct?)
+                  ?.let { s ->
+                    Values.isoDuration(
+                        s.getInt64(MONTHS),
+                        s.getInt64(DAYS),
+                        s.getInt64(SECONDS),
+                        s.getInt32(NANOS))
+                  }
+                  ?.asIsoDuration()
+          DURATION_LIST -> it.get(f) as List<*>?
+          POINT ->
+              (it.get(f) as Struct?)
+                  ?.let { s ->
+                    when (val dimension = s.getInt8(DIMENSION)) {
+                      TWO_D -> Values.point(s.getInt32(SR_ID), s.getFloat64(X), s.getFloat64(Y))
+                      THREE_D ->
+                          Values.point(
+                              s.getInt32(SR_ID), s.getFloat64(X), s.getFloat64(Y), s.getFloat64(Z))
+                      else ->
+                          throw IllegalArgumentException("unsupported dimension value ${dimension}")
+                    }
+                  }
+                  ?.asPoint()
+          POINT_LIST -> it.get(f) as List<*>?
+          else -> throw IllegalArgumentException("unsupported neo4j type: ${f.name()}")
+        }
+      }
+
+      return null
+    }
+  }
+}
 
 fun Schema.matches(other: Schema): Boolean {
   return this.id() == other.id() || this.shortId() == other.shortId()
@@ -143,159 +374,8 @@ object DynamicTypes {
       return null
     }
 
-    if (schema == propertyType) {
-      return when (value) {
-        is Boolean -> Struct(propertyType).put(BOOLEAN, value)
-        is Float -> Struct(propertyType).put(FLOAT, value.toDouble())
-        is Double -> Struct(propertyType).put(FLOAT, value)
-        is Number -> Struct(propertyType).put(LONG, value.toLong())
-        is String -> Struct(propertyType).put(STRING, value)
-        is Char -> Struct(propertyType).put(STRING, value.toString())
-        is CharArray -> Struct(propertyType).put(STRING, String(value))
-        is ByteArray -> Struct(propertyType).put(BYTES, value)
-        is ByteBuffer -> Struct(propertyType).put(BYTES, value.array())
-        is LocalDate ->
-            Struct(propertyType).put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(value))
-        is LocalDateTime ->
-            Struct(propertyType).put(LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
-        is LocalTime ->
-            Struct(propertyType).put(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(value))
-        is OffsetDateTime ->
-            Struct(propertyType).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
-        is ZonedDateTime ->
-            Struct(propertyType).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
-        is OffsetTime ->
-            Struct(propertyType).put(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(value))
-        is IsoDuration ->
-            Struct(propertyType)
-                .put(
-                    DURATION,
-                    Struct(durationSchema)
-                        .put(MONTHS, value.months())
-                        .put(DAYS, value.days())
-                        .put(SECONDS, value.seconds())
-                        .put(NANOS, value.nanoseconds()))
-        is Point ->
-            Struct(propertyType)
-                .put(
-                    POINT,
-                    Struct(pointSchema)
-                        .put(SR_ID, value.srid())
-                        .put(X, value.x())
-                        .put(Y, value.y())
-                        .also {
-                          it.put(DIMENSION, if (value.z().isNaN()) TWO_D else THREE_D)
-                          if (!value.z().isNaN()) {
-                            it.put(Z, value.z())
-                          }
-                        })
-        is ShortArray -> Struct(propertyType).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
-        is IntArray -> Struct(propertyType).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
-        is LongArray -> Struct(propertyType).put(LONG_LIST, value.toList())
-        is FloatArray ->
-            Struct(propertyType).put(FLOAT_LIST, value.map { s -> s.toDouble() }.toList())
-        is DoubleArray -> Struct(propertyType).put(FLOAT_LIST, value.toList())
-        is BooleanArray -> Struct(propertyType).put(BOOLEAN_LIST, value.toList())
-        is Array<*> ->
-            when (val componentType = value::class.java.componentType.kotlin) {
-              Boolean::class -> Struct(propertyType).put(BOOLEAN_LIST, value.toList())
-              Byte::class -> Struct(propertyType).put(BYTES, (value as Array<Byte>).toByteArray())
-              Short::class ->
-                  Struct(propertyType)
-                      .put(LONG_LIST, (value as Array<Short>).map { s -> s.toLong() }.toList())
-              Int::class ->
-                  Struct(propertyType)
-                      .put(LONG_LIST, (value as Array<Int>).map { s -> s.toLong() }.toList())
-              Long::class -> Struct(propertyType).put(LONG_LIST, (value as Array<Long>).toList())
-              Float::class ->
-                  Struct(propertyType)
-                      .put(FLOAT_LIST, (value as Array<Float>).map { s -> s.toDouble() }.toList())
-              Double::class ->
-                  Struct(propertyType).put(FLOAT_LIST, (value as Array<Double>).toList())
-              String::class -> Struct(propertyType).put(STRING_LIST, value.toList())
-              LocalDate::class ->
-                  Struct(propertyType)
-                      .put(
-                          LOCAL_DATE_LIST,
-                          (value as Array<LocalDate>)
-                              .map { s -> DateTimeFormatter.ISO_DATE.format(s) }
-                              .toList())
-              LocalDateTime::class ->
-                  Struct(propertyType)
-                      .put(
-                          LOCAL_DATE_TIME_LIST,
-                          (value as Array<LocalDateTime>)
-                              .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
-                              .toList())
-              LocalTime::class ->
-                  Struct(propertyType)
-                      .put(
-                          LOCAL_TIME_LIST,
-                          (value as Array<LocalTime>)
-                              .map { s -> DateTimeFormatter.ISO_TIME.format(s) }
-                              .toList())
-              OffsetDateTime::class ->
-                  Struct(propertyType)
-                      .put(
-                          ZONED_DATE_TIME_LIST,
-                          (value as Array<OffsetDateTime>)
-                              .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
-                              .toList())
-              ZonedDateTime::class ->
-                  Struct(propertyType)
-                      .put(
-                          ZONED_DATE_TIME_LIST,
-                          (value as Array<ZonedDateTime>)
-                              .map { s -> DateTimeFormatter.ISO_DATE_TIME.format(s) }
-                              .toList())
-              OffsetTime::class ->
-                  Struct(propertyType)
-                      .put(
-                          OFFSET_TIME_LIST,
-                          (value as Array<OffsetTime>)
-                              .map { s -> DateTimeFormatter.ISO_TIME.format(s) }
-                              .toList())
-              else ->
-                  if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
-                    Struct(propertyType)
-                        .put(
-                            DURATION_LIST,
-                            value
-                                .map { s -> s as IsoDuration }
-                                .map {
-                                  Struct(durationSchema)
-                                      .put(MONTHS, it.months())
-                                      .put(DAYS, it.days())
-                                      .put(SECONDS, it.seconds())
-                                      .put(NANOS, it.nanoseconds())
-                                }
-                                .toList())
-                  } else if (Point::class.java.isAssignableFrom(componentType.java)) {
-                    Struct(propertyType)
-                        .put(
-                            POINT_LIST,
-                            value
-                                .map { s -> s as Point }
-                                .map { s ->
-                                  Struct(pointSchema)
-                                      .put(SR_ID, s.srid())
-                                      .put(X, s.x())
-                                      .put(Y, s.y())
-                                      .also {
-                                        it.put(DIMENSION, if (s.z().isNaN()) TWO_D else THREE_D)
-                                        if (!s.z().isNaN()) {
-                                          it.put(Z, s.z())
-                                        }
-                                      }
-                                }
-                                .toList())
-                  } else {
-                    throw IllegalArgumentException(
-                        "unsupported array type: array of ${value.javaClass.componentType.name}")
-                  }
-            }
-        else -> throw IllegalArgumentException("unsupported property type: ${value.javaClass.name}")
-      }
+    if (schema == PropertyType.schema) {
+      return PropertyType.toConnectValue(value)
     }
 
     return when (schema.type()) {
@@ -313,29 +393,23 @@ object DynamicTypes {
           when (value) {
             is Node ->
                 Struct(schema).apply {
-                  put("<id>", toConnectValue(propertyType, value.id()))
-                  put(
-                      "<labels>",
-                      toConnectValue(propertyType, value.labels().toList().toTypedArray()))
+                  put("<id>", value.id())
+                  put("<labels>", value.labels().toList())
 
                   value
                       .asMap { it.asObject() }
-                      .forEach { e ->
-                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
-                      }
+                      .forEach { e -> put(e.key, PropertyType.toConnectValue(e.value)) }
                 }
             is Relationship ->
                 Struct(schema).apply {
-                  put("<id>", toConnectValue(propertyType, value.id()))
-                  put("<type>", toConnectValue(propertyType, value.type()))
-                  put("<start.id>", toConnectValue(propertyType, value.startNodeId()))
-                  put("<end.id>", toConnectValue(propertyType, value.endNodeId()))
+                  put("<id>", value.id())
+                  put("<type>", value.type())
+                  put("<start.id>", value.startNodeId())
+                  put("<end.id>", value.endNodeId())
 
                   value
                       .asMap { it.asObject() }
-                      .forEach { e ->
-                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
-                      }
+                      .forEach { e -> put(e.key, PropertyType.toConnectValue(e.value)) }
                 }
             is Map<*, *> ->
                 Struct(schema).apply {
@@ -388,97 +462,7 @@ object DynamicTypes {
           }
       Schema.Type.STRUCT ->
           when {
-            propertyType.matches(schema) ->
-                (value as Struct?)?.let {
-                  for (f in it.schema().fields()) {
-                    if (it.getWithoutDefault(f.name()) == null) {
-                      continue
-                    }
-
-                    return when (f.name()) {
-                      BOOLEAN -> it.get(f) as Boolean?
-                      BOOLEAN_LIST -> it.get(f) as List<*>?
-                      LONG -> it.get(f) as Long?
-                      LONG_LIST -> it.get(f) as List<*>?
-                      FLOAT -> it.get(f) as Double?
-                      FLOAT_LIST -> it.get(f) as List<*>?
-                      STRING -> it.get(f) as String?
-                      STRING_LIST -> it.get(f) as List<*>?
-                      BYTES -> it.get(f) as ByteArray?
-                      LOCAL_DATE ->
-                          (it.get(f) as String?)?.let { s ->
-                            DateTimeFormatter.ISO_DATE.parse(s) { parsed -> LocalDate.from(parsed) }
-                          }
-                      LOCAL_DATE_LIST -> it.get(f) as List<*>?
-                      LOCAL_TIME ->
-                          (it.get(f) as String?)?.let { s ->
-                            DateTimeFormatter.ISO_TIME.parse(s) { parsed -> LocalTime.from(parsed) }
-                          }
-                      LOCAL_TIME_LIST -> it.get(f) as List<*>?
-                      LOCAL_DATE_TIME ->
-                          (it.get(f) as String?)?.let { s ->
-                            DateTimeFormatter.ISO_DATE_TIME.parse(s) { parsed ->
-                              LocalDateTime.from(parsed)
-                            }
-                          }
-                      LOCAL_DATE_TIME_LIST -> it.get(f) as List<*>?
-                      ZONED_DATE_TIME ->
-                          (it.get(f) as String?)?.let { s ->
-                            DateTimeFormatter.ISO_DATE_TIME.parse(s) { parsed ->
-                              val zoneId = parsed.query(TemporalQueries.zone())
-
-                              if (zoneId is ZoneOffset) {
-                                OffsetDateTime.from(parsed)
-                              } else {
-                                ZonedDateTime.from(parsed)
-                              }
-                            }
-                          }
-                      ZONED_DATE_TIME_LIST -> it.get(f) as List<*>?
-                      OFFSET_TIME ->
-                          (it.get(f) as String?)?.let { s ->
-                            DateTimeFormatter.ISO_TIME.parse(s) { parsed ->
-                              OffsetTime.from(parsed)
-                            }
-                          }
-                      OFFSET_TIME_LIST -> it.get(f) as List<*>?
-                      DURATION ->
-                          (it.get(f) as Struct?)
-                              ?.let { s ->
-                                Values.isoDuration(
-                                    s.getInt64(MONTHS),
-                                    s.getInt64(DAYS),
-                                    s.getInt64(SECONDS),
-                                    s.getInt32(NANOS))
-                              }
-                              ?.asIsoDuration()
-                      DURATION_LIST -> it.get(f) as List<*>?
-                      POINT ->
-                          (it.get(f) as Struct?)
-                              ?.let { s ->
-                                when (val dimension = s.getInt8(DIMENSION)) {
-                                  TWO_D ->
-                                      Values.point(
-                                          s.getInt32(SR_ID), s.getFloat64(X), s.getFloat64(Y))
-                                  THREE_D ->
-                                      Values.point(
-                                          s.getInt32(SR_ID),
-                                          s.getFloat64(X),
-                                          s.getFloat64(Y),
-                                          s.getFloat64(Z))
-                                  else ->
-                                      throw IllegalArgumentException(
-                                          "unsupported dimension value ${dimension}")
-                                }
-                              }
-                              ?.asPoint()
-                      POINT_LIST -> it.get(f) as List<*>?
-                      else -> throw IllegalArgumentException("unsupported neo4j type: ${f.name()}")
-                    }
-                  }
-
-                  return null
-                }
+            PropertyType.schema.matches(schema) -> PropertyType.fromConnectValue(value as Struct?)
             else -> {
               val result = mutableMapOf<String, Any?>()
               val struct = value as Struct
@@ -555,22 +539,22 @@ object DynamicTypes {
       temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
   ): Schema =
       when (value) {
-        null -> propertyType
-        is Boolean -> propertyType
+        null -> PropertyType.schema
+        is Boolean,
         is Float,
-        is Double -> propertyType
-        is Number -> propertyType
+        is Double,
+        is Number,
         is Char,
         is CharArray,
-        is CharSequence -> propertyType
+        is CharSequence,
         is ByteBuffer,
-        is ByteArray -> propertyType
+        is ByteArray,
         is ShortArray,
         is IntArray,
-        is LongArray -> propertyType
+        is LongArray,
         is FloatArray,
-        is DoubleArray -> propertyType
-        is BooleanArray -> propertyType
+        is DoubleArray,
+        is BooleanArray -> PropertyType.schema
         is Array<*> -> {
           when (val componentType = value::class.java.componentType.kotlin) {
             Boolean::class,
@@ -586,12 +570,12 @@ object DynamicTypes {
             LocalTime::class,
             OffsetDateTime::class,
             ZonedDateTime::class,
-            OffsetTime::class -> propertyType
+            OffsetTime::class -> PropertyType.schema
             else ->
                 if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
-                  propertyType
+                  PropertyType.schema
                 } else if (Point::class.java.isAssignableFrom(componentType.java)) {
-                  propertyType
+                  PropertyType.schema
                 } else {
                   val first = value.firstOrNull { it.notNullOrEmpty() }
                   val schema =
@@ -600,29 +584,21 @@ object DynamicTypes {
                 }
           }
         }
-        is LocalDate -> propertyType
-        is LocalDateTime -> propertyType
-        is LocalTime -> propertyType
-        is OffsetDateTime -> propertyType
-        is ZonedDateTime -> propertyType
-        is OffsetTime -> propertyType
-        is IsoDuration -> propertyType
-        is Point -> propertyType
+        is LocalDate,
+        is LocalDateTime,
+        is LocalTime,
+        is OffsetDateTime,
+        is ZonedDateTime,
+        is OffsetTime,
+        is IsoDuration,
+        is Point -> PropertyType.schema
         is Node ->
             SchemaBuilder.struct()
                 .apply {
-                  field("<id>", propertyType)
-                  field("<labels>", propertyType)
+                  field("<id>", Schema.INT64_SCHEMA)
+                  field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
 
-                  value.keys().forEach {
-                    field(
-                        it,
-                        toConnectSchema(
-                            value.get(it).asObject(),
-                            optional,
-                            forceMapsAsStruct,
-                            temporalDataSchemaType))
-                  }
+                  value.keys().forEach { field(it, PropertyType.schema) }
 
                   if (optional) optional()
                 }
@@ -630,20 +606,12 @@ object DynamicTypes {
         is Relationship ->
             SchemaBuilder.struct()
                 .apply {
-                  field("<id>", propertyType)
-                  field("<type>", propertyType)
-                  field("<start.id>", propertyType)
-                  field("<end.id>", propertyType)
+                  field("<id>", Schema.INT64_SCHEMA)
+                  field("<type>", Schema.STRING_SCHEMA)
+                  field("<start.id>", Schema.INT64_SCHEMA)
+                  field("<end.id>", Schema.INT64_SCHEMA)
 
-                  value.keys().forEach {
-                    field(
-                        it,
-                        toConnectSchema(
-                            value.get(it).asObject(),
-                            optional,
-                            forceMapsAsStruct,
-                            temporalDataSchemaType))
-                  }
+                  value.keys().forEach { field(it, PropertyType.schema) }
 
                   if (optional) optional()
                 }
@@ -655,7 +623,7 @@ object DynamicTypes {
                   .map { toConnectSchema(it, optional, forceMapsAsStruct, temporalDataSchemaType) }
 
           when (nonEmptyElementTypes.toSet().size) {
-            0 -> SchemaBuilder.array(propertyType).apply { if (optional) optional() }.build()
+            0 -> SchemaBuilder.array(PropertyType.schema).apply { if (optional) optional() }.build()
             1 ->
                 SchemaBuilder.array(nonEmptyElementTypes.first())
                     .apply { if (optional) optional() }

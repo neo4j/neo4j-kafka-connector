@@ -37,8 +37,9 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
-import org.neo4j.connectors.kafka.data.propertyType
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -238,37 +239,37 @@ abstract class Neo4jCdcSourceIT {
 
           properties.getStruct("localDate") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDate.of(2024, 1, 1),
               ) as Struct
 
           properties.getStruct("localDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               ) as Struct
 
           properties.getStruct("localTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalTime.of(12, 0, 0),
               ) as Struct
 
           properties.getStruct("zonedDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               ) as Struct
 
           properties.getStruct("offsetDatetime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
 
           properties.getStruct("offsetTime") shouldBeEqualToComparingFields
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               ) as Struct
         }
@@ -314,37 +315,37 @@ abstract class Neo4jCdcSourceIT {
 
           properties.getString("localDate") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDate.of(2024, 1, 1),
               )
 
           properties.getString("localDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalDateTime.of(2024, 1, 1, 12, 0, 0),
               )
 
           properties.getString("localTime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   LocalTime.of(12, 0, 0),
               )
 
           properties.getString("zonedDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   ZonedDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneId.of("Europe/Stockholm")),
               )
 
           properties.getString("offsetDatetime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC),
               )
 
           properties.getString("offsetTime") shouldBe
               DynamicTypes.toConnectValue(
-                  propertyType,
+                  PropertyType.schema,
                   OffsetTime.of(12, 0, 0, 0, ZoneOffset.UTC),
               )
         }

@@ -27,7 +27,8 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.propertyType
+import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -122,8 +123,8 @@ abstract class Neo4jCudIT {
         SchemaBuilder.struct()
             .field("id", Schema.INT64_SCHEMA)
             .field("foo", Schema.STRING_SCHEMA)
-            .field("dob", propertyType)
-            .field("place", propertyType)
+            .field("dob", PropertyType.schema)
+            .field("place", PropertyType.schema)
             .build()
     val createNodeSchema =
         SchemaBuilder.struct()
@@ -147,11 +148,12 @@ abstract class Neo4jCudIT {
                         .put("foo", "foo-value")
                         .put(
                             "dob",
-                            DynamicTypes.toConnectValue(propertyType, LocalDate.of(1995, 1, 1)))
+                            DynamicTypes.toConnectValue(
+                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                propertyType, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
     )
 
     eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
@@ -187,8 +189,8 @@ abstract class Neo4jCudIT {
     val propertiesSchema =
         SchemaBuilder.struct()
             .field("foo", Schema.STRING_SCHEMA)
-            .field("dob", propertyType)
-            .field("place", propertyType)
+            .field("dob", PropertyType.schema)
+            .field("place", PropertyType.schema)
             .build()
     val updateNodeSchema =
         SchemaBuilder.struct()
@@ -213,11 +215,12 @@ abstract class Neo4jCudIT {
                         .put("foo", "foo-value-updated")
                         .put(
                             "dob",
-                            DynamicTypes.toConnectValue(propertyType, LocalDate.of(1995, 1, 1)))
+                            DynamicTypes.toConnectValue(
+                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                propertyType, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
     )
 
     eventually(30.seconds) {
@@ -254,8 +257,8 @@ abstract class Neo4jCudIT {
         SchemaBuilder.struct()
             .field("id", Schema.INT64_SCHEMA)
             .field("foo_new", Schema.STRING_SCHEMA)
-            .field("dob", propertyType)
-            .field("place", propertyType)
+            .field("dob", PropertyType.schema)
+            .field("place", PropertyType.schema)
             .build()
     val mergeNodeSchema =
         SchemaBuilder.struct()
@@ -281,11 +284,12 @@ abstract class Neo4jCudIT {
                         .put("foo_new", "foo-new-value-merged")
                         .put(
                             "dob",
-                            DynamicTypes.toConnectValue(propertyType, LocalDate.of(1995, 1, 1)))
+                            DynamicTypes.toConnectValue(
+                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                propertyType, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
     )
 
     eventually(30.seconds) {

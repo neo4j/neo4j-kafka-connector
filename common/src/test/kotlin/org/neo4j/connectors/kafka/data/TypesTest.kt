@@ -43,6 +43,15 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.cdc.client.CDCClient
+import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
+import org.neo4j.connectors.kafka.data.PropertyType.DURATION
+import org.neo4j.connectors.kafka.data.PropertyType.FLOAT
+import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
+import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE_TIME
+import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_TIME
+import org.neo4j.connectors.kafka.data.PropertyType.OFFSET_TIME
+import org.neo4j.connectors.kafka.data.PropertyType.POINT
+import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -106,72 +115,77 @@ class TypesTest {
 
     override fun provideArguments(p0: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
-          Arguments.of(Named.of("null", null), propertyType, null),
+          Arguments.of(Named.of("null", null), PropertyType.schema, null),
           Arguments.of(
-              Named.of("boolean", true), propertyType, Struct(propertyType).put(BOOLEAN, true)),
-          Arguments.of(Named.of("long", 1), propertyType, Struct(propertyType).put(LONG, 1L)),
-          Arguments.of(Named.of("float", 1.0), propertyType, Struct(propertyType).put(FLOAT, 1.0)),
+              Named.of("boolean", true),
+              PropertyType.schema,
+              Struct(PropertyType.schema).put(BOOLEAN, true)),
+          Arguments.of(Named.of("long", 1), PropertyType.schema, PropertyType.toConnectValue(1L)),
+          Arguments.of(
+              Named.of("float", 1.0),
+              PropertyType.schema,
+              Struct(PropertyType.schema).put(FLOAT, 1.0)),
           Arguments.of(
               Named.of("string", "a string"),
-              propertyType,
-              Struct(propertyType).put(STRING, "a string")),
+              PropertyType.schema,
+              PropertyType.toConnectValue("a string")),
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date", it),
-                propertyType,
-                Struct(propertyType).put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(it)))
+                PropertyType.schema,
+                Struct(PropertyType.schema).put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(it)))
           },
           LocalTime.of(23, 59, 59, 5).let {
             Arguments.of(
                 Named.of("local time", it),
-                propertyType,
-                Struct(propertyType).put(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(it)))
+                PropertyType.schema,
+                Struct(PropertyType.schema).put(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(it)))
           },
           LocalDateTime.of(1999, 12, 31, 23, 59, 59, 5).let {
             Arguments.of(
                 Named.of("local date time", it),
-                propertyType,
-                Struct(propertyType)
+                PropertyType.schema,
+                Struct(PropertyType.schema)
                     .put(LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
           },
           OffsetTime.of(23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
                 Named.of("offset time", it),
-                propertyType,
-                Struct(propertyType).put(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(it)))
+                PropertyType.schema,
+                Struct(PropertyType.schema).put(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(it)))
           },
           OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
                 Named.of("offset date time", it),
-                propertyType,
-                Struct(propertyType)
+                PropertyType.schema,
+                Struct(PropertyType.schema)
                     .put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
           },
           ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneId.of("Europe/Istanbul")).let {
             Arguments.of(
                 Named.of("offset date time", it),
-                propertyType,
-                Struct(propertyType)
+                PropertyType.schema,
+                Struct(PropertyType.schema)
                     .put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
           },
           Arguments.of(
               Named.of("duration", Values.isoDuration(5, 2, 23, 5).asIsoDuration()),
-              propertyType,
-              Struct(propertyType)
+              PropertyType.schema,
+              Struct(PropertyType.schema)
                   .put(
                       DURATION,
-                      Struct(durationSchema)
+                      Struct(PropertyType.durationSchema)
                           .put("months", 5L)
                           .put("days", 2L)
                           .put("seconds", 23L)
                           .put("nanoseconds", 5))),
           Arguments.of(
               Named.of("point - 2d", Values.point(7203, 2.3, 4.5).asPoint()),
-              propertyType,
-              Struct(propertyType)
+              PropertyType.schema,
+              Struct(PropertyType.schema)
                   .put(
                       POINT,
-                      Struct(pointSchema)
+                      Struct(PropertyType.pointSchema)
                           .put("dimension", 2.toByte())
                           .put("srid", 7203)
                           .put("x", 2.3)
@@ -179,11 +193,11 @@ class TypesTest {
                           .put("z", null))),
           Arguments.of(
               Named.of("point - 3d", Values.point(4979, 12.78, 56.7, 100.0).asPoint()),
-              propertyType,
-              Struct(propertyType)
+              PropertyType.schema,
+              Struct(PropertyType.schema)
                   .put(
                       POINT,
-                      Struct(pointSchema)
+                      Struct(PropertyType.pointSchema)
                           .put("dimension", 3.toByte())
                           .put("srid", 4979)
                           .put("x", 12.78)
@@ -191,31 +205,31 @@ class TypesTest {
                           .put("z", 100.0))),
           Arguments.of(
               Named.of("list - uniformly typed elements", (1L..50L).toList()),
-              SchemaBuilder.array(propertyType).build(),
-              (1L..50L).map { Struct(propertyType).put(LONG, it) }.toList()),
+              SchemaBuilder.array(PropertyType.schema).build(),
+              (1L..50L).map { PropertyType.toConnectValue(it) }.toList()),
           Arguments.of(
               Named.of("list - non-uniformly typed elements", listOf(1, true, 2.0, "a string")),
-              SchemaBuilder.array(propertyType).build(),
+              SchemaBuilder.array(PropertyType.schema).build(),
               listOf(
-                  Struct(propertyType).put(LONG, 1L),
-                  Struct(propertyType).put(BOOLEAN, true),
-                  Struct(propertyType).put(FLOAT, 2.0),
-                  Struct(propertyType).put(STRING, "a string"))),
+                  PropertyType.toConnectValue(1L),
+                  Struct(PropertyType.schema).put(BOOLEAN, true),
+                  Struct(PropertyType.schema).put(FLOAT, 2.0),
+                  PropertyType.toConnectValue("a string"))),
           Arguments.of(
               Named.of("map - uniformly typed values", mapOf("a" to 1, "b" to 2, "c" to 3)),
-              SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType).build(),
+              SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
               mapOf(
-                  "a" to Struct(propertyType).put(LONG, 1L),
-                  "b" to Struct(propertyType).put(LONG, 2L),
-                  "c" to Struct(propertyType).put(LONG, 3L))),
+                  "a" to PropertyType.toConnectValue(1L),
+                  "b" to PropertyType.toConnectValue(2L),
+                  "c" to PropertyType.toConnectValue(3L))),
           Arguments.of(
               Named.of(
                   "map - non-uniformly typed values", mapOf("a" to 1, "b" to true, "c" to 3.0)),
-              SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType).build(),
+              SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
               mapOf(
-                  "a" to Struct(propertyType).put(LONG, 1L),
-                  "b" to Struct(propertyType).put(BOOLEAN, true),
-                  "c" to Struct(propertyType).put(FLOAT, 3.0))))
+                  "a" to PropertyType.toConnectValue(1L),
+                  "b" to Struct(PropertyType.schema).put(BOOLEAN, true),
+                  "c" to Struct(PropertyType.schema).put(FLOAT, 3.0))))
     }
   }
 
@@ -246,25 +260,20 @@ class TypesTest {
       schemaAndValue(person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", propertyType)
-                .field("<labels>", propertyType)
-                .field("name", propertyType)
-                .field("surname", propertyType)
-                .field("dob", propertyType)
+                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("name", PropertyType.schema)
+                .field("surname", PropertyType.schema)
+                .field("dob", PropertyType.schema)
                 .build()
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", Struct(propertyType).put(LONG, person.id()))
-                .put("<labels>", Struct(propertyType).put(STRING_LIST, person.labels().toList()))
-                .put("name", Struct(propertyType).put(STRING, "john"))
-                .put("surname", Struct(propertyType).put(STRING, "doe"))
-                .put(
-                    "dob",
-                    Struct(propertyType)
-                        .put(
-                            LOCAL_DATE,
-                            DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))))
+                .put("<id>", person.id())
+                .put("<labels>", person.labels().toList())
+                .put("name", PropertyType.toConnectValue("john"))
+                .put("surname", PropertyType.toConnectValue("doe"))
+                .put("dob", PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)))
 
         reverted shouldBe
             mapOf(
@@ -279,23 +288,18 @@ class TypesTest {
       schemaAndValue(company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", propertyType)
-                .field("<labels>", propertyType)
-                .field("name", propertyType)
-                .field("est", propertyType)
+                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+                .field("name", PropertyType.schema)
+                .field("est", PropertyType.schema)
                 .build()
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", Struct(propertyType).put(LONG, company.id()))
-                .put("<labels>", Struct(propertyType).put(STRING_LIST, company.labels().toList()))
-                .put("name", Struct(propertyType).put(STRING, "acme corp"))
-                .put(
-                    "est",
-                    Struct(propertyType)
-                        .put(
-                            LOCAL_DATE,
-                            DateTimeFormatter.ISO_DATE.format(LocalDate.of(1980, 1, 1))))
+                .put("<id>", company.id())
+                .put("<labels>", company.labels().toList())
+                .put("name", PropertyType.toConnectValue("acme corp"))
+                .put("est", PropertyType.toConnectValue(LocalDate.of(1980, 1, 1)))
 
         reverted shouldBe
             mapOf(
@@ -309,27 +313,22 @@ class TypesTest {
       schemaAndValue(worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", propertyType)
-                .field("<type>", propertyType)
-                .field("<start.id>", propertyType)
-                .field("<end.id>", propertyType)
-                .field("contractId", propertyType)
-                .field("since", propertyType)
+                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<type>", Schema.STRING_SCHEMA)
+                .field("<start.id>", Schema.INT64_SCHEMA)
+                .field("<end.id>", Schema.INT64_SCHEMA)
+                .field("contractId", PropertyType.schema)
+                .field("since", PropertyType.schema)
                 .build()
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", Struct(propertyType).put(LONG, worksFor.id()))
-                .put("<type>", Struct(propertyType).put(STRING, worksFor.type()))
-                .put("<start.id>", Struct(propertyType).put(LONG, worksFor.startNodeId()))
-                .put("<end.id>", Struct(propertyType).put(LONG, worksFor.endNodeId()))
-                .put("contractId", Struct(propertyType).put(LONG, 5916L))
-                .put(
-                    "since",
-                    Struct(propertyType)
-                        .put(
-                            LOCAL_DATE,
-                            DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 5))))
+                .put("<id>", worksFor.id())
+                .put("<type>", worksFor.type())
+                .put("<start.id>", worksFor.startNodeId())
+                .put("<end.id>", worksFor.endNodeId())
+                .put("contractId", PropertyType.toConnectValue(5916L))
+                .put("since", PropertyType.toConnectValue(LocalDate.of(2000, 1, 5)))
 
         reverted shouldBe
             mapOf(
@@ -441,14 +440,14 @@ class TypesTest {
 
     val expectedSchema =
         SchemaBuilder.struct()
-            .field("id", propertyType)
+            .field("id", PropertyType.schema)
             .field(
                 "data",
                 SchemaBuilder.struct()
                     .field(
                         "arr",
                         SchemaBuilder.array(
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType)
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
                                     .optional()
                                     .build())
                             .optional()
@@ -456,12 +455,12 @@ class TypesTest {
                     .field(
                         "arr_mixed",
                         SchemaBuilder.array(
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, propertyType)
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
                                     .optional()
                                     .build())
                             .optional()
                             .build())
-                    .field("id", propertyType)
+                    .field("id", PropertyType.schema)
                     .field(
                         "root",
                         SchemaBuilder.array(
@@ -469,7 +468,7 @@ class TypesTest {
                                         Schema.STRING_SCHEMA,
                                         SchemaBuilder.array(
                                                 SchemaBuilder.map(
-                                                        Schema.STRING_SCHEMA, propertyType)
+                                                        Schema.STRING_SCHEMA, PropertyType.schema)
                                                     .optional()
                                                     .build())
                                             .optional()
@@ -488,20 +487,18 @@ class TypesTest {
     val converted = DynamicTypes.toConnectValue(schema, returned)
     converted shouldBe
         Struct(schema)
-            .put("id", Struct(propertyType).put(STRING, "ROOT_ID"))
+            .put("id", PropertyType.toConnectValue("ROOT_ID"))
             .put(
                 "data",
                 Struct(schema.field("data").schema())
-                    .put(
-                        "arr",
-                        listOf(null, mapOf("foo" to Struct(propertyType).put(STRING, "bar"))))
+                    .put("arr", listOf(null, mapOf("foo" to PropertyType.toConnectValue("bar"))))
                     .put(
                         "arr_mixed",
                         listOf(
-                            mapOf("foo" to Struct(propertyType).put(STRING, "bar")),
+                            mapOf("foo" to PropertyType.toConnectValue("bar")),
                             null,
-                            mapOf("foo" to Struct(propertyType).put(LONG, 1L))))
-                    .put("id", Struct(propertyType).put(STRING, "ROOT_ID"))
+                            mapOf("foo" to PropertyType.toConnectValue(1L))))
+                    .put("id", PropertyType.toConnectValue("ROOT_ID"))
                     .put(
                         "root",
                         listOf(
@@ -509,9 +506,7 @@ class TypesTest {
                             mapOf(
                                 "children" to
                                     listOf(
-                                        mapOf(
-                                            "name" to
-                                                Struct(propertyType).put(STRING, "child")))))))
+                                        mapOf("name" to PropertyType.toConnectValue("child")))))))
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe returned
