@@ -49,6 +49,7 @@ import org.neo4j.connectors.kafka.data.PropertyType.FLOAT
 import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
 import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_TIME
+import org.neo4j.connectors.kafka.data.PropertyType.LONG_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.OFFSET_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.POINT
 import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME
@@ -204,9 +205,9 @@ class TypesTest {
                           .put("y", 56.7)
                           .put("z", 100.0))),
           Arguments.of(
-              Named.of("list - uniformly typed elements", (1L..50L).toList()),
-              SchemaBuilder.array(PropertyType.schema).build(),
-              (1L..50L).map { PropertyType.toConnectValue(it) }.toList()),
+              Named.of("list - long", (1L..50L).toList()),
+              PropertyType.schema,
+              Struct(PropertyType.schema).put(LONG_LIST, (1L..50L).toList())),
           Arguments.of(
               Named.of("list - non-uniformly typed elements", listOf(1, true, 2.0, "a string")),
               SchemaBuilder.array(PropertyType.schema).build(),
