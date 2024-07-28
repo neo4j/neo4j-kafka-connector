@@ -39,6 +39,7 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
+import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ELEMENT_ID
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ENTITY_KEYS
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.SKIP
@@ -112,11 +113,7 @@ object TestData {
   val elementIdSchema: Schema = Schema.STRING_SCHEMA
 
   private val propertySchema: Schema =
-      SchemaBuilder.struct()
-          .field("foo", Schema.OPTIONAL_STRING_SCHEMA)
-          .field("bar", Schema.OPTIONAL_INT64_SCHEMA)
-          .optional()
-          .build()
+      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
 
   val nodeKeysSchema: Schema =
       SchemaBuilder.struct()
@@ -137,8 +134,9 @@ object TestData {
                   .put(
                       LABEL,
                       listOf(
-                          Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
-                      ),
+                          mapOf(
+                              "foo" to PropertyType.toConnectValue("fighters"),
+                              "bar" to PropertyType.toConnectValue(42L))),
                   ))
 
   val relKeysSchema: Schema =
@@ -152,8 +150,9 @@ object TestData {
           .put(
               "keys",
               listOf(
-                  Struct(propertySchema).put("foo", "fighters").put("bar", 42L),
-              ))
+                  mapOf(
+                      "foo" to PropertyType.toConnectValue("fighters"),
+                      "bar" to PropertyType.toConnectValue(42L))))
 
   val nodeChange =
       ChangeEventConverter()
