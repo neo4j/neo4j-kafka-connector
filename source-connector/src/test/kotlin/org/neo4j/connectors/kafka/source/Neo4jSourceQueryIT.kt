@@ -79,6 +79,37 @@ abstract class Neo4jSourceQueryIT {
       topic = TOPIC,
       strategy = SourceStrategy.QUERY,
       streamingProperty = "timestamp",
+      startFrom = "EARLIEST",
+      query =
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck " +
+              "RETURN ts.name as name, ts.surname as surname, ts.timestamp as timestamp, " +
+              "{key1: {subKey1: 'value', subKey2: 'value'}, key2: {subKey1: 'value', subKey2: true}} AS nested")
+  @Test
+  fun `should return nested object`(
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: 0})").consume()
+
+    TopicVerifier.createForMap(consumer)
+        .assertMessageValue { value ->
+          value shouldBe
+              mapOf(
+                  "name" to "jane",
+                  "surname" to "doe",
+                  "timestamp" to 0,
+                  "nested" to
+                      mapOf(
+                          "key1" to mapOf("subKey1" to "value", "subKey2" to "value"),
+                          "key2" to mapOf("subKey1" to "value", "subKey2" to true)))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      topic = TOPIC,
+      strategy = SourceStrategy.QUERY,
+      streamingProperty = "timestamp",
       startFrom = "NOW",
       query =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp")
