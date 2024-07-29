@@ -276,7 +276,10 @@ object PropertyType {
   fun fromConnectValue(value: Struct?): Any? {
     return value?.let {
       for (f in it.schema().fields()) {
-        if (it.getWithoutDefault(f.name()) == null) {
+        val fieldValue = it.getWithoutDefault(f.name())
+        // not set list fields are returned back as empty lists, so we are looking for a non-empty
+        // field here
+        if (fieldValue == null || (fieldValue is Collection<*> && fieldValue.isEmpty())) {
           continue
         }
 

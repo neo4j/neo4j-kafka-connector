@@ -81,6 +81,7 @@
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
         <protobuf.version>3.19.6</protobuf.version>
         <reactor.version>2023.0.7</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>

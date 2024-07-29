@@ -17,10 +17,13 @@
 package org.neo4j.connectors.kafka.source
 
 import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.EntityOperation.CREATE
 import org.neo4j.cdc.client.model.EntityOperation.DELETE
+import org.neo4j.cdc.client.model.EntityOperation.UPDATE
 import org.neo4j.cdc.client.model.EventType.RELATIONSHIP
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -55,7 +58,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                                   CdcSourceParam(
                                       "(:TestSource)-[:RELIES_TO {weight,-rate}]->(:TestSource)"))))))
   @Test
-  fun `should read changes caught by patterns`(
+  fun `should publish changes caught by patterns`(
       @TopicConsumer(topic = "neo4j-cdc-rels", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -75,7 +78,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -85,7 +88,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -116,7 +119,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           topic = "neo4j-cdc-rels-prop-remove-add",
                           patterns = arrayOf(CdcSourceParam("()-[:RELIES_TO {}]->()"))))))
   @Test
-  fun `should read property removal and additions`(
+  fun `should publish property removal and additions`(
       @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -139,7 +142,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -149,7 +152,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -159,7 +162,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("RELIES_TO")
               .startLabelledAs("TestSource")
               .endLabelledAs("TestSource")
@@ -193,7 +196,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
                           changesTo = arrayOf(CdcSourceParam(value = "a,c"))))))
   @Test
-  fun `should read only specified field changes on update`(
+  fun `should publish only specified field changes on update`(
       @TopicConsumer(topic = "neo4j-cdc-update-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -207,7 +210,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("R")
               .startLabelledAs("A")
               .endLabelledAs("B")
@@ -217,7 +220,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("R")
               .startLabelledAs("A")
               .endLabelledAs("B")
@@ -239,7 +242,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           patterns =
                               arrayOf(CdcSourceParam("(:Person)-[:IS_EMPLOYEE]->(:Company)"))))))
   @Test
-  open fun `should read changes with different properties using the default topic compatibility mode`(
+  open fun `should publish changes with different properties using the default topic compatibility mode`(
       @TopicConsumer(topic = "neo4j-cdc-create-inc-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -251,7 +254,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("IS_EMPLOYEE")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -261,7 +264,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("IS_EMPLOYEE")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -292,7 +295,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
                           operations = arrayOf(CdcSourceParam("DELETE"))))))
   @Test
-  fun `should read each operation to a separate topic`(
+  fun `should publish each operation to a separate topic`(
       @TopicConsumer(topic = "cdc-creates-rel", offset = "earliest")
       createsConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-updates-rel", offset = "earliest")
@@ -309,7 +312,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -321,7 +324,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.UPDATE)
+              .hasOperation(UPDATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -352,12 +355,141 @@ abstract class Neo4jCdcSourceRelationshipsIT {
               topics =
                   arrayOf(
                       CdcSourceTopic(
+                          topic = "cdc",
+                          patterns =
+                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+  @Test
+  fun `should publish changes with property type changes`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session
+        .run(
+            "CREATE (:Person)-[r:EMPLOYED]->(:Company) SET r = ${'$'}props",
+            mapOf("props" to mapOf("role" to "SWE")))
+        .consume()
+    session
+        .run(
+            "MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r += ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0))))
+        .consume()
+    session
+        .run(
+            "MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r += ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1))))
+        .consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("role" to "SWE"))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(UPDATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(mapOf("role" to "SWE"))
+              .hasAfterStateProperties(
+                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0)))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(UPDATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(
+                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0)))
+              .hasAfterStateProperties(
+                  mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1)))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              patternsIndexed = true,
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "cdc",
+                          patterns =
+                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+  @Test
+  fun `should publish each operation to a single topic`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session.run("CREATE (:Person)-[:EMPLOYED {role: 'SWE'}]->(:Company)").consume()
+    session.run("MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r.role = 'EM'").consume()
+    session.run("MATCH (:Person)-[r:EMPLOYED]->(:Company) DELETE r").consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("role" to "SWE"))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(UPDATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(mapOf("role" to "SWE"))
+              .hasAfterStateProperties(mapOf("role" to "EM"))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(DELETE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasBeforeStateProperties(mapOf("role" to "EM"))
+              .hasNoAfterState()
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              patternsIndexed = true,
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
                           topic = "neo4j-cdc-metadata-rel",
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
                           metadata =
                               arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B"))))))
   @Test
-  fun `should read changes marked with specific transaction metadata attribute`(
+  fun `should publish changes marked with specific transaction metadata attribute`(
       @TopicConsumer(topic = "neo4j-cdc-metadata-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -378,7 +510,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
               .endLabelledAs("Company")
@@ -401,7 +533,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           patterns =
                               arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
   @Test
-  fun `should read changes containing relationship keys`(
+  fun `should publish changes containing relationship keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -421,7 +553,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(RELATIONSHIP)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasType("EMPLOYED")
               .startLabelledAs("Person")
               .endLabelledAs("Company")

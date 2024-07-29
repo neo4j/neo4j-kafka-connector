@@ -56,7 +56,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           patterns =
                               arrayOf(CdcSourceParam("(:TestSource{name,+surname,-age})"))))))
   @Test
-  fun `should read changes caught by patterns`(
+  fun `should publish changes caught by patterns`(
       @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -106,7 +106,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-topic-prop-remove-add",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read property removal and additions`(
+  fun `should publish property removal and additions`(
       @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -183,7 +183,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
                           changesTo = arrayOf(CdcSourceParam(value = "surname,email"))))))
   @Test
-  fun `should read only specified field changes on update`(
+  fun `should publish only specified field changes on update`(
       @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -239,7 +239,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-create-inc",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read changes with different properties using the default topic compatibility mode`(
+  fun `should publish changes with different properties using the default topic compatibility mode`(
       @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -288,7 +288,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           patterns = arrayOf(CdcSourceParam("(:TestSource)")),
                           operations = arrayOf(CdcSourceParam("DELETE"))))))
   @Test
-  fun `should read each operation to a separate topic`(
+  fun `should publish each operation to a separate topic`(
       @TopicConsumer(topic = "cdc-creates", offset = "earliest")
       createsConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-updates", offset = "earliest")
@@ -433,7 +433,7 @@ abstract class Neo4jCdcSourceNodesIT {
                       CdcSourceTopic(
                           topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read each operation to a single topic`(
+  fun `should publish each operation to a single topic`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
@@ -493,7 +493,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           metadata =
                               arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B"))))))
   @Test
-  fun `should read changes marked with specific transaction metadata attribute`(
+  fun `should publish changes marked with specific transaction metadata attribute`(
       @TopicConsumer(topic = "neo4j-cdc-metadata", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -534,7 +534,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read changes containing node keys`(
+  fun `should publish changes containing node keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
