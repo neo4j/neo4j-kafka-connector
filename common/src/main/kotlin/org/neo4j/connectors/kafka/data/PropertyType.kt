@@ -289,7 +289,14 @@ object PropertyType {
           FLOAT_LIST -> it.get(f) as List<*>
           STRING -> it.get(f) as String
           STRING_LIST -> it.get(f) as List<*>
-          BYTES -> it.get(f) as ByteArray
+          BYTES ->
+              when (val bytes = it.get(f)) {
+                is ByteArray -> bytes
+                is ByteBuffer -> bytes.array()
+                else ->
+                    throw IllegalArgumentException(
+                        "unsupported BYTES value: ${bytes.javaClass.name}")
+              }
           LOCAL_DATE -> parseLocalDate((it.get(f) as String))
           LOCAL_DATE_LIST -> (it.get(f) as List<String>).map { s -> parseLocalDate(s) }
           LOCAL_TIME -> parseLocalTime((it.get(f) as String))

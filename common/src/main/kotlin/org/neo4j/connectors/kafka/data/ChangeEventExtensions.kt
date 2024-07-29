@@ -33,9 +33,7 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.data.DynamicTypes.toConnectSchema
 
-class ChangeEventConverter(
-    val temporalDataSchemaType: TemporalDataSchemaType = TemporalDataSchemaType.STRUCT,
-) {
+class ChangeEventConverter() {
 
   fun toConnectValue(changeEvent: ChangeEvent): SchemaAndValue {
     val schema = toConnectSchema(changeEvent)

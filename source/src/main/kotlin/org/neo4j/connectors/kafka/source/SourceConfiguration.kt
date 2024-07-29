@@ -41,7 +41,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
@@ -90,10 +89,6 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   val topic
     get(): String = getString(QUERY_TOPIC)
-
-  val temporalDataSchemaType
-    get(): TemporalDataSchemaType =
-        TemporalDataSchemaType.valueOf(getString(TEMPORAL_DATA_SCHEMA_TYPE))
 
   val partition
     get(): Map<String, Any> {
@@ -409,7 +404,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_TOPIC = "neo4j.query.topic"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
-    const val TEMPORAL_DATA_SCHEMA_TYPE = "neo4j.temporal-schema.type"
     private const val GROUP_NAME_TOPIC = "topic"
     private const val GROUP_NAME_INDEX = "index"
     private const val GROUP_NAME_METADATA = "metadata"
@@ -608,14 +602,6 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
-            .define(
-                ConfigKeyBuilder.of(TEMPORAL_DATA_SCHEMA_TYPE, ConfigDef.Type.STRING) {
-                  importance = ConfigDef.Importance.MEDIUM
-                  defaultValue = TemporalDataSchemaType.STRUCT.name
-                  group = Groups.CONNECTOR.title
-                  validator = Validators.enum(TemporalDataSchemaType::class.java)
-                  recommender = Recommenders.enum(TemporalDataSchemaType::class.java)
                 })
   }
 }

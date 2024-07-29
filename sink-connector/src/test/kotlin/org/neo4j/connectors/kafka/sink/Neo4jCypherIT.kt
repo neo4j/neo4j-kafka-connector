@@ -455,7 +455,7 @@ abstract class Neo4jCypherIT {
               CypherStrategy(
                   TOPIC,
                   """
-                  CREATE (n:Data) SET n = __value
+                  CREATE (n:Data) SET n = __value.map
                   """)])
   @Test
   fun `should support complex maps`(
@@ -468,9 +468,14 @@ abstract class Neo4jCypherIT {
             "lastName" to "doe",
             "dob" to LocalDate.of(1999, 1, 1),
             "siblings" to 3)
-    val schema = DynamicTypes.toConnectSchema(value)
-
-    producer.publish(valueSchema = schema, value = DynamicTypes.toConnectValue(schema, value))
+    DynamicTypes.toConnectSchema(value).let { mapSchema ->
+      // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
+      SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
+        producer.publish(
+            valueSchema = wrapper,
+            value = Struct(wrapper).put("map", DynamicTypes.toConnectValue(mapSchema, value)))
+      }
+    }
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n", emptyMap()).single() }
         .get(0)
