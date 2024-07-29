@@ -113,7 +113,11 @@ object TestData {
   val elementIdSchema: Schema = Schema.STRING_SCHEMA
 
   private val propertySchema: Schema =
-      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+      SchemaBuilder.struct()
+          .field("foo", PropertyType.schema)
+          .field("bar", PropertyType.schema)
+          .optional()
+          .build()
 
   val nodeKeysSchema: Schema =
       SchemaBuilder.struct()
@@ -134,9 +138,10 @@ object TestData {
                   .put(
                       LABEL,
                       listOf(
-                          mapOf(
-                              "foo" to PropertyType.toConnectValue("fighters"),
-                              "bar" to PropertyType.toConnectValue(42L))),
+                          Struct(propertySchema)
+                              .put("foo", PropertyType.toConnectValue("fighters"))
+                              .put("bar", PropertyType.toConnectValue(42L)),
+                      ),
                   ))
 
   val relKeysSchema: Schema =
@@ -150,9 +155,10 @@ object TestData {
           .put(
               "keys",
               listOf(
-                  mapOf(
-                      "foo" to PropertyType.toConnectValue("fighters"),
-                      "bar" to PropertyType.toConnectValue(42L))))
+                  Struct(propertySchema)
+                      .put("foo", PropertyType.toConnectValue("fighters"))
+                      .put("bar", PropertyType.toConnectValue(42L)),
+              ))
 
   val nodeChange =
       ChangeEventConverter()

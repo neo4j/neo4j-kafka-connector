@@ -44,7 +44,6 @@ fun Schema.matches(other: Schema): Boolean {
 }
 
 object DynamicTypes {
-
   fun toConnectValue(schema: Schema, value: Any?): Any? {
     if (value == null) {
       return null
@@ -313,9 +312,9 @@ object DynamicTypes {
                 .filter { e -> e.value.notNullOrEmpty() }
                 .mapValues { e -> toConnectSchema(e.value, optional, forceMapsAsStruct) }
 
-        val valueSet = elementTypes.values.toSet()
+        val elementValueTypesSet = elementTypes.values.toSet()
         when {
-          valueSet.isEmpty() ->
+          elementValueTypesSet.isEmpty() ->
               SchemaBuilder.struct()
                   .apply {
                     value.forEach {
@@ -325,7 +324,7 @@ object DynamicTypes {
                   }
                   .apply { if (optional) optional() }
                   .build()
-          valueSet.singleOrNull() != null && !forceMapsAsStruct ->
+          elementValueTypesSet.singleOrNull() != null && !forceMapsAsStruct ->
               SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
                   .apply { if (optional) optional() }
                   .build()

@@ -136,6 +136,7 @@ class ChangeEventConverter(
   internal fun nodeEventToConnectValue(nodeEvent: NodeEvent, schema: Schema): Struct =
       Struct(schema).also {
         val keys = DynamicTypes.toConnectValue(schema.field("keys").schema(), nodeEvent.keys)
+
         it.put("elementId", nodeEvent.elementId)
         it.put("eventType", nodeEvent.eventType.name)
         it.put("operation", nodeEvent.operation.name)
@@ -154,7 +155,7 @@ class ChangeEventConverter(
           .field("type", Schema.STRING_SCHEMA)
           .field("start", nodeToConnectSchema(relationshipEvent.start))
           .field("end", nodeToConnectSchema(relationshipEvent.end))
-          .field("keys", schemaForKeys())
+          .field("keys", schemaForKeys(relationshipEvent.keys))
           .field(
               "state", relationshipStateSchema(relationshipEvent.before, relationshipEvent.after))
           .build()
@@ -166,6 +167,7 @@ class ChangeEventConverter(
       Struct(schema).also {
         val keys =
             DynamicTypes.toConnectValue(schema.field("keys").schema(), relationshipEvent.keys)
+
         it.put("elementId", relationshipEvent.elementId)
         it.put("eventType", relationshipEvent.eventType.name)
         it.put("operation", relationshipEvent.operation.name)
@@ -196,13 +198,28 @@ class ChangeEventConverter(
 
   private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>?): Schema {
     return SchemaBuilder.struct()
-        .apply { keys?.forEach { field(it.key, schemaForKeys()) } }
+        .apply { keys?.forEach { field(it.key, schemaForKeys(it.value)) } }
         .optional()
         .build()
   }
 
-  private fun schemaForKeys(): Schema {
-    return SchemaBuilder.array(SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
+  private fun schemaForKeys(keys: List<Map<String, Any>>?): Schema {
+    return SchemaBuilder.array(
+            // We need to define a uniform structure of key array elements. Because all elements
+            // must have identical structure, we list all available keys as optional fields.
+            SchemaBuilder.struct()
+                .apply {
+                  keys?.forEach { key ->
+                    key.forEach {
+                      field(
+                          it.key,
+                          DynamicTypes.toConnectSchema(
+                              it.value, optional = true, forceMapsAsStruct = true))
+                    }
+                  }
+                }
+                .optional()
+                .build())
         .optional()
         .build()
   }
