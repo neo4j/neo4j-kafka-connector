@@ -271,6 +271,10 @@ object DynamicTypes {
               .build()
       is Collection<*> -> {
         val elementTypes = value.map { it?.javaClass?.kotlin }.toSet()
+        if (elementTypes.isEmpty()) {
+          return PropertyType.schema
+        }
+
         val elementType = elementTypes.singleOrNull()
         if (elementType != null && isSimplePropertyType(elementType)) {
           return PropertyType.schema

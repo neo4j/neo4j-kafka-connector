@@ -568,6 +568,51 @@ abstract class Neo4jCdcSourceNodesIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should publish changes with arrays`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session
+        .run(
+            "CREATE (n:TestSource) SET n = ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "prop1" to arrayOf(1, 2, 3, 4),
+                        "prop2" to arrayOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
+                        "prop3" to listOf("a", "b", "c"),
+                        "prop4" to arrayOf<Boolean>(),
+                        "prop5" to listOf<Double>())))
+        .consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(CREATE)
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(
+                  mapOf(
+                      "prop1" to listOf(1L, 2L, 3L, 4L),
+                      "prop2" to listOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
+                      "prop3" to listOf("a", "b", "c"),
+                      "prop4" to emptyList<Boolean>(),
+                      "prop5" to emptyList<Double>()))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO)

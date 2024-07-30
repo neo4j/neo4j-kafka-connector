@@ -21,6 +21,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.nio.ByteBuffer
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -45,6 +46,7 @@ import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.neo4j.driver.types.Node
+import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
 
 class DynamicTypesTest {
@@ -115,44 +117,55 @@ class DynamicTypesTest {
           Arguments.of("bool array", BooleanArray(1) { true }, null),
           Arguments.of("array (bool)", Array(1) { true }, null),
           Arguments.of("list (bool)", listOf(true), null),
+          Arguments.of("empty list (bool)", emptyList<Boolean>(), null),
           Arguments.of("short array (empty)", ShortArray(0), null),
           Arguments.of("short array", ShortArray(1) { 1.toShort() }, listOf(1L)),
           Arguments.of("array (short)", Array(1) { 1.toShort() }, listOf(1L)),
           Arguments.of("list (short)", listOf(1.toShort()), listOf(1L)),
+          Arguments.of("empty list (short)", emptyList<Short>(), null),
           Arguments.of("int array (empty)", IntArray(0), null),
           Arguments.of("int array", IntArray(1) { 1 }, listOf(1L)),
           Arguments.of("array (int)", Array(1) { 1 }, listOf(1L)),
           Arguments.of("list (int)", listOf(1), listOf(1L)),
+          Arguments.of("empty list (int)", emptyList<Int>(), null),
           Arguments.of("long array (empty)", LongArray(0), null),
           Arguments.of("long array", LongArray(1) { 1.toLong() }, null),
           Arguments.of("array (long)", Array(1) { 1.toLong() }, null),
           Arguments.of("list (long)", listOf(1L), null),
+          Arguments.of("empty list (long)", emptyList<Long>(), null),
           Arguments.of("float array (empty)", FloatArray(0), null),
           Arguments.of("float array", FloatArray(1) { 1.toFloat() }, listOf(1.toDouble())),
           Arguments.of("array (float)", Array(1) { 1.toFloat() }, null),
           Arguments.of("list (float)", listOf(1.toFloat()), null),
+          Arguments.of("empty list (float)", emptyList<Float>(), null),
           Arguments.of("double array (empty)", DoubleArray(0), null),
           Arguments.of("double array", DoubleArray(1) { 1.toDouble() }, null),
           Arguments.of("array (double)", Array(1) { 1.toDouble() }, null),
           Arguments.of("list (double)", listOf(1.toDouble()), null),
+          Arguments.of("empty list (double)", emptyList<Double>(), null),
           Arguments.of("array (string)", Array(1) { "a" }, null),
           Arguments.of("list (string)", listOf("a"), null),
+          Arguments.of("empty list (string)", emptyList<String>(), null),
           Arguments.of("array (local date)", Array(1) { LocalDate.of(1999, 12, 31) }, null),
           Arguments.of("list (local date)", listOf(LocalDate.of(1999, 12, 31)), null),
+          Arguments.of("empty list (local date)", emptyList<LocalDate>(), null),
           Arguments.of("array (local time)", Array(1) { LocalTime.of(23, 59, 59) }, null),
           Arguments.of("list (local time)", listOf(LocalTime.of(23, 59, 59)), null),
+          Arguments.of("empty list (local time)", emptyList<LocalTime>(), null),
           Arguments.of(
               "array (local date time)",
               Array(1) { LocalDateTime.of(1999, 12, 31, 23, 59, 59) },
               null),
           Arguments.of(
               "list (local date time)", listOf(LocalDateTime.of(1999, 12, 31, 23, 59, 59)), null),
+          Arguments.of("empty list (local date time)", emptyList<LocalDateTime>(), null),
           Arguments.of(
               "array (offset time)",
               Array(1) { OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC) },
               null),
           Arguments.of(
               "list (offset time)", listOf(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC)), null),
+          Arguments.of("empty list (offset time)", emptyList<OffsetTime>(), null),
           Arguments.of(
               "array (offset date time)",
               Array(1) { OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC) },
@@ -161,6 +174,7 @@ class DynamicTypesTest {
               "list (offset date time)",
               listOf(OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC)),
               null),
+          Arguments.of("empty list (offset date time)", emptyList<OffsetDateTime>(), null),
           Arguments.of(
               "array (zoned date time)",
               Array(1) {
@@ -171,6 +185,7 @@ class DynamicTypesTest {
               "list (zoned date time)",
               listOf(ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London"))),
               null),
+          Arguments.of("empty list (zoned date time)", emptyList<ZonedDateTime>(), null),
           Arguments.of(
               "array (duration)",
               Array(1) { Values.isoDuration(12, 12, 59, 1230).asIsoDuration() },
@@ -179,6 +194,7 @@ class DynamicTypesTest {
               "list (duration)",
               listOf(Values.isoDuration(12, 12, 59, 1230).asIsoDuration()),
               null),
+          Arguments.of("empty list (duration)", emptyList<Duration>(), null),
           Arguments.of(
               "array (point (2d))", Array(1) { Values.point(4326, 1.0, 2.0).asPoint() }, null),
           Arguments.of("list (point (2d))", listOf(Values.point(4326, 1.0, 2.0).asPoint()), null),
@@ -186,6 +202,7 @@ class DynamicTypesTest {
               "array (point (3d))", Array(1) { Values.point(4326, 1.0, 2.0, 3.0).asPoint() }, null),
           Arguments.of(
               "list (point (3d))", listOf(Values.point(4326, 1.0, 2.0, 3.0).asPoint()), null),
+          Arguments.of("empty list (point)", emptyList<Point>(), null),
       )
     }
   }
@@ -239,15 +256,37 @@ class DynamicTypesTest {
   }
 
   @Test
-  fun `empty collections or arrays should map to an array of property type`() {
-    listOf(listOf<Any>(), setOf<Any>(), arrayOf<Any>()).forEach { collection ->
+  fun `empty collections should map to property type`() {
+    listOf(listOf<Any>(), setOf<Any>()).forEach { collection ->
       withClue(collection) {
-        DynamicTypes.toConnectSchema(collection, false) shouldBe
-            SchemaBuilder.array(PropertyType.schema).build()
-        DynamicTypes.toConnectSchema(collection, true) shouldBe
-            SchemaBuilder.array(PropertyType.schema).optional().build()
+        DynamicTypes.toConnectSchema(collection, false) shouldBe PropertyType.schema
+        DynamicTypes.toConnectSchema(collection, true) shouldBe PropertyType.schema
       }
     }
+  }
+
+  @Test
+  fun `empty arrays should map to an array of property type`() {
+    DynamicTypes.toConnectSchema(arrayOf<Any>(), false) shouldBe
+        SchemaBuilder.array(PropertyType.schema).build()
+    DynamicTypes.toConnectSchema(arrayOf<Any>(), true) shouldBe
+        SchemaBuilder.array(PropertyType.schema).optional().build()
+  }
+
+  @Test
+  fun `empty arrays of simple types should map to property type`() {
+    listOf(
+            arrayOf<Int>(),
+            arrayOf<String>(),
+            arrayOf<LocalDate>(),
+            arrayOf<Boolean>(),
+            arrayOf<Point>())
+        .forEach { array ->
+          withClue(array) {
+            DynamicTypes.toConnectSchema(array, false) shouldBe PropertyType.schema
+            DynamicTypes.toConnectSchema(array, true) shouldBe PropertyType.schema
+          }
+        }
   }
 
   @ParameterizedTest(name = "{0}")

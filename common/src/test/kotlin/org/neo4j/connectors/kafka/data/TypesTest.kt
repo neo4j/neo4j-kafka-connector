@@ -205,6 +205,10 @@ class TypesTest {
                           .put("y", 56.7)
                           .put("z", 100.0))),
           Arguments.of(
+              Named.of("list - empty", emptyList<Any>()),
+              PropertyType.schema,
+              Struct(PropertyType.schema).put(LONG_LIST, emptyList<Long>())),
+          Arguments.of(
               Named.of("list - long", (1L..50L).toList()),
               PropertyType.schema,
               Struct(PropertyType.schema).put(LONG_LIST, (1L..50L).toList())),

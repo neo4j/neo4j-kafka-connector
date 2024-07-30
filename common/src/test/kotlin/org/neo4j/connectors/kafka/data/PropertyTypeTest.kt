@@ -479,6 +479,16 @@ class PropertyTypeTest {
                               .put(Z, 3.0)
                               .put(DIMENSION, THREE_D))),
               listOf(Values.point(4326, 1.0, 2.0, 3.0).asPoint())),
+          Arguments.of(
+              "empty list (any)",
+              emptyList<Any>(),
+              Struct(PropertyType.schema).put(LONG_LIST, emptyList<Long>()),
+              emptyList<Any>()),
+          Arguments.of(
+              "empty list (typed)",
+              emptyList<Int>(),
+              Struct(PropertyType.schema).put(LONG_LIST, emptyList<Long>()),
+              emptyList<Any>()),
       )
     }
   }

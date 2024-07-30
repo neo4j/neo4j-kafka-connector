@@ -72,6 +72,34 @@ object PropertyType {
   internal const val POINT = "SP"
   internal const val POINT_LIST = "LSP"
 
+  private val SIMPLE_TYPE_FIELDS =
+      listOf(
+          BOOLEAN,
+          LONG,
+          FLOAT,
+          STRING,
+          BYTES,
+          LOCAL_DATE,
+          LOCAL_DATE_TIME,
+          LOCAL_TIME,
+          ZONED_DATE_TIME,
+          OFFSET_TIME,
+          DURATION,
+          POINT)
+  private val LIST_TYPE_FIELDS =
+      listOf(
+          BOOLEAN_LIST,
+          LONG_LIST,
+          FLOAT_LIST,
+          STRING_LIST,
+          LOCAL_DATE_LIST,
+          LOCAL_DATE_TIME_LIST,
+          LOCAL_TIME_LIST,
+          ZONED_DATE_TIME_LIST,
+          OFFSET_TIME_LIST,
+          DURATION_LIST,
+          POINT_LIST)
+
   internal val durationSchema: Schema =
       SchemaBuilder(Schema.Type.STRUCT)
           .field(MONTHS, Schema.INT64_SCHEMA)
@@ -175,6 +203,10 @@ object PropertyType {
       is Array<*> -> asList(value.toList(), value::class.java.componentType.kotlin)
       is Iterable<*> -> {
         val elementTypes = value.map { it?.javaClass?.kotlin }.toSet()
+        if (elementTypes.isEmpty()) {
+          return asList(value, Int::class)
+        }
+
         val elementType = elementTypes.singleOrNull()
         if (elementType != null) {
           return asList(value, elementType)
@@ -275,50 +307,73 @@ object PropertyType {
 
   fun fromConnectValue(value: Struct?): Any? {
     return value?.let {
-      for (f in it.schema().fields()) {
-        val fieldValue = it.getWithoutDefault(f.name())
-        // not set list fields are returned back as empty lists, so we are looking for a non-empty
-        // field here
-        if (fieldValue == null || (fieldValue is Collection<*> && fieldValue.isEmpty())) {
-          continue
-        }
-
-        return when (f.name()) {
-          BOOLEAN -> it.get(f) as Boolean
-          BOOLEAN_LIST -> it.get(f) as List<*>
-          LONG -> it.get(f) as Long
-          LONG_LIST -> it.get(f) as List<*>
-          FLOAT -> it.get(f) as Double
-          FLOAT_LIST -> it.get(f) as List<*>
-          STRING -> it.get(f) as String
-          STRING_LIST -> it.get(f) as List<*>
+      val simpleFieldAndValue =
+          SIMPLE_TYPE_FIELDS.firstNotNullOfOrNull { f ->
+            val fieldValue = it.getWithoutDefault(f)
+            if (fieldValue != null) Pair(f, fieldValue) else null
+          }
+      if (simpleFieldAndValue != null) {
+        return when (simpleFieldAndValue.first) {
+          BOOLEAN -> simpleFieldAndValue.second as Boolean
+          LONG -> simpleFieldAndValue.second as Long
+          FLOAT -> simpleFieldAndValue.second as Double
+          STRING -> simpleFieldAndValue.second as String
           BYTES ->
-              when (val bytes = it.get(f)) {
+              when (val bytes = simpleFieldAndValue.second) {
                 is ByteArray -> bytes
                 is ByteBuffer -> bytes.array()
                 else ->
                     throw IllegalArgumentException(
                         "unsupported BYTES value: ${bytes.javaClass.name}")
               }
-          LOCAL_DATE -> parseLocalDate((it.get(f) as String))
-          LOCAL_DATE_LIST -> (it.get(f) as List<String>).map { s -> parseLocalDate(s) }
-          LOCAL_TIME -> parseLocalTime((it.get(f) as String))
-          LOCAL_TIME_LIST -> (it.get(f) as List<String>).map { s -> parseLocalTime(s) }
-          LOCAL_DATE_TIME -> parseLocalDateTime((it.get(f) as String))
-          LOCAL_DATE_TIME_LIST -> (it.get(f) as List<String>).map { s -> parseLocalDateTime(s) }
-          ZONED_DATE_TIME -> parseZonedDateTime((it.get(f) as String))
-          ZONED_DATE_TIME_LIST -> (it.get(f) as List<String>).map { s -> parseZonedDateTime(s) }
-          OFFSET_TIME -> parseOffsetTime((it.get(f) as String))
-          OFFSET_TIME_LIST -> (it.get(f) as List<String>).map { s -> parseOffsetTime(s) }
-          DURATION -> toDuration((it.get(f) as Struct))
-          DURATION_LIST -> (it.get(f) as List<Struct>).map { s -> toDuration(s) }
-          POINT -> toPoint((it.get(f) as Struct))
-          POINT_LIST -> (it.get(f) as List<Struct>).map { s -> toPoint(s) }
-          else -> throw IllegalArgumentException("unsupported neo4j type: ${f.name()}")
+          LOCAL_DATE -> parseLocalDate((simpleFieldAndValue.second as String))
+          LOCAL_TIME -> parseLocalTime((simpleFieldAndValue.second as String))
+          LOCAL_DATE_TIME -> parseLocalDateTime((simpleFieldAndValue.second as String))
+          ZONED_DATE_TIME -> parseZonedDateTime((simpleFieldAndValue.second as String))
+          OFFSET_TIME -> parseOffsetTime((simpleFieldAndValue.second as String))
+          DURATION -> toDuration((simpleFieldAndValue.second as Struct))
+          POINT -> toPoint((simpleFieldAndValue.second as Struct))
+          else ->
+              throw IllegalArgumentException(
+                  "unsupported simple type: ${simpleFieldAndValue.first}: ${simpleFieldAndValue.second.javaClass.name}")
         }
       }
 
-      return null
+      val listFieldAndValue =
+          LIST_TYPE_FIELDS.firstNotNullOfOrNull { f ->
+            val fieldValue = it.getWithoutDefault(f)
+            if (fieldValue != null && (fieldValue is Collection<*> && fieldValue.isNotEmpty()))
+                Pair(f, fieldValue)
+            else null
+          }
+      if (listFieldAndValue != null) {
+        return when (listFieldAndValue.first) {
+          BOOLEAN_LIST -> listFieldAndValue.second as List<*>
+          LONG_LIST -> listFieldAndValue.second as List<*>
+          FLOAT_LIST -> listFieldAndValue.second as List<*>
+          STRING_LIST -> listFieldAndValue.second as List<*>
+          LOCAL_DATE_LIST ->
+              (listFieldAndValue.second as List<String>).map { s -> parseLocalDate(s) }
+          LOCAL_TIME_LIST ->
+              (listFieldAndValue.second as List<String>).map { s -> parseLocalTime(s) }
+          LOCAL_DATE_TIME_LIST ->
+              (listFieldAndValue.second as List<String>).map { s -> parseLocalDateTime(s) }
+          ZONED_DATE_TIME_LIST ->
+              (listFieldAndValue.second as List<String>).map { s -> parseZonedDateTime(s) }
+          OFFSET_TIME_LIST ->
+              (listFieldAndValue.second as List<String>).map { s -> parseOffsetTime(s) }
+          DURATION_LIST -> (listFieldAndValue.second as List<Struct>).map { s -> toDuration(s) }
+          POINT_LIST -> (listFieldAndValue.second as List<Struct>).map { s -> toPoint(s) }
+          else ->
+              throw IllegalArgumentException(
+                  "unsupported list type: ${listFieldAndValue.first}: ${listFieldAndValue.second.javaClass.name}")
+        }
+      }
+
+      // Protobuf does not support NULLs in repeated fields, so we always receive LIST typed fields
+      // as empty lists. If we could not find a simple field and also a non-empty list field, we
+      // assume the value is an empty list.
+      return emptyList<Any>()
     }
   }
 
