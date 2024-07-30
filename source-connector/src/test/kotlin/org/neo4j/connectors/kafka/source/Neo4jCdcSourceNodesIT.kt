@@ -17,10 +17,12 @@
 package org.neo4j.connectors.kafka.source
 
 import java.time.Duration
-import org.junit.jupiter.api.Disabled
+import java.time.LocalDate
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.EntityOperation.CREATE
 import org.neo4j.cdc.client.model.EntityOperation.UPDATE
 import org.neo4j.cdc.client.model.EventType.NODE
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
@@ -54,7 +56,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           patterns =
                               arrayOf(CdcSourceParam("(:TestSource{name,+surname,-age})"))))))
   @Test
-  fun `should read changes caught by patterns`(
+  fun `should publish changes caught by patterns`(
       @TopicConsumer(topic = "neo4j-cdc-topic", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -69,7 +71,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe"))
@@ -104,7 +106,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-topic-prop-remove-add",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read property removal and additions`(
+  fun `should publish property removal and additions`(
       @TopicConsumer(topic = "neo4j-cdc-topic-prop-remove-add", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -122,7 +124,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
@@ -181,7 +183,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
                           changesTo = arrayOf(CdcSourceParam(value = "surname,email"))))))
   @Test
-  fun `should read only specified field changes on update`(
+  fun `should publish only specified field changes on update`(
       @TopicConsumer(topic = "neo4j-cdc-update-topic", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -237,7 +239,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-create-inc",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  open fun `should read changes with different properties using the default topic compatibility mode`(
+  fun `should publish changes with different properties using the default topic compatibility mode`(
       @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -249,7 +251,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "John"))
@@ -257,7 +259,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("title" to "Neo4j"))
@@ -286,7 +288,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           patterns = arrayOf(CdcSourceParam("(:TestSource)")),
                           operations = arrayOf(CdcSourceParam("DELETE"))))))
   @Test
-  fun `should read each operation to a separate topic`(
+  fun `should publish each operation to a separate topic`(
       @TopicConsumer(topic = "cdc-creates", offset = "earliest")
       createsConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-updates", offset = "earliest")
@@ -303,7 +305,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
@@ -350,12 +352,148 @@ abstract class Neo4jCdcSourceNodesIT {
               topics =
                   arrayOf(
                       CdcSourceTopic(
+                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should publish changes with property type changes`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session
+        .run(
+            "CREATE (n:TestSource) SET n = ${'$'}props",
+            mapOf("props" to mapOf("name" to "Jane", "surname" to "Doe", "age" to 42)))
+        .consume()
+    session
+        .run(
+            "MATCH (ts:TestSource {name: 'Jane'}) SET ts += ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "surname" to "Smith",
+                        "age" to "42",
+                        "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0))))
+        .consume()
+    session
+        .run(
+            "MATCH (ts:TestSource {name: 'Jane'}) SET ts += ${'$'}props",
+            mapOf("props" to mapOf("age" to 42, "dob" to LocalDate.of(1982, 1, 1))))
+        .consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(CREATE)
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
+              .hasAfterStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to "42",
+                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to "42",
+                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
+              .hasAfterStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to 42L,
+                      "dob" to LocalDate.of(1982, 1, 1)))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              patternsIndexed = true,
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should publish each operation to a single topic`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session.run("CREATE (:TestSource {name: 'Jane', surname: 'Doe', age: 42})", mapOf()).consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) SET ts.surname = 'Smith'").consume()
+    session.run("MATCH (ts:TestSource {name: 'Jane'}) DELETE ts").consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(CREATE)
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(UPDATE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
+              .hasAfterStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to 42L,
+                  ))
+        }
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(EntityOperation.DELETE)
+              .labelledAs("TestSource")
+              .hasBeforeStateProperties(
+                  mapOf(
+                      "name" to "Jane",
+                      "surname" to "Smith",
+                      "age" to 42L,
+                  ))
+              .hasNoAfterState()
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              patternsIndexed = true,
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
                           topic = "neo4j-cdc-metadata",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)")),
                           metadata =
                               arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B"))))))
   @Test
-  fun `should read changes marked with specific transaction metadata attribute`(
+  fun `should publish changes marked with specific transaction metadata attribute`(
       @TopicConsumer(topic = "neo4j-cdc-metadata", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -376,7 +514,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Alice"))
@@ -396,7 +534,7 @@ abstract class Neo4jCdcSourceNodesIT {
                           topic = "neo4j-cdc-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
   @Test
-  fun `should read changes containing node keys`(
+  fun `should publish changes containing node keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
@@ -419,7 +557,7 @@ abstract class Neo4jCdcSourceNodesIT {
         .assertMessageValue { value ->
           assertThat(value)
               .hasEventType(NODE)
-              .hasOperation(EntityOperation.CREATE)
+              .hasOperation(CREATE)
               .hasLabels(setOf("TestSource", "Employee"))
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("id" to 1L, "name" to "John", "employeeId" to 456L))
@@ -430,24 +568,58 @@ abstract class Neo4jCdcSourceNodesIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should publish changes with arrays`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session
+        .run(
+            "CREATE (n:TestSource) SET n = ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "prop1" to arrayOf(1, 2, 3, 4),
+                        "prop2" to arrayOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
+                        "prop3" to listOf("a", "b", "c"),
+                        "prop4" to arrayOf<Boolean>(),
+                        "prop5" to listOf<Double>())))
+        .consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(CREATE)
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(
+                  mapOf(
+                      "prop1" to listOf(1L, 2L, 3L, 4L),
+                      "prop2" to listOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
+                      "prop3" to listOf("a", "b", "c"),
+                      "prop4" to emptyList<Boolean>(),
+                      "prop5" to emptyList<Double>()))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO)
 class Neo4jCdcSourceNodesAvroIT : Neo4jCdcSourceNodesIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT() {
-
-  @Disabled("Json schema doesn't tolerate when an optional field changes the name")
-  override fun `should read changes with different properties using the default topic compatibility mode`(
-      consumer: ConvertingKafkaConsumer,
-      session: Session
-  ) {
-    super
-        .`should read changes with different properties using the default topic compatibility mode`(
-            consumer, session)
-  }
-}
+class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
 class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT()

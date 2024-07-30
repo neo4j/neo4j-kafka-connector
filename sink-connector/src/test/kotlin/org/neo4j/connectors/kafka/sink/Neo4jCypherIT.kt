@@ -43,7 +43,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.connectors.kafka.data.DynamicTypes
-import org.neo4j.connectors.kafka.data.SimpleTypes
+import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -299,17 +299,7 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.OPTIONAL_BOOLEAN_SCHEMA),
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_BYTES_SCHEMA),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
-          Arguments.of(SimpleTypes.LOCALTIME.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE.schema(true)),
-          Arguments.of(SimpleTypes.OFFSETTIME.schema(true)),
-          Arguments.of(SimpleTypes.ZONEDDATETIME.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.LOCALTIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.OFFSETTIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)),
-          Arguments.of(SimpleTypes.DURATION.schema(true)))
+          Arguments.of(PropertyType.schema))
     }
   }
 
@@ -339,49 +329,39 @@ abstract class Neo4jCypherIT {
   object KnownTypes : ArgumentsProvider {
     override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
-          Arguments.of(SimpleTypes.BOOLEAN.schema(false), true),
-          Arguments.of(SimpleTypes.BOOLEAN.schema(true), false),
-          Arguments.of(SimpleTypes.LONG.schema(false), Long.MAX_VALUE),
-          Arguments.of(SimpleTypes.LONG.schema(true), Long.MIN_VALUE),
-          Arguments.of(SimpleTypes.FLOAT.schema(false), Double.MAX_VALUE),
-          Arguments.of(SimpleTypes.FLOAT.schema(true), Double.MIN_VALUE),
-          Arguments.of(SimpleTypes.STRING.schema(false), "a string"),
-          Arguments.of(SimpleTypes.STRING.schema(true), "another string"),
-          Arguments.of(SimpleTypes.BYTES.schema(false), "a string".encodeToByteArray()),
-          Arguments.of(SimpleTypes.BYTES.schema(true), "another string".encodeToByteArray()),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(false), LocalDate.of(2019, 5, 1)),
-          Arguments.of(SimpleTypes.LOCALDATE_STRUCT.schema(true), LocalDate.of(2019, 5, 1)),
+          Arguments.of(PropertyType.schema, true),
+          Arguments.of(PropertyType.schema, false),
+          Arguments.of(PropertyType.schema, Long.MAX_VALUE),
+          Arguments.of(PropertyType.schema, Long.MIN_VALUE),
+          Arguments.of(PropertyType.schema, Double.MAX_VALUE),
+          Arguments.of(PropertyType.schema, Double.MIN_VALUE),
+          Arguments.of(PropertyType.schema, "a string"),
+          Arguments.of(PropertyType.schema, "another string"),
+          Arguments.of(PropertyType.schema, "a string".encodeToByteArray()),
+          Arguments.of(PropertyType.schema, "another string".encodeToByteArray()),
+          Arguments.of(PropertyType.schema, LocalDate.of(2019, 5, 1)),
+          Arguments.of(PropertyType.schema, LocalDate.of(2019, 5, 1)),
+          Arguments.of(PropertyType.schema, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalTime.of(23, 59, 59, 999999999)),
+          Arguments.of(PropertyType.schema, LocalTime.of(23, 59, 59, 999999999)),
           Arguments.of(
-              SimpleTypes.LOCALDATETIME_STRUCT.schema(false),
-              LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALDATETIME_STRUCT.schema(true),
-              LocalDateTime.of(2019, 5, 1, 23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALTIME_STRUCT.schema(false), LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.LOCALTIME_STRUCT.schema(true), LocalTime.of(23, 59, 59, 999999999)),
-          Arguments.of(
-              SimpleTypes.ZONEDDATETIME_STRUCT.schema(false),
+              PropertyType.schema,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              SimpleTypes.ZONEDDATETIME_STRUCT.schema(true),
+              PropertyType.schema,
               ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
           Arguments.of(
-              SimpleTypes.OFFSETTIME_STRUCT.schema(false),
-              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
+              PropertyType.schema, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
           Arguments.of(
-              SimpleTypes.OFFSETTIME_STRUCT.schema(true),
+              PropertyType.schema,
               OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
-          Arguments.of(
-              SimpleTypes.DURATION.schema(false), Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(
-              SimpleTypes.DURATION.schema(true), Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
-          Arguments.of(SimpleTypes.POINT.schema(false), Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(SimpleTypes.POINT.schema(true), Values.point(7203, 2.3, 4.5).asPoint()),
-          Arguments.of(
-              SimpleTypes.POINT.schema(false), Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
-          Arguments.of(SimpleTypes.POINT.schema(true), Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+          Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
+          Arguments.of(PropertyType.schema, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(7203, 2.3, 4.5).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
+          Arguments.of(PropertyType.schema, Values.point(4979, 2.3, 4.5, 0.0).asPoint()),
       )
     }
   }
@@ -475,7 +455,7 @@ abstract class Neo4jCypherIT {
               CypherStrategy(
                   TOPIC,
                   """
-                  CREATE (n:Data) SET n = __value
+                  CREATE (n:Data) SET n = __value.map
                   """)])
   @Test
   fun `should support complex maps`(
@@ -488,9 +468,14 @@ abstract class Neo4jCypherIT {
             "lastName" to "doe",
             "dob" to LocalDate.of(1999, 1, 1),
             "siblings" to 3)
-    val schema = DynamicTypes.toConnectSchema(value)
-
-    producer.publish(valueSchema = schema, value = DynamicTypes.toConnectValue(schema, value))
+    DynamicTypes.toConnectSchema(value).let { mapSchema ->
+      // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
+      SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
+        producer.publish(
+            valueSchema = wrapper,
+            value = Struct(wrapper).put("map", DynamicTypes.toConnectValue(mapSchema, value)))
+      }
+    }
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n", emptyMap()).single() }
         .get(0)

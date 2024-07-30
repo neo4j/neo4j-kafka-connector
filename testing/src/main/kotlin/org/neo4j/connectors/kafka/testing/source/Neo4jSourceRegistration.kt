@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
-import org.neo4j.connectors.kafka.data.TemporalDataSchemaType
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
@@ -48,7 +47,6 @@ internal class Neo4jSourceRegistration(
     cdcChangesTo: Map<String, List<String>>,
     cdcMetadata: Map<String, List<Map<String, String>>>,
     cdcKeySerializations: Map<String, String>,
-    temporalDataSchemaType: TemporalDataSchemaType
 ) {
 
   private val name: String = randomizedName("Neo4jSourceConnector")
@@ -79,8 +77,6 @@ internal class Neo4jSourceRegistration(
         put("value.converter.schema.registry.url", schemaControlRegistryUri)
       }
       putAll(valueConverter.additionalProperties.mapKeys { "value.converter.${it.key}" })
-
-      put("neo4j.temporal-schema.type", temporalDataSchemaType.name)
 
       if (strategy == QUERY) {
         put("neo4j.query.topic", topic)

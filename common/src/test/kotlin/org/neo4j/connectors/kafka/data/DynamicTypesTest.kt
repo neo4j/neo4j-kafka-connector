@@ -21,6 +21,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.nio.ByteBuffer
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -29,6 +30,7 @@ import java.time.OffsetTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.function.Function
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
@@ -40,250 +42,173 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.neo4j.driver.types.Node
+import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
 
 class DynamicTypesTest {
 
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PropertyTypedValueProvider::class)
+  fun `should derive schema for property typed values and convert them back and forth`(
+      name: String,
+      value: Any?,
+      expectedIfDifferent: Any?
+  ) {
+    DynamicTypes.toConnectSchema(value, false) shouldBe PropertyType.schema
+    DynamicTypes.toConnectSchema(value, true) shouldBe PropertyType.schema
+
+    val converted = DynamicTypes.toConnectValue(PropertyType.schema, value)
+    converted shouldBe PropertyType.toConnectValue(value)
+
+    val reverted = DynamicTypes.fromConnectValue(PropertyType.schema, converted)
+    reverted shouldBe (expectedIfDifferent ?: value)
+  }
+
+  object PropertyTypedValueProvider : ArgumentsProvider {
+    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+      return Stream.of(
+          Arguments.of("null", null, null),
+          Arguments.of("byte", 8.toByte(), 8L),
+          Arguments.of("short", 8.toShort(), 8L),
+          Arguments.of("int", 8, 8L),
+          Arguments.of("long", 8.toLong(), null),
+          Arguments.of("float", 8.toFloat(), 8.toDouble()),
+          Arguments.of("double", 8.toDouble(), null),
+          Arguments.of("string", "a string", null),
+          Arguments.of("char array", "a char array".toCharArray(), "a char array"),
+          Arguments.of("string builder", StringBuilder("a string builder"), "a string builder"),
+          Arguments.of("string buffer", StringBuilder("a string buffer"), "a string buffer"),
+          Arguments.of(
+              "char sequence",
+              object : CharSequence {
+                private val value = "a char sequence"
+                override val length: Int
+                  get() = value.length
+
+                override fun get(index: Int): Char = value[index]
+
+                override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
+                    value.subSequence(startIndex, endIndex)
+              },
+              "a char sequence"),
+          Arguments.of("local date", LocalDate.of(1999, 12, 31), null),
+          Arguments.of("local time", LocalTime.of(23, 59, 59), null),
+          Arguments.of("local date time", LocalDateTime.of(1999, 12, 31, 23, 59, 59), null),
+          Arguments.of("offset time", OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), null),
+          Arguments.of(
+              "offset date time",
+              OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
+              null),
+          Arguments.of(
+              "zoned date time",
+              ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
+              null),
+          Arguments.of("duration", Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), null),
+          Arguments.of("point (2d)", Values.point(4326, 1.0, 2.0).asPoint(), null),
+          Arguments.of("point (3d)", Values.point(4326, 1.0, 2.0, 3.0).asPoint(), null),
+          Arguments.of("byte array", ByteArray(0), null),
+          Arguments.of("byte buffer", ByteBuffer.allocate(0), ByteArray(0)),
+          Arguments.of("array (byte)", Array(1) { 1.toByte() }, null),
+          Arguments.of("bool array (empty)", BooleanArray(0), null),
+          Arguments.of("bool array", BooleanArray(1) { true }, null),
+          Arguments.of("array (bool)", Array(1) { true }, null),
+          Arguments.of("list (bool)", listOf(true), null),
+          Arguments.of("empty list (bool)", emptyList<Boolean>(), null),
+          Arguments.of("short array (empty)", ShortArray(0), null),
+          Arguments.of("short array", ShortArray(1) { 1.toShort() }, listOf(1L)),
+          Arguments.of("array (short)", Array(1) { 1.toShort() }, listOf(1L)),
+          Arguments.of("list (short)", listOf(1.toShort()), listOf(1L)),
+          Arguments.of("empty list (short)", emptyList<Short>(), null),
+          Arguments.of("int array (empty)", IntArray(0), null),
+          Arguments.of("int array", IntArray(1) { 1 }, listOf(1L)),
+          Arguments.of("array (int)", Array(1) { 1 }, listOf(1L)),
+          Arguments.of("list (int)", listOf(1), listOf(1L)),
+          Arguments.of("empty list (int)", emptyList<Int>(), null),
+          Arguments.of("long array (empty)", LongArray(0), null),
+          Arguments.of("long array", LongArray(1) { 1.toLong() }, null),
+          Arguments.of("array (long)", Array(1) { 1.toLong() }, null),
+          Arguments.of("list (long)", listOf(1L), null),
+          Arguments.of("empty list (long)", emptyList<Long>(), null),
+          Arguments.of("float array (empty)", FloatArray(0), null),
+          Arguments.of("float array", FloatArray(1) { 1.toFloat() }, listOf(1.toDouble())),
+          Arguments.of("array (float)", Array(1) { 1.toFloat() }, null),
+          Arguments.of("list (float)", listOf(1.toFloat()), null),
+          Arguments.of("empty list (float)", emptyList<Float>(), null),
+          Arguments.of("double array (empty)", DoubleArray(0), null),
+          Arguments.of("double array", DoubleArray(1) { 1.toDouble() }, null),
+          Arguments.of("array (double)", Array(1) { 1.toDouble() }, null),
+          Arguments.of("list (double)", listOf(1.toDouble()), null),
+          Arguments.of("empty list (double)", emptyList<Double>(), null),
+          Arguments.of("array (string)", Array(1) { "a" }, null),
+          Arguments.of("list (string)", listOf("a"), null),
+          Arguments.of("empty list (string)", emptyList<String>(), null),
+          Arguments.of("array (local date)", Array(1) { LocalDate.of(1999, 12, 31) }, null),
+          Arguments.of("list (local date)", listOf(LocalDate.of(1999, 12, 31)), null),
+          Arguments.of("empty list (local date)", emptyList<LocalDate>(), null),
+          Arguments.of("array (local time)", Array(1) { LocalTime.of(23, 59, 59) }, null),
+          Arguments.of("list (local time)", listOf(LocalTime.of(23, 59, 59)), null),
+          Arguments.of("empty list (local time)", emptyList<LocalTime>(), null),
+          Arguments.of(
+              "array (local date time)",
+              Array(1) { LocalDateTime.of(1999, 12, 31, 23, 59, 59) },
+              null),
+          Arguments.of(
+              "list (local date time)", listOf(LocalDateTime.of(1999, 12, 31, 23, 59, 59)), null),
+          Arguments.of("empty list (local date time)", emptyList<LocalDateTime>(), null),
+          Arguments.of(
+              "array (offset time)",
+              Array(1) { OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC) },
+              null),
+          Arguments.of(
+              "list (offset time)", listOf(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC)), null),
+          Arguments.of("empty list (offset time)", emptyList<OffsetTime>(), null),
+          Arguments.of(
+              "array (offset date time)",
+              Array(1) { OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC) },
+              null),
+          Arguments.of(
+              "list (offset date time)",
+              listOf(OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC)),
+              null),
+          Arguments.of("empty list (offset date time)", emptyList<OffsetDateTime>(), null),
+          Arguments.of(
+              "array (zoned date time)",
+              Array(1) {
+                ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London"))
+              },
+              null),
+          Arguments.of(
+              "list (zoned date time)",
+              listOf(ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London"))),
+              null),
+          Arguments.of("empty list (zoned date time)", emptyList<ZonedDateTime>(), null),
+          Arguments.of(
+              "array (duration)",
+              Array(1) { Values.isoDuration(12, 12, 59, 1230).asIsoDuration() },
+              null),
+          Arguments.of(
+              "list (duration)",
+              listOf(Values.isoDuration(12, 12, 59, 1230).asIsoDuration()),
+              null),
+          Arguments.of("empty list (duration)", emptyList<Duration>(), null),
+          Arguments.of(
+              "array (point (2d))", Array(1) { Values.point(4326, 1.0, 2.0).asPoint() }, null),
+          Arguments.of("list (point (2d))", listOf(Values.point(4326, 1.0, 2.0).asPoint()), null),
+          Arguments.of(
+              "array (point (3d))", Array(1) { Values.point(4326, 1.0, 2.0, 3.0).asPoint() }, null),
+          Arguments.of(
+              "list (point (3d))", listOf(Values.point(4326, 1.0, 2.0, 3.0).asPoint()), null),
+          Arguments.of("empty list (point)", emptyList<Point>(), null),
+      )
+    }
+  }
+
   @Test
-  fun `should derive schema for simple types correctly`() {
-    // NULL
-    DynamicTypes.toConnectSchema(null, false) shouldBe SimpleTypes.NULL.schema()
-    DynamicTypes.toConnectSchema(null, true) shouldBe SimpleTypes.NULL.schema()
-
-    // Integer, Long, etc.
-    listOf<Any>(8.toByte(), 8.toShort(), 8.toInt(), 8.toLong()).forEach { number ->
-      withClue(number) {
-        DynamicTypes.toConnectSchema(number, false) shouldBe SchemaBuilder.INT64_SCHEMA
-        DynamicTypes.toConnectSchema(number, true) shouldBe SchemaBuilder.OPTIONAL_INT64_SCHEMA
-      }
-    }
-
-    // Float, Double
-    listOf<Any>(8.toFloat(), 8.toDouble()).forEach { number ->
-      withClue(number) {
-        DynamicTypes.toConnectSchema(number, false) shouldBe SchemaBuilder.FLOAT64_SCHEMA
-        DynamicTypes.toConnectSchema(number, true) shouldBe SchemaBuilder.OPTIONAL_FLOAT64_SCHEMA
-      }
-    }
-
-    // String
-    listOf<Any>(
-            "a string",
-            "a char array".toCharArray(),
-            StringBuilder("a string builder"),
-            StringBuffer("a string buffer"),
-            object : CharSequence {
-              private val value = "a char sequence"
-              override val length: Int
-                get() = value.length
-
-              override fun get(index: Int): Char = value[index]
-
-              override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
-                  value.subSequence(startIndex, endIndex)
-            })
-        .forEach { string ->
-          withClue(string) {
-            DynamicTypes.toConnectSchema(string, false) shouldBe SchemaBuilder.STRING_SCHEMA
-            DynamicTypes.toConnectSchema(string, true) shouldBe SchemaBuilder.OPTIONAL_STRING_SCHEMA
-          }
-        }
-
-    // Byte Array
-    listOf<Any>(ByteArray(0), ByteBuffer.allocate(0)).forEach { bytes ->
-      withClue(bytes) {
-        DynamicTypes.toConnectSchema(bytes, false) shouldBe SchemaBuilder.BYTES_SCHEMA
-        DynamicTypes.toConnectSchema(bytes, true) shouldBe SchemaBuilder.OPTIONAL_BYTES_SCHEMA
-      }
-    }
-
-    // Boolean Array (boolean[])
-    listOf<Any>(BooleanArray(0), BooleanArray(1) { true }).forEach { array ->
-      withClue(array) {
-        DynamicTypes.toConnectSchema(array, false) shouldBe
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).build()
-        DynamicTypes.toConnectSchema(array, true) shouldBe
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).optional().build()
-      }
-    }
-
-    // Array of Boolean (Boolean[])
-    listOf<Any>(Array(1) { true }).forEach { array ->
-      withClue(array) {
-        DynamicTypes.toConnectSchema(array, false) shouldBe
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).build()
-        DynamicTypes.toConnectSchema(array, true) shouldBe
-            SchemaBuilder.array(Schema.OPTIONAL_BOOLEAN_SCHEMA).optional().build()
-      }
-    }
-
-    // Int Arrays (short[], int[], long[])
-    listOf(ShortArray(1), IntArray(1), LongArray(1)).forEach { array ->
-      withClue(array) {
-        DynamicTypes.toConnectSchema(array, false) shouldBe
-            SchemaBuilder.array(Schema.INT64_SCHEMA).build()
-        DynamicTypes.toConnectSchema(array, true) shouldBe
-            SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build()
-      }
-    }
-
-    // Array of Integer (Short[], Integer[], Long[])
-    listOf(Array(1) { i -> i }, Array(1) { i -> i.toShort() }, Array(1) { i -> i.toLong() })
-        .forEach { array ->
-          withClue(array) {
-            DynamicTypes.toConnectSchema(array, false) shouldBe
-                SchemaBuilder.array(Schema.INT64_SCHEMA).build()
-            DynamicTypes.toConnectSchema(array, true) shouldBe
-                SchemaBuilder.array(Schema.OPTIONAL_INT64_SCHEMA).optional().build()
-          }
-        }
-
-    // Float Arrays (float[], double[])
-    listOf(FloatArray(1), DoubleArray(1)).forEach { array ->
-      withClue(array) {
-        DynamicTypes.toConnectSchema(array, false) shouldBe
-            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
-        DynamicTypes.toConnectSchema(array, true) shouldBe
-            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build()
-      }
-    }
-
-    // Float Arrays (Float[], Double[])
-    listOf(Array(1) { i -> i.toFloat() }, Array(1) { i -> i.toDouble() }).forEach { array ->
-      withClue(array) {
-        DynamicTypes.toConnectSchema(array, false) shouldBe
-            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).build()
-        DynamicTypes.toConnectSchema(array, true) shouldBe
-            SchemaBuilder.array(Schema.OPTIONAL_FLOAT64_SCHEMA).optional().build()
-      }
-    }
-
-    // String Array
-    DynamicTypes.toConnectSchema(Array(1) { "a" }, false) shouldBe
-        SchemaBuilder.array(Schema.STRING_SCHEMA).build()
-    DynamicTypes.toConnectSchema(Array(1) { "a" }, true) shouldBe
-        SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build()
-
-    // Temporal Types
-    DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), false) shouldBe
-        SimpleTypes.LOCALDATE_STRUCT.schema()
-    DynamicTypes.toConnectSchema(LocalDate.of(1999, 12, 31), true) shouldBe
-        SimpleTypes.LOCALDATE_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        LocalDate.of(1999, 12, 31),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALDATE.schema()
-    DynamicTypes.toConnectSchema(
-        LocalDate.of(1999, 12, 31),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALDATE.schema(true)
-
-    DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALTIME_STRUCT.schema()
-    DynamicTypes.toConnectSchema(LocalTime.of(23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALTIME_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        LocalTime.of(23, 59, 59),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALTIME.schema()
-    DynamicTypes.toConnectSchema(
-        LocalTime.of(23, 59, 59),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALTIME.schema(true)
-
-    DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), false) shouldBe
-        SimpleTypes.LOCALDATETIME_STRUCT.schema()
-    DynamicTypes.toConnectSchema(LocalDateTime.of(1999, 12, 31, 23, 59, 59), true) shouldBe
-        SimpleTypes.LOCALDATETIME_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALDATETIME.schema()
-    DynamicTypes.toConnectSchema(
-        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.LOCALDATETIME.schema(true)
-
-    DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.OFFSETTIME_STRUCT.schema()
-    DynamicTypes.toConnectSchema(OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.OFFSETTIME_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.OFFSETTIME.schema()
-    DynamicTypes.toConnectSchema(
-        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.OFFSETTIME.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), false) shouldBe
-        SimpleTypes.ZONEDDATETIME_STRUCT.schema()
-    DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema()
-    DynamicTypes.toConnectSchema(
-        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
-        true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), false) shouldBe
-        SimpleTypes.ZONEDDATETIME_STRUCT.schema()
-    DynamicTypes.toConnectSchema(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")), true) shouldBe
-        SimpleTypes.ZONEDDATETIME_STRUCT.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = false,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema()
-    DynamicTypes.toConnectSchema(
-        ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = true,
-        temporalDataSchemaType = TemporalDataSchemaType.STRING) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema(true)
-
-    DynamicTypes.toConnectSchema(
-        Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe
-        SimpleTypes.DURATION.schema()
-    DynamicTypes.toConnectSchema(
-        Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), true) shouldBe
-        SimpleTypes.DURATION.schema(true)
-
-    // Point
-    listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
-        .forEach { point ->
-          withClue(point) {
-            DynamicTypes.toConnectSchema(point, false) shouldBe SimpleTypes.POINT.schema()
-            DynamicTypes.toConnectSchema(point, true) shouldBe SimpleTypes.POINT.schema(true)
-          }
-        }
-
+  fun `should derive schema for entity types correctly`() {
     // Node
     DynamicTypes.toConnectSchema(TestNode(0, emptyList(), emptyMap()), false) shouldBe
         SchemaBuilder.struct()
@@ -300,15 +225,15 @@ class DynamicTypesTest {
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field("name", Schema.STRING_SCHEMA)
-            .field("surname", Schema.STRING_SCHEMA)
+            .field("name", PropertyType.schema)
+            .field("surname", PropertyType.schema)
             .build()
 
     // Relationship
     DynamicTypes.toConnectSchema(TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
-            .field("<type>", SchemaBuilder.STRING_SCHEMA)
+            .field("<type>", Schema.STRING_SCHEMA)
             .field("<start.id>", Schema.INT64_SCHEMA)
             .field("<end.id>", Schema.INT64_SCHEMA)
             .build()
@@ -322,61 +247,77 @@ class DynamicTypesTest {
         false) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
-            .field("<type>", SchemaBuilder.STRING_SCHEMA)
+            .field("<type>", Schema.STRING_SCHEMA)
             .field("<start.id>", Schema.INT64_SCHEMA)
             .field("<end.id>", Schema.INT64_SCHEMA)
-            .field("name", Schema.STRING_SCHEMA)
-            .field("surname", Schema.STRING_SCHEMA)
+            .field("name", PropertyType.schema)
+            .field("surname", PropertyType.schema)
             .build()
   }
 
   @Test
-  fun `empty collections or arrays should map to an array schema`() {
-    listOf(listOf<Any>(), setOf<Any>(), arrayOf<Any>()).forEach { collection ->
+  fun `empty collections should map to property type`() {
+    listOf(listOf<Any>(), setOf<Any>()).forEach { collection ->
       withClue(collection) {
-        DynamicTypes.toConnectSchema(collection, false) shouldBe
-            SchemaBuilder.array(SimpleTypes.NULL.schema()).build()
-        DynamicTypes.toConnectSchema(collection, true) shouldBe
-            SchemaBuilder.array(SimpleTypes.NULL.schema()).optional().build()
+        DynamicTypes.toConnectSchema(collection, false) shouldBe PropertyType.schema
+        DynamicTypes.toConnectSchema(collection, true) shouldBe PropertyType.schema
       }
     }
   }
 
   @Test
-  fun `collections with elements of single type should map to an array schema`() {
-    listOf<Triple<Any, Schema, Schema>>(
-            Triple(listOf(1, 2, 3), Schema.INT64_SCHEMA, Schema.OPTIONAL_INT64_SCHEMA),
-            Triple(listOf("a", "b", "c"), Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA),
-            Triple(setOf(true), Schema.BOOLEAN_SCHEMA, Schema.OPTIONAL_BOOLEAN_SCHEMA),
-        )
-        .forEach { (collection, elementSchema, elementOptionalSchema) ->
-          withClue(collection) {
-            DynamicTypes.toConnectSchema(collection, false) shouldBe
-                SchemaBuilder.array(elementSchema).build()
-            DynamicTypes.toConnectSchema(collection, true) shouldBe
-                SchemaBuilder.array(elementOptionalSchema).optional().build()
+  fun `empty arrays should map to an array of property type`() {
+    DynamicTypes.toConnectSchema(arrayOf<Any>(), false) shouldBe
+        SchemaBuilder.array(PropertyType.schema).build()
+    DynamicTypes.toConnectSchema(arrayOf<Any>(), true) shouldBe
+        SchemaBuilder.array(PropertyType.schema).optional().build()
+  }
+
+  @Test
+  fun `empty arrays of simple types should map to property type`() {
+    listOf(
+            arrayOf<Int>(),
+            arrayOf<String>(),
+            arrayOf<LocalDate>(),
+            arrayOf<Boolean>(),
+            arrayOf<Point>())
+        .forEach { array ->
+          withClue(array) {
+            DynamicTypes.toConnectSchema(array, false) shouldBe PropertyType.schema
+            DynamicTypes.toConnectSchema(array, true) shouldBe PropertyType.schema
           }
         }
   }
 
-  @Test
-  fun `collections with elements of different types should map to a struct schema`() {
-    DynamicTypes.toConnectSchema(listOf(1, true, "a", 5.toFloat()), false) shouldBe
-        SchemaBuilder.struct()
-            .field("e0", Schema.INT64_SCHEMA)
-            .field("e1", Schema.BOOLEAN_SCHEMA)
-            .field("e2", Schema.STRING_SCHEMA)
-            .field("e3", Schema.FLOAT64_SCHEMA)
-            .build()
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PropertyTypedCollectionProvider::class)
+  fun `collections with elements of property types should map to an array schema`(
+      name: String,
+      value: Any?
+  ) {
+    DynamicTypes.toConnectSchema(value, false) shouldBe
+        SchemaBuilder.array(PropertyType.schema).build()
+    DynamicTypes.toConnectSchema(value, true) shouldBe
+        SchemaBuilder.array(PropertyType.schema).optional().build()
+  }
 
-    DynamicTypes.toConnectSchema(listOf(1, true, "a", 5.toFloat()), true) shouldBe
-        SchemaBuilder.struct()
-            .field("e0", Schema.OPTIONAL_INT64_SCHEMA)
-            .field("e1", Schema.OPTIONAL_BOOLEAN_SCHEMA)
-            .field("e2", Schema.OPTIONAL_STRING_SCHEMA)
-            .field("e3", Schema.OPTIONAL_FLOAT64_SCHEMA)
-            .optional()
-            .build()
+  object PropertyTypedCollectionProvider : ArgumentsProvider {
+    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+      return Stream.of(
+          Arguments.of(
+              "list of mixed simple types",
+              listOf(1, true, "a", 5.toFloat(), LocalDate.of(1999, 1, 1))),
+          Arguments.of(
+              "list of mixed types",
+              listOf(
+                  1,
+                  true,
+                  "a",
+                  5.toFloat(),
+                  LocalDate.of(1999, 1, 1),
+                  IntArray(1) { 1 },
+                  Array(1) { LocalTime.of(23, 59, 59) })))
+    }
   }
 
   @Test
@@ -394,51 +335,36 @@ class DynamicTypesTest {
     } shouldHaveMessage ("unsupported map key type java.lang.Integer")
   }
 
-  @Test
-  fun `maps with single typed values should map to a map schema`() {
-    listOf(
-            mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.INT64_SCHEMA,
-            mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.INT64_SCHEMA)
-        .forEach { (map, valueSchema) ->
-          withClue("not optional: $map") {
-            DynamicTypes.toConnectSchema(map, false) shouldBe
-                SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).build()
-          }
-        }
-
-    listOf(
-            mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.OPTIONAL_INT64_SCHEMA,
-            mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.OPTIONAL_STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.OPTIONAL_INT64_SCHEMA)
-        .forEach { (map, valueSchema) ->
-          withClue("optional: $map") {
-            DynamicTypes.toConnectSchema(map, true) shouldBe
-                SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).optional().build()
-          }
-        }
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PropertyTypedMapProvider::class)
+  fun `maps with property typed values should map to a map schema`(name: String, value: Any?) {
+    DynamicTypes.toConnectSchema(value, false) shouldBe
+        SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+    DynamicTypes.toConnectSchema(value, true) shouldBe
+        SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).optional().build()
   }
 
-  @Test
-  fun `maps with values of different types should map to a struct schema`() {
-    DynamicTypes.toConnectSchema(
-        mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()), false) shouldBe
-        SchemaBuilder.struct()
-            .field("a", Schema.INT64_SCHEMA)
-            .field("b", Schema.BOOLEAN_SCHEMA)
-            .field("c", Schema.STRING_SCHEMA)
-            .field("d", Schema.FLOAT64_SCHEMA)
-            .build()
-
-    DynamicTypes.toConnectSchema(
-        mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()), true) shouldBe
-        SchemaBuilder.struct()
-            .field("a", Schema.OPTIONAL_INT64_SCHEMA)
-            .field("b", Schema.OPTIONAL_BOOLEAN_SCHEMA)
-            .field("c", Schema.OPTIONAL_STRING_SCHEMA)
-            .field("d", Schema.OPTIONAL_FLOAT64_SCHEMA)
-            .optional()
-            .build()
+  object PropertyTypedMapProvider : ArgumentsProvider {
+    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+      return Stream.of(
+          Arguments.of("string to int", mapOf("a" to 1, "b" to 2, "c" to 3)),
+          Arguments.of("string to string", mapOf("a" to "a", "b" to "b", "c" to "c")),
+          Arguments.of(
+              "string to numeric",
+              mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong(), "d" to 4.toFloat())),
+          Arguments.of(
+              "string to mixed simple type",
+              mapOf("a" to 1, "b" to true, "c" to "string", "d" to 4.toFloat())),
+          Arguments.of(
+              "string to mixed",
+              mapOf(
+                  "a" to 1,
+                  "b" to true,
+                  "c" to "string",
+                  "d" to 4.toFloat(),
+                  "e" to Array(1) { LocalDate.of(1999, 1, 1) })),
+      )
+    }
   }
 
   @Test
@@ -446,105 +372,23 @@ class DynamicTypesTest {
     data class Test(val a: String)
 
     listOf(object {}, java.sql.Date(0), object : Entity(emptyMap()) {}, Test("a string")).forEach {
-        value ->
-      shouldThrow<IllegalArgumentException> { DynamicTypes.toConnectSchema(value, false) }
+      shouldThrow<IllegalArgumentException> { DynamicTypes.toConnectSchema(it, false) }
     }
   }
 
   @Test
-  fun `simple types should be converted to themselves and should be converted back`() {
+  fun `maps should be returned as maps of structs and should be converted back`() {
     listOf(
-            true to true,
-            false to false,
-            1.toShort() to 1.toLong(),
-            2 to 2.toLong(),
-            3.toLong() to 3.toLong(),
-            4.toFloat() to 4.toDouble(),
-            5.toDouble() to 5.toDouble(),
-            'c' to "c",
-            "string" to "string",
-            "string".toCharArray() to "string",
-            "string".toByteArray() to "string".toByteArray())
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.toConnectSchema(value, false)
-            val converted = DynamicTypes.toConnectValue(schema, value)
-            val reverted = DynamicTypes.fromConnectValue(schema, converted)
-
-            converted shouldBe expected
-            reverted shouldBe expected
-          }
-        }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(TemporalTypes::class)
-  fun `temporal types should be returned as structs and should be converted back`(
-      value: Any,
-      expected: Any
-  ) {
-    val schema = DynamicTypes.toConnectSchema(value, false)
-    val converted = DynamicTypes.toConnectValue(schema, value)
-
-    converted shouldBe expected
-
-    val reverted = DynamicTypes.fromConnectValue(schema, converted)
-    reverted shouldBe value
-  }
-
-  object TemporalTypes : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
-      return Stream.of(
-          LocalDate.of(1999, 12, 31).let {
-            Arguments.of(
-                it, Struct(SimpleTypes.LOCALDATE_STRUCT.schema).put(EPOCH_DAYS, it.toEpochDay()))
-          },
-          LocalTime.of(23, 59, 59, 9999).let {
-            Arguments.of(
-                it, Struct(SimpleTypes.LOCALTIME_STRUCT.schema).put(NANOS_OF_DAY, it.toNanoOfDay()))
-          },
-          LocalDateTime.of(1999, 12, 31, 23, 59, 59, 9999).let {
-            Arguments.of(
-                it,
-                Struct(SimpleTypes.LOCALDATETIME_STRUCT.schema)
-                    .put(EPOCH_DAYS, it.toLocalDate().toEpochDay())
-                    .put(NANOS_OF_DAY, it.toLocalTime().toNanoOfDay()))
-          },
-          OffsetTime.of(23, 59, 59, 9999, ZoneOffset.UTC).let {
-            Arguments.of(
-                it,
-                Struct(SimpleTypes.OFFSETTIME_STRUCT.schema)
-                    .put(NANOS_OF_DAY, it.toLocalTime().toNanoOfDay())
-                    .put(ZONE_ID, it.offset.id))
-          },
-          OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneOffset.ofHours(1)).let {
-            Arguments.of(
-                it,
-                Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
-                    .put(EPOCH_SECONDS, it.toEpochSecond())
-                    .put(NANOS_OF_SECOND, it.nano)
-                    .put(ZONE_ID, it.offset.id))
-          },
-          ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 9999, ZoneId.of("Europe/Istanbul")).let {
-            Arguments.of(
-                it,
-                Struct(SimpleTypes.ZONEDDATETIME_STRUCT.schema)
-                    .put(EPOCH_SECONDS, it.toEpochSecond())
-                    .put(NANOS_OF_SECOND, it.nano)
-                    .put(ZONE_ID, it.zone.id))
-          })
-    }
-  }
-
-  @Test
-  fun `duration types should be returned as structs and should be converted back`() {
-    listOf(
-            Values.isoDuration(5, 2, 0, 9999).asIsoDuration() to
-                Struct(SimpleTypes.DURATION.schema())
-                    .put("months", 5L)
-                    .put("days", 2L)
-                    .put("seconds", 0L)
-                    .put("nanoseconds", 9999))
+            mapOf("a" to "x", "b" to "y", "c" to "z") to
+                mapOf(
+                    "a" to PropertyType.toConnectValue("x"),
+                    "b" to PropertyType.toConnectValue("y"),
+                    "c" to PropertyType.toConnectValue("z")),
+            mapOf("a" to 1, "b" to 2, "c" to 3) to
+                mapOf(
+                    "a" to PropertyType.toConnectValue(1L),
+                    "b" to PropertyType.toConnectValue(2L),
+                    "c" to PropertyType.toConnectValue(3L)))
         .forEach { (value, expected) ->
           withClue(value) {
             val schema = DynamicTypes.toConnectSchema(value, false)
@@ -556,102 +400,6 @@ class DynamicTypesTest {
             reverted shouldBe value
           }
         }
-  }
-
-  @Test
-  fun `arrays and collections should be returned as arrays and should be converted back`() {
-    fun primitiveToArray(value: Any): Any =
-        when (value) {
-          is BooleanArray -> value.toList()
-          is ByteArray -> value.toList()
-          is CharArray -> value.toList()
-          is DoubleArray -> value.toList()
-          is FloatArray -> value.toList()
-          is IntArray -> value.toList()
-          is LongArray -> value.toList()
-          is ShortArray -> value.toList()
-          else -> value
-        }
-
-    listOf(
-            ShortArray(1) { 1 } to LongArray(1) { 1.toLong() },
-            IntArray(1) { 1 } to LongArray(1) { 1.toLong() },
-            LongArray(1) { 1 } to LongArray(1) { 1 },
-            FloatArray(1) { 1F } to DoubleArray(1) { 1.0 },
-            DoubleArray(1) { 1.0 } to DoubleArray(1) { 1.0 },
-            BooleanArray(1) { true } to BooleanArray(1) { true },
-            Array(1) { 1 } to Array(1) { 1L },
-            Array(1) { 1.toShort() } to Array(1) { 1L },
-            Array(1) { "string" } to Array(1) { "string" },
-            listOf(1, 2, 3) to arrayOf(1L, 2L, 3L),
-            listOf("a", "b", "c") to arrayOf("a", "b", "c"),
-            setOf(true, false) to arrayOf(true, false))
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.toConnectSchema(value, false)
-            val converted = DynamicTypes.toConnectValue(schema, value)
-
-            converted shouldBe expected
-
-            val reverted = DynamicTypes.fromConnectValue(schema, converted)
-            reverted shouldBe primitiveToArray(value)
-          }
-        }
-  }
-
-  @Test
-  fun `maps should be returned as maps and should be converted back`() {
-    listOf(
-            mapOf("a" to "x", "b" to "y", "c" to "z") to mapOf("a" to "x", "b" to "y", "c" to "z"),
-            mapOf("a" to 1, "b" to 2, "c" to 3) to mapOf("a" to 1L, "b" to 2L, "c" to 3L))
-        .forEach { (value, expected) ->
-          withClue(value) {
-            val schema = DynamicTypes.toConnectSchema(value, false)
-            val converted = DynamicTypes.toConnectValue(schema, value)
-
-            converted shouldBe expected
-
-            val reverted = DynamicTypes.fromConnectValue(schema, converted)
-            reverted shouldBe value
-          }
-        }
-  }
-
-  @Test
-  fun `2d points should be returned as structs and should be converted back`() {
-    //    listOf(, Values.point(4326, 1.0, 2.0, 3.0).asPoint())
-    val point = Values.point(4326, 1.0, 2.0).asPoint()
-    val schema = DynamicTypes.toConnectSchema(point, false)
-    val converted = DynamicTypes.toConnectValue(schema, point)
-
-    converted shouldBe
-        Struct(schema)
-            .put("dimension", 2.toByte())
-            .put("srid", point.srid())
-            .put("x", point.x())
-            .put("y", point.y())
-            .put("z", null)
-
-    val reverted = DynamicTypes.fromConnectValue(schema, converted)
-    reverted shouldBe point
-  }
-
-  @Test
-  fun `3d points should be returned as structs and should be converted back`() {
-    val point = Values.point(4326, 1.0, 2.0, 3.0).asPoint()
-    val schema = DynamicTypes.toConnectSchema(point, false)
-    val converted = DynamicTypes.toConnectValue(schema, point)
-
-    converted shouldBe
-        Struct(schema)
-            .put("dimension", 3.toByte())
-            .put("srid", point.srid())
-            .put("x", point.x())
-            .put("y", point.y())
-            .put("z", point.z())
-
-    val reverted = DynamicTypes.fromConnectValue(schema, converted)
-    reverted shouldBe point
   }
 
   @Test
@@ -668,8 +416,8 @@ class DynamicTypesTest {
         Struct(schema)
             .put("<id>", 0L)
             .put("<labels>", listOf("Person", "Employee"))
-            .put("name", "john")
-            .put("surname", "doe")
+            .put("name", PropertyType.toConnectValue("john"))
+            .put("surname", PropertyType.toConnectValue("doe"))
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
@@ -698,8 +446,8 @@ class DynamicTypesTest {
             .put("<start.id>", 1L)
             .put("<end.id>", 2L)
             .put("<type>", "KNOWS")
-            .put("name", "john")
-            .put("surname", "doe")
+            .put("name", PropertyType.toConnectValue("john"))
+            .put("surname", PropertyType.toConnectValue("doe"))
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
@@ -713,7 +461,7 @@ class DynamicTypesTest {
   }
 
   @Test
-  fun `maps with values of different types should be returned as structs and should be converted back`() {
+  fun `maps with values of different simple types should be returned as map of property types and should be converted back`() {
     val map =
         mapOf(
             "name" to "john",
@@ -725,36 +473,33 @@ class DynamicTypesTest {
     val converted = DynamicTypes.toConnectValue(schema, map)
 
     converted shouldBe
-        Struct(schema)
-            .put("name", "john")
-            .put("age", 21L)
-            .put(
-                "dob",
-                Struct(SimpleTypes.LOCALDATE_STRUCT.schema)
-                    .put(EPOCH_DAYS, LocalDate.of(1999, 12, 31).toEpochDay()))
-            .put("employed", true)
-            .put("nullable", null)
+        mapOf(
+            "name" to PropertyType.toConnectValue("john"),
+            "age" to PropertyType.toConnectValue(21L),
+            "dob" to
+                Struct(PropertyType.schema)
+                    .put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
+            "employed" to PropertyType.toConnectValue(true),
+            "nullable" to null)
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe map
   }
 
   @Test
-  fun `collections with elements of different types should be returned as struct and should be converted back`() {
+  fun `collections with elements of different types should be returned as list of property types and should be converted back`() {
     val coll = listOf("john", 21, LocalDate.of(1999, 12, 31), true, null)
     val schema = DynamicTypes.toConnectSchema(coll, false)
     val converted = DynamicTypes.toConnectValue(schema, coll)
 
     converted shouldBe
-        Struct(schema)
-            .put("e0", "john")
-            .put("e1", 21L)
-            .put(
-                "e2",
-                Struct(SimpleTypes.LOCALDATE_STRUCT.schema)
-                    .put(EPOCH_DAYS, LocalDate.of(1999, 12, 31).toEpochDay()))
-            .put("e3", true)
-            .put("e4", null)
+        listOf(
+            PropertyType.toConnectValue("john"),
+            PropertyType.toConnectValue(21L),
+            Struct(PropertyType.schema)
+                .put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
+            PropertyType.toConnectValue(true),
+            null)
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe coll
@@ -767,17 +512,14 @@ class DynamicTypesTest {
             .field("id", Schema.INT32_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
             .field("last_name", Schema.STRING_SCHEMA)
-            .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+            .field("dob", PropertyType.schema)
             .build()
     val struct =
         Struct(schema)
             .put("id", 1)
             .put("name", "john")
             .put("last_name", "doe")
-            .put(
-                "dob",
-                DynamicTypes.toConnectValue(
-                    SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(2000, 1, 1)))
+            .put("dob", PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)))
 
     DynamicTypes.fromConnectValue(schema, struct) shouldBe
         mapOf("id" to 1, "name" to "john", "last_name" to "doe", "dob" to LocalDate.of(2000, 1, 1))
@@ -787,31 +529,32 @@ class DynamicTypesTest {
   fun `structs with complex values should be returned as maps`() {
     val addressSchema =
         SchemaBuilder.struct()
-            .field("city", Schema.STRING_SCHEMA)
-            .field("country", Schema.STRING_SCHEMA)
+            .field("city", PropertyType.schema)
+            .field("country", PropertyType.schema)
             .build()
     val schema =
         SchemaBuilder.struct()
-            .field("id", Schema.INT32_SCHEMA)
-            .field("name", Schema.STRING_SCHEMA)
-            .field("last_name", Schema.STRING_SCHEMA)
-            .field("dob", SimpleTypes.LOCALDATE_STRUCT.schema)
+            .field("id", PropertyType.schema)
+            .field("name", PropertyType.schema)
+            .field("last_name", PropertyType.schema)
+            .field("dob", PropertyType.schema)
             .field("address", addressSchema)
-            .field("years_of_interest", SchemaBuilder.array(Schema.INT32_SCHEMA))
+            .field("years_of_interest", PropertyType.schema)
             .field(
                 "events_of_interest", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA))
             .build()
     val struct =
         Struct(schema)
-            .put("id", 1)
-            .put("name", "john")
-            .put("last_name", "doe")
+            .put("id", PropertyType.toConnectValue(1L))
+            .put("name", PropertyType.toConnectValue("john"))
+            .put("last_name", PropertyType.toConnectValue("doe"))
+            .put("dob", PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)))
             .put(
-                "dob",
-                DynamicTypes.toConnectValue(
-                    SimpleTypes.LOCALDATE_STRUCT.schema, LocalDate.of(2000, 1, 1)))
-            .put("address", Struct(addressSchema).put("city", "london").put("country", "uk"))
-            .put("years_of_interest", listOf(2000, 2005, 2017))
+                "address",
+                Struct(addressSchema)
+                    .put("city", PropertyType.toConnectValue("london"))
+                    .put("country", PropertyType.toConnectValue("uk")))
+            .put("years_of_interest", PropertyType.toConnectValue(listOf(2000L, 2005L, 2017L)))
             .put(
                 "events_of_interest",
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))

@@ -74,7 +74,7 @@ class Neo4jCdcTask : SourceTask() {
     offset = AtomicReference(resumeFrom(config, cdc))
     log.info("resuming from offset: ${offset.get()}")
 
-    changeEventConverter = ChangeEventConverter(config.temporalDataSchemaType)
+    changeEventConverter = ChangeEventConverter()
   }
 
   override fun stop() {

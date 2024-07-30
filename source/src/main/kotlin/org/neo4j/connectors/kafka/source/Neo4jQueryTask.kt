@@ -96,11 +96,7 @@ class Neo4jQueryTask : SourceTask() {
   private fun build(record: Record): SourceRecord {
     val recordAsMap = record.asMap()
     val schema =
-        DynamicTypes.toConnectSchema(
-            recordAsMap,
-            optional = true,
-            forceMapsAsStruct = true,
-            temporalDataSchemaType = config.temporalDataSchemaType)
+        DynamicTypes.toConnectSchema(recordAsMap, optional = true, forceMapsAsStruct = true)
     val value = DynamicTypes.toConnectValue(schema, recordAsMap)
 
     return SourceRecord(
