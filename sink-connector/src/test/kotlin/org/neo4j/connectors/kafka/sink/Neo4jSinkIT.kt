@@ -25,6 +25,7 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -77,6 +78,10 @@ abstract class Neo4jSinkIT {
 
 @KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSinkAvroIT : Neo4jSinkIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA) class Neo4jSinkJsonIT : Neo4jSinkIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
+class Neo4jSinkJsonSchemaIT : Neo4jSinkIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
+class Neo4jSinkJsonEmbeddedIT : Neo4jSinkIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF) class Neo4jSinkProtobufIT : Neo4jSinkIT()

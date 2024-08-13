@@ -28,6 +28,7 @@ import org.awaitility.core.ConditionTimeoutException
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.toChangeEvent
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
 import org.slf4j.Logger
@@ -133,18 +134,30 @@ class TopicVerifier<K, V>(
         consumer: ConvertingKafkaConsumer,
     ): TopicVerifier<K, V> {
       val keyConverter = consumer.keyConverter.converterProvider()
-      keyConverter.configure(
-          mapOf(
-              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                  consumer.schemaRegistryUrlProvider()),
-          true)
+      when (consumer.keyConverter) {
+        KafkaConverter.JSON_EMBEDDED ->
+            keyConverter.configure(mapOf("schemas.enable" to true), true)
+        else ->
+            keyConverter.configure(
+                mapOf(
+                    AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                        consumer.schemaRegistryUrlProvider()),
+                true)
+      }
 
       val valueConverter = consumer.valueConverter.converterProvider()
-      valueConverter.configure(
-          mapOf(
-              AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                  consumer.schemaRegistryUrlProvider()),
-          false)
+      when (consumer.valueConverter) {
+        KafkaConverter.JSON_EMBEDDED ->
+            valueConverter.configure(mapOf("schemas.enable" to true), false)
+        else ->
+            valueConverter.configure(
+                mapOf(
+                    AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
+                        consumer.schemaRegistryUrlProvider(),
+                ),
+                false,
+            )
+      }
 
       return TopicVerifier(
           consumer = consumer,

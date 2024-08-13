@@ -25,7 +25,7 @@ object JsonSchemaSerializer : KafkaRecordSerializer {
 
   private val jsonSchemaData = JsonSchemaData()
 
-  override fun serialize(value: Any, schema: Schema): Any {
+  override fun serialize(value: Any, schema: Schema, isKey: Boolean): Any {
     val jsonSchema = jsonSchemaData.fromConnectSchema(schema)
     val jsonNode = jsonSchemaData.fromConnectData(schema, value)
     return JsonSchemaUtils.envelope(jsonSchema, jsonNode)

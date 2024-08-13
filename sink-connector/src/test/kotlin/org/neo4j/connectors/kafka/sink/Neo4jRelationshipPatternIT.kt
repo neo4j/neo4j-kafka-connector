@@ -906,7 +906,10 @@ abstract class Neo4jRelationshipPatternIT {
   class Neo4jRelationshipPatternAvroIT : Neo4jRelationshipPatternIT()
 
   @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-  class Neo4jRelationshipPatternJsonIT : Neo4jRelationshipPatternIT()
+  class Neo4jRelationshipPatternJsonSchemaIT : Neo4jRelationshipPatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_EMBEDDED, value = KafkaConverter.JSON_EMBEDDED)
+  class Neo4jRelationshipPatternJsonEmbeddedIT : Neo4jRelationshipPatternIT()
 
   @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
   class Neo4jRelationshipPatternProtobufIT : Neo4jRelationshipPatternIT()

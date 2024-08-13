@@ -14,18 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.format.protobuf
+package org.neo4j.connectors.kafka.testing.format.json
 
-import io.confluent.connect.protobuf.ProtobufData
-import io.confluent.connect.protobuf.ProtobufDataConfig
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.json.JsonConverter
 import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
-class ProtobufSerializer(config: Map<*, *>) : KafkaRecordSerializer {
+object JsonEmbeddedSerializer : KafkaRecordSerializer {
 
-  private val protobufData = ProtobufData(ProtobufDataConfig(config))
+  private val converter = JsonConverter()
+  private val objectMapper = ObjectMapper()
 
   override fun serialize(value: Any, schema: Schema, isKey: Boolean): Any {
-    return protobufData.fromConnectData(schema, value).value
+    converter.configure(mapOf("schemas.enable" to true), isKey)
+    val data = converter.fromConnectData(null, schema, value)
+    return objectMapper.readTree(data)
   }
 }

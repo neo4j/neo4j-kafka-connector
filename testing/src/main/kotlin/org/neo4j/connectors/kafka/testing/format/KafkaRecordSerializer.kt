@@ -19,5 +19,5 @@ package org.neo4j.connectors.kafka.testing.format
 import org.apache.kafka.connect.data.Schema
 
 interface KafkaRecordSerializer {
-  fun serialize(value: Any, schema: Schema): Any
+  fun serialize(value: Any, schema: Schema, isKey: Boolean): Any
 }
