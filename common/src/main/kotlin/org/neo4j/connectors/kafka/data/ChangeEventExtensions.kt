@@ -315,6 +315,26 @@ class ChangeEventConverter() {
       }
 }
 
+fun SchemaAndValue.extractEventSchema(): Schema {
+  return this.schema().field("event").schema()
+}
+
+fun SchemaAndValue.extractEventValue(): Struct {
+  val value = this.value()
+  if (value !is Struct) {
+    throw IllegalArgumentException(
+        "expected value to be a struct, but got: ${value?.javaClass}",
+    )
+  }
+  val eventData = value.get("event")
+  if (eventData !is Struct) {
+    throw IllegalArgumentException(
+        "expected event attribute to be a struct, but got: ${value.javaClass}",
+    )
+  }
+  return eventData
+}
+
 fun Struct.toChangeEvent(): ChangeEvent =
     ChangeEvent(
         ChangeIdentifier(getString("id")),
