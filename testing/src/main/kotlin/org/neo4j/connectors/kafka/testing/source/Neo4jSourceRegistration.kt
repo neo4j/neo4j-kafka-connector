@@ -56,7 +56,13 @@ internal class Neo4jSourceRegistration(
     val config = buildMap {
       put("connector.class", "org.neo4j.connectors.kafka.source.Neo4jConnector")
       put("key.converter", keyConverter.className)
+      if (keyConverter == KafkaConverter.JSON_EMBEDDED) {
+        put("key.converter.schemas.enable", true)
+      }
       put("value.converter", valueConverter.className)
+      if (valueConverter == KafkaConverter.JSON_EMBEDDED) {
+        put("value.converter.schemas.enable", true)
+      }
       put("neo4j.uri", neo4jUri)
       put("neo4j.authentication.type", "BASIC")
       put("neo4j.authentication.basic.username", neo4jUser)

@@ -28,6 +28,7 @@ import org.neo4j.cdc.client.model.EventType.NODE
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -619,7 +620,10 @@ abstract class Neo4jCdcSourceNodesIT {
 class Neo4jCdcSourceNodesAvroIT : Neo4jCdcSourceNodesIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jCdcSourceNodesJsonIT : Neo4jCdcSourceNodesIT()
+class Neo4jCdcSourceNodesJsonSchemaIT : Neo4jCdcSourceNodesIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
+class Neo4jCdcSourceNodesJsonEmbeddedIT : Neo4jCdcSourceNodesIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
 class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT()

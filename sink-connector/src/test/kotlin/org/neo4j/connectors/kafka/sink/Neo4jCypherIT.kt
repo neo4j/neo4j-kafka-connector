@@ -700,7 +700,10 @@ abstract class Neo4jCypherIT {
   class Neo4jCypherAvroIT : Neo4jCypherIT()
 
   @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-  class Neo4jCypherJsonIT : Neo4jCypherIT()
+  class Neo4jCypherJsonSchemaIT : Neo4jCypherIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_EMBEDDED, value = KafkaConverter.JSON_EMBEDDED)
+  class Neo4jCypherJsonEmbeddedIT : Neo4jCypherIT()
 
   @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
   class Neo4jCypherProtobufIT : Neo4jCypherIT()

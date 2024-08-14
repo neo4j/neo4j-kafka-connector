@@ -25,6 +25,7 @@ import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -202,7 +203,10 @@ abstract class Neo4jSourceQueryIT {
 @KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSourceAvroIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jSourceJsonIT : Neo4jSourceQueryIT()
+class Neo4jSourceJsonSchemaIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
+class Neo4jSourceJsonEmbeddedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
 class Neo4jSourceProtobufIT : Neo4jSourceQueryIT()

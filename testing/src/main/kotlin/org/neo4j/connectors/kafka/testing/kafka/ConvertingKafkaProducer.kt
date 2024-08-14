@@ -67,7 +67,9 @@ data class ConvertingKafkaProducer(
               null -> null
               else ->
                   keyConverter.testShimSerializer.serialize(
-                      it.key, it.keySchema ?: throw IllegalArgumentException("null key schema"))
+                      it.key,
+                      it.keySchema ?: throw IllegalArgumentException("null key schema"),
+                      true)
             }
         val serializedValue =
             when (it.value) {
@@ -75,7 +77,8 @@ data class ConvertingKafkaProducer(
               else ->
                   valueConverter.testShimSerializer.serialize(
                       it.value,
-                      it.valueSchema ?: throw IllegalArgumentException("null value schema"))
+                      it.valueSchema ?: throw IllegalArgumentException("null value schema"),
+                      false)
             }
         val converter = SimpleHeaderConverter()
         val recordHeaders =

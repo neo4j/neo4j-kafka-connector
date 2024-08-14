@@ -42,6 +42,7 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -914,7 +915,10 @@ abstract class Neo4jSinkErrorIT {
 @KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSinkErrorAvroIT : Neo4jSinkErrorIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jSinkErrorJsonIT : Neo4jSinkErrorIT()
+class Neo4jSinkErrorJsonSchemaIT : Neo4jSinkErrorIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
+class Neo4jSinkErrorJsonEmbeddedIT : Neo4jSinkErrorIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
 class Neo4jSinkErrorProtobufIT : Neo4jSinkErrorIT()

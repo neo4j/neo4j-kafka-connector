@@ -21,7 +21,7 @@ import org.neo4j.connectors.kafka.testing.format.KafkaRecordSerializer
 
 object StringSerializer : KafkaRecordSerializer {
 
-  override fun serialize(value: Any, schema: Schema): Any {
+  override fun serialize(value: Any, schema: Schema, isKey: Boolean): Any {
     return when (value) {
       is String -> value
       else -> value.toString()

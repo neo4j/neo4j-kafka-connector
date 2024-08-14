@@ -26,7 +26,7 @@ object AvroSerializer : KafkaRecordSerializer {
 
   private val avroData = AvroData(CACHE_SIZE)
 
-  override fun serialize(value: Any, schema: Schema): Any {
+  override fun serialize(value: Any, schema: Schema, isKey: Boolean): Any {
     return avroData.fromConnectData(schema, value)
   }
 }

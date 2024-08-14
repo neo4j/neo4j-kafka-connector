@@ -480,7 +480,10 @@ abstract class Neo4jCdcSchemaIT {
 class Neo4jCdcSchemaAvroIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-class Neo4jCdcSchemaJsonIT : Neo4jCdcSchemaIT()
+class Neo4jCdcSchemaJsonSchemaIT : Neo4jCdcSchemaIT()
+
+@KeyValueConverter(key = KafkaConverter.JSON_EMBEDDED, value = KafkaConverter.JSON_EMBEDDED)
+class Neo4jCdcSchemaJsonEmbeddedIT : Neo4jCdcSchemaIT()
 
 @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
 class Neo4jCdcSchemaProtobufIT : Neo4jCdcSchemaIT()

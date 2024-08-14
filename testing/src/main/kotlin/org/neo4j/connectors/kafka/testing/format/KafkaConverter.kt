@@ -20,14 +20,17 @@ import io.confluent.connect.avro.AvroConverter
 import io.confluent.connect.json.JsonSchemaConverter
 import io.confluent.connect.protobuf.ProtobufConverter
 import io.confluent.kafka.serializers.KafkaAvroSerializer
+import io.confluent.kafka.serializers.KafkaJsonSerializer
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
 import org.apache.kafka.common.serialization.Serializer
+import org.apache.kafka.connect.json.JsonConverter
 import org.apache.kafka.connect.storage.Converter
 import org.apache.kafka.connect.storage.StringConverter
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonEmbeddedSerializer
 import org.neo4j.connectors.kafka.testing.format.json.JsonSchemaSerializer
 import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
 import org.neo4j.connectors.kafka.testing.format.string.StringSerializer
@@ -53,6 +56,11 @@ enum class KafkaConverter(
       converterProvider = { JsonSchemaConverter() },
       serializerClass = KafkaJsonSchemaSerializer::class.java,
       testShimSerializer = JsonSchemaSerializer),
+  JSON_EMBEDDED(
+      className = "org.apache.kafka.connect.json.JsonConverter",
+      converterProvider = { JsonConverter() },
+      serializerClass = KafkaJsonSerializer::class.java,
+      testShimSerializer = JsonEmbeddedSerializer),
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       converterProvider = { ProtobufConverter() },

@@ -1632,7 +1632,10 @@ abstract class Neo4jCudIT {
   class Neo4jCudAvroIT : Neo4jCudIT()
 
   @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-  class Neo4jCudJsonIT : Neo4jCudIT()
+  class Neo4jCudJsonSchemaIT : Neo4jCudIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_EMBEDDED, value = KafkaConverter.JSON_EMBEDDED)
+  class Neo4jCudJsonEmbeddedIT : Neo4jCudIT()
 
   @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
   class Neo4jCudProtobufIT : Neo4jCudIT()

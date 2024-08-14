@@ -700,7 +700,10 @@ abstract class Neo4jNodePatternIT {
   class Neo4jNodePatternAvroIT : Neo4jNodePatternIT()
 
   @KeyValueConverter(key = KafkaConverter.JSON_SCHEMA, value = KafkaConverter.JSON_SCHEMA)
-  class Neo4jNodePatternJsonIT : Neo4jNodePatternIT()
+  class Neo4jNodePatternJsonSchemaIT : Neo4jNodePatternIT()
+
+  @KeyValueConverter(key = KafkaConverter.JSON_EMBEDDED, value = KafkaConverter.JSON_EMBEDDED)
+  class Neo4jNodePatternJsonEmbeddedIT : Neo4jNodePatternIT()
 
   @KeyValueConverter(key = KafkaConverter.PROTOBUF, value = KafkaConverter.PROTOBUF)
   class Neo4jNodePatternProtobufIT : Neo4jNodePatternIT()
