@@ -182,7 +182,7 @@ abstract class Neo4jSinkErrorIT {
     struct.put("id", 1L)
     struct.put("name", "John")
 
-    //before the failure
+    // before the failure
     sink.getTaskState() shouldBe "RUNNING"
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
@@ -199,19 +199,19 @@ abstract class Neo4jSinkErrorIT {
 
   @Neo4jSink(
       cypher =
-      [
-        CypherStrategy(
-            TOPIC,
-            "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+          [
+              CypherStrategy(
+                  TOPIC,
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should still be in running state when error tolerance is all`(
-    @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-    @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-    session: Session,
-    sink: Neo4jSinkRegistration
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
+      session: Session,
+      sink: Neo4jSinkRegistration
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
     val schemaWithMissingSurname =
@@ -223,7 +223,7 @@ abstract class Neo4jSinkErrorIT {
     struct.put("id", 1L)
     struct.put("name", "John")
 
-    //before the failure
+    // before the failure
     sink.getTaskState() shouldBe "RUNNING"
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
@@ -234,7 +234,7 @@ abstract class Neo4jSinkErrorIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
 
-    //after the failure
+    // after the failure
     continually(10.seconds) { sink.getTaskState() shouldBe "RUNNING" }
   }
 
