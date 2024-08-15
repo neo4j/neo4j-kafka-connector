@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink
 
+import io.kotest.assertions.nondeterministic.continually
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.should
@@ -54,6 +55,7 @@ import org.neo4j.connectors.kafka.testing.sink.CdcSourceIdStrategy
 import org.neo4j.connectors.kafka.testing.sink.CudStrategy
 import org.neo4j.connectors.kafka.testing.sink.CypherStrategy
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
+import org.neo4j.connectors.kafka.testing.sink.Neo4jSinkRegistration
 import org.neo4j.connectors.kafka.testing.sink.NodePatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.RelationshipPatternStrategy
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
@@ -161,12 +163,95 @@ abstract class Neo4jSinkErrorIT {
                   TOPIC,
                   "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
       errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "none",
+      enableErrorHeaders = true)
+  @Test
+  fun `should be in failed state when error tolerance is none`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
+      session: Session,
+      sink: Neo4jSinkRegistration
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    val schemaWithMissingSurname =
+        SchemaBuilder.struct()
+            .field("id", Schema.INT64_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .build()
+    val struct = Struct(schemaWithMissingSurname)
+    struct.put("id", 1L)
+    struct.put("name", "John")
+
+    //before the failure
+    sink.getTaskState() shouldBe "RUNNING"
+
+    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+
+    TopicVerifier.createForMap(errorConsumer)
+        .assertMessageValue(schemaTopic = producer.topic) {
+          it shouldBe mapOf("id" to 1L, "name" to "John")
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+
+    // after the failure
+    eventually(30.seconds) { sink.getTaskState() shouldBe "FAILED" }
+  }
+
+  @Neo4jSink(
+      cypher =
+      [
+        CypherStrategy(
+            TOPIC,
+            "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+      errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
+      enableErrorHeaders = true)
+  @Test
+  fun `should still be in running state when error tolerance is all`(
+    @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+    @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
+    session: Session,
+    sink: Neo4jSinkRegistration
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    val schemaWithMissingSurname =
+        SchemaBuilder.struct()
+            .field("id", Schema.INT64_SCHEMA)
+            .field("name", Schema.STRING_SCHEMA)
+            .build()
+    val struct = Struct(schemaWithMissingSurname)
+    struct.put("id", 1L)
+    struct.put("name", "John")
+
+    //before the failure
+    sink.getTaskState() shouldBe "RUNNING"
+
+    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+
+    TopicVerifier.createForMap(errorConsumer)
+        .assertMessageValue(schemaTopic = producer.topic) {
+          it shouldBe mapOf("id" to 1L, "name" to "John")
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+
+    //after the failure
+    continually(10.seconds) { sink.getTaskState() shouldBe "RUNNING" }
+  }
+
+  @Neo4jSink(
+      cypher =
+          [
+              CypherStrategy(
+                  TOPIC,
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+      errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should report failed events with cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
 
@@ -243,12 +328,13 @@ abstract class Neo4jSinkErrorIT {
               NodePatternStrategy(
                   TOPIC, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should report failed events with node pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
     val message1 =
@@ -316,12 +402,13 @@ abstract class Neo4jSinkErrorIT {
                   mergeNodeProperties = false,
                   mergeRelationshipProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should report failed events with relationship pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:Item) REQUIRE n.id IS KEY").consume()
@@ -428,12 +515,16 @@ abstract class Neo4jSinkErrorIT {
         .verifyWithin(Duration.ofSeconds(30))
   }
 
-  @Neo4jSink(cud = [CudStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, enableErrorHeaders = true)
+  @Neo4jSink(
+      cud = [CudStrategy(TOPIC)],
+      errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with cud strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
 
@@ -544,7 +635,10 @@ abstract class Neo4jSinkErrorIT {
   }
 
   @Neo4jSink(
-      cdcSchema = [CdcSchemaStrategy(TOPIC)], errorDlqTopic = DLQ_TOPIC, enableErrorHeaders = true)
+      cdcSchema = [CdcSchemaStrategy(TOPIC)],
+      errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
+      enableErrorHeaders = true)
   @Test
   fun `should report failed events with cdc schema strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -657,6 +751,7 @@ abstract class Neo4jSinkErrorIT {
   @Neo4jSink(
       cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")],
       errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should report failed events with cdc source id strategy`(
@@ -783,7 +878,7 @@ abstract class Neo4jSinkErrorIT {
   fun `should stop the process and only report first failed event when error tolerance is none`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     val message1 =
         KafkaMessage(
@@ -825,6 +920,7 @@ abstract class Neo4jSinkErrorIT {
               NodePatternStrategy(
                   TOPIC_3, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
       errorDlqTopic = DLQ_TOPIC,
+      errorTolerance = "all",
       enableErrorHeaders = true)
   @Test
   fun `should report failed events from different topics`(
@@ -832,7 +928,7 @@ abstract class Neo4jSinkErrorIT {
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_3) producer3: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session,
+      session: Session
   ) = runTest {
     val cudMessageToFail =
         KafkaMessage(

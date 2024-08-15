@@ -16,21 +16,25 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import org.neo4j.connectors.kafka.testing.RegistrationSupport
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 
-internal class Neo4jSinkRegistration(
+class Neo4jSinkRegistration(
     neo4jUri: String,
     neo4jUser: String,
     neo4jPassword: String,
     neo4jDatabase: String,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
-    errorTolerance: String = "all",
+    errorTolerance: String = "none",
     errorDlqTopic: String = "",
     enableErrorHeaders: Boolean = false,
     enableErrorLog: Boolean = true,
@@ -111,6 +115,27 @@ internal class Neo4jSinkRegistration(
 
   fun unregister() {
     RegistrationSupport.unregisterConnector(URI("$connectBaseUri/connectors/$name/"))
+  }
+
+  fun getTaskState(): String {
+    val request =
+        HttpRequest.newBuilder(URI("$connectBaseUri/connectors/$name/status"))
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .GET()
+            .build()
+
+    val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
+    if (response.statusCode() != 200) {
+      throw RuntimeException(
+          "Could not get connector status, response code: ${response.statusCode()}")
+    }
+
+    // by default task count is 1
+    val taskState =
+        ObjectMapper().readTree(response.body()).get("tasks").get(0).get("state").asText()
+
+    return taskState
   }
 
   internal fun getPayload(): Map<String, Any> {
