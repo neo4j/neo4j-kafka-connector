@@ -172,6 +172,19 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
   }
 
+  val cdcTopicsToValueStrategy: Map<String, Neo4jCdcValueStrategy> by lazy {
+    when (strategy) {
+      SourceType.CDC -> {
+        originals()
+            .entries
+            .filter { CDC_VALUE_STRATEGY_REGEX.matches(it.key) }
+            .map { CdcPatternConfigItem(it, CDC_VALUE_STRATEGY_REGEX) }
+            .associate { mapValueStrategy(it) }
+      }
+      else -> emptyMap()
+    }
+  }
+
   private fun mapPositionalPattern(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
@@ -271,6 +284,14 @@ class SourceConfiguration(originals: Map<*, *>) :
     val topicName = configEntry.topic
     val value = configEntry.value
     return topicName to Neo4jCdcKeyStrategy.valueOf(value as String)
+  }
+
+  private fun mapValueStrategy(
+      configEntry: CdcPatternConfigItem,
+  ): Pair<String, Neo4jCdcValueStrategy> {
+    val topicName = configEntry.topic
+    val value = configEntry.value
+    return topicName to Neo4jCdcValueStrategy.valueOf(value as String)
   }
 
   private fun retrieveIndexAndPattern(
@@ -413,6 +434,10 @@ class SourceConfiguration(originals: Map<*, *>) :
         Regex(
             "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.key-strategy)$",
         )
+    private val CDC_VALUE_STRATEGY_REGEX =
+        Regex(
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.value-strategy)$",
+        )
     private val CDC_PATTERN_ARRAY_REGEX =
         Regex(
             "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.pattern)$")
@@ -461,7 +486,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                 originals.entries.filter { CDC_PATTERN_ARRAY_OPERATION_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_CHANGES_TO_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) } +
-                originals.entries.filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) }
+                originals.entries.filter { CDC_KEY_STRATEGY_REGEX.matches(it.key) } +
+                originals.entries.filter { CDC_VALUE_STRATEGY_REGEX.matches(it.key) }
         if (cdcTopics.isEmpty()) {
           strategy.addErrorMessage(
               "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.")
@@ -480,6 +506,9 @@ class SourceConfiguration(originals: Map<*, *>) :
               }
               if (CDC_KEY_STRATEGY_REGEX.matches(it.key)) {
                 Validators.enum(Neo4jCdcKeyStrategy::class.java).ensureValid(it.key, it.value)
+              }
+              if (CDC_VALUE_STRATEGY_REGEX.matches(it.key)) {
+                Validators.enum(Neo4jCdcValueStrategy::class.java).ensureValid(it.key, it.value)
               }
             } catch (e: ConfigException) {
               strategy.addErrorMessage(e.message)

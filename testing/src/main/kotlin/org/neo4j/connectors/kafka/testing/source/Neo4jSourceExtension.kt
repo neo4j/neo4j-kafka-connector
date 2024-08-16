@@ -164,7 +164,8 @@ internal class Neo4jSourceExtension(
             cdcOperations = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::operations),
             cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
             cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
-            cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap())
+            cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
+            cdcValueSerializations = sourceAnnotation.cdc.valueSerializationsAsMap())
 
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     topicRegistry.log()
@@ -261,7 +262,14 @@ internal class Neo4jSourceExtension(
     return this.topics
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
-        .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
+        .mapValues { entry -> entry.value.map { it.keySerializationStrategy }.single() }
+  }
+
+  private fun CdcSource.valueSerializationsAsMap(): Map<String, String> {
+    return this.topics
+        .groupBy { it.topic }
+        .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
+        .mapValues { entry -> entry.value.map { it.valueSerializationStrategy }.single() }
   }
 
   override fun supportsParameter(

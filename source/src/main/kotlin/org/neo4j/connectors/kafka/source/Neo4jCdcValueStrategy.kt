@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [https://neo4j.com]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.neo4j.connectors.kafka.source
+
+import org.apache.kafka.connect.data.Schema
+import org.apache.kafka.connect.data.SchemaAndValue
+import org.neo4j.connectors.kafka.data.extractEventSchema
+import org.neo4j.connectors.kafka.data.extractEventValue
+
+enum class Neo4jCdcValueStrategy {
+  CHANGE_EVENT {
+    override fun schema(message: SchemaAndValue): Schema? {
+      return message.schema()
+    }
+
+    override fun value(message: SchemaAndValue): Any? {
+      return message.value()
+    }
+  },
+  ENTITY_EVENT {
+    override fun schema(message: SchemaAndValue): Schema {
+      return message.extractEventSchema()
+    }
+
+    override fun value(message: SchemaAndValue): Any {
+      return message.extractEventValue()
+    }
+  };
+
+  abstract fun schema(message: SchemaAndValue): Schema?
+
+  abstract fun value(message: SchemaAndValue): Any?
+}

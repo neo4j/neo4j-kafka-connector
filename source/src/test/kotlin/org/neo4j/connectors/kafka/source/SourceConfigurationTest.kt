@@ -628,6 +628,27 @@ class SourceConfigurationTest {
   }
 
   @Test
+  fun `fail validation on invalid CDC value serialization strategy`() {
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
+                      "neo4j.cdc.topic.topic-1.value-strategy" to "INVALID"))
+              .validate()
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value INVALID for configuration neo4j.cdc.topic.topic-1.value-strategy: Must be one of: 'CHANGE_EVENT', 'ENTITY_EVENT'."
+        }
+  }
+
+  @Test
   fun `should return correct telemetry data for cdc strategy`() {
     val originals =
         mapOf(

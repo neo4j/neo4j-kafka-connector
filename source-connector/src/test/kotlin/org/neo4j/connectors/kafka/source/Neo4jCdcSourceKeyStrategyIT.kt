@@ -21,7 +21,6 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
@@ -53,24 +52,17 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-none",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerialization = "SKIP"),
+                          keySerializationStrategy = "SKIP"),
                   ),
           ),
   )
   @Test
   fun `supports skipping serialization of keys`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-none", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.createForMap(consumer)
         .assertMessage { it.raw.key().shouldBeNull() }
@@ -87,24 +79,17 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-whole",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerialization = "WHOLE_VALUE"),
+                          keySerializationStrategy = "WHOLE_VALUE"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as whole values`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-whole", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageKey { key ->
@@ -114,7 +99,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
-              .hasAfterStateProperties(mapOf("name" to "Jane", "execId" to executionId))
+              .hasAfterStateProperties(mapOf("name" to "Jane"))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -129,24 +114,17 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-element-ids",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerialization = "ELEMENT_ID"),
+                          keySerializationStrategy = "ELEMENT_ID"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as element IDs`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-element-ids", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<String, Map<String, Any>>(consumer)
         .assertMessageKey { it.shouldNotBeNull() }
@@ -163,25 +141,18 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerialization = "ENTITY_KEYS"),
+                          keySerializationStrategy = "ENTITY_KEYS"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as (missing) node keys`(
-      testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-key-serialization-missing-node-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<Map<String, Any>, Map<String, Any>>(consumer)
         .assertMessageKey { it.shouldBeNull() }
@@ -198,30 +169,18 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-node-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerialization = "ENTITY_KEYS"),
+                          keySerializationStrategy = "ENTITY_KEYS"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as node keys`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-node-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY",
-            mapOf("execId" to executionId),
-        )
-        .consume()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.createForMap(consumer)
         .assertMessageKey {
@@ -242,25 +201,18 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
                           patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
-                          keySerialization = "ENTITY_KEYS"),
+                          keySerializationStrategy = "ENTITY_KEYS"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as (missing) rel keys`(
-      testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:Source)-[:TO {name: 'somewhere', execId: \$execId}]->(:Destination)",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:Source)-[:TO {name: 'somewhere'}]->(:Destination)").consume()
 
     TopicVerifier.create<String, Map<String, Any>>(consumer)
         .assertMessageKey { it.shouldBeNull() }
@@ -277,30 +229,18 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-rel-keys",
                           patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
-                          keySerialization = "ENTITY_KEYS"),
+                          keySerializationStrategy = "ENTITY_KEYS"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of keys as rel keys`(
-      testInfo: TestInfo,
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE CONSTRAINT FOR ()-[to:TO]-() REQUIRE to.name IS RELATIONSHIP KEY",
-            mapOf("execId" to executionId),
-        )
-        .consume()
-    session
-        .run(
-            "CREATE (:Source)-[:TO {name: 'somewhere', execId: \$execId}]->(:Destination)",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE CONSTRAINT FOR ()-[to:TO]-() REQUIRE to.name IS RELATIONSHIP KEY").consume()
+    session.run("CREATE (:Source)-[:TO {name: 'somewhere'}]->(:Destination)").consume()
 
     TopicVerifier.createForMap(consumer)
         .assertMessageKey { key ->

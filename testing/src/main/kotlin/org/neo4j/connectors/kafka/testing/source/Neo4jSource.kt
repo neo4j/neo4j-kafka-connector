@@ -61,7 +61,8 @@ annotation class CdcSourceTopic(
     val operations: Array<CdcSourceParam> = [],
     val changesTo: Array<CdcSourceParam> = [],
     val metadata: Array<CdcMetadata> = [],
-    val keySerialization: String = "WHOLE_VALUE",
+    val keySerializationStrategy: String = "WHOLE_VALUE",
+    val valueSerializationStrategy: String = "CHANGE_EVENT"
 )
 
 annotation class CdcSourceParam(val value: String, val index: Int = 0)
