@@ -262,14 +262,14 @@ internal class Neo4jSourceExtension(
     return this.topics
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
-        .mapValues { entry -> entry.value.map { it.keySerialization }.single() }
+        .mapValues { entry -> entry.value.map { it.keySerializationStrategy }.single() }
   }
 
   private fun CdcSource.valueSerializationsAsMap(): Map<String, String> {
     return this.topics
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
-        .mapValues { entry -> entry.value.map { it.valueSerialization }.single() }
+        .mapValues { entry -> entry.value.map { it.valueSerializationStrategy }.single() }
   }
 
   override fun supportsParameter(

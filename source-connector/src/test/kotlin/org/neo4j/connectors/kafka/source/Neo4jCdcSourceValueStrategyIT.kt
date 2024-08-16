@@ -20,7 +20,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.time.Duration
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInfo
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
@@ -52,25 +51,19 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-value-serialization-change-event",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          valueSerialization = "CHANGE_EVENT"),
+                          valueSerializationStrategy = "CHANGE_EVENT"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of values as whole change event`(
-      testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-value-serialization-change-event", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue {
@@ -79,7 +72,7 @@ abstract class Neo4jCdcSourceValueStrategyIT {
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
               .hasNoBeforeState()
-              .hasAfterStateProperties(mapOf("name" to "Jane", "execId" to executionId))
+              .hasAfterStateProperties(mapOf("name" to "Jane"))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -94,25 +87,18 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-value-serialization-entity-event",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          valueSerialization = "ENTITY_EVENT"),
+                          valueSerializationStrategy = "ENTITY_EVENT"),
                   ),
           ),
   )
   @Test
   fun `supports serialization of values as only event entity`(
-      testInfo: TestInfo,
       @TopicConsumer(
           topic = "neo4j-cdc-topic-value-serialization-entity-event", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    session
-        .run(
-            "CREATE (:TestSource {name: 'Jane', execId: \$execId})",
-            mapOf("execId" to executionId),
-        )
-        .consume()
+    session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.createForMap(consumer)
         .assertMessageValue {
@@ -128,8 +114,7 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                           "after" to
                               mapOf(
                                   "labels" to listOf("TestSource"),
-                                  "properties" to
-                                      mapOf("name" to "Jane", "execId" to executionId))))
+                                  "properties" to mapOf("name" to "Jane"))))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
