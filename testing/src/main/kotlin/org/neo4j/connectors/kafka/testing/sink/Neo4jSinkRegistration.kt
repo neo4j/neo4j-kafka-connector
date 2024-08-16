@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.testing.sink
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
 import java.net.http.HttpClient
@@ -117,7 +118,7 @@ class Neo4jSinkRegistration(
     RegistrationSupport.unregisterConnector(URI("$connectBaseUri/connectors/$name/"))
   }
 
-  fun getTaskState(): String {
+  fun getConnectorTasksForStatusCheck(): JsonNode {
     val request =
         HttpRequest.newBuilder(URI("$connectBaseUri/connectors/$name/status"))
             .header("Content-Type", "application/json")
@@ -131,11 +132,8 @@ class Neo4jSinkRegistration(
           "Could not get connector status, response code: ${response.statusCode()}")
     }
 
-    // by default task count is 1
-    val taskState =
-        ObjectMapper().readTree(response.body()).get("tasks").get(0).get("state").asText()
-
-    return taskState
+    val connectorTasks = ObjectMapper().readTree(response.body()).get("tasks")
+    return connectorTasks
   }
 
   internal fun getPayload(): Map<String, Any> {

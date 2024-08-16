@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink
 import io.kotest.assertions.nondeterministic.continually
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -183,7 +184,9 @@ abstract class Neo4jSinkErrorIT {
     struct.put("name", "John")
 
     // before the failure
-    sink.getTaskState() shouldBe "RUNNING"
+    var tasks = sink.getConnectorTasksForStatusCheck()
+    tasks shouldHaveSize 1
+    tasks.get(0).get("state").asText() shouldBe "RUNNING"
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
@@ -194,7 +197,11 @@ abstract class Neo4jSinkErrorIT {
         .verifyWithin(Duration.ofSeconds(30))
 
     // after the failure
-    eventually(30.seconds) { sink.getTaskState() shouldBe "FAILED" }
+    eventually(30.seconds) {
+      tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
   }
 
   @Neo4jSink(
@@ -224,7 +231,9 @@ abstract class Neo4jSinkErrorIT {
     struct.put("name", "John")
 
     // before the failure
-    sink.getTaskState() shouldBe "RUNNING"
+    var tasks = sink.getConnectorTasksForStatusCheck()
+    tasks shouldHaveSize 1
+    tasks.get(0).get("state").asText() shouldBe "RUNNING"
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
@@ -235,7 +244,11 @@ abstract class Neo4jSinkErrorIT {
         .verifyWithin(Duration.ofSeconds(30))
 
     // after the failure
-    continually(10.seconds) { sink.getTaskState() shouldBe "RUNNING" }
+    continually(10.seconds) {
+      tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "RUNNING"
+    }
   }
 
   @Neo4jSink(
