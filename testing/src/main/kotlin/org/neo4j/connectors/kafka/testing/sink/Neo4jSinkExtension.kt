@@ -60,7 +60,7 @@ internal class Neo4jSinkExtension(
               Session::class.java to ::resolveSession,
               ConvertingKafkaProducer::class.java to ::resolveGenericProducer,
               ConvertingKafkaConsumer::class.java to ::resolveGenericConsumer,
-          ))
+              Neo4jSinkRegistration::class.java to ::resolveSinkRegistration))
 
   private lateinit var sinkAnnotation: Neo4jSink
 
@@ -335,5 +335,12 @@ internal class Neo4jSinkExtension(
       extensionContext: ExtensionContext?
   ): Any {
     return consumerResolver.resolveGenericConsumer(parameterContext, extensionContext)
+  }
+
+  private fun resolveSinkRegistration(
+      parameterContext: ParameterContext?,
+      extensionContext: ExtensionContext?
+  ): Any {
+    return sink
   }
 }
