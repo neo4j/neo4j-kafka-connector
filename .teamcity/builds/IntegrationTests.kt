@@ -67,7 +67,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
           formatStderrAsError = true
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:11-jdk"
+          dockerImage = "eclipse-temurin:17-jdk"
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
         maven {
@@ -79,7 +79,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
           localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:11-jdk"
+          dockerImage = "eclipse-temurin:17-jdk"
           dockerRunParameters =
               "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
         }
@@ -100,7 +100,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
 
           executionMode = BuildStep.ExecutionMode.ALWAYS
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:11-jdk"
+          dockerImage = "eclipse-temurin:17-jdk"
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
       }

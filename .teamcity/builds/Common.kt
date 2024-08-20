@@ -92,7 +92,7 @@ fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
         localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
         dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:11-jdk"
+        dockerImage = "eclipse-temurin:17-jdk"
         dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 
