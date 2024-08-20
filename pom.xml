@@ -50,13 +50,13 @@
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
         <jackson.version>2.17.2</jackson.version>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <joda-time.version>2.12.7</joda-time.version>
         <jreleaser-maven-plugin.version>1.13.1</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.3</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
-        <kafka-schema-registry.version>7.2.9</kafka-schema-registry.version>
+        <kafka-schema-registry.version>7.7.0</kafka-schema-registry.version>
         <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <kafka.version>3.4.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
@@ -82,7 +82,7 @@
         <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
-        <protobuf.version>3.19.6</protobuf.version>
+        <protobuf.version>3.24.4</protobuf.version>
         <reactor.version>2023.0.7</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
@@ -420,7 +420,7 @@
                                         <version>[3.6.3,)</version>
                                     </requireMavenVersion>
                                     <requireJavaVersion>
-                                        <version>11</version>
+                                        <version>{java.version}</version>
                                     </requireJavaVersion>
                                     <dependencyConvergence/>
                                 </rules>
