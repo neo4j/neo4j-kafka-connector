@@ -1,14 +1,16 @@
 package builds
 
+import builds.Neo4jKafkaConnectorVcs.id
+import builds.Neo4jKafkaConnectorVcs.name
 import jetbrains.buildServer.configs.kotlin.AbsoluteId
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class WhiteListCheck(id: String, name: String) :
+class WhiteListCheck(id: String, name: String, javaVersion: String) :
     BuildType({
-      this.id(id.toId())
-      this.name = name
+      this.id("${id}-${javaVersion}".toId())
+      this.name = "$name (Java $javaVersion)"
 
       dependencies {
         artifacts(AbsoluteId("Tools_WhitelistCheck")) {

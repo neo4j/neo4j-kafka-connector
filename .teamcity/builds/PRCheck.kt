@@ -6,10 +6,10 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class PRCheck(id: String, name: String) :
+class PRCheck(id: String, name: String, javaVersion: String) :
     BuildType({
-      this.id(id.toId())
-      this.name = name
+      this.id("${id}-${javaVersion}".toId())
+      this.name = "$name (Java $javaVersion)"
 
       steps {
         script {

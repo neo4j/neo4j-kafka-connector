@@ -24,12 +24,12 @@ class Build(
               javaVersion,
               "-pl :packaging -am -DskipTests")
 
-      val complete = Empty("${name}-complete", "complete")
+      val complete = Empty("${name}-complete", "complete", javaVersion)
 
       val bts = sequential {
         if (forPullRequests)
-            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
-        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
+            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check", javaVersion))
+        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check", javaVersion))
         dependentBuildType(Maven("${name}-build", "build", "test-compile", javaVersion))
         dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", javaVersion))
         dependentBuildType(collectArtifacts(packaging))
