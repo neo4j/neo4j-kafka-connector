@@ -9,10 +9,10 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Release(id: String, name: String) :
+class Release(id: String, name: String, javaVersion: String) :
     BuildType({
-      this.id(id.toId())
-      this.name = name
+      this.id("${id}-${javaVersion}".toId())
+      this.name = "$name (Java $javaVersion)"
 
       params {
         text(
@@ -34,23 +34,23 @@ class Release(id: String, name: String) :
       }
 
       steps {
-        setVersion("Set release version", "%releaseVersion%")
+        setVersion("Set release version", "%releaseVersion%", javaVersion)
 
-        commonMaven {
+        commonMaven(javaVersion) {
           this.name = "Build versionalised package"
           goals = "package"
-          runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipTests"
+          runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -DskipTests"
         }
 
         commitAndPush("Push release version", "build: release version %releaseVersion%")
 
-        commonMaven {
+        commonMaven(javaVersion) {
           this.name = "Release to Github"
           goals = "jreleaser:full-release"
-          runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
+          runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -Prelease -pl :packaging"
         }
 
-        setVersion("Set next snapshot version", "%nextSnapshotVersion%")
+        setVersion("Set next snapshot version", "%nextSnapshotVersion%", javaVersion)
 
         commitAndPush(
             "Push next snapshot version", "build: update version to %nextSnapshotVersion%")
@@ -61,11 +61,12 @@ class Release(id: String, name: String) :
       requirements { runOnLinux(LinuxSize.SMALL) }
     })
 
-fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
-  return this.commonMaven {
+fun BuildSteps.setVersion(name: String, version: String, javaVersion: String): MavenBuildStep {
+  return this.commonMaven(javaVersion) {
     this.name = name
     goals = "versions:set"
-    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=$version -DgenerateBackupPoms=false"
+    runnerArgs =
+        "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -DnewVersion=$version -DgenerateBackupPoms=false"
   }
 }
 

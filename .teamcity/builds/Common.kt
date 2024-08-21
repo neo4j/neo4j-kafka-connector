@@ -84,7 +84,7 @@ fun collectArtifacts(buildType: BuildType): BuildType {
   return buildType
 }
 
-fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
+fun BuildSteps.commonMaven(javaVersion: String, init: MavenBuildStep.() -> Unit): MavenBuildStep {
   val maven =
       this.maven {
         // this is the settings name we uploaded to Connectors project
@@ -92,7 +92,12 @@ fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
         localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
         dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:17-jdk"
+        dockerImage =
+            when (javaVersion) {
+              "11" -> "eclipse-temurin:11-jdk"
+              "17" -> "eclipse-temurin:17-jdk"
+              else -> error("Unsupported Java version: $javaVersion")
+            }
         dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 

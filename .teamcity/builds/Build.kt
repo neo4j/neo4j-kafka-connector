@@ -9,14 +9,20 @@ class Build(
     name: String,
     branchFilter: String,
     forPullRequests: Boolean,
+    javaVersion: String,
     triggerRules: String? = null
 ) :
     Project({
-      this.id(name.toId())
-      this.name = name
+      this.id("${name}-${javaVersion}".toId())
+      this.name = "$name (Java $javaVersion)"
 
       val packaging =
-          Maven("${name}-package", "package", "package", "-pl :packaging -am -DskipTests")
+          Maven(
+              "${name}-package",
+              "package",
+              "package",
+              javaVersion,
+              "-pl :packaging -am -DskipTests")
 
       val complete = Empty("${name}-complete", "complete")
 
@@ -24,11 +30,11 @@ class Build(
         if (forPullRequests)
             buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
         if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
-        dependentBuildType(Maven("${name}-build", "build", "test-compile"))
-        dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test"))
+        dependentBuildType(Maven("${name}-build", "build", "test-compile", javaVersion))
+        dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", javaVersion))
         dependentBuildType(collectArtifacts(packaging))
         dependentBuildType(
-            IntegrationTests("${name}-integration-tests", "integration tests") {
+            IntegrationTests("${name}-integration-tests", "integration tests", javaVersion) {
               dependencies {
                 artifacts(packaging) {
                   artifactRules =
@@ -41,7 +47,7 @@ class Build(
               }
             })
         dependentBuildType(complete)
-        if (!forPullRequests) dependentBuildType(Release("${name}-release", "release"))
+        if (!forPullRequests) dependentBuildType(Release("${name}-release", "release", javaVersion))
       }
 
       bts.buildTypes().forEach {

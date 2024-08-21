@@ -13,28 +13,29 @@ project {
 
   vcsRoot(Neo4jKafkaConnectorVcs)
 
-  subProject(
-      Build(
-          name = "main",
-          branchFilter =
-              """
-                +:main
-              """
-                  .trimIndent(),
-          triggerRules =
-              """
-                -:comment=^build.*release version.*:**
-                -:comment=^build.*update version.*:**
-              """
-                  .trimIndent(),
-          forPullRequests = false))
-  subProject(
-      Build(
-          name = "pull-request",
-          branchFilter =
-              """
-                +:pull/*
-              """
-                  .trimIndent(),
-          forPullRequests = true))
+  val javaVersions = listOf("11", "17")
+
+  javaVersions.forEach { javaVersion ->
+    subProject(
+        Build(
+            name = "main",
+            branchFilter =
+                """
+                      +:main
+                    """
+                    .trimIndent(),
+            forPullRequests = false,
+            javaVersion = javaVersion))
+
+    subProject(
+        Build(
+            name = "pull-request",
+            branchFilter =
+                """
+                      +:pull/*
+                    """
+                    .trimIndent(),
+            forPullRequests = true,
+            javaVersion = javaVersion))
+  }
 }

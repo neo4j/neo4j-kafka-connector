@@ -10,10 +10,10 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
+class IntegrationTests(id: String, name: String, javaVersion: String, init: BuildType.() -> Unit) :
     BuildType({
-      this.id(id.toId())
-      this.name = name
+      this.id("${id}-${javaVersion}".toId())
+      this.name = "$name (Java $javaVersion)"
       init()
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
@@ -33,6 +33,13 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
           </servers>
       </settings>
        */
+
+      val javaDockerImage =
+          when (javaVersion) {
+            "11" -> "eclipse-temurin:11-jdk"
+            "17" -> "eclipse-temurin:17-jdk"
+            else -> error("Unsupported Java version: $javaVersion")
+          }
 
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
@@ -67,19 +74,19 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
           formatStderrAsError = true
 
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:17-jdk"
+          dockerImage = javaDockerImage
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipUnitTests"
+          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"
           localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
           dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:17-jdk"
+          dockerImage = javaDockerImage
           dockerRunParameters =
               "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
         }
@@ -100,7 +107,7 @@ class IntegrationTests(id: String, name: String, init: BuildType.() -> Unit) :
 
           executionMode = BuildStep.ExecutionMode.ALWAYS
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-          dockerImage = "eclipse-temurin:17-jdk"
+          dockerImage = javaDockerImage
           dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
         }
       }
