@@ -19,6 +19,8 @@ const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
 const val MAVEN_DEFAULT_ARGS =
     "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository"
 
+const val DEFAULT_JAVA_VERSION = "11"
+
 enum class LinuxSize(val value: String) {
   SMALL("small"),
   LARGE("large")

@@ -7,10 +7,10 @@ import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class WhiteListCheck(id: String, name: String, javaVersion: String) :
+class WhiteListCheck(id: String, name: String) :
     BuildType({
-      this.id("${id}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id(id.toId())
+      this.name = name
 
       dependencies {
         artifacts(AbsoluteId("Tools_WhitelistCheck")) {

@@ -13,29 +13,23 @@ project {
 
   vcsRoot(Neo4jKafkaConnectorVcs)
 
-  val javaVersions = listOf("11", "17")
-
-  javaVersions.forEach { javaVersion ->
-    subProject(
-        Build(
-            name = "main",
-            branchFilter =
-                """
+  subProject(
+      Build(
+          name = "main",
+          branchFilter =
+              """
                       +:main
                     """
-                    .trimIndent(),
-            forPullRequests = false,
-            javaVersion = javaVersion))
+                  .trimIndent(),
+          forPullRequests = false))
 
-    subProject(
-        Build(
-            name = "pull-request",
-            branchFilter =
-                """
+  subProject(
+      Build(
+          name = "pull-request",
+          branchFilter =
+              """
                       +:pull/*
                     """
-                    .trimIndent(),
-            forPullRequests = true,
-            javaVersion = javaVersion))
-  }
+                  .trimIndent(),
+          forPullRequests = true))
 }

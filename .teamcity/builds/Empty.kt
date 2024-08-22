@@ -3,10 +3,10 @@ package builds
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Empty(id: String, name: String, javaVersion: String) :
+class Empty(id: String, name: String) :
     BuildType({
-      this.id("${id}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id(id.toId())
+      this.name = name
 
       requirements { runOnLinux(LinuxSize.SMALL) }
     })

@@ -9,46 +9,53 @@ class Build(
     name: String,
     branchFilter: String,
     forPullRequests: Boolean,
-    javaVersion: String,
     triggerRules: String? = null
 ) :
     Project({
-      this.id("${name}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id(name.toId())
+      this.name = name
 
-      val packaging =
-          Maven(
-              "${name}-package",
-              "package",
-              "package",
-              javaVersion,
-              "-pl :packaging -am -DskipTests")
-
-      val complete = Empty("${name}-complete", "complete", javaVersion)
+      val complete = Empty("${name}-complete", "complete")
 
       val bts = sequential {
         if (forPullRequests)
-            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check", javaVersion))
-        if (forPullRequests)
-            dependentBuildType(PRCheck("${name}-pr-check", "pr check", javaVersion))
-        dependentBuildType(Maven("${name}-build", "build", "test-compile", javaVersion))
-        dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", javaVersion))
-        dependentBuildType(collectArtifacts(packaging))
-        dependentBuildType(
-            IntegrationTests("${name}-integration-tests", "integration tests", javaVersion) {
-              dependencies {
-                artifacts(packaging) {
-                  artifactRules =
-                      """
+            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
+        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
+
+        parallel {
+          listOf("11", "17").forEach { javaVersion ->
+            val packaging =
+                Maven(
+                    "${name}-package",
+                    "package",
+                    "package",
+                    javaVersion,
+                    "-pl :packaging -am -DskipTests")
+
+            sequential {
+              dependentBuildType(Maven("${name}-build", "build", "test-compile", javaVersion))
+              dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", javaVersion))
+              dependentBuildType(collectArtifacts(packaging))
+              dependentBuildType(
+                  IntegrationTests("${name}-integration-tests", "integration tests", javaVersion) {
+                    dependencies {
+                      artifacts(packaging) {
+                        artifactRules =
+                            """
                         +:packages/*.jar => docker/plugins
                         -:packages/*-kc-oss.jar
                       """
-                          .trimIndent()
-                }
-              }
-            })
+                                .trimIndent()
+                      }
+                    }
+                  })
+            }
+          }
+        }
+
         dependentBuildType(complete)
-        if (!forPullRequests) dependentBuildType(Release("${name}-release", "release", javaVersion))
+        if (!forPullRequests)
+            dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
       }
 
       bts.buildTypes().forEach {
