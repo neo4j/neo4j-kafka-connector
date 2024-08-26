@@ -18,9 +18,9 @@ class Build(
       val complete = Empty("${name}-complete", "complete")
 
       val bts = sequential {
-//        if (forPullRequests)
-//            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
-//        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
+        if (forPullRequests)
+            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
+        if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
 
         parallel {
           listOf("11", "17").forEach { javaVersion ->
