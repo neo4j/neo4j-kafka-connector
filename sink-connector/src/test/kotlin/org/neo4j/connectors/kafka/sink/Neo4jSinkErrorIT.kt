@@ -201,6 +201,7 @@ abstract class Neo4jSinkErrorIT {
     // after the failure
     eventually(30.seconds) {
       val tasks = sink.getConnectorTasksForStatusCheck()
+
       tasks shouldHaveSize 1
       tasks.get(0).get("state").asText() shouldBe "FAILED"
     }
