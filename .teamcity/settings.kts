@@ -22,6 +22,7 @@ project {
                     """
                   .trimIndent(),
           forPullRequests = false))
+
   subProject(
       Build(
           name = "pull-request",
