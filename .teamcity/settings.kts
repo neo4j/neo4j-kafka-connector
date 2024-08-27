@@ -28,7 +28,7 @@ project {
           name = "pull-request",
           branchFilter =
               """
-                      +:pull/*
+                      +:pull/174
                     """
                   .trimIndent(),
           forPullRequests = true))
