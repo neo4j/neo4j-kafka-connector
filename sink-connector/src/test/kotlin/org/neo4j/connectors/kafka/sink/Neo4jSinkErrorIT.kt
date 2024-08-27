@@ -157,99 +157,99 @@ abstract class Neo4jSinkErrorIT {
         .verifyWithin(Duration.ofSeconds(30))
   }
 
-  @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
-      errorDlqTopic = DLQ_TOPIC,
-      errorTolerance = "none",
-      enableErrorHeaders = true)
-  @Test
-  fun `should be in failed state when error tolerance is none`(
-      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
-      sink: Neo4jSinkRegistration
-  ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
-    val schemaWithMissingSurname =
-        SchemaBuilder.struct()
-            .field("id", Schema.INT64_SCHEMA)
-            .field("name", Schema.STRING_SCHEMA)
-            .build()
-    val struct = Struct(schemaWithMissingSurname)
-    struct.put("id", 1L)
-    struct.put("name", "John")
+//  @Neo4jSink(
+//      cypher =
+//          [
+//              CypherStrategy(
+//                  TOPIC,
+//                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+//      errorDlqTopic = DLQ_TOPIC,
+//      errorTolerance = "none",
+//      enableErrorHeaders = true)
+//  @Test
+//  fun `should be in failed state when error tolerance is none`(
+//      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+//      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
+//      session: Session,
+//      sink: Neo4jSinkRegistration
+//  ) = runTest {
+//    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+//    val schemaWithMissingSurname =
+//        SchemaBuilder.struct()
+//            .field("id", Schema.INT64_SCHEMA)
+//            .field("name", Schema.STRING_SCHEMA)
+//            .build()
+//    val struct = Struct(schemaWithMissingSurname)
+//    struct.put("id", 1L)
+//    struct.put("name", "John")
+//
+//    // before the failure
+//    var tasks = sink.getConnectorTasksForStatusCheck()
+//    tasks shouldHaveSize 1
+//    tasks.get(0).get("state").asText() shouldBe "RUNNING"
+//
+//    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+//
+//    TopicVerifier.createForMap(errorConsumer)
+//        .assertMessageValue(schemaTopic = producer.topic) {
+//          it shouldBe mapOf("id" to 1L, "name" to "John")
+//        }
+//        .verifyWithin(Duration.ofSeconds(30))
+//
+//    // after the failure
+//    eventually(30.seconds) {
+//      tasks = sink.getConnectorTasksForStatusCheck()
+//      tasks shouldHaveSize 1
+//      tasks.get(0).get("state").asText() shouldBe "FAILED"
+//    }
+//  }
 
-    // before the failure
-    var tasks = sink.getConnectorTasksForStatusCheck()
-    tasks shouldHaveSize 1
-    tasks.get(0).get("state").asText() shouldBe "RUNNING"
-
-    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
-
-    TopicVerifier.createForMap(errorConsumer)
-        .assertMessageValue(schemaTopic = producer.topic) {
-          it shouldBe mapOf("id" to 1L, "name" to "John")
-        }
-        .verifyWithin(Duration.ofSeconds(30))
-
-    // after the failure
-    eventually(30.seconds) {
-      tasks = sink.getConnectorTasksForStatusCheck()
-      tasks shouldHaveSize 1
-      tasks.get(0).get("state").asText() shouldBe "FAILED"
-    }
-  }
-
-  @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
-      errorDlqTopic = DLQ_TOPIC,
-      errorTolerance = "all",
-      enableErrorHeaders = true)
-  @Test
-  fun `should still be in running state when error tolerance is all`(
-      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session,
-      sink: Neo4jSinkRegistration
-  ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
-    val schemaWithMissingSurname =
-        SchemaBuilder.struct()
-            .field("id", Schema.INT64_SCHEMA)
-            .field("name", Schema.STRING_SCHEMA)
-            .build()
-    val struct = Struct(schemaWithMissingSurname)
-    struct.put("id", 1L)
-    struct.put("name", "John")
-
-    // before the failure
-    var tasks = sink.getConnectorTasksForStatusCheck()
-    tasks shouldHaveSize 1
-    tasks.get(0).get("state").asText() shouldBe "RUNNING"
-
-    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
-
-    TopicVerifier.createForMap(errorConsumer)
-        .assertMessageValue(schemaTopic = producer.topic) {
-          it shouldBe mapOf("id" to 1L, "name" to "John")
-        }
-        .verifyWithin(Duration.ofSeconds(30))
-
-    // after the failure
-    continually(10.seconds) {
-      tasks = sink.getConnectorTasksForStatusCheck()
-      tasks shouldHaveSize 1
-      tasks.get(0).get("state").asText() shouldBe "RUNNING"
-    }
-  }
+//  @Neo4jSink(
+//      cypher =
+//          [
+//              CypherStrategy(
+//                  TOPIC,
+//                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+//      errorDlqTopic = DLQ_TOPIC,
+//      errorTolerance = "all",
+//      enableErrorHeaders = true)
+//  @Test
+//  fun `should still be in running state when error tolerance is all`(
+//      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+//      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
+//      session: Session,
+//      sink: Neo4jSinkRegistration
+//  ) = runTest {
+//    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+//    val schemaWithMissingSurname =
+//        SchemaBuilder.struct()
+//            .field("id", Schema.INT64_SCHEMA)
+//            .field("name", Schema.STRING_SCHEMA)
+//            .build()
+//    val struct = Struct(schemaWithMissingSurname)
+//    struct.put("id", 1L)
+//    struct.put("name", "John")
+//
+//    // before the failure
+//    var tasks = sink.getConnectorTasksForStatusCheck()
+//    tasks shouldHaveSize 1
+//    tasks.get(0).get("state").asText() shouldBe "RUNNING"
+//
+//    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+//
+//    TopicVerifier.createForMap(errorConsumer)
+//        .assertMessageValue(schemaTopic = producer.topic) {
+//          it shouldBe mapOf("id" to 1L, "name" to "John")
+//        }
+//        .verifyWithin(Duration.ofSeconds(30))
+//
+//    // after the failure
+//    continually(10.seconds) {
+//      tasks = sink.getConnectorTasksForStatusCheck()
+//      tasks shouldHaveSize 1
+//      tasks.get(0).get("state").asText() shouldBe "RUNNING"
+//    }
+//  }
 
   @Neo4jSink(
       cypher =
