@@ -33,8 +33,8 @@ project {
           name = "pull-request",
           branchFilter =
               """
-                      +:pull/174
-                    """
+                +:pull/*
+              """
                   .trimIndent(),
           forPullRequests = true))
 }

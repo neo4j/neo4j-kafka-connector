@@ -30,9 +30,9 @@ object Neo4jKafkaConnectorVcs :
     GitVcsRoot({
       id("Connectors_Neo4jKafkaConnector_Build")
 
-      name = "tc-jdk-matrix"
+      name = "neo4j-kafka-connector"
       url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-      branch = "refs/heads/tc-jdk-matrix"
+      branch = "refs/heads/main"
       branchSpec = "refs/heads/*"
 
       authMethod = defaultPrivateKey { userName = "git" }
