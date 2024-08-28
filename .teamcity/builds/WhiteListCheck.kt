@@ -1,7 +1,5 @@
 package builds
 
-import builds.Neo4jKafkaConnectorVcs.id
-import builds.Neo4jKafkaConnectorVcs.name
 import jetbrains.buildServer.configs.kotlin.AbsoluteId
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
