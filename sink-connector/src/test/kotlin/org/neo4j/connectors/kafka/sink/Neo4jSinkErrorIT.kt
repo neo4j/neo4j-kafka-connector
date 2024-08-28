@@ -184,9 +184,11 @@ abstract class Neo4jSinkErrorIT {
     struct.put("name", "John")
 
     // before the failure
-    var tasks = sink.getConnectorTasksForStatusCheck()
-    tasks shouldHaveSize 1
-    tasks.get(0).get("state").asText() shouldBe "RUNNING"
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "RUNNING"
+    }
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
@@ -198,7 +200,7 @@ abstract class Neo4jSinkErrorIT {
 
     // after the failure
     eventually(30.seconds) {
-      tasks = sink.getConnectorTasksForStatusCheck()
+      val tasks = sink.getConnectorTasksForStatusCheck()
       tasks shouldHaveSize 1
       tasks.get(0).get("state").asText() shouldBe "FAILED"
     }
@@ -231,9 +233,11 @@ abstract class Neo4jSinkErrorIT {
     struct.put("name", "John")
 
     // before the failure
-    var tasks = sink.getConnectorTasksForStatusCheck()
-    tasks shouldHaveSize 1
-    tasks.get(0).get("state").asText() shouldBe "RUNNING"
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "RUNNING"
+    }
 
     producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
 
@@ -245,7 +249,7 @@ abstract class Neo4jSinkErrorIT {
 
     // after the failure
     continually(10.seconds) {
-      tasks = sink.getConnectorTasksForStatusCheck()
+      val tasks = sink.getConnectorTasksForStatusCheck()
       tasks shouldHaveSize 1
       tasks.get(0).get("state").asText() shouldBe "RUNNING"
     }
