@@ -50,7 +50,7 @@
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
         <jackson.version>2.17.2</jackson.version>
-        <java.version>17</java.version>
+        <java.version>11</java.version>
         <joda-time.version>2.12.7</joda-time.version>
         <jreleaser-maven-plugin.version>1.13.1</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.10.3</junit-jupiter.version>
