@@ -192,8 +192,7 @@ class SourceConfigurationTest {
     config.cdcSelectorsToTopics shouldContainExactly
         mapOf(
             NodeSelector.builder().build() to listOf("topic-1"),
-            RelationshipSelector.builder().build() to listOf("topic-1")
-        )
+            RelationshipSelector.builder().build() to listOf("topic-1"))
   }
 
   @Test
