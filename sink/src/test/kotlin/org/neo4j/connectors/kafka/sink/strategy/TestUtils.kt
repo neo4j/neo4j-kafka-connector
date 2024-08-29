@@ -49,6 +49,7 @@ object TestUtils {
                 "service",
                 "neo4j",
                 "server-1",
+                "neo4j",
                 CaptureMode.DIFF,
                 "bolt",
                 "127.0.0.1:32000",

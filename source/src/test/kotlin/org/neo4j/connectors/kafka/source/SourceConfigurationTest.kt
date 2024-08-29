@@ -29,7 +29,6 @@ import org.apache.kafka.common.config.ConfigException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.selector.EntitySelector
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
@@ -192,15 +191,9 @@ class SourceConfigurationTest {
     config.cdcPollingInterval shouldBe 5.seconds
     config.cdcSelectorsToTopics shouldContainExactly
         mapOf(
-            NodeSelector(null, emptySet(), emptySet(), emptyMap(), emptyMap()) to listOf("topic-1"),
-            RelationshipSelector(
-                null,
-                emptySet(),
-                null,
-                RelationshipNodeSelector(emptySet(), emptyMap()),
-                RelationshipNodeSelector(emptySet(), emptyMap()),
-                emptyMap(),
-                emptyMap()) to listOf("topic-1"))
+            NodeSelector.builder().build() to listOf("topic-1"),
+            RelationshipSelector.builder().build() to listOf("topic-1")
+        )
   }
 
   @Test
@@ -232,30 +225,26 @@ class SourceConfigurationTest {
     config.cdcPollingInterval shouldBe 5.seconds
     config.cdcSelectorsToTopics shouldContainAll
         mapOf(
-            NodeSelector(null, emptySet(), setOf("Person"), emptyMap(), emptyMap()) to
+            NodeSelector.builder().withLabels(setOf("Person")).build() to
                 listOf("people", "topic-1"),
-            NodeSelector(null, emptySet(), setOf("Person"), emptyMap(), setOf("id"), emptySet()) to
-                listOf("topic-2"),
-            NodeSelector(null, emptySet(), setOf("Company"), emptyMap(), emptyMap()) to
-                listOf("company"),
-            RelationshipSelector(
-                null,
-                emptySet(),
-                "WORKS_FOR",
-                RelationshipNodeSelector(setOf("Person"), emptyMap()),
-                RelationshipNodeSelector(setOf("Company"), emptyMap()),
-                emptyMap(),
-                emptyMap()) to listOf("works_for"),
-            NodeSelector(
-                EntityOperation.CREATE,
-                setOf("name", "age"),
-                setOf("User"),
-                emptyMap(),
-                mapOf(
-                    EntitySelector.METADATA_KEY_AUTHENTICATED_USER to "someone",
-                    EntitySelector.METADATA_KEY_EXECUTING_USER to "someoneElse",
-                    EntitySelector.METADATA_KEY_TX_METADATA to mapOf("app" to "neo4j-browser"),
-                )) to listOf("topic-3"))
+            NodeSelector.builder()
+                .withLabels(setOf("Person"))
+                .includingProperties(setOf("id"))
+                .build() to listOf("topic-2"),
+            NodeSelector.builder().withLabels(setOf("Company")).build() to listOf("company"),
+            RelationshipSelector.builder()
+                .withType("WORKS_FOR")
+                .withStart(RelationshipNodeSelector.builder().withLabels(setOf("Person")).build())
+                .withEnd(RelationshipNodeSelector.builder().withLabels(setOf("Company")).build())
+                .build() to listOf("works_for"),
+            NodeSelector.builder()
+                .withOperation(EntityOperation.CREATE)
+                .withChangesTo(setOf("name", "age"))
+                .withLabels(setOf("User"))
+                .withTxMetadata(mapOf("app" to "neo4j-browser"))
+                .withExecutingUser("someoneElse")
+                .withAuthenticatedUser("someone")
+                .build() to listOf("topic-3"))
   }
 
   @Test
@@ -514,69 +503,74 @@ class SourceConfigurationTest {
                   "neo4j.cdc.topic.my-topic.patterns.0.pattern" to "(:Person)",
                   "neo4j.cdc.topic.my-topic.patterns.0.operation" to "create",
                   "neo4j.cdc.topic.my-topic.patterns.0.changesTo" to "name,surname",
-                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.authenticatedUser" to "neo4j",
-                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.executingUser" to "neo4j",
-                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.txMetadata.app" to "sales",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.authenticatedUser" to
+                      "pattern0-authUser",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.executingUser" to
+                      "pattern0-execUser",
+                  "neo4j.cdc.topic.my-topic.patterns.0.metadata.txMetadata.key0" to
+                      "pattern0-value0",
                   "neo4j.cdc.topic.my-topic.patterns.1.pattern" to "(:Person)-[:KNOWS]->(:Person)",
                   "neo4j.cdc.topic.my-topic.patterns.1.operation" to "update",
                   "neo4j.cdc.topic.my-topic.patterns.1.changesTo" to "since",
-                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.authenticatedUser" to "neo4j",
-                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.executingUser" to "neo4j",
-                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.txMetadata.app" to "sales",
-              ))
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.authenticatedUser" to
+                      "pattern1-authUser",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.executingUser" to
+                      "pattern1-execUser",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.txMetadata.key0" to
+                      "pattern1-value0",
+                  "neo4j.cdc.topic.my-topic.patterns.1.metadata.txMetadata.key1" to
+                      "pattern1-value1",
+              ),
+          )
 
       configuration.validate()
       configuration.cdcSelectors shouldHaveSize 2
       configuration.cdcSelectors shouldBe
           setOf(
-              NodeSelector(
-                  EntityOperation.CREATE,
-                  setOf("name", "surname"),
-                  setOf("Person"),
-                  emptyMap(),
-                  mapOf(
-                      "authenticatedUser" to "neo4j",
-                      "executingUser" to "neo4j",
-                      "txMetadata" to mapOf("app" to "sales"))),
-              RelationshipSelector(
-                  EntityOperation.UPDATE,
-                  setOf("since"),
-                  "KNOWS",
-                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
-                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
-                  emptyMap(),
-                  mapOf(
-                      "authenticatedUser" to "neo4j",
-                      "executingUser" to "neo4j",
-                      "txMetadata" to mapOf("app" to "sales"))),
-          )
+              NodeSelector.builder()
+                  .withOperation(EntityOperation.CREATE)
+                  .withChangesTo(setOf("name", "surname"))
+                  .withLabels(setOf("Person"))
+                  .withTxMetadata(mapOf("key0" to "pattern0-value0"))
+                  .withExecutingUser("pattern0-execUser")
+                  .withAuthenticatedUser("pattern0-authUser")
+                  .build(),
+              RelationshipSelector.builder()
+                  .withOperation(EntityOperation.UPDATE)
+                  .withChangesTo(setOf("since"))
+                  .withType("KNOWS")
+                  .withStart(RelationshipNodeSelector.builder().withLabels(setOf("Person")).build())
+                  .withEnd(RelationshipNodeSelector.builder().withLabels(setOf("Person")).build())
+                  .withTxMetadata(mapOf("key0" to "pattern1-value0", "key1" to "pattern1-value1"))
+                  .withExecutingUser("pattern1-execUser")
+                  .withAuthenticatedUser("pattern1-authUser")
+                  .build())
       configuration.cdcSelectorsToTopics shouldBe
           mapOf(
-              NodeSelector(
-                  EntityOperation.CREATE,
-                  setOf("name", "surname"),
-                  setOf("Person"),
-                  emptyMap(),
-                  mapOf(
-                      "authenticatedUser" to "neo4j",
-                      "executingUser" to "neo4j",
-                      "txMetadata" to mapOf("app" to "sales"))) to listOf("my-topic"),
-              RelationshipSelector(
-                  EntityOperation.UPDATE,
-                  setOf("since"),
-                  "KNOWS",
-                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
-                  RelationshipNodeSelector(setOf("Person"), emptyMap()),
-                  emptyMap(),
-                  mapOf(
-                      "authenticatedUser" to "neo4j",
-                      "executingUser" to "neo4j",
-                      "txMetadata" to mapOf("app" to "sales"))) to listOf("my-topic"))
+              NodeSelector.builder()
+                  .withOperation(EntityOperation.CREATE)
+                  .withChangesTo(setOf("name", "surname"))
+                  .withLabels(setOf("Person"))
+                  .withTxMetadata(mapOf("key0" to "pattern0-value0"))
+                  .withExecutingUser("pattern0-execUser")
+                  .withAuthenticatedUser("pattern0-authUser")
+                  .build() to listOf("my-topic"),
+              RelationshipSelector.builder()
+                  .withOperation(EntityOperation.UPDATE)
+                  .withChangesTo(setOf("since"))
+                  .withType("KNOWS")
+                  .withStart(RelationshipNodeSelector.builder().withLabels(setOf("Person")).build())
+                  .withEnd(RelationshipNodeSelector.builder().withLabels(setOf("Person")).build())
+                  .withTxMetadata(mapOf("key0" to "pattern1-value0", "key1" to "pattern1-value1"))
+                  .withExecutingUser("pattern1-execUser")
+                  .withAuthenticatedUser("pattern1-authUser")
+                  .build() to listOf("my-topic"),
+          )
     }
   }
 
   @Test
-  fun `strictly parses transaction metadata selector`() {
+  fun `fail on invalid metadata key`() {
     val config =
         SourceConfiguration(
             mapOf(
@@ -594,16 +588,11 @@ class SourceConfigurationTest {
                 "neo4j.cdc.topic.myTopic.patterns.0.metadata.txMetadataButNotReally.key" to
                     "value"))
 
-    config.cdcSelectors shouldBe
-        setOf(
-            NodeSelector(
-                EntityOperation.CREATE,
-                setOf(),
-                setOf("TestSource"),
-                mapOf(),
-                mapOf(
-                    "txMetadataButNotReally.key" to "value",
-                    "txMetadata" to mapOf("app" to "something-AI-something"))))
+    assertFailsWith(ConfigException::class) { config.cdcSelectorsToTopics }
+        .also {
+          it shouldHaveMessage
+              "Unexpected metadata key: 'txMetadataButNotReally.key' found in configuration property 'neo4j.cdc.topic.myTopic.patterns.0.metadata.txMetadataButNotReally.key'. Valid keys are 'authenticatedUser', 'executingUser', or keys starting with 'txMetadata.*'."
+        }
   }
 
   @Test
@@ -618,7 +607,9 @@ class SourceConfigurationTest {
                       SourceConfiguration.BATCH_SIZE to "10000",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
-                      "neo4j.cdc.topic.topic-1.key-strategy" to "INVALID"))
+                      "neo4j.cdc.topic.topic-1.key-strategy" to "INVALID",
+                  ),
+              )
               .validate()
         }
         .also {

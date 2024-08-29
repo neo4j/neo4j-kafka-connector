@@ -67,6 +67,7 @@ class Neo4jCdcTask : SourceTask() {
         CDCClient(
             config.driver,
             { sessionConfig },
+            { config.txConfig() },
             config.cdcPollingInterval.toJavaDuration(),
             *config.cdcSelectors.toTypedArray())
     log.debug("constructed cdc client")
