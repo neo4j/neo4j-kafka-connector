@@ -247,7 +247,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val value = configEntry.value as String
     val changesTo = value.splitToSequence(",").map { term -> term.trim() }.toSet()
-    val pattern = patterns.get(index)
+    val pattern = patterns[index]
     pattern.withChangesTo(changesTo)
   }
 
@@ -264,12 +264,9 @@ class SourceConfiguration(originals: Map<*, *>) :
     if (metadataKey.startsWith("$METADATA_KEY_TX_METADATA.")) {
       val txMetadataKey = metadataKey.removePrefix("$METADATA_KEY_TX_METADATA.")
 
-      var txMetadata = patternTxMetadataMap[pattern]
-      if (txMetadata == null) {
-        txMetadata = mutableMapOf(txMetadataKey to value)
-      } else {
-        txMetadata[txMetadataKey] = value
-      }
+      val txMetadata =
+          patternTxMetadataMap.getOrPut(pattern) { mutableMapOf(txMetadataKey to value) }
+      txMetadata[txMetadataKey] = value
 
       pattern.withTxMetadata(txMetadata)
       patternTxMetadataMap[pattern] = txMetadata
