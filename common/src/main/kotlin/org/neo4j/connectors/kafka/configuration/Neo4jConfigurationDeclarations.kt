@@ -314,11 +314,3 @@ fun ConfigDef.defineRetrySettings(): ConfigDef =
                   group = Groups.CONNECTION_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
                 })
-        .define(
-            ConfigKeyBuilder.of(
-                Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS, ConfigDef.Type.INT) {
-                  importance = Importance.LOW
-                  defaultValue = Neo4jConfiguration.DEFAULT_MAX_RETRY_ATTEMPTS
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator = Range.atLeast(1)
-                })
