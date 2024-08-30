@@ -307,10 +307,10 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
 
 fun ConfigDef.defineRetrySettings(): ConfigDef =
     this.define(
-            ConfigKeyBuilder.of(
-                Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue = Neo4jConfiguration.DEFAULT_MAX_RETRY_DURATION.toSimpleString()
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+        ConfigKeyBuilder.of(
+            Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT, ConfigDef.Type.STRING) {
+              importance = Importance.LOW
+              defaultValue = Neo4jConfiguration.DEFAULT_MAX_RETRY_DURATION.toSimpleString()
+              group = Groups.CONNECTION_ADVANCED.title
+              validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+            })
