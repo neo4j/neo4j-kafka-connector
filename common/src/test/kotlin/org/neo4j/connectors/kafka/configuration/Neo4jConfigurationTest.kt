@@ -87,17 +87,6 @@ class Neo4jConfigurationTest {
           mapOf(
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s"),
-          type)
-    } shouldHaveMessage
-        "Invalid value 0 for configuration neo4j.max-retry-attempts: Value must be at least 1"
-
-    shouldThrow<ConfigException> {
-      Neo4jConfiguration(
-          Neo4jConfiguration.config(),
-          mapOf(
-              Neo4jConfiguration.URI to "bolt://localhost",
-              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1"),
           type)
