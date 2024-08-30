@@ -37,6 +37,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.TransactionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -46,6 +47,7 @@ class Neo4jCdcTask : SourceTask() {
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
   private lateinit var sessionConfig: SessionConfig
+  private lateinit var transactionConfig: TransactionConfig
   private lateinit var cdc: CDCService
   private lateinit var offset: AtomicReference<String>
   private lateinit var changeEventConverter: ChangeEventConverter
@@ -62,11 +64,13 @@ class Neo4jCdcTask : SourceTask() {
       configBuilder.withDatabase(config.database)
     }
     sessionConfig = configBuilder.build()
+    transactionConfig = config.txConfig()
 
     cdc =
         CDCClient(
             config.driver,
             { sessionConfig },
+            { transactionConfig },
             config.cdcPollingInterval.toJavaDuration(),
             *config.cdcSelectors.toTypedArray())
     log.debug("constructed cdc client")

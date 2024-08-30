@@ -353,6 +353,7 @@ class StreamsTransactionEventExtensionsTest {
           "user",
           "user",
           "unknown",
+          "unknown",
           CaptureMode.OFF,
           "unknown",
           "unknown",
