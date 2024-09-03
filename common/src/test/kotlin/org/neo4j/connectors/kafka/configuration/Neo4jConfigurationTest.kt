@@ -88,19 +88,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 0),
-          type)
-    } shouldHaveMessage
-        "Invalid value 0 for configuration neo4j.max-retry-attempts: Value must be at least 1"
-
-    shouldThrow<ConfigException> {
-      Neo4jConfiguration(
-          Neo4jConfiguration.config(),
-          mapOf(
-              Neo4jConfiguration.URI to "bolt://localhost",
-              Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1"),
           type)
     } shouldHaveMessage
@@ -113,7 +100,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 0),
           type)
@@ -127,7 +113,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5k"),
@@ -142,7 +127,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -158,7 +142,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -175,7 +158,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -193,7 +175,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -212,7 +193,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -232,7 +212,6 @@ class Neo4jConfigurationTest {
               Neo4jConfiguration.URI to "bolt://localhost",
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-              Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
               Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
               Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
               Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -260,7 +239,6 @@ class Neo4jConfigurationTest {
                 Neo4jConfiguration.URI to "bolt://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT to "5s",
-                Neo4jConfiguration.MAX_TRANSACTION_RETRY_ATTEMPTS to 5,
                 Neo4jConfiguration.CONNECTION_TIMEOUT to "1m",
                 Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE to 5,
                 Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT to "5m",
@@ -275,7 +253,6 @@ class Neo4jConfigurationTest {
     assertEquals(listOf(URI("bolt://localhost")), config.uris)
     assertEquals(AuthTokens.none(), config.authenticationToken)
     assertEquals(5.seconds, config.maxRetryTime)
-    assertEquals(5, config.maxRetryAttempts)
     assertEquals(1.minutes, config.connectionTimeout)
     assertEquals(5, config.maxConnectionPoolSize)
     assertEquals(5.minutes, config.connectionAcquisitionTimeout)
