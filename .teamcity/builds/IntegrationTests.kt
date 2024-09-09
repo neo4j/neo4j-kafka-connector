@@ -10,10 +10,16 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class IntegrationTests(id: String, name: String, javaVersion: String, init: BuildType.() -> Unit) :
+class IntegrationTests(
+    id: String,
+    name: String,
+    javaVersion: String,
+    confluentPlatformVersion: String,
+    init: BuildType.() -> Unit
+) :
     BuildType({
-      this.id("${id}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id("${id}-${javaVersion}-${confluentPlatformVersion}".toId())
+      this.name = "$name (Java $javaVersion) (Confluent Platform $confluentPlatformVersion)"
       init()
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
@@ -53,6 +59,7 @@ class IntegrationTests(id: String, name: String, javaVersion: String, init: Buil
         text("env.NEO4J_EXTERNAL_URI", "neo4j://neo4j")
         text("env.NEO4J_USER", "neo4j")
         text("env.NEO4J_PASSWORD", "password")
+        text("env.CONFLUENT_PLATFORM_VERSION", confluentPlatformVersion)
       }
 
       steps {
