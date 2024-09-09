@@ -1,6 +1,8 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.StageFactory.parallel
+import jetbrains.buildServer.configs.kotlin.StageFactory.sequential
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
@@ -22,34 +24,70 @@ class Build(
             buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
         if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
 
-        parallel {
-          listOf("11", "17").forEach { javaVersion ->
-            val packaging =
-                Maven(
-                    "${name}-package",
-                    "package",
-                    "package",
-                    javaVersion,
-                    "-pl :packaging -am -DskipTests")
+        val packaging11 =
+            Maven("${name}-package", "package", "package", "11", "-pl :packaging -am -DskipTests")
 
-            sequential {
-              dependentBuildType(Maven("${name}-build", "build", "test-compile", javaVersion))
-              dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", javaVersion))
-              dependentBuildType(collectArtifacts(packaging))
+        val packaging17 =
+            Maven("${name}-package", "package", "package", "17", "-pl :packaging -am -DskipTests")
+
+        parallel {
+          // JDK 11
+          sequential {
+            dependentBuildType(Maven("${name}-build", "build", "test-compile", "11"))
+            dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", "11"))
+            dependentBuildType(collectArtifacts(packaging11))
+
+            parallel {
               dependentBuildType(
-                  IntegrationTests("${name}-integration-tests", "integration tests", javaVersion) {
-                    dependencies {
-                      artifacts(packaging) {
-                        artifactRules =
-                            """
+                  IntegrationTests(
+                      "${name}-integration-tests", "integration tests", "11", "7.2.9") {
+                        dependencies {
+                          artifacts(packaging11) {
+                            artifactRules =
+                                """
                         +:packages/*.jar => docker/plugins
                         -:packages/*-kc-oss.jar
                       """
-                                .trimIndent()
-                      }
-                    }
-                  })
+                                    .trimIndent()
+                          }
+                        }
+                      })
+              dependentBuildType(
+                  IntegrationTests(
+                      "${name}-integration-tests", "integration tests", "11", "7.7.0") {
+                        dependencies {
+                          artifacts(packaging11) {
+                            artifactRules =
+                                """
+                        +:packages/*.jar => docker/plugins
+                        -:packages/*-kc-oss.jar
+                      """
+                                    .trimIndent()
+                          }
+                        }
+                      })
             }
+          }
+
+          // JDK 17
+          sequential {
+            dependentBuildType(Maven("${name}-build", "build", "test-compile", "17"))
+            dependentBuildType(Maven("${name}-unit-tests", "unit tests", "test", "17"))
+            dependentBuildType(collectArtifacts(packaging17))
+
+            dependentBuildType(
+                IntegrationTests("${name}-integration-tests", "integration tests", "17", "7.7.0") {
+                  dependencies {
+                    artifacts(packaging17) {
+                      artifactRules =
+                          """
+                        +:packages/*.jar => docker/plugins
+                        -:packages/*-kc-oss.jar
+                      """
+                              .trimIndent()
+                    }
+                  }
+                })
           }
         }
 
