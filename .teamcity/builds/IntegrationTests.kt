@@ -40,6 +40,7 @@ class IntegrationTests(
       </settings>
        */
 
+
       val javaDockerImage =
           when (javaVersion) {
             "11" -> "eclipse-temurin:11-jdk"
