@@ -17,6 +17,14 @@ Apache Software License, Version 2.0
   Kotlin Reflect
   Kotlin Stdlib
   kotlinx-coroutines-core
+  Netty/Buffer
+  Netty/Codec
+  Netty/Common
+  Netty/Handler
+  Netty/Resolver
+  Netty/TomcatNative [OpenSSL - Classes]
+  Netty/Transport
+  Netty/Transport/Native/Unix/Common
   Non-Blocking Reactive Foundation for the JVM
   org.apiguardian:apiguardian-api
   SnakeYAML
