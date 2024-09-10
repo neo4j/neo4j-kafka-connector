@@ -26,6 +26,7 @@ import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
+import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class ConfigPropertiesTest {
@@ -103,6 +104,29 @@ class ConfigPropertiesTest {
     parsedPattern.shouldBeInstanceOf<RelationshipPattern>()
 
     shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+  }
+
+  @Test
+  fun `source cdc quick start config should be valid`() {
+    val properties = loadConfigProperties("source-cdc-quickstart.properties")
+
+    properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.source.Neo4jConnector"
+    properties["neo4j.source-strategy"] shouldBe "CDC"
+    properties.keys.any { it.startsWith("neo4j.cdc.topic") } shouldBe true
+
+    shouldNotThrowAny { SourceConfiguration(properties) }
+  }
+
+  @Test
+  fun `source query quick start config should be valid`() {
+    val properties = loadConfigProperties("source-query-quickstart.properties")
+
+    properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.source.Neo4jConnector"
+    properties["neo4j.source-strategy"] shouldBe "QUERY"
+    properties["neo4j.query.topic"] shouldNotBe null
+    properties["neo4j.query"] shouldNotBe null
+
+    shouldNotThrowAny { SourceConfiguration(properties) }
   }
 
   private fun loadConfigProperties(fileName: String): Map<String, Any> {
