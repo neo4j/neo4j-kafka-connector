@@ -161,12 +161,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <includes>
-                        <include>**/*Test.*</include>
-                    </includes>
-                    <trimStackTrace>false</trimStackTrace>
-                </configuration>
                 <executions>
                     <execution>
                         <id>test-compile</id>
@@ -178,7 +172,6 @@
             </plugin>
         </plugins>
         <testSourceDirectory>src/test/kotlin</testSourceDirectory>
-        <outputDirectory>target/classes</outputDirectory>
         <testOutputDirectory>target/test-classes</testOutputDirectory>
     </build>
     <profiles>
