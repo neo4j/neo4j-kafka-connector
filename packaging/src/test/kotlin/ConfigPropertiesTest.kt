@@ -22,11 +22,17 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.*
 import org.junit.jupiter.api.Test
+import org.neo4j.cdc.client.selector.NodeSelector
+import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
-import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
-import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
+import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.CudHandler
+import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
+import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
+import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class ConfigPropertiesTest {
@@ -45,9 +51,13 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("sink-cdc-schema-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
-    properties["neo4j.cdc.schema.topics"] shouldNotBe null
 
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+
+    config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
+    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSchemaHandler>()
+    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSchemaHandler>()
+    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSchemaHandler>()
   }
 
   @Test
@@ -55,9 +65,13 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("sink-cdc-source-id-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
-    properties["neo4j.cdc.source-id.topics"] shouldNotBe null
 
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+
+    config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
+    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSourceIdHandler>()
+    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSourceIdHandler>()
+    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSourceIdHandler>()
   }
 
   @Test
@@ -65,9 +79,11 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("sink-cud-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
-    properties["neo4j.cud.topics"] shouldNotBe null
 
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+
+    config.topicHandlers.keys shouldBe setOf("people")
+    config.topicHandlers["people"].shouldBeInstanceOf<CudHandler>()
   }
 
   @Test
@@ -75,9 +91,11 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("sink-cypher-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
-    properties.keys.any { it.startsWith("neo4j.cypher.topic") } shouldBe true
 
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+
+    config.topicHandlers.keys shouldBe setOf("people")
+    config.topicHandlers["people"].shouldBeInstanceOf<CypherHandler>()
   }
 
   @Test
@@ -86,13 +104,10 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val patternKey = properties.keys.first { it.startsWith("neo4j.pattern.topic") }
-    patternKey shouldNotBe null
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    val parsedPattern = Pattern.parse(properties[patternKey] as String)
-    parsedPattern.shouldBeInstanceOf<NodePattern>()
-
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    config.topicHandlers.keys shouldBe setOf("people")
+    config.topicHandlers["people"].shouldBeInstanceOf<NodePatternHandler>()
   }
 
   @Test
@@ -101,13 +116,10 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val patternKey = properties.keys.first { it.startsWith("neo4j.pattern.topic") }
-    patternKey shouldNotBe null
+    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    val parsedPattern = Pattern.parse(properties[patternKey] as String)
-    parsedPattern.shouldBeInstanceOf<RelationshipPattern>()
-
-    shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    config.topicHandlers.keys shouldBe setOf("knows")
+    config.topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternHandler>()
   }
 
   @Test
@@ -115,10 +127,22 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("source-cdc-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.source.Neo4jConnector"
-    properties["neo4j.source-strategy"] shouldBe "CDC"
-    properties.keys.any { it.startsWith("neo4j.cdc.topic") } shouldBe true
 
-    shouldNotThrowAny { SourceConfiguration(properties) }
+    val config = shouldNotThrowAny { SourceConfiguration(properties) }
+
+    config.strategy shouldBe SourceType.CDC
+    config.cdcSelectorsToTopics.forEach { (selector, topics) ->
+      when (topics) {
+        listOf("company"),
+        listOf("person") -> {
+          selector.shouldBeInstanceOf<NodeSelector>()
+        }
+        listOf("works_for") -> {
+          selector.shouldBeInstanceOf<RelationshipSelector>()
+        }
+      }
+    }
+    config.query shouldBe ""
   }
 
   @Test
@@ -126,11 +150,12 @@ class ConfigPropertiesTest {
     val properties = loadConfigProperties("source-query-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.source.Neo4jConnector"
-    properties["neo4j.source-strategy"] shouldBe "QUERY"
-    properties["neo4j.query.topic"] shouldNotBe null
-    properties["neo4j.query"] shouldNotBe null
 
-    shouldNotThrowAny { SourceConfiguration(properties) }
+    val config = shouldNotThrowAny { SourceConfiguration(properties) }
+
+    config.strategy shouldBe SourceType.QUERY
+    config.topic shouldBe "my-topic"
+    config.query shouldNotBe ""
   }
 
   private fun loadConfigProperties(fileName: String): Map<String, Any> {
