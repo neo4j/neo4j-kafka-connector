@@ -5,7 +5,14 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Maven(id: String, name: String, goals: String, javaVersion: String, args: String? = null) :
+class Maven(
+    id: String,
+    name: String,
+    goals: String,
+    javaVersion: String,
+    schemaRegistryVersion: String,
+    args: String? = null
+) :
     BuildType({
       this.id("${id}-${javaVersion}".toId())
       this.name = "$name (Java $javaVersion)"
@@ -37,7 +44,8 @@ class Maven(id: String, name: String, goals: String, javaVersion: String, args: 
       steps {
         commonMaven(javaVersion) {
           this.goals = goals
-          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion ${args ?: ""}"
+          this.runnerArgs =
+              "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -Dkafka-schema-registry.version=$schemaRegistryVersion ${args ?: ""}"
         }
       }
 
