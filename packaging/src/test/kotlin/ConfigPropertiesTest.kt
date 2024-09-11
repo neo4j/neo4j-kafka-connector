@@ -16,7 +16,6 @@
  */
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.io.File
 import java.io.FileInputStream
@@ -155,7 +154,8 @@ class ConfigPropertiesTest {
 
     config.strategy shouldBe SourceType.QUERY
     config.topic shouldBe "my-topic"
-    config.query shouldNotBe ""
+    config.query shouldBe
+        "MATCH (ts:TestSource) WHERE ts.timestamp > ${"$"}lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp"
   }
 
   private fun loadConfigProperties(fileName: String): Map<String, Any> {
