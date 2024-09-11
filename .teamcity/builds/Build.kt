@@ -41,32 +41,35 @@ class Build(
                         it.javaVersion,
                         "-pl :packaging -am -DskipTests")
 
-                dependentBuildType(Maven("${name}-build", "build", "test-compile", it.javaVersion))
-                dependentBuildType(
-                    Maven("${name}-unit-tests", "unit tests", "test", it.javaVersion))
-                dependentBuildType(collectArtifacts(packaging))
+                sequential {
+                  dependentBuildType(
+                      Maven("${name}-build", "build", "test-compile", it.javaVersion))
+                  dependentBuildType(
+                      Maven("${name}-unit-tests", "unit tests", "test", it.javaVersion))
+                  dependentBuildType(collectArtifacts(packaging))
 
-                parallel {
-                  it.platformVersions.forEach { platformVersion ->
-                    dependentBuildType(
-                        IntegrationTests(
-                            "${name}-integration-tests",
-                            "integration tests",
-                            it.javaVersion,
-                            platformVersion,
-                        ) {
-                          dependencies {
-                            artifacts(packaging) {
-                              artifactRules =
-                                  """
+                  parallel {
+                    it.platformVersions.forEach { platformVersion ->
+                      dependentBuildType(
+                          IntegrationTests(
+                              "${name}-integration-tests",
+                              "integration tests",
+                              it.javaVersion,
+                              platformVersion,
+                          ) {
+                            dependencies {
+                              artifacts(packaging) {
+                                artifactRules =
+                                    """
                       +:packages/*.jar => docker/plugins
                       -:packages/*-kc-oss.jar
                     """
-                                      .trimIndent()
+                                        .trimIndent()
+                              }
                             }
-                          }
-                        },
-                    )
+                          },
+                      )
+                    }
                   }
                 }
               }
