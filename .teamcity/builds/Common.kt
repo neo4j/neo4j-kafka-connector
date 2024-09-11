@@ -20,6 +20,7 @@ const val MAVEN_DEFAULT_ARGS =
     "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository"
 
 const val DEFAULT_JAVA_VERSION = "11"
+const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
