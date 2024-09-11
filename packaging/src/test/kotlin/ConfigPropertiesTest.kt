@@ -30,6 +30,10 @@ import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class ConfigPropertiesTest {
+
+  // This test checks that the number of config files is fixed.
+  // If a new file is added, the test will fail, reminding the developer to update this test and add
+  // unit tests for the new file.
   @Test
   fun `should be specific amount of config files`() {
     val configDirectory = File(BASE_CONFIG_PATH)
@@ -145,7 +149,7 @@ class ConfigPropertiesTest {
       ConfigPropertiesTest::class.java.getResourceAsStream("/test.properties").use {
         properties.load(it)
       }
-      BASE_CONFIG_PATH = properties.getProperty("location")
+      BASE_CONFIG_PATH = properties.getProperty("quickstart.config.properties.path")
     }
   }
 }
