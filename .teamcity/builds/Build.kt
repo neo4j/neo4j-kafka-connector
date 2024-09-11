@@ -29,7 +29,6 @@ class Build(
           val bts = sequential {
             if (forPullRequests)
                 buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
-
             if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
 
             parallel {
