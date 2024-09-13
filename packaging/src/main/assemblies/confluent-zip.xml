@@ -12,8 +12,6 @@
         <fileSet>
             <directory>src/main/distributions/text</directory>
             <outputDirectory/>
-            <lineEnding>keep</lineEnding>
-            <filtered>true</filtered>
             <includes>
                 <include>**/*</include>
             </includes>
@@ -21,7 +19,19 @@
                 <exclude>**/.keep</exclude>
                 <exclude>**/*.formatted</exclude>
                 <exclude>config/*.properties</exclude>
+                <exclude>manifest.json</exclude>
             </excludes>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/distributions/text</directory>
+            <outputDirectory/>
+            <filtered>true</filtered>
+            <lineEnding>keep</lineEnding>
+            <includes>
+                <include>manifest.json</include>
+            </includes>
             <directoryMode>0755</directoryMode>
             <fileMode>0644</fileMode>
         </fileSet>
@@ -36,6 +46,7 @@
             <directoryMode>0755</directoryMode>
             <fileMode>0644</fileMode>
         </fileSet>
+
     </fileSets>
 
     <dependencySets>

@@ -50,6 +50,7 @@ object StreamsTransactionEventExtensions {
             this.meta.username,
             this.meta.username,
             "unknown",
+            "unknown",
             CaptureMode.OFF,
             "unknown",
             "unknown",
