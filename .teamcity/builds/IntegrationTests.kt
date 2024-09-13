@@ -14,12 +14,12 @@ class IntegrationTests(
     id: String,
     name: String,
     javaVersion: String,
-    confluentPlatformVersion: String,
+    platformVersion: String,
     init: BuildType.() -> Unit
 ) :
     BuildType({
-      this.id("${id}-${javaVersion}-${confluentPlatformVersion}".toId())
-      this.name = "$name (Java $javaVersion) (Confluent Platform $confluentPlatformVersion)"
+      this.id("${id}-${javaVersion}-${platformVersion}".toId())
+      this.name = "$name (Java $javaVersion) (Confluent Platform $platformVersion)"
       init()
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
@@ -59,7 +59,7 @@ class IntegrationTests(
         text("env.NEO4J_EXTERNAL_URI", "neo4j://neo4j")
         text("env.NEO4J_USER", "neo4j")
         text("env.NEO4J_PASSWORD", "password")
-        text("env.CONFLUENT_PLATFORM_VERSION", confluentPlatformVersion)
+        text("env.CONFLUENT_PLATFORM_VERSION", platformVersion)
       }
 
       steps {
@@ -86,7 +86,8 @@ class IntegrationTests(
         }
         maven {
           this.goals = "verify"
-          this.runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -DskipUnitTests"
+          this.runnerArgs =
+              "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -Dkafka-schema-registry.version=$platformVersion -DskipUnitTests"
 
           // this is the settings name we uploaded to Connectors project
           userSettingsSelection = "github"

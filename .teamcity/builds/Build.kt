@@ -7,10 +7,11 @@ import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
 enum class JavaPlatform(
     val javaVersion: String = DEFAULT_JAVA_VERSION,
-    val platformVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
+    val schemaRegistryVersion: String = DEFAULT_CONFLUENT_PLATFORM_VERSION,
+    val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
 ) {
-  JDK_11("11", platformVersions = listOf("7.2.9", "7.7.0")),
-  JDK_17("17", platformVersions = listOf("7.7.0"))
+  JDK_11("11", schemaRegistryVersion = "7.2.9", platformITVersions = listOf("7.2.9", "7.7.0")),
+  JDK_17("17", schemaRegistryVersion = "7.7.0", platformITVersions = listOf("7.7.0"))
 }
 
 class Build(
@@ -39,17 +40,28 @@ class Build(
                         "package",
                         "package",
                         it.javaVersion,
+                        it.schemaRegistryVersion,
                         "-pl :packaging -am -DskipTests")
 
                 sequential {
                   dependentBuildType(
-                      Maven("${name}-build", "build", "test-compile", it.javaVersion))
+                      Maven(
+                          "${name}-build",
+                          "build",
+                          "test-compile",
+                          it.javaVersion,
+                          it.schemaRegistryVersion))
                   dependentBuildType(
-                      Maven("${name}-unit-tests", "unit tests", "test", it.javaVersion))
+                      Maven(
+                          "${name}-unit-tests",
+                          "unit tests",
+                          "test",
+                          it.javaVersion,
+                          it.schemaRegistryVersion))
                   dependentBuildType(collectArtifacts(packaging))
 
                   parallel {
-                    it.platformVersions.forEach { platformVersion ->
+                    it.platformITVersions.forEach { platformVersion ->
                       dependentBuildType(
                           IntegrationTests(
                               "${name}-integration-tests",
