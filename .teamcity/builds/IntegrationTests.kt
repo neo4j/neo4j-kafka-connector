@@ -73,7 +73,6 @@ class IntegrationTests(
             """
                     .trimIndent()
             formatStderrAsError = true
-
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
             dockerImage = javaVersion.dockerImage
             dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
@@ -81,12 +80,11 @@ class IntegrationTests(
           maven {
             this.goals = "verify"
             this.runnerArgs =
-                "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -Dkafka-schema-registry.version=$platformVersion -DskipUnitTests"
+                "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Dkafka-schema-registry.version=$platformVersion -DskipUnitTests"
 
             // this is the settings name we uploaded to Connectors project
             userSettingsSelection = "github"
             localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
-
             dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
             dockerImage = javaVersion.dockerImage
             dockerRunParameters =
@@ -106,7 +104,6 @@ class IntegrationTests(
             """
                     .trimIndent()
             formatStderrAsError = true
-
             executionMode = BuildStep.ExecutionMode.ALWAYS
             dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
             dockerImage = javaVersion.dockerImage
