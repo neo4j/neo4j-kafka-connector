@@ -14,8 +14,8 @@ class Maven(
     args: String? = null
 ) :
     BuildType({
-      this.id("${id}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id("${id}-${javaVersion.version}".toId())
+      this.name = "$name (Java ${javaVersion.version})"
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
       // with the following content, so we set the relevant environment variables here.

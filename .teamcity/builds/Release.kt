@@ -12,7 +12,7 @@ import jetbrains.buildServer.configs.kotlin.toId
 class Release(id: String, name: String, javaVersion: JavaVersion) :
   BuildType(
       {
-        this.id("${id}-${javaVersion}".toId())
+        this.id("${id}-${javaVersion.version}".toId())
         this.name = "$name (Java ${javaVersion.version})"
 
         params {

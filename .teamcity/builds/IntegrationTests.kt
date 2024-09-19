@@ -19,8 +19,8 @@ class IntegrationTests(
 ) :
   BuildType(
       {
-        this.id("${id}-${javaVersion}-${platformVersion}".toId())
-        this.name = "$name (Java $javaVersion) (Confluent Platform $platformVersion)"
+        this.id("${id}-${javaVersion.version}-${platformVersion}".toId())
+        this.name = "$name (Java ${javaVersion.version}) (Confluent Platform $platformVersion)"
         init()
 
         // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
