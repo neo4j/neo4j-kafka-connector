@@ -33,18 +33,18 @@ enum class JavaVersion(val version: String, val dockerImage: String) {
 }
 
 object Neo4jKafkaConnectorVcs :
-  GitVcsRoot(
-      {
-        id("Connectors_Neo4jKafkaConnector_Build")
+    GitVcsRoot(
+        {
+          id("Connectors_Neo4jKafkaConnector_Build")
 
-      name = "neo4j-kafka-connector"
-      url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-      branch = "refs/heads/main"
-      branchSpec = "refs/heads/*"
+          name = "neo4j-kafka-connector"
+          url = "git@github.com:neo4j/neo4j-kafka-connector.git"
+          branch = "refs/heads/main"
+          branchSpec = "refs/heads/*"
 
-        authMethod = defaultPrivateKey { userName = "git" }
-      },
-  )
+          authMethod = defaultPrivateKey { userName = "git" }
+        },
+    )
 
 fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {
   startsWith("cloud.amazon.agent-name-prefix", "linux-${size.value}")
@@ -95,8 +95,8 @@ fun collectArtifacts(buildType: BuildType): BuildType {
 }
 
 fun BuildSteps.commonMaven(
-  javaVersion: JavaVersion,
-  init: MavenBuildStep.() -> Unit
+    javaVersion: JavaVersion,
+    init: MavenBuildStep.() -> Unit
 ): MavenBuildStep {
   val maven =
       this.maven {

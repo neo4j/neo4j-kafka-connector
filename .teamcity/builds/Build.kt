@@ -6,9 +6,9 @@ import jetbrains.buildServer.configs.kotlin.toId
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
 enum class JavaPlatform(
-  val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
-  val schemaRegistryVersion: String = DEFAULT_CONFLUENT_PLATFORM_VERSION,
-  val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
+    val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
+    val schemaRegistryVersion: String = DEFAULT_CONFLUENT_PLATFORM_VERSION,
+    val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
 ) {
   JDK_11(
       JavaVersion.V_11,
@@ -19,105 +19,105 @@ enum class JavaPlatform(
 }
 
 class Build(
-  name: String,
-  branchFilter: String,
-  forPullRequests: Boolean,
-  triggerRules: String? = null
+    name: String,
+    branchFilter: String,
+    forPullRequests: Boolean,
+    triggerRules: String? = null
 ) :
-  Project(
-      {
-        this.id(name.toId())
-        this.name = name
+    Project(
+        {
+          this.id(name.toId())
+          this.name = name
 
-        val complete = Empty("${name}-complete", "complete")
+          val complete = Empty("${name}-complete", "complete")
 
-        val bts = sequential {
-          if (forPullRequests)
-            buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
-          if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
+          val bts = sequential {
+            if (forPullRequests)
+                buildType(WhiteListCheck("${name}-whitelist-check", "white-list check"))
+            if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
 
-          parallel {
-            JavaPlatform.entries.forEach {
-              val packaging =
-                  Maven(
-                      "${name}-package",
-                      "package",
-                      "package",
-                      it.javaVersion,
-                      it.schemaRegistryVersion,
-                      "-pl :packaging -am -DskipTests",
+            parallel {
+              JavaPlatform.entries.forEach {
+                val packaging =
+                    Maven(
+                        "${name}-package",
+                        "package",
+                        "package",
+                        it.javaVersion,
+                        it.schemaRegistryVersion,
+                        "-pl :packaging -am -DskipTests",
+                    )
+
+                sequential {
+                  dependentBuildType(
+                      Maven(
+                          "${name}-build",
+                          "build",
+                          "test-compile",
+                          it.javaVersion,
+                          it.schemaRegistryVersion,
+                      ),
                   )
+                  dependentBuildType(
+                      Maven(
+                          "${name}-unit-tests",
+                          "unit tests",
+                          "test",
+                          it.javaVersion,
+                          it.schemaRegistryVersion,
+                      ),
+                  )
+                  dependentBuildType(collectArtifacts(packaging))
 
-              sequential {
-                dependentBuildType(
-                    Maven(
-                        "${name}-build",
-                        "build",
-                        "test-compile",
-                        it.javaVersion,
-                        it.schemaRegistryVersion,
-                    ),
-                )
-                dependentBuildType(
-                    Maven(
-                        "${name}-unit-tests",
-                        "unit tests",
-                        "test",
-                        it.javaVersion,
-                        it.schemaRegistryVersion,
-                    ),
-                )
-                dependentBuildType(collectArtifacts(packaging))
-
-                parallel {
-                  it.platformITVersions.forEach { platformVersion ->
-                    dependentBuildType(
-                        IntegrationTests(
-                            "${name}-integration-tests",
-                            "integration tests",
-                            it.javaVersion,
-                            platformVersion,
-                        ) {
-                          dependencies {
-                            artifacts(packaging) {
-                              artifactRules =
-                                  """
+                  parallel {
+                    it.platformITVersions.forEach { platformVersion ->
+                      dependentBuildType(
+                          IntegrationTests(
+                              "${name}-integration-tests",
+                              "integration tests",
+                              it.javaVersion,
+                              platformVersion,
+                          ) {
+                            dependencies {
+                              artifacts(packaging) {
+                                artifactRules =
+                                    """
                       +:packages/*.jar => docker/plugins
                       -:packages/*-kc-oss.jar
                     """
-                                      .trimIndent()
+                                        .trimIndent()
+                              }
                             }
-                          }
-                        },
-                    )
+                          },
+                      )
+                    }
                   }
                 }
               }
             }
+
+            dependentBuildType(complete)
+            if (!forPullRequests)
+                dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
           }
 
-          dependentBuildType(complete)
-          if (!forPullRequests)
-            dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
-        }
+          bts.buildTypes().forEach {
+            it.thisVcs()
 
-        bts.buildTypes().forEach {
-          it.thisVcs()
+            it.features {
+              requireDiskSpace("5gb")
+              enableCommitStatusPublisher()
+              if (forPullRequests) enablePullRequests()
+            }
 
-          it.features {
-            requireDiskSpace("5gb")
-            enableCommitStatusPublisher()
-            if (forPullRequests) enablePullRequests()
+            buildType(it)
           }
 
-          buildType(it)
-        }
-
-        complete.triggers {
-          vcs {
-            this.branchFilter = branchFilter
-            this.triggerRules = triggerRules
+          complete.triggers {
+            vcs {
+              this.branchFilter = branchFilter
+              this.triggerRules = triggerRules
+            }
           }
-        }
-      },
-  )
+        },
+    )
