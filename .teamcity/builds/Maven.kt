@@ -9,13 +9,13 @@ class Maven(
     id: String,
     name: String,
     goals: String,
-    javaVersion: String,
+    javaVersion: JavaVersion,
     schemaRegistryVersion: String,
     args: String? = null
 ) :
     BuildType({
-      this.id("${id}-${javaVersion}".toId())
-      this.name = "$name (Java $javaVersion)"
+      this.id("${id}-${javaVersion.version}".toId())
+      this.name = "$name (Java ${javaVersion.version})"
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
       // with the following content, so we set the relevant environment variables here.
@@ -38,14 +38,14 @@ class Maven(
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
-        text("env.JAVA_VERSION", javaVersion)
+        text("env.JAVA_VERSION", javaVersion.version)
       }
 
       steps {
         commonMaven(javaVersion) {
           this.goals = goals
           this.runnerArgs =
-              "$MAVEN_DEFAULT_ARGS -Djava.version=$javaVersion -Dkafka-schema-registry.version=$schemaRegistryVersion ${args ?: ""}"
+              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Dkafka-schema-registry.version=$schemaRegistryVersion ${args ?: ""}"
         }
       }
 
