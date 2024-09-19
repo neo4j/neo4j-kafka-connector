@@ -209,6 +209,7 @@ object TestData {
         "authenticated-user",
         "executing-user",
         "server-id",
+        "neo4j",
         CaptureMode.FULL,
         "connection-type",
         "connection-client",

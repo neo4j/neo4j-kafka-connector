@@ -76,9 +76,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     get(): kotlin.time.Duration =
         kotlin.time.Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
 
-  val maxRetryAttempts
-    get(): Int = getInt(MAX_TRANSACTION_RETRY_ATTEMPTS)
-
   internal val maxConnectionPoolSize
     get(): Int = getInt(POOL_MAX_CONNECTION_POOL_SIZE)
 
@@ -248,7 +245,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     const val AUTHENTICATION_CUSTOM_REALM = "neo4j.authentication.custom.realm"
 
     const val MAX_TRANSACTION_RETRY_TIMEOUT = "neo4j.max-retry-time"
-    const val MAX_TRANSACTION_RETRY_ATTEMPTS = "neo4j.max-retry-attempts"
 
     const val CONNECTION_TIMEOUT = "neo4j.connection-timeout"
     const val POOL_MAX_CONNECTION_POOL_SIZE = "neo4j.pool.max-connection-pool-size"
