@@ -32,7 +32,7 @@ import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
 @KeyValueConverter(key = JSON_RAW, value = JSON_RAW)
-class Neo4jSinkRawJSONIT {
+class Neo4jSinkRawJsonIT {
   companion object {
     private const val TOPIC = "persons"
   }
@@ -101,7 +101,8 @@ class Neo4jSinkRawJSONIT {
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
           .run(
-              "MATCH (p:Person) RETURN count(p) as result",
+              "MATCH (p:Person) WHERE [p.name, p.surname] IN ${'$'}names RETURN count(p) as result",
+              mapOf("names" to listOf(listOf("Jane", "Doe"), listOf("John", "Doe"))),
           )
           .single()["result"]
           .asLong() shouldBe 2L
@@ -130,7 +131,8 @@ class Neo4jSinkRawJSONIT {
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
           .run(
-              "MATCH (p:Person) RETURN count(p) as result",
+              "MATCH (p:Person {name: ${'$'}name}) RETURN count(p) as result",
+              mapOf("name" to "John"),
           )
           .single()["result"]
           .asLong() shouldBe 1L
@@ -159,7 +161,38 @@ class Neo4jSinkRawJSONIT {
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
           .run(
-              "MATCH (p:Person) RETURN count(p) as result",
+              "MATCH (p:Person {age: ${'$'}age}) RETURN count(p) as result",
+              mapOf("age" to 25L),
+          )
+          .single()["result"]
+          .asLong() shouldBe 1L
+    }
+  }
+
+  @Neo4jSink(
+      cypher =
+          [
+              CypherStrategy(
+                  TOPIC,
+                  "WITH __value AS status MERGE (p:Person {single: status})",
+              ),
+          ],
+  )
+  @Test
+  fun `should support raw boolean value`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+  ) {
+    producer.publish(
+        value = true,
+        valueSchema = Schema.BOOLEAN_SCHEMA,
+    )
+
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
+      session
+          .run(
+              "MATCH (p:Person {single: ${'$'}single}) RETURN count(p) as result",
+              mapOf("single" to true),
           )
           .single()["result"]
           .asLong() shouldBe 1L
