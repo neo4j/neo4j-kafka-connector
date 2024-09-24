@@ -56,14 +56,14 @@ class Neo4jSinkRawJsonIT {
         valueSchema = SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build(),
     )
 
-    await().atMost(30.seconds.toJavaDuration()).until {
+    await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
           .run(
-              "MATCH (p:Person {name: \$name, surname: \$surname}) RETURN count(p) = 1 AS result",
+              "MATCH (p:Person {name: ${'$'}name, surname: ${'$'}surname}) RETURN count(p) as result",
               mapOf("name" to "Jane", "surname" to "Doe"),
           )
           .single()["result"]
-          .asBoolean()
+          .asLong() shouldBe 1L
     }
   }
 
