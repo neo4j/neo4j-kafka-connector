@@ -31,12 +31,15 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
 import org.neo4j.connectors.kafka.testing.format.json.JsonEmbeddedSerializer
+import org.neo4j.connectors.kafka.testing.format.json.JsonRawSerializer
 import org.neo4j.connectors.kafka.testing.format.json.JsonSchemaSerializer
 import org.neo4j.connectors.kafka.testing.format.protobuf.ProtobufSerializer
 import org.neo4j.connectors.kafka.testing.format.string.StringSerializer
 
 private val PROTOBUF_OPTIONS =
     mapOf("enhanced.protobuf.schema.support" to "true", "optional.for.nullables" to "true")
+
+private val JSON_RAW_OPTIONS = mapOf("schemas.enable" to "false")
 
 enum class KafkaConverter(
     val className: String,
@@ -50,28 +53,40 @@ enum class KafkaConverter(
       className = "io.confluent.connect.avro.AvroConverter",
       converterProvider = { AvroConverter() },
       serializerClass = KafkaAvroSerializer::class.java,
-      testShimSerializer = AvroSerializer),
+      testShimSerializer = AvroSerializer,
+  ),
   JSON_SCHEMA(
       className = "io.confluent.connect.json.JsonSchemaConverter",
       converterProvider = { JsonSchemaConverter() },
       serializerClass = KafkaJsonSchemaSerializer::class.java,
-      testShimSerializer = JsonSchemaSerializer),
+      testShimSerializer = JsonSchemaSerializer,
+  ),
   JSON_EMBEDDED(
       className = "org.apache.kafka.connect.json.JsonConverter",
       converterProvider = { JsonConverter() },
       serializerClass = KafkaJsonSerializer::class.java,
-      testShimSerializer = JsonEmbeddedSerializer),
+      testShimSerializer = JsonEmbeddedSerializer,
+  ),
+  JSON_RAW(
+      className = "org.apache.kafka.connect.json.JsonConverter",
+      converterProvider = { JsonConverter() },
+      serializerClass = KafkaJsonSerializer::class.java,
+      testShimSerializer = JsonRawSerializer,
+      additionalProperties = JSON_RAW_OPTIONS,
+  ),
   PROTOBUF(
       className = "io.confluent.connect.protobuf.ProtobufConverter",
       converterProvider = { ProtobufConverter() },
       serializerClass = KafkaProtobufSerializer::class.java,
       testShimSerializer = ProtobufSerializer(PROTOBUF_OPTIONS),
-      additionalProperties = PROTOBUF_OPTIONS),
+      additionalProperties = PROTOBUF_OPTIONS,
+  ),
   STRING(
       className = "org.apache.kafka.connect.storage.StringConverter",
       converterProvider = { StringConverter() },
       serializerClass = org.apache.kafka.common.serialization.StringSerializer::class.java,
-      testShimSerializer = StringSerializer)
+      testShimSerializer = StringSerializer,
+  )
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)

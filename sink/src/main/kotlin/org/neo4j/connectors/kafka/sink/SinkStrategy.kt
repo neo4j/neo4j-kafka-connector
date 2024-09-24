@@ -89,7 +89,7 @@ data class SinkMessage(val record: SinkRecord) {
             }
       }
       converted
-    }
+    } ?: value
   }
 
   override fun toString(): String {
