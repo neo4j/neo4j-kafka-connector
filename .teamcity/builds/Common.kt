@@ -19,22 +19,32 @@ const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
 const val MAVEN_DEFAULT_ARGS =
     "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository"
 
+val DEFAULT_JAVA_VERSION = JavaVersion.V_11
+const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
+
 enum class LinuxSize(val value: String) {
   SMALL("small"),
   LARGE("large")
 }
 
+enum class JavaVersion(val version: String, val dockerImage: String) {
+  V_11(version = "11", dockerImage = "eclipse-temurin:11-jdk"),
+  V_17(version = "17", dockerImage = "eclipse-temurin:17-jdk"),
+}
+
 object Neo4jKafkaConnectorVcs :
-    GitVcsRoot({
-      id("Connectors_Neo4jKafkaConnector_Build")
+    GitVcsRoot(
+        {
+          id("Connectors_Neo4jKafkaConnector_Build")
 
-      name = "neo4j-kafka-connector"
-      url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-      branch = "refs/heads/main"
-      branchSpec = "refs/heads/*"
+          name = "neo4j-kafka-connector"
+          url = "git@github.com:neo4j/neo4j-kafka-connector.git"
+          branch = "refs/heads/main"
+          branchSpec = "refs/heads/*"
 
-      authMethod = defaultPrivateKey { userName = "git" }
-    })
+          authMethod = defaultPrivateKey { userName = "git" }
+        },
+    )
 
 fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {
   startsWith("cloud.amazon.agent-name-prefix", "linux-${size.value}")
@@ -84,7 +94,10 @@ fun collectArtifacts(buildType: BuildType): BuildType {
   return buildType
 }
 
-fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
+fun BuildSteps.commonMaven(
+    javaVersion: JavaVersion,
+    init: MavenBuildStep.() -> Unit
+): MavenBuildStep {
   val maven =
       this.maven {
         // this is the settings name we uploaded to Connectors project
@@ -92,7 +105,7 @@ fun BuildSteps.commonMaven(init: MavenBuildStep.() -> Unit): MavenBuildStep {
         localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
         dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-        dockerImage = "eclipse-temurin:11-jdk"
+        dockerImage = javaVersion.dockerImage
         dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
       }
 

@@ -9,63 +9,71 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Release(id: String, name: String) :
-    BuildType({
-      this.id(id.toId())
-      this.name = name
+class Release(id: String, name: String, javaVersion: JavaVersion) :
+    BuildType(
+        {
+          this.id("${id}-${javaVersion.version}".toId())
+          this.name = "$name (Java ${javaVersion.version})"
 
-      params {
-        text(
-            "releaseVersion",
-            "",
-            allowEmpty = false,
-            display = ParameterDisplay.PROMPT,
-            label = "Version to release")
-        text(
-            "nextSnapshotVersion",
-            "",
-            allowEmpty = false,
-            display = ParameterDisplay.PROMPT,
-            label = "Version on the next snapshot after the release")
+          params {
+            text(
+                "releaseVersion",
+                "",
+                allowEmpty = false,
+                display = ParameterDisplay.PROMPT,
+                label = "Version to release",
+            )
+            text(
+                "nextSnapshotVersion",
+                "",
+                allowEmpty = false,
+                display = ParameterDisplay.PROMPT,
+                label = "Version on the next snapshot after the release",
+            )
 
-        text("env.PACKAGES_USERNAME", "%github-packages-user%")
-        password("env.PACKAGES_PASSWORD", "%github-packages-token%")
-        password("env.JRELEASER_GITHUB_TOKEN", "%github-pull-request-token%")
-      }
+            text("env.PACKAGES_USERNAME", "%github-packages-user%")
+            password("env.PACKAGES_PASSWORD", "%github-packages-token%")
+            password("env.JRELEASER_GITHUB_TOKEN", "%github-pull-request-token%")
+          }
 
-      steps {
-        setVersion("Set release version", "%releaseVersion%")
+          steps {
+            setVersion("Set release version", "%releaseVersion%", javaVersion)
 
-        commonMaven {
-          this.name = "Build versionalised package"
-          goals = "package"
-          runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipTests"
-        }
+            commonMaven(javaVersion) {
+              this.name = "Build versionalised package"
+              goals = "package"
+              runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipTests"
+            }
 
-        commitAndPush("Push release version", "build: release version %releaseVersion%")
+            commitAndPush("Push release version", "build: release version %releaseVersion%")
 
-        commonMaven {
-          this.name = "Release to Github"
-          goals = "jreleaser:full-release"
-          runnerArgs = "$MAVEN_DEFAULT_ARGS -Prelease -pl :packaging"
-        }
+            commonMaven(javaVersion) {
+              this.name = "Release to Github"
+              goals = "jreleaser:full-release"
+              runnerArgs =
+                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Prelease -pl :packaging"
+            }
 
-        setVersion("Set next snapshot version", "%nextSnapshotVersion%")
+            setVersion("Set next snapshot version", "%nextSnapshotVersion%", javaVersion)
 
-        commitAndPush(
-            "Push next snapshot version", "build: update version to %nextSnapshotVersion%")
-      }
+            commitAndPush(
+                "Push next snapshot version",
+                "build: update version to %nextSnapshotVersion%",
+            )
+          }
 
-      features { dockerSupport {} }
+          features { dockerSupport {} }
 
-      requirements { runOnLinux(LinuxSize.SMALL) }
-    })
+          requirements { runOnLinux(LinuxSize.SMALL) }
+        },
+    )
 
-fun BuildSteps.setVersion(name: String, version: String): MavenBuildStep {
-  return this.commonMaven {
+fun BuildSteps.setVersion(name: String, version: String, javaVersion: JavaVersion): MavenBuildStep {
+  return this.commonMaven(javaVersion) {
     this.name = name
     goals = "versions:set"
-    runnerArgs = "$MAVEN_DEFAULT_ARGS -DnewVersion=$version -DgenerateBackupPoms=false"
+    runnerArgs =
+        "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DnewVersion=$version -DgenerateBackupPoms=false"
   }
 }
 
