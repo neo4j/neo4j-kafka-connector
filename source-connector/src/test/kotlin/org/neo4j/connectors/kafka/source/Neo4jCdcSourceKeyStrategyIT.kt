@@ -89,6 +89,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
+    session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
@@ -98,6 +99,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
               .hasEventType(EventType.NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
+              .hasNodeKeys(mapOf("TestSource" to listOf(mapOf("name" to "Jane"))))
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane"))
         }

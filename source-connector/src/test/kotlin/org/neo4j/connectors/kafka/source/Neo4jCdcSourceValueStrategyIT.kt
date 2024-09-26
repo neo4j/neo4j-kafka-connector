@@ -62,15 +62,17 @@ abstract class Neo4jCdcSourceValueStrategyIT {
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-
+    session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue {
           ChangeEventAssert.assertThat(it)
               .isNotNull()
+              .hasEventType(EventType.NODE)
               .hasOperation(EntityOperation.CREATE)
               .labelledAs("TestSource")
+              .hasNodeKeys(mapOf("TestSource" to listOf(mapOf("name" to "Jane"))))
               .hasNoBeforeState()
               .hasAfterStateProperties(mapOf("name" to "Jane"))
         }
@@ -98,6 +100,7 @@ abstract class Neo4jCdcSourceValueStrategyIT {
       consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
+    session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.createForMap(consumer)
@@ -108,7 +111,7 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                   "eventType" to EventType.NODE.name,
                   "operation" to EntityOperation.CREATE.name,
                   "labels" to listOf("TestSource"),
-                  "keys" to emptyMap<Any, Any>(),
+                  "keys" to mapOf("TestSource" to listOf(mapOf("name" to "Jane"))),
                   "state" to
                       mapOf(
                           "after" to
