@@ -41,6 +41,8 @@ private val PROTOBUF_OPTIONS =
 
 private val JSON_RAW_OPTIONS = mapOf("schemas.enable" to "false")
 
+private val JSON_EMBEDDED_OPTIONS = mapOf("schemas.enable" to "true")
+
 enum class KafkaConverter(
     val className: String,
     val converterProvider: () -> Converter,
@@ -66,6 +68,7 @@ enum class KafkaConverter(
       converterProvider = { JsonConverter() },
       serializerClass = KafkaJsonSerializer::class.java,
       testShimSerializer = JsonEmbeddedSerializer,
+      additionalProperties = JSON_EMBEDDED_OPTIONS,
   ),
   JSON_RAW(
       className = "org.apache.kafka.connect.json.JsonConverter",
