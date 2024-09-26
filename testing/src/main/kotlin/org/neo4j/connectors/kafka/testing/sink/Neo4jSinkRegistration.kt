@@ -63,13 +63,7 @@ class Neo4jSinkRegistration(
                       put("topics", topics.joinToString(","))
                       put("connector.class", "org.neo4j.connectors.kafka.sink.Neo4jConnector")
                       put("key.converter", keyConverter.className)
-                      if (keyConverter == KafkaConverter.JSON_EMBEDDED) {
-                        put("key.converter.schemas.enable", true)
-                      }
                       put("value.converter", valueConverter.className)
-                      if (valueConverter == KafkaConverter.JSON_EMBEDDED) {
-                        put("value.converter.schemas.enable", true)
-                      }
                       put("errors.retry.timeout", retryTimeout.inWholeMilliseconds)
                       put("errors.retry.delay.max.ms", retryMaxDelay.inWholeMilliseconds)
                       put("errors.tolerance", errorTolerance)
