@@ -111,6 +111,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       SourceType.CDC -> {
         val configMap = mutableMapOf<String, MutableList<Pattern>>()
         val nonPositionalConfigMode = mutableMapOf<String, Boolean>()
+        val patternTxMetadataMap = mutableMapOf<Pattern, MutableMap<String, Any>>()
 
         originals()
             .entries
@@ -151,7 +152,7 @@ class SourceConfiguration(originals: Map<*, *>) :
             .entries
             .filter { CDC_PATTERN_ARRAY_METADATA_REGEX.matches(it.key) }
             .map { CdcPatternConfigItem(it, CDC_PATTERN_ARRAY_METADATA_REGEX) }
-            .forEach { mapMetadata(it, nonPositionalConfigMode, configMap) }
+            .forEach { mapMetadata(it, nonPositionalConfigMode, configMap, patternTxMetadataMap) }
 
         pivotMapCdcSelectorMap(configMap)
       }
@@ -246,35 +247,38 @@ class SourceConfiguration(originals: Map<*, *>) :
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val value = configEntry.value as String
     val changesTo = value.splitToSequence(",").map { term -> term.trim() }.toSet()
-    val pattern = patterns.get(index)
+    val pattern = patterns[index]
     pattern.withChangesTo(changesTo)
   }
 
   private fun mapMetadata(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
-      configMap: MutableMap<String, MutableList<Pattern>>
+      configMap: MutableMap<String, MutableList<Pattern>>,
+      patternTxMetadataMap: MutableMap<Pattern, MutableMap<String, Any>>
   ) {
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
-    val keyValue = configEntry.metadata!!
-    var value = configEntry.value
+    val metadataKey = configEntry.metadata!!
+    val value = configEntry.value
     val pattern = patterns[index]
-    if (keyValue.startsWith(EntitySelector.METADATA_KEY_TX_METADATA + '.')) {
-      value =
-          mapOf(
-              keyValue.removePrefix(EntitySelector.METADATA_KEY_TX_METADATA + '.') to value,
-          )
-      val metadata =
-          mapOf(
-              EntitySelector.METADATA_KEY_TX_METADATA to value,
-          )
-      pattern.withMetadata(metadata)
+    if (metadataKey.startsWith("$METADATA_KEY_TX_METADATA.")) {
+      val txMetadataKey = metadataKey.removePrefix("$METADATA_KEY_TX_METADATA.")
+
+      val txMetadata =
+          patternTxMetadataMap.getOrPut(pattern) { mutableMapOf(txMetadataKey to value) }
+      txMetadata[txMetadataKey] = value
+
+      pattern.withTxMetadata(txMetadata)
+      patternTxMetadataMap[pattern] = txMetadata
+    } else if (metadataKey == METADATA_KEY_EXECUTING_USER) {
+      pattern.withExecutingUser(value as String)
+    } else if (metadataKey == METADATA_KEY_AUTHENTICATED_USER) {
+      pattern.withAuthenticatedUser(value as String)
     } else {
-      val metadata =
-          mapOf(
-              keyValue to value,
-          )
-      pattern.withMetadata(metadata)
+      throw ConfigException(
+          "Unexpected metadata key: '$metadataKey' found in configuration property '${configEntry.key}'. " +
+              "Valid keys are '$METADATA_KEY_AUTHENTICATED_USER', '$METADATA_KEY_EXECUTING_USER', " +
+              "or keys starting with '$METADATA_KEY_TX_METADATA.*'.")
     }
   }
 
@@ -345,11 +349,36 @@ class SourceConfiguration(originals: Map<*, *>) :
     cdcSelectorsToTopics.keys
         .map {
           when (it) {
-            is NodeSelector -> NodeSelector(it.change, it.changesTo, it.labels, it.key, it.metadata)
+            is NodeSelector ->
+                NodeSelector.builder()
+                    .withOperation(it.operation)
+                    .withChangesTo(it.changesTo)
+                    .withLabels(it.labels)
+                    .withKey(it.key)
+                    .withTxMetadata(it.txMetadata)
+                    .withExecutingUser(it.executingUser)
+                    .withAuthenticatedUser(it.authenticatedUser)
+                    .build()
             is RelationshipSelector ->
-                RelationshipSelector(
-                    it.change, it.changesTo, it.type, it.start, it.end, it.key, it.metadata)
-            is EntitySelector -> EntitySelector(it.change, it.changesTo, it.metadata)
+                RelationshipSelector.builder()
+                    .withOperation(it.operation)
+                    .withChangesTo(it.changesTo)
+                    .withType(it.type)
+                    .withStart(it.start)
+                    .withEnd(it.end)
+                    .withKey(it.key)
+                    .withTxMetadata(it.txMetadata)
+                    .withExecutingUser(it.executingUser)
+                    .withAuthenticatedUser(it.authenticatedUser)
+                    .build()
+            is EntitySelector ->
+                EntitySelector.builder()
+                    .withOperation(it.operation)
+                    .withChangesTo(it.changesTo)
+                    .withTxMetadata(it.txMetadata)
+                    .withExecutingUser(it.executingUser)
+                    .withAuthenticatedUser(it.authenticatedUser)
+                    .build()
             else -> throw IllegalStateException("unexpected pattern type ${it.javaClass.name}")
           }
         }
@@ -458,6 +487,10 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
     private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
+
+    private const val METADATA_KEY_AUTHENTICATED_USER = "authenticatedUser"
+    private const val METADATA_KEY_EXECUTING_USER = "executingUser"
+    private const val METADATA_KEY_TX_METADATA = "txMetadata"
 
     fun validate(config: Config, originals: Map<String, String>) {
       validate(config)

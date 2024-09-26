@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.neo4j.connectors.kafka</groupId>
     <artifactId>parent</artifactId>
-    <version>5.1.0-SNAPSHOT</version>
+    <version>5.1.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>parent</name>
     <description>Neo4j Connector for Kafka</description>
@@ -45,7 +45,7 @@
         <awaitility.version>4.2.1</awaitility.version>
         <build-resources.version>2024-07.1</build-resources.version>
         <byte-buddy.version>1.14.17</byte-buddy.version>
-        <cdc.version>1.0.6</cdc.version>
+        <cdc.version>1.0.7</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <hamcrest.version>2.2</hamcrest.version>
@@ -79,7 +79,7 @@
         <mockito-kotlin.version>5.3.1</mockito-kotlin.version>
         <mockito.version>5.12.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.9.2</neo4j-cypher-dsl.version>
-        <neo4j-java-driver.version>4.4.9</neo4j-java-driver.version>
+        <neo4j-java-driver.version>4.4.18</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
         <protobuf.version>3.24.4</protobuf.version>
@@ -285,7 +285,7 @@
             </dependency>
             <dependency>
                 <groupId>org.neo4j.driver</groupId>
-                <artifactId>neo4j-java-driver</artifactId>
+                <artifactId>neo4j-java-driver-slim</artifactId>
                 <version>${neo4j-java-driver.version}</version>
             </dependency>
             <dependency>
