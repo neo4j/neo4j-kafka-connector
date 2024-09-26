@@ -23,7 +23,6 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInfo
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -45,20 +44,20 @@ abstract class Neo4jSinkIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "MERGE (p:Person {name: event.name, surname: event.surname, executionId: event.executionId})")])
+                  "MERGE (p:Person {name: event.name, surname: event.surname})",
+              ),
+          ],
+  )
   @Test
   fun `writes messages to Neo4j via sink connector`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      testInfo: TestInfo
   ) {
-    val executionId = testInfo.displayName + System.currentTimeMillis()
-    val value = mapOf("name" to "Jane", "surname" to "Doe", "executionId" to executionId)
+    val value = mapOf("name" to "Jane", "surname" to "Doe")
     val schema =
         SchemaBuilder.struct()
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
-            .field("executionId", Schema.STRING_SCHEMA)
             .build()
     val struct = Struct(schema)
     schema.fields().forEach { struct.put(it, value[it.name()]) }
@@ -68,8 +67,9 @@ abstract class Neo4jSinkIT {
     await().atMost(30.seconds.toJavaDuration()).until {
       session
           .run(
-              "MATCH (p:Person {name: \$name, surname: \$surname, executionId: \$executionId}) RETURN count(p) = 1 AS result",
-              mapOf("name" to "Jane", "surname" to "Doe", "executionId" to executionId))
+              "MATCH (p:Person {name: \$name, surname: \$surname}) RETURN count(p) = 1 AS result",
+              mapOf("name" to "Jane", "surname" to "Doe"),
+          )
           .single()["result"]
           .asBoolean()
     }

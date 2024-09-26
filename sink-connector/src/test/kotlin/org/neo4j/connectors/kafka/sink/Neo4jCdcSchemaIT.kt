@@ -465,6 +465,7 @@ abstract class Neo4jCdcSchemaIT {
               "neo4j",
               "neo4j",
               "server-id",
+              "neo4j",
               CaptureMode.DIFF,
               "bolt",
               "localhost:32000",
