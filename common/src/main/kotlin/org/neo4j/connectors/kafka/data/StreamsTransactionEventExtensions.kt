@@ -70,8 +70,13 @@ object StreamsTransactionEventExtensions {
                 this.schema.constraints
                     .filter { c -> c.type == StreamsConstraintType.UNIQUE }
                     .map { c ->
-                      c.label!! to c.properties.associateWith { referenceState.properties[it] }
+                      c.label!! to
+                          c.properties
+                              .associateWith { referenceState.properties[it] }
+                              // Does not have values associated in the schema
+                              .filterValues { it != null }
                     }
+                    .filter { it.second.isNotEmpty() }
                     .groupBy { it.first }
                     .mapValues { it.value.map { p -> p.second } }
 

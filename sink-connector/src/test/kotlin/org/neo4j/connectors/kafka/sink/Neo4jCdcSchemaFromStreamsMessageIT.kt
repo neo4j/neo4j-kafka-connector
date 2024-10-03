@@ -24,6 +24,7 @@ import java.time.LocalDate
 import kotlin.time.Duration.Companion.seconds
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.events.Constraint
+import org.neo4j.connectors.kafka.events.EntityType
 import org.neo4j.connectors.kafka.events.Meta
 import org.neo4j.connectors.kafka.events.NodeChange
 import org.neo4j.connectors.kafka.events.NodePayload
@@ -155,6 +156,209 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
       val result = session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 1L)).list()
 
       result shouldHaveSize 0
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should create a node with a null unique constraint property value`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+
+    // given a creation event
+    // with a unique constraint referencing a property that doesn't exist
+    val event =
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.created),
+            payload =
+                NodePayload(
+                    id = "1",
+                    type = EntityType.node,
+                    before = null,
+                    after =
+                        NodeChange(
+                            mapOf(
+                                "first_name" to "john",
+                                "last_name" to "smith",
+                                "email" to "john@smith.org",
+                            ),
+                            listOf("Person")),
+                ),
+            schema =
+                Schema(
+                    properties =
+                        mapOf(
+                            "first_name" to "String",
+                            "last_name" to "String",
+                            "email" to "String",
+                        ),
+                    constraints =
+                        listOf(
+                            Constraint("Person", setOf("email"), StreamsConstraintType.UNIQUE),
+                            Constraint(
+                                "Person",
+                                setOf("email"),
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
+                ))
+
+    // when the event is published
+    producer.publish(event)
+
+    // then a new node should exist
+    eventually(30.seconds) {
+      val result =
+          session
+              .run(
+                  "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
+                  mapOf("first_name" to "john"))
+              .list()
+
+      result shouldHaveSize 1
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should delete a node with a null unique constraint property value`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+
+    // given a database containing 1 node
+    session
+        .run(
+            "CREATE (n:Person) SET n = ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "first_name" to "john",
+                        "last_name" to "smith",
+                        "email" to "john@smith.org",
+                    )))
+        .consume()
+
+    // and a deletion event and with a unique constraint referencing a property that doesn't exist
+    val event =
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.deleted),
+            payload =
+                NodePayload(
+                    id = "1",
+                    type = EntityType.node,
+                    after = null,
+                    before =
+                        NodeChange(
+                            mapOf(
+                                "first_name" to "john",
+                                "last_name" to "smith",
+                                "email" to "john@smith.org",
+                            ),
+                            listOf("Person")),
+                ),
+            schema =
+                Schema(
+                    properties =
+                        mapOf(
+                            "first_name" to "String",
+                            "last_name" to "String",
+                            "email" to "String",
+                        ),
+                    constraints =
+                        listOf(
+                            Constraint("Person", setOf("email"), StreamsConstraintType.UNIQUE),
+                            Constraint(
+                                "Person",
+                                setOf("email"),
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
+                ))
+
+    // when the event is published
+    producer.publish(event)
+
+    // then the node should no longer exist
+    eventually(10.seconds) {
+      val result =
+          session
+              .run(
+                  "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
+                  mapOf("first_name" to "john"))
+              .list()
+
+      result shouldHaveSize 0
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a node when no valid unique constraints are provided`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+
+    // given a database containing 1 node
+    session
+        .run(
+            "CREATE (n:Person) SET n = ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "first_name" to "john",
+                        "last_name" to "smith",
+                        "email" to "john@smith.org",
+                    )))
+        .consume()
+
+    // and a deletion event and with a multiple unique constraints which do not have a valid
+    // property
+    val event =
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.deleted),
+            payload =
+                NodePayload(
+                    id = "1",
+                    type = EntityType.node,
+                    after = null,
+                    before =
+                        NodeChange(
+                            mapOf(
+                                "first_name" to "john",
+                                "last_name" to "smith",
+                            ),
+                            listOf("Person")),
+                ),
+            schema =
+                Schema(
+                    properties =
+                        mapOf(
+                            "first_name" to "String",
+                            "last_name" to "String",
+                        ),
+                    constraints =
+                        listOf(
+                            Constraint("Person", setOf("email"), StreamsConstraintType.UNIQUE),
+                            Constraint(
+                                "Person",
+                                setOf("email"),
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
+                ))
+
+    // when the event is published
+    producer.publish(event)
+
+    // then the node should not be deleted and should still exist
+    eventually(10.seconds) {
+      val result =
+          session
+              .run(
+                  "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
+                  mapOf("first_name" to "john"))
+              .list()
+
+      result shouldHaveSize 1
     }
   }
 
