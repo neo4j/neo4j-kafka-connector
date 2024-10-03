@@ -727,6 +727,98 @@ class CdcSchemaHandlerTest {
     } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
+  @Test
+  fun `should generate correct statement for node deletion events containing null keys property values`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.DELETE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("name" to "john"), mapOf("invalid" to null))),
+                NodeState(emptyList(), mapOf("name" to "john")),
+                null),
+            1,
+            0)
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MATCH (n:`Person` {name: ${'$'}nName}) DETACH DELETE n",
+                        mapOf("nName" to "john"))))))
+  }
+
+  @Test
+  fun `should generate correct statement for node creation events containing null keys property values`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            event =
+                NodeEvent(
+                    "node-element-id",
+                    EntityOperation.CREATE,
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"), mapOf("invalid" to null))),
+                    null,
+                    NodeState(
+                        listOf("Person"),
+                        mapOf(
+                            "name" to "john",
+                        ))),
+            txId = 1,
+            seq = 0)
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MERGE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
+                        mapOf(
+                            "nName" to "john",
+                            "nProps" to
+                                mapOf(
+                                    "name" to "john",
+                                )))))))
+  }
+
+  @Test
+  fun `should fail to generate query when no keys properties are provided`() {
+    // given a sink message which contains a key with no properties
+    val sinkMessage =
+        newChangeEventMessage(
+            NodeEvent(
+                "node-element-id",
+                EntityOperation.DELETE,
+                listOf("Person"),
+                mapOf("Person" to emptyList()),
+                NodeState(emptyList(), mapOf("name" to "john")),
+                null),
+            1,
+            0)
+
+    // when the key is handled
+    // then an exception is thrown
+    shouldThrow<IllegalArgumentException> {
+          val handler =
+              CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+
+          handler.handle(listOf(sinkMessage))
+        }
+        .also {
+          it shouldHaveMessage
+              Regex(
+                  "^schema strategy requires at least one node key with valid properties aliased.*$")
+        }
+  }
+
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
     val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
 
