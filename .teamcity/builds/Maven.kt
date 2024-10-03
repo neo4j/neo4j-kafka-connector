@@ -5,10 +5,17 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.toId
 
-class Maven(id: String, name: String, goals: String, args: String? = null) :
+class Maven(
+    id: String,
+    name: String,
+    goals: String,
+    javaVersion: JavaVersion,
+    schemaRegistryVersion: String,
+    args: String? = null
+) :
     BuildType({
-      this.id(id.toId())
-      this.name = name
+      this.id("${id}-${javaVersion.version}".toId())
+      this.name = "$name (Java ${javaVersion.version})"
 
       // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
       // with the following content, so we set the relevant environment variables here.
@@ -31,12 +38,14 @@ class Maven(id: String, name: String, goals: String, args: String? = null) :
       params {
         text("env.PACKAGES_USERNAME", "%github-packages-user%")
         password("env.PACKAGES_PASSWORD", "%github-packages-token%")
+        text("env.JAVA_VERSION", javaVersion.version)
       }
 
       steps {
-        commonMaven {
+        commonMaven(javaVersion) {
           this.goals = goals
-          this.runnerArgs = "$MAVEN_DEFAULT_ARGS ${args ?: ""}"
+          this.runnerArgs =
+              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Dkafka-schema-registry.version=$schemaRegistryVersion ${args ?: ""}"
         }
       }
 
