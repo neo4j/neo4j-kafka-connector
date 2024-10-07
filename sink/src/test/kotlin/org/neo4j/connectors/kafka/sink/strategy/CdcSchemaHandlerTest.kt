@@ -107,7 +107,7 @@ class CdcSchemaHandlerTest {
               .also {
                 it shouldHaveMessage
                     Regex(
-                        "^schema strategy requires at least one node key associated with node aliased.*$")
+                        "^schema strategy requires at least one node key with valid properties aliased.*$")
               }
         }
   }
