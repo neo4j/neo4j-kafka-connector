@@ -135,14 +135,16 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
   }
 
   private fun buildNode(keys: Map<String, List<Map<String, Any>>>, named: String): Node {
-    require(keys.isNotEmpty()) {
-      "schema strategy requires at least one node key associated with node aliased '$named'."
+    val validKeys = keys.filterValues { it.isNotEmpty() }
+
+    require(validKeys.isNotEmpty()) {
+      "schema strategy requires at least one node key with valid properties aliased '$named'."
     }
 
     val node =
-        Cypher.node(keys.keys.first(), keys.keys.drop(1))
+        Cypher.node(validKeys.keys.first(), validKeys.keys.drop(1))
             .withProperties(
-                keys
+                validKeys
                     .flatMap { it.value }
                     .asSequence()
                     .flatMap { it.asSequence() }
