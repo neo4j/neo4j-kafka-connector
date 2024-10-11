@@ -160,7 +160,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "CREATE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -206,7 +206,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "CREATE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -255,7 +255,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -299,7 +299,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -351,7 +351,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage2),
                     Query(
-                        "MATCH (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MERGE (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
                         mapOf(
                             "nId" to 5000L,
                             "nName" to "john",
@@ -440,9 +440,9 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start:`Person` {id: ${'$'}startId}) " +
-                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
-                            "CREATE (start)-[r:`KNOWS` {}]->(end) " +
+                        "MERGE (start:`Person` {id: ${'$'}startId}) " +
+                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
+                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
                             "SET r = ${'$'}rProps",
                         mapOf(
                             "startId" to 1L,
@@ -496,9 +496,9 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                            "MATCH (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
-                            "MATCH (start)-[r:`KNOWS` {}]->(end) " +
+                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
+                            "MERGE (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
+                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
                             "SET r += ${'$'}rProps",
                         mapOf(
                             "startId" to 1L,
@@ -950,7 +950,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "CREATE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
+                        "MERGE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nProps" to

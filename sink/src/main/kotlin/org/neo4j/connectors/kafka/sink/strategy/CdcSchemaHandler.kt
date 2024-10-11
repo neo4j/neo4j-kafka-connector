@@ -37,7 +37,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
 
     val node = buildNode(event.keys, "n")
     val stmt =
-        Cypher.create(node)
+        Cypher.merge(node)
             .set(node, Cypher.parameter("nProps", event.after.properties))
             .let {
               val labels = event.after.labels.minus(event.keys.keys)
@@ -62,7 +62,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
 
     val node = buildNode(event.keys, "n")
     val stmt =
-        Cypher.match(node)
+        Cypher.merge(node)
             .mutate(node, Cypher.parameter("nProps", event.mutatedProperties()))
             .let {
               val addedLabels = event.addedLabels()
@@ -99,9 +99,9 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
 
     val (start, end, rel) = buildRelationship(event, "r", true)
     val stmt =
-        Cypher.match(start)
-            .match(end)
-            .create(rel)
+        Cypher.merge(start)
+            .merge(end)
+            .merge(rel)
             .set(rel, Cypher.parameter("rProps", event.after.properties))
             .build()
 
@@ -118,7 +118,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
 
     val (start, end, rel, matchNodes) = buildRelationship(event, "r", false)
     val stmt =
-        (if (matchNodes) Cypher.match(start).match(end).match(rel) else Cypher.match(rel))
+        (if (matchNodes) Cypher.merge(start).merge(end).merge(rel) else Cypher.match(rel))
             .mutate(rel, Cypher.parameter("rProps", event.mutatedProperties()))
             .build()
 
