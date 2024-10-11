@@ -30,11 +30,14 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -51,9 +54,11 @@ class CdcSchemaHandlerTest {
                     emptyList(),
                     emptyMap(),
                     null,
-                    NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe"))),
+                    NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe")),
+                ),
                 1,
-                0),
+                0,
+            ),
             newChangeEventMessage(
                 RelationshipEvent(
                     "rel-element-id",
@@ -63,9 +68,11 @@ class CdcSchemaHandlerTest {
                     emptyList(),
                     EntityOperation.CREATE,
                     null,
-                    RelationshipState(emptyMap())),
+                    RelationshipState(emptyMap()),
+                ),
                 1,
-                0),
+                0,
+            ),
             newChangeEventMessage(
                 RelationshipEvent(
                     "rel-element-id",
@@ -73,14 +80,17 @@ class CdcSchemaHandlerTest {
                     Node(
                         "start-element-id",
                         listOf("Person"),
-                        mapOf("Person" to listOf(mapOf("id" to 5L)))),
+                        mapOf("Person" to listOf(mapOf("id" to 5L))),
+                    ),
                     Node("end-element-id", listOf("Person"), emptyMap()),
                     emptyList(),
                     EntityOperation.CREATE,
                     null,
-                    RelationshipState(emptyMap())),
+                    RelationshipState(emptyMap()),
+                ),
                 1,
-                0),
+                0,
+            ),
             newChangeEventMessage(
                 RelationshipEvent(
                     "rel-element-id",
@@ -89,25 +99,32 @@ class CdcSchemaHandlerTest {
                     Node(
                         "end-element-id",
                         listOf("Person"),
-                        mapOf("Person" to listOf(mapOf("id" to 5L)))),
+                        mapOf("Person" to listOf(mapOf("id" to 5L))),
+                    ),
                     emptyList(),
                     EntityOperation.CREATE,
                     null,
-                    RelationshipState(emptyMap())),
+                    RelationshipState(emptyMap()),
+                ),
                 1,
-                0))
+                0,
+            ),
+        )
         .forEach {
-          shouldThrow<IllegalArgumentException> {
+          shouldThrow<InvalidDataException> {
                 val handler =
                     CdcSchemaHandler(
-                        "my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+                        "my-topic",
+                        Renderer.getRenderer(Configuration.defaultConfig()),
+                    )
 
                 handler.handle(listOf(it))
               }
               .also {
                 it shouldHaveMessage
                     Regex(
-                        "^schema strategy requires at least one node key with valid properties aliased.*$")
+                        "^schema strategy requires at least one node key with valid properties on node aliased '(n|start|end)'.$",
+                    )
               }
         }
   }
@@ -125,9 +142,15 @@ class CdcSchemaHandlerTest {
                 NodeState(
                     listOf("Person"),
                     mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -137,7 +160,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
+                        "CREATE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -145,7 +168,14 @@ class CdcSchemaHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1))))))))
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -158,9 +188,15 @@ class CdcSchemaHandlerTest {
                 NodeState(
                     listOf("Person", "Employee"),
                     mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -170,7 +206,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
+                        "CREATE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -178,7 +214,14 @@ class CdcSchemaHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1))))))))
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -194,9 +237,15 @@ class CdcSchemaHandlerTest {
                 NodeState(
                     listOf("Person", "Employee"),
                     mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -206,12 +255,17 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
+                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
-                            "nProps" to
-                                mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1))))))))
+                            "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -222,13 +276,20 @@ class CdcSchemaHandlerTest {
                 mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("name" to "joe", "surname" to "doe", "married" to true)),
+                    mapOf("name" to "joe", "surname" to "doe", "married" to true),
+                ),
                 NodeState(
                     listOf("Person", "Manager"),
                     mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -238,7 +299,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
                         mapOf(
                             "nName" to "john",
                             "nSurname" to "doe",
@@ -246,7 +307,14 @@ class CdcSchemaHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null)))))))
+                                    "married" to null,
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     val sinkMessage2 =
         newChangeEventMessage(
@@ -256,16 +324,24 @@ class CdcSchemaHandlerTest {
                 listOf("Person", "Employee"),
                 mapOf(
                     "Person" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Employee" to listOf(mapOf("id" to 5000L))),
+                    "Employee" to listOf(mapOf("id" to 5000L)),
+                ),
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("name" to "joe", "surname" to "doe", "married" to true)),
+                    mapOf("name" to "joe", "surname" to "doe", "married" to true),
+                ),
                 NodeState(
                     listOf("Person", "Manager"),
                     mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                        "name" to "john",
+                        "surname" to "doe",
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage2),
         listOf(
@@ -275,7 +351,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MATCH (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
                         mapOf(
                             "nId" to 5000L,
                             "nName" to "john",
@@ -284,7 +360,14 @@ class CdcSchemaHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null)))))))
+                                    "married" to null,
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -298,10 +381,13 @@ class CdcSchemaHandlerTest {
                 mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe"))),
                 NodeState(
                     emptyList(),
-                    mapOf("name" to "joe", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1))),
-                null),
+                    mapOf("name" to "joe", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)),
+                ),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -312,7 +398,12 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) DETACH DELETE n",
-                        mapOf("nName" to "joe", "nSurname" to "doe"))))))
+                        mapOf("nName" to "joe", "nSurname" to "doe"),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -325,17 +416,21 @@ class CdcSchemaHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1)))),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -345,14 +440,20 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`Person` {id: ${'$'}startId}) " +
-                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
-                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
+                        "MATCH (start:`Person` {id: ${'$'}startId}) " +
+                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
+                            "CREATE (start)-[r:`KNOWS` {}]->(end) " +
                             "SET r = ${'$'}rProps",
                         mapOf(
                             "startId" to 1L,
                             "endId" to 2L,
-                            "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))))))))
+                            "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -367,19 +468,25 @@ class CdcSchemaHandlerTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to listOf(mapOf("id" to 1L)),
-                        "Employee" to listOf(mapOf("contractId" to 5000L)))),
+                        "Employee" to listOf(mapOf("contractId" to 5000L)),
+                    ),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to listOf(mapOf("id" to 2L)),
-                        "Employee" to listOf(mapOf("contractId" to 5001L)))),
+                        "Employee" to listOf(mapOf("contractId" to 5001L)),
+                    ),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
-                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1)))),
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -389,16 +496,22 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                            "MERGE (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
-                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
+                        "MATCH (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
+                            "MATCH (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
+                            "MATCH (start)-[r:`KNOWS` {}]->(end) " +
                             "SET r += ${'$'}rProps",
                         mapOf(
                             "startId" to 1L,
                             "startContractId" to 5000L,
                             "endId" to 2L,
                             "endContractId" to 5001L,
-                            "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1))))))))
+                            "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1)),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -410,17 +523,22 @@ class CdcSchemaHandlerTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to listOf(mapOf("id" to 1L)),
-                        "Employee" to listOf(mapOf("contractId" to 5000L)))),
+                        "Employee" to listOf(mapOf("contractId" to 5000L)),
+                    ),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 listOf(mapOf("id" to 1001L)),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                RelationshipState(mapOf("name" to "joe", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "joe", "surname" to "doe")),
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -430,16 +548,17 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
-                            "MERGE (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
                             "SET r += ${'$'}rProps",
                         mapOf(
-                            "startId" to 1L,
-                            "startContractId" to 5000L,
-                            "endId" to 2L,
                             "rId" to 1001L,
-                            "rProps" to mapOf("name" to "joe")))))))
+                            "rProps" to mapOf("name" to "joe"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -452,17 +571,21 @@ class CdcSchemaHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -476,7 +599,12 @@ class CdcSchemaHandlerTest {
                             "MATCH (end:`Person` {id: ${'$'}endId}) " +
                             "MATCH (start)-[r:`KNOWS` {}]->(end) " +
                             "DELETE r",
-                        mapOf("startId" to 1L, "endId" to 2L))))))
+                        mapOf("startId" to 1L, "endId" to 2L),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -488,17 +616,22 @@ class CdcSchemaHandlerTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to listOf(mapOf("id" to 1L)),
-                        "Employee" to listOf(mapOf("contractId" to 5000L)))),
+                        "Employee" to listOf(mapOf("contractId" to 5000L)),
+                    ),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 listOf(mapOf("id" to 1001L)),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -508,15 +641,15 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
-                            "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                            "DELETE r",
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
                         mapOf(
-                            "startId" to 1L,
-                            "startContractId" to 5000L,
-                            "endId" to 2L,
-                            "rId" to 1001L))))))
+                            "rId" to 1001L,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -531,7 +664,9 @@ class CdcSchemaHandlerTest {
                 newChangeEventMessage(randomChangeEvent(), 0, 2),
                 newChangeEventMessage(randomChangeEvent(), 1, 0),
                 newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0)))
+                newChangeEventMessage(randomChangeEvent(), 2, 0),
+            ),
+        )
 
     result
         .shouldHaveSize(3)
@@ -551,7 +686,8 @@ class CdcSchemaHandlerTest {
                       { q3 ->
                         q3.txId shouldBe 0
                         q3.seq shouldBe 2
-                      })
+                      },
+                  )
             },
             { second ->
               second
@@ -564,16 +700,20 @@ class CdcSchemaHandlerTest {
                       { q2 ->
                         q2.txId shouldBe 1
                         q2.seq shouldBe 1
-                      })
+                      },
+                  )
             },
             { third ->
               third
                   .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 2
-                    q1.seq shouldBe 0
-                  })
-            })
+                  .shouldMatchInOrder(
+                      { q1 ->
+                        q1.txId shouldBe 2
+                        q1.seq shouldBe 0
+                      },
+                  )
+            },
+        )
   }
 
   @Test
@@ -588,9 +728,11 @@ class CdcSchemaHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -609,17 +751,21 @@ class CdcSchemaHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -639,9 +785,13 @@ class CdcSchemaHandlerTest {
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
                 NodeState(
-                    listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe"))),
+                    listOf("Person", "Employee"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -660,17 +810,21 @@ class CdcSchemaHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 null,
-                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -689,9 +843,11 @@ class CdcSchemaHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -710,17 +866,21 @@ class CdcSchemaHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -737,9 +897,11 @@ class CdcSchemaHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("name" to "john"), mapOf("invalid" to null))),
                 NodeState(emptyList(), mapOf("name" to "john")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -750,7 +912,12 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH (n:`Person` {name: ${'$'}nName}) DETACH DELETE n",
-                        mapOf("nName" to "john"))))))
+                        mapOf("nName" to "john"),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
@@ -768,9 +935,12 @@ class CdcSchemaHandlerTest {
                         listOf("Person"),
                         mapOf(
                             "name" to "john",
-                        ))),
+                        ),
+                    ),
+                ),
             txId = 1,
-            seq = 0)
+            seq = 0,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -780,17 +950,23 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
+                        "CREATE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
                         mapOf(
                             "nName" to "john",
                             "nProps" to
                                 mapOf(
                                     "name" to "john",
-                                )))))))
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
   }
 
   @Test
-  fun `should fail to generate query when no keys properties are provided`() {
+  fun `should fail when node keys is empty`() {
     // given a sink message which contains a key with no properties
     val sinkMessage =
         newChangeEventMessage(
@@ -800,13 +976,773 @@ class CdcSchemaHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to emptyList()),
                 NodeState(emptyList(), mapOf("name" to "john")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
-    // when the key is handled
-    // then an exception is thrown
-    shouldThrow<IllegalArgumentException> {
+    assertInvalidDataException(sinkMessage, "n")
+  }
+
+  @Test
+  fun `should fail when relationship start keys is empty for create even if relationship has keys`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is empty for create even if relationship has keys`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList()),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should fail when relationship start keys is empty for create`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship start keys is effectively empty for create`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is empty for create`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is effectively empty for create`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should generate correct statement when relationship start keys is empty but relationship has its own keys for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("id" to 1L)),
+                RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
+                            "SET r += ${'$'}rProps",
+                        mapOf(
+                            "rId" to 1L,
+                            "rProps" to
+                                mapOf(
+                                    "since" to LocalDate.of(2000, 1, 1),
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+  }
+
+  @Test
+  fun `should generate correct statement when relationship end keys is empty but relationship has its own keys for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("id" to 1L)),
+                RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
+                            "SET r += ${'$'}rProps",
+                        mapOf(
+                            "rId" to 1L,
+                            "rProps" to
+                                mapOf(
+                                    "since" to LocalDate.of(2000, 1, 1),
+                                ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+  }
+
+  @Test
+  fun `should fail when relationship start keys is empty for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(emptyMap<String, Any>()),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship start keys is effectively empty for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(emptyMap<String, Any>()),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is empty for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(emptyMap<String, Any>()),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is effectively empty for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(emptyMap<String, Any>()),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should generate correct statement when relationship start keys is empty but relationship has its own keys for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("id" to 1L)),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
+                        mapOf(
+                            "rId" to 1L,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+  }
+
+  @Test
+  fun `should generate correct statement when relationship end keys is empty but relationship has its own keys for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("id" to 1L)),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    1,
+                    0,
+                    listOf(sinkMessage),
+                    Query(
+                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
+                        mapOf(
+                            "rId" to 1L,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+  }
+
+  @Test
+  fun `should fail when relationship start keys is empty for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(emptyMap<String, Any>()),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship start keys is effectively empty for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(emptyMap<String, Any>()),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is empty for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(emptyMap<String, Any>()),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should fail when relationship end keys is effectively empty for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(emptyMap<String, Any>()),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  @Test
+  fun `should fail when streams node keys is empty`() {
+    val streamsMessage =
+        """
+      {
+        "meta": {
+          "timestamp": 1728643218066,
+          "username": "neo4j",
+          "txId": 18,
+          "txEventId": 0,
+          "txEventsCount": 1,
+          "operation": "deleted",
+          "source": {
+            "hostname": "neo4j03"
+          }
+        },
+        "payload": {
+          "id": "0",
+          "before": {
+            "properties": {
+              "first_name": "Ali",
+              "last_name": "Ince",
+              "id": 1
+            },
+            "labels": [
+              "Person"
+            ]
+          },
+          "after": null,
+          "type": "node"
+        },
+        "schema": {
+          "properties": {
+            "first_name": "String",
+            "last_name": "String",
+            "id": "Long"
+          },
+          "constraints": []
+        }
+      }
+    """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+
+    assertInvalidDataException(sinkMessage, "n")
+  }
+
+  @Test
+  fun `should fail when streams relationship start node keys is empty`() {
+    val streamsMessage =
+        """
+      {
+        "meta": {
+          "timestamp": 1728641686524,
+          "username": "neo4j",
+          "txId": 17,
+          "txEventId": 0,
+          "txEventsCount": 1,
+          "operation": "deleted",
+          "source": {
+            "hostname": "neo4j03"
+          }
+        },
+        "payload": {
+          "id": "0",
+          "start": {
+            "id": "0",
+            "labels": [
+              "Person"
+            ],
+            "ids": {}
+          },
+          "end": {
+            "id": "2",
+            "labels": [
+              "Company"
+            ],
+            "ids": {
+              "name": "Neo4j"
+            }
+          },
+          "before": {
+            "properties": {}
+          },
+          "after": null,
+          "label": "WORKS_FOR",
+          "type": "relationship"
+        },
+        "schema": {
+          "properties": {},
+          "constraints": []
+        }
+      }
+    """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+
+    assertInvalidDataException(sinkMessage, "start")
+  }
+
+  @Test
+  fun `should fail when streams relationship end node keys is empty`() {
+    val streamsMessage =
+        """
+      {
+        "meta": {
+          "timestamp": 1728641686524,
+          "username": "neo4j",
+          "txId": 17,
+          "txEventId": 0,
+          "txEventsCount": 1,
+          "operation": "deleted",
+          "source": {
+            "hostname": "neo4j03"
+          }
+        },
+        "payload": {
+          "id": "0",
+          "start": {
+            "id": "0",
+            "labels": [
+              "Person"
+            ],
+            "ids": {
+              "name": "john"
+            }
+          },
+          "end": {
+            "id": "2",
+            "labels": [
+              "Company"
+            ],
+            "ids": {}
+          },
+          "before": {
+            "properties": {}
+          },
+          "after": null,
+          "label": "WORKS_FOR",
+          "type": "relationship"
+        },
+        "schema": {
+          "properties": {},
+          "constraints": []
+        }
+      }
+    """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+
+    assertInvalidDataException(sinkMessage, "end")
+  }
+
+  private fun assertInvalidDataException(sinkMessage: SinkMessage, alias: String) {
+    shouldThrow<InvalidDataException> {
           val handler =
               CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
 
@@ -815,7 +1751,8 @@ class CdcSchemaHandlerTest {
         .also {
           it shouldHaveMessage
               Regex(
-                  "^schema strategy requires at least one node key with valid properties aliased.*$")
+                  "^schema strategy requires at least one node key with valid properties on node aliased '$alias'.$",
+              )
         }
   }
 
