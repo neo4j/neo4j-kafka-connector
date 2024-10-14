@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink
 
-import io.kotest.assertions.nondeterministic.continually
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
@@ -42,6 +41,7 @@ import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.sink.CdcSchemaStrategy
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
+import org.neo4j.connectors.kafka.testing.sink.Neo4jSinkRegistration
 import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
@@ -69,8 +69,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john"),
-                            labels = listOf("Person"))),
-            schema = defaultSchema()))
+                            labels = listOf("Person"),
+                        ),
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -93,7 +97,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -110,9 +115,14 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                     "id" to 5L,
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay()),
-                            labels = listOf("Person", "Employee"))),
-            schema = defaultSchema()))
+                                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                ),
+                            labels = listOf("Person", "Employee"),
+                        ),
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -126,7 +136,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     "id" to 5L,
                     "name" to "john",
                     "surname" to "doe",
-                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay())
+                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                )
           }
     }
   }
@@ -140,7 +151,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -150,8 +162,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                 NodePayload(
                     id = "person1",
                     before = NodeChange(mapOf("id" to 1L, "name" to "john"), emptyList()),
-                    after = null),
-            schema = defaultSchema()))
+                    after = null,
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 1L)).list()
@@ -184,7 +199,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                 "last_name" to "smith",
                                 "email" to "john@smith.org",
                             ),
-                            listOf("Person")),
+                            listOf("Person"),
+                        ),
                 ),
             schema =
                 Schema(
@@ -200,9 +216,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                             Constraint(
                                 "Person",
                                 setOf("email"),
-                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
-                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
-                ))
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS,
+                            ),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE),
+                        ),
+                ),
+        )
 
     // when the event is published
     producer.publish(event)
@@ -213,7 +232,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
           session
               .run(
                   "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
-                  mapOf("first_name" to "john"))
+                  mapOf("first_name" to "john"),
+              )
               .list()
 
       result shouldHaveSize 1
@@ -237,7 +257,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                         "first_name" to "john",
                         "last_name" to "smith",
                         "email" to "john@smith.org",
-                    )))
+                    ),
+            ),
+        )
         .consume()
 
     // and an update event adding a new property and label
@@ -255,7 +277,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                 "last_name" to "smith",
                                 "email" to "john@smith.org",
                             ),
-                            listOf("Person")),
+                            listOf("Person"),
+                        ),
                     after =
                         NodeChange(
                             properties =
@@ -263,8 +286,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                     "first_name" to "john",
                                     "last_name" to "smith",
                                     "email" to "john@smith.org",
-                                    "location" to "London"),
-                            labels = listOf("Person", "Employee"))),
+                                    "location" to "London",
+                                ),
+                            labels = listOf("Person", "Employee"),
+                        ),
+                ),
             schema =
                 Schema(
                     constraints =
@@ -273,9 +299,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                             Constraint(
                                 "Person",
                                 setOf("email"),
-                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
-                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
-                ))
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS,
+                            ),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE),
+                        ),
+                ),
+        )
 
     // when the message is published
     producer.publish(updateEvent)
@@ -286,7 +315,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
           session
               .run(
                   "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
-                  mapOf("first_name" to "john"))
+                  mapOf("first_name" to "john"),
+              )
               .single()
 
       result.get("n").asNode() should
@@ -297,7 +327,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     "first_name" to "john",
                     "last_name" to "smith",
                     "email" to "john@smith.org",
-                    "location" to "London")
+                    "location" to "London",
+                )
           }
     }
   }
@@ -319,7 +350,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                         "first_name" to "john",
                         "last_name" to "smith",
                         "email" to "john@smith.org",
-                    )))
+                    ),
+            ),
+        )
         .consume()
 
     // and a deletion event and with a unique constraint referencing a property that doesn't exist
@@ -338,7 +371,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                 "last_name" to "smith",
                                 "email" to "john@smith.org",
                             ),
-                            listOf("Person")),
+                            listOf("Person"),
+                        ),
                 ),
             schema =
                 Schema(
@@ -354,9 +388,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                             Constraint(
                                 "Person",
                                 setOf("email"),
-                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
-                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
-                ))
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS,
+                            ),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE),
+                        ),
+                ),
+        )
 
     // when the event is published
     producer.publish(event)
@@ -367,7 +404,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
           session
               .run(
                   "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
-                  mapOf("first_name" to "john"))
+                  mapOf("first_name" to "john"),
+              )
               .list()
 
       result shouldHaveSize 0
@@ -378,7 +416,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
   @Test
   fun `should fail to delete a node when no valid unique constraints are provided`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      sink: Neo4jSinkRegistration
   ) = runTest {
 
     // given a database containing 1 node
@@ -391,7 +430,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                         "first_name" to "john",
                         "last_name" to "smith",
                         "email" to "john@smith.org",
-                    )))
+                    ),
+            ),
+        )
         .consume()
 
     // and a deletion event and with a multiple unique constraints which do not have a valid
@@ -410,7 +451,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                                 "first_name" to "john",
                                 "last_name" to "smith",
                             ),
-                            listOf("Person")),
+                            listOf("Person"),
+                        ),
                 ),
             schema =
                 Schema(
@@ -425,24 +467,108 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                             Constraint(
                                 "Person",
                                 setOf("email"),
-                                StreamsConstraintType.NODE_PROPERTY_EXISTS),
-                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE)),
-                ))
+                                StreamsConstraintType.NODE_PROPERTY_EXISTS,
+                            ),
+                            Constraint("Person", setOf("invalid"), StreamsConstraintType.UNIQUE),
+                        ),
+                ),
+        )
 
     // when the event is published
     producer.publish(event)
 
-    // then the node should not be deleted and should still exist
-    continually(10.seconds) {
-      val result =
-          session
-              .run(
-                  "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
-                  mapOf("first_name" to "john"))
-              .list()
-
-      result shouldHaveSize 1
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
     }
+
+    // and the node should not be deleted and should still exist
+    val result =
+        session
+            .run(
+                "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
+                mapOf("first_name" to "john"),
+            )
+            .list()
+
+    result shouldHaveSize 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a node when no constraints are provided`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+
+    // given a database containing 1 node
+    session
+        .run(
+            "CREATE (n:Person) SET n = ${'$'}props",
+            mapOf(
+                "props" to
+                    mapOf(
+                        "first_name" to "john",
+                        "last_name" to "smith",
+                        "email" to "john@smith.org",
+                    ),
+            ),
+        )
+        .consume()
+
+    // and a deletion event and with a multiple unique constraints which do not have a valid
+    // property
+    val event =
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.deleted),
+            payload =
+                NodePayload(
+                    id = "1",
+                    type = EntityType.node,
+                    after = null,
+                    before =
+                        NodeChange(
+                            mapOf(
+                                "first_name" to "john",
+                                "last_name" to "smith",
+                            ),
+                            listOf("Person"),
+                        ),
+                ),
+            schema =
+                Schema(
+                    properties =
+                        mapOf(
+                            "first_name" to "String",
+                            "last_name" to "String",
+                        ),
+                    constraints = emptyList(),
+                ),
+        )
+
+    // when the event is published
+    producer.publish(event)
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and the node should not be deleted and should still exist
+    val result =
+        session
+            .run(
+                "MATCH (n:Person {first_name: ${'$'}first_name}) RETURN n",
+                mapOf("first_name" to "john"),
+            )
+            .list()
+
+    result shouldHaveSize 1
   }
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
@@ -459,7 +585,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
             """,
             mapOf(
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe")))
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -474,8 +602,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     before = null,
                     after =
                         RelationshipChange(
-                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
@@ -499,6 +631,108 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
+  fun `should fail to create a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.created),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), emptyMap()),
+                    end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
+                    before = null,
+                    after =
+                        RelationshipChange(
+                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to create a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.created),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), mapOf("id" to 1L)),
+                    end = RelationshipNodeChange("person2", listOf("Person"), emptyMap()),
+                    before = null,
+                    after =
+                        RelationshipChange(
+                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
@@ -514,7 +748,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
                 "knows" to
-                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend")))
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -530,11 +766,17 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                         RelationshipChange(
                             mapOf(
                                 "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                                "type" to "friend")),
+                                "type" to "friend",
+                            ),
+                        ),
                     after =
                         RelationshipChange(
-                            mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                            mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
@@ -542,6 +784,164 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
       result.get("r").asRelationship() should
           {
             it.asMap() shouldBe mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay())
+          }
+      result.get("start").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+          }
+      result.get("end").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+          }
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.updated),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), emptyMap()),
+                    end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
+                    before =
+                        RelationshipChange(
+                            mapOf(
+                                "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                "type" to "friend",
+                            ),
+                        ),
+                    after =
+                        RelationshipChange(
+                            mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be updated
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+    result.get("r").asRelationship() should
+        {
+          it.asMap() shouldBe
+              mapOf(
+                  "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                  "type" to "friend",
+              )
+        }
+    result.get("start").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+    result.get("end").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.updated),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), mapOf("id" to 1L)),
+                    end = RelationshipNodeChange("person2", listOf("Person"), emptyMap()),
+                    before =
+                        RelationshipChange(
+                            mapOf(
+                                "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                "type" to "friend",
+                            ),
+                        ),
+                    after =
+                        RelationshipChange(
+                            mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be updated
+    eventually(30.seconds) {
+      val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+      result.get("r").asRelationship() should
+          {
+            it.asMap() shouldBe
+                mapOf(
+                    "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                    "type" to "friend",
+                )
           }
       result.get("start").asNode() should
           {
@@ -573,7 +973,9 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
                 "knows" to
-                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend")))
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -589,9 +991,14 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                         RelationshipChange(
                             mapOf(
                                 "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                                "type" to "friend")),
-                    after = null),
-            schema = Schema()))
+                                "type" to "friend",
+                            ),
+                        ),
+                    after = null,
+                ),
+            schema = Schema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
@@ -600,10 +1007,125 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
     }
   }
 
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.deleted),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), emptyMap()),
+                    end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
+                    before =
+                        RelationshipChange(
+                            mapOf(
+                                "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                "type" to "friend",
+                            ),
+                        ),
+                    after = null,
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay(), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        StreamsTransactionEvent(
+            meta = newMetadata(operation = OperationType.deleted),
+            payload =
+                RelationshipPayload(
+                    id = "knows1",
+                    label = "KNOWS",
+                    start = RelationshipNodeChange("person1", listOf("Person"), mapOf("id" to 1L)),
+                    end = RelationshipNodeChange("person2", listOf("Person"), emptyMap()),
+                    before =
+                        RelationshipChange(
+                            mapOf(
+                                "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                "type" to "friend",
+                            ),
+                        ),
+                    after = null,
+                ),
+            schema = Schema(),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
   @Neo4jSink(
       schemaControlKeyCompatibility = SchemaCompatibilityMode.NONE,
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
-      cdcSchema = [CdcSchemaStrategy(TOPIC)])
+      cdcSchema = [CdcSchemaStrategy(TOPIC)],
+  )
   @Test
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -613,7 +1135,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 1, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 1,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 NodePayload(
                     id = "person1",
@@ -621,14 +1147,22 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                            labels = listOf("Person"))),
-            schema = defaultSchema()))
+                            labels = listOf("Person"),
+                        ),
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 2, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 2,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 NodePayload(
                     id = "person2",
@@ -636,14 +1170,22 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                            labels = listOf("Person"))),
-            schema = defaultSchema()))
+                            labels = listOf("Person"),
+                        ),
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 3, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 3,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -651,8 +1193,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     start = RelationshipNodeChange("person1", listOf("Person"), mapOf("id" to 1L)),
                     end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
                     before = null,
-                    after = RelationshipChange(emptyMap())),
-            schema = Schema()))
+                    after = RelationshipChange(emptyMap()),
+                ),
+            schema = Schema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -664,7 +1209,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
             MATCH (start)-[r:KNOWS]->(end)
             RETURN start, r, end
           """,
-                  mapOf("startId" to 1L, "endId" to 2L))
+                  mapOf("startId" to 1L, "endId" to 2L),
+              )
               .single()
 
       result.get("r").asRelationship() should { it.asMap() shouldBe emptyMap() }
@@ -684,7 +1230,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 4, txEventId = 0, txEventsCount = 1, operation = OperationType.updated),
+                    txId = 4,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.updated,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -694,8 +1244,12 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     before = RelationshipChange(emptyMap()),
                     after =
                         RelationshipChange(
-                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()),
+                        ),
+                ),
+            schema = Schema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -707,7 +1261,8 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
             MATCH (start)-[r:KNOWS]->(end)
             RETURN r
           """,
-                  mapOf("startId" to 1L, "endId" to 2L))
+                  mapOf("startId" to 1L, "endId" to 2L),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -720,7 +1275,11 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 0, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 0,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -729,38 +1288,57 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
                     end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
                     before =
                         RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay())),
-                    after = null),
-            schema = Schema()))
+                    after = null,
+                ),
+            schema = Schema(),
+        ),
+    )
 
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 1, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 1,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 NodePayload(
                     id = "person1",
                     before =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                            labels = listOf("Person")),
-                    after = null),
-            schema = defaultSchema()))
+                            labels = listOf("Person"),
+                        ),
+                    after = null,
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 2, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 2,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 NodePayload(
                     id = "person2",
                     before =
                         NodeChange(
                             properties = mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                            labels = listOf("Person")),
-                    after = null),
-            schema = defaultSchema()))
+                            labels = listOf("Person"),
+                        ),
+                    after = null,
+                ),
+            schema = defaultSchema(),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n) RETURN count(n)").single()
@@ -786,5 +1364,6 @@ class Neo4jCdcSchemaFromStreamsMessageIT {
           txId = txId,
           txEventId = txEventId,
           txEventsCount = txEventsCount,
-          operation = operation)
+          operation = operation,
+      )
 }

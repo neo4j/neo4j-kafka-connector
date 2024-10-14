@@ -41,6 +41,7 @@ import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.sink.CdcSchemaStrategy
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
+import org.neo4j.connectors.kafka.testing.sink.Neo4jSinkRegistration
 import org.neo4j.connectors.kafka.testing.sink.SchemaCompatibilityMode
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
@@ -67,7 +68,10 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 5L))),
                 null,
-                NodeState(emptyList(), mapOf("id" to 5L, "name" to "john", "surname" to "doe")))))
+                NodeState(emptyList(), mapOf("id" to 5L, "name" to "john", "surname" to "doe")),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -90,7 +94,8 @@ abstract class Neo4jCdcSchemaIT {
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -109,7 +114,12 @@ abstract class Neo4jCdcSchemaIT {
                         "id" to 5L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(2000, 1, 1))))))
+                        "dob" to LocalDate.of(2000, 1, 1),
+                    ),
+                ),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -123,7 +133,8 @@ abstract class Neo4jCdcSchemaIT {
                     "id" to 5L,
                     "name" to "john",
                     "surname" to "doe",
-                    "dob" to LocalDate.of(2000, 1, 1))
+                    "dob" to LocalDate.of(2000, 1, 1),
+                )
           }
     }
   }
@@ -137,7 +148,8 @@ abstract class Neo4jCdcSchemaIT {
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -150,13 +162,100 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
-                null)))
+                null,
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 1)).list()
 
       result shouldHaveSize 0
     }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a node when keys is empty `(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration
+  ) = runTest {
+    session
+        .run(
+            "CREATE (n:Person) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            NodeEvent(
+                "person1",
+                EntityOperation.DELETE,
+                listOf("Person"),
+                emptyMap<String, List<Map<String, Any>>>(),
+                NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and the node should not be deleted and should still exist
+    val result = session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 1)).list()
+
+    result shouldHaveSize 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a node when keys is effectively empty `(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration
+  ) = runTest {
+    session
+        .run(
+            "CREATE (n:Person) SET n = ${'$'}props",
+            mapOf("props" to mapOf("id" to 1L, "name" to "john")),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            NodeEvent(
+                "person1",
+                EntityOperation.DELETE,
+                listOf("Person"),
+                mapOf("Person" to emptyList<Map<String, Any>>()),
+                NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and the node should not be deleted and should still exist
+    val result = session.run("MATCH (n:Person {id: ${'$'}id}) RETURN n", mapOf("id" to 1)).list()
+
+    result shouldHaveSize 1
   }
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
@@ -173,7 +272,9 @@ abstract class Neo4jCdcSchemaIT {
             """,
             mapOf(
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe")))
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -188,7 +289,10 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
@@ -212,6 +316,257 @@ abstract class Neo4jCdcSchemaIT {
 
   @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
   @Test
+  fun `should fail to create a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to create a relationship when start node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to emptyList())),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to create a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("person2", listOf("Person"), emptyMap()),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to create a relationship when end node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to emptyList())),
+                emptyList(),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to create a relationship when start and end node keys is empty even if it has its own keys`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to emptyList())),
+                Node("person2", listOf("Person"), emptyMap()),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(
+                    mapOf(
+                        "id" to 1L,
+                        "since" to LocalDate.of(2000, 1, 1),
+                        "type" to "friend",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be created
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 0
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session
@@ -226,7 +581,9 @@ abstract class Neo4jCdcSchemaIT {
             mapOf(
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")))
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -241,7 +598,10 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
-                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
@@ -249,6 +609,322 @@ abstract class Neo4jCdcSchemaIT {
       result.get("r").asRelationship() should
           {
             it.asMap() shouldBe mapOf("since" to LocalDate.of(1999, 1, 1))
+          }
+      result.get("start").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+          }
+      result.get("end").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+          }
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be updated
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+    result.get("r").asRelationship() should
+        {
+          it.asMap() shouldBe mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")
+        }
+    result.get("start").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+    result.get("end").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when start node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to emptyList())),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be updated
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+    result.get("r").asRelationship() should
+        {
+          it.asMap() shouldBe mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")
+        }
+    result.get("start").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+    result.get("end").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("person2", listOf("Person"), emptyMap()),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be updated
+    val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+    result.get("r").asRelationship() should
+        {
+          it.asMap() shouldBe mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")
+        }
+    result.get("start").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
+        }
+    result.get("end").asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("id" to 2L, "name" to "mary", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to update a relationship when end node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to emptyList())),
+                emptyList(),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should update a relationship when start and end node keys are empty but it has its own keys`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session.run("CREATE CONSTRAINT KNOWS_KEY FOR ()-[r:KNOWS]-() REQUIRE r.id IS KEY").consume()
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf(
+                        "id" to 3L,
+                        "since" to LocalDate.of(2000, 1, 1),
+                        "type" to "friend",
+                    ),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to emptyList())),
+                Node("person2", listOf("Person"), emptyMap()),
+                listOf(mapOf("id" to 3L)),
+                EntityOperation.UPDATE,
+                RelationshipState(
+                    mapOf(
+                        "id" to 3L,
+                        "since" to LocalDate.of(2000, 1, 1),
+                        "type" to "friend",
+                    ),
+                ),
+                RelationshipState(mapOf("id" to 3L, "since" to LocalDate.of(1999, 1, 1))),
+            ),
+        ),
+    )
+
+    eventually(30.seconds) {
+      val result = session.run("MATCH (start)-[r:KNOWS]->(end) RETURN start, r, end").single()
+
+      result.get("r").asRelationship() should
+          {
+            it.asMap() shouldBe mapOf("id" to 3L, "since" to LocalDate.of(1999, 1, 1))
           }
       result.get("start").asNode() should
           {
@@ -279,7 +955,9 @@ abstract class Neo4jCdcSchemaIT {
             mapOf(
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")))
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -294,7 +972,266 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
-                null)))
+                null,
+            ),
+        ),
+    )
+
+    eventually(30.seconds) {
+      val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+
+      result.get(0).asInt() shouldBe 0
+    }
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when start node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when start node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to emptyList<Map<String, Any>>())),
+                Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when end node keys is empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person2", listOf("Person"), emptyMap()),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should fail to delete a relationship when end node keys is effectively empty`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                Node("person2", listOf("Person"), mapOf("Person" to emptyList<Map<String, Any>>())),
+                emptyList(),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+                null,
+            ),
+        ),
+    )
+
+    // sink connector should transition into FAILED state
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
+    }
+
+    // and relationship should not be deleted
+    val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
+    result.get(0).asInt() shouldBe 1
+  }
+
+  @Neo4jSink(cdcSchema = [CdcSchemaStrategy(TOPIC)])
+  @Test
+  fun `should delete a relationship when start and end node keys are empty but it has its own keys`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+      sink: Neo4jSinkRegistration,
+  ) = runTest {
+    session.run("CREATE CONSTRAINT KNOWS_KEY FOR ()-[r:KNOWS]-() REQUIRE r.id IS KEY").consume()
+    session
+        .run(
+            """
+            CREATE (n1:Person) SET n1 = ${'$'}person1
+            CREATE (n2:Person) SET n2 = ${'$'}person2
+            CREATE (n1)-[r:KNOWS]->(n2) SET r = ${'$'}knows
+            """,
+            mapOf(
+                "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                "knows" to
+                    mapOf(
+                        "id" to 3L,
+                        "since" to LocalDate.of(2000, 1, 1),
+                        "type" to "friend",
+                    ),
+            ),
+        )
+        .consume()
+
+    producer.publish(
+        newEvent(
+            0,
+            0,
+            RelationshipEvent(
+                "knows1",
+                "KNOWS",
+                Node("person1", listOf("Person"), emptyMap()),
+                Node("person2", listOf("Person"), mapOf("Person" to emptyList())),
+                listOf(mapOf("id" to 3L)),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("id" to 3L, "since" to LocalDate.of(1999, 1, 1))),
+                null,
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH ()-[r:KNOWS]->() RETURN count(r)").single()
@@ -306,7 +1243,8 @@ abstract class Neo4jCdcSchemaIT {
   @Neo4jSink(
       schemaControlKeyCompatibility = SchemaCompatibilityMode.NONE,
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
-      cdcSchema = [CdcSchemaStrategy(TOPIC)])
+      cdcSchema = [CdcSchemaStrategy(TOPIC)],
+  )
   @Test
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -323,7 +1261,12 @@ abstract class Neo4jCdcSchemaIT {
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
                 NodeState(
-                    listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")))))
+                    listOf("Person"),
+                    mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                ),
+            ),
+        ),
+    )
 
     producer.publish(
         newEvent(
@@ -336,7 +1279,12 @@ abstract class Neo4jCdcSchemaIT {
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 null,
                 NodeState(
-                    listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")))))
+                    listOf("Person"),
+                    mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                ),
+            ),
+        ),
+    )
 
     producer.publish(
         newEvent(
@@ -350,7 +1298,10 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(emptyMap()))))
+                RelationshipState(emptyMap()),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -362,7 +1313,8 @@ abstract class Neo4jCdcSchemaIT {
             MATCH (start)-[r:KNOWS]->(end)
             RETURN start, r, end
           """,
-                  mapOf("startId" to 1L, "endId" to 2L))
+                  mapOf("startId" to 1L, "endId" to 2L),
+              )
               .single()
 
       result.get("r").asRelationship() should { it.asMap() shouldBe emptyMap() }
@@ -390,7 +1342,10 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(emptyMap()),
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -402,7 +1357,8 @@ abstract class Neo4jCdcSchemaIT {
             MATCH (start)-[r:KNOWS]->(end)
             RETURN r
           """,
-                  mapOf("startId" to 1L, "endId" to 2L))
+                  mapOf("startId" to 1L, "endId" to 2L),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -423,7 +1379,10 @@ abstract class Neo4jCdcSchemaIT {
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
-                null)))
+                null,
+            ),
+        ),
+    )
     producer.publish(
         newEvent(
             4,
@@ -434,8 +1393,13 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 NodeState(
-                    listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")),
-                null)))
+                    listOf("Person"),
+                    mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                ),
+                null,
+            ),
+        ),
+    )
     producer.publish(
         newEvent(
             4,
@@ -446,8 +1410,13 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 NodeState(
-                    listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")),
-                null)))
+                    listOf("Person"),
+                    mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                ),
+                null,
+            ),
+        ),
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n) RETURN count(n)").single()
@@ -473,8 +1442,10 @@ abstract class Neo4jCdcSchemaIT {
               ZonedDateTime.now().minusSeconds(5),
               ZonedDateTime.now(),
               emptyMap(),
-              emptyMap()),
-          event)
+              emptyMap(),
+          ),
+          event,
+      )
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)
