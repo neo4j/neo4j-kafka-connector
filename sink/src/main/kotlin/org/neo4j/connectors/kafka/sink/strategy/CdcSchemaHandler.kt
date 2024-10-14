@@ -97,7 +97,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
 
-    val (start, end, rel) = buildRelationship(event, "r")
+    val (start, end, rel) = buildRelationship(event, "r", true)
     val stmt =
         Cypher.merge(start)
             .merge(end)
@@ -116,11 +116,9 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
-    val (start, end, rel) = buildRelationship(event, "r")
+    val (start, end, rel, matchNodes) = buildRelationship(event, "r", false)
     val stmt =
-        Cypher.merge(start)
-            .merge(end)
-            .merge(rel)
+        (if (matchNodes) Cypher.merge(start).merge(end).merge(rel) else Cypher.match(rel))
             .mutate(rel, Cypher.parameter("rProps", event.mutatedProperties()))
             .build()
 
@@ -128,17 +126,28 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
   }
 
   override fun transformDelete(event: RelationshipEvent): Query {
-    val (start, end, rel) = buildRelationship(event, "r")
-    val stmt = Cypher.match(start).match(end).match(rel).delete(rel).build()
+    val (start, end, rel, matchNodes) = buildRelationship(event, "r", false)
+    val stmt =
+        (if (matchNodes) Cypher.match(start).match(end).match(rel) else Cypher.match(rel))
+            .delete(rel)
+            .build()
 
     return Query(renderer.render(stmt), stmt.parameters)
   }
 
-  private fun buildNode(keys: Map<String, List<Map<String, Any>>>, named: String): Node {
-    val validKeys = keys.filterValues { it.isNotEmpty() }
+  private fun buildNode(
+      keys: Map<String, List<Map<String, Any>>>,
+      named: String,
+  ): Node {
+    val validKeys =
+        keys
+            .mapValues { kvp -> kvp.value.filter { it.isNotEmpty() } }
+            .filterValues { it.isNotEmpty() }
 
-    require(validKeys.isNotEmpty()) {
-      "schema strategy requires at least one node key with valid properties aliased '$named'."
+    if (validKeys.isEmpty()) {
+      throw InvalidDataException(
+          "schema strategy requires at least one node key with valid properties on node aliased '$named'.",
+      )
     }
 
     val node =
@@ -153,20 +162,47 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
                           e.key,
                           Cypher.parameter(
                               "${named}${e.key.replaceFirstChar { c -> c.uppercaseChar() }}",
-                              e.value))
+                              e.value,
+                          ),
+                      )
                     },
             )
             .named(named)
+
     return node
   }
+
+  data class RelationshipOutput(
+      val start: Node,
+      val end: Node,
+      val relationship: Relationship,
+      val matchNodes: Boolean
+  )
 
   @Suppress("SameParameterValue")
   private fun buildRelationship(
       event: RelationshipEvent,
-      named: String
-  ): Triple<Node, Node, Relationship> {
-    val start = buildNode(event.start.keys, "start")
-    val end = buildNode(event.end.keys, "end")
+      named: String,
+      forCreate: Boolean
+  ): RelationshipOutput {
+    val relationshipHasKeys = event.keys.filter { it.isNotEmpty() }.any()
+
+    // if this is a create event, we enforce start and end key properties
+    // else we check whether relationship has its own keys or not
+    val start =
+        if (!forCreate && relationshipHasKeys) Cypher.anyNode("start")
+        else
+            buildNode(
+                event.start.keys,
+                "start",
+            )
+    val end =
+        if (!forCreate && relationshipHasKeys) Cypher.anyNode("end")
+        else
+            buildNode(
+                event.end.keys,
+                "end",
+            )
     val rel =
         start
             .relationshipTo(end, event.type)
@@ -179,10 +215,13 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
                           e.key,
                           Cypher.parameter(
                               "${named}${e.key.replaceFirstChar { c -> c.uppercaseChar() }}",
-                              e.value))
+                              e.value,
+                          ),
+                      )
                     },
             )
             .named(named)
-    return Triple(start, end, rel)
+
+    return RelationshipOutput(start, end, rel, forCreate || !relationshipHasKeys)
   }
 }
