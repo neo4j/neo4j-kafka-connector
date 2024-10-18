@@ -611,6 +611,49 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "neo4j-cdc-keys-rel",
+                          patterns =
+                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+  @Test
+  fun `should publish with multiple keys on the same property`(
+      @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
+      consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session
+        .run(
+            "CREATE CONSTRAINT employedId FOR ()-[r:EMPLOYED]->() REQUIRE (r.id, r.role) IS RELATIONSHIP KEY")
+        .consume()
+    session
+        .run(
+            "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.id IS RELATIONSHIP KEY")
+        .consume()
+
+    session.run("CREATE (:Person)-[:EMPLOYED {id: 1, role: 'SWE'}]->(:Company)").consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(RELATIONSHIP)
+              .hasOperation(CREATE)
+              .hasType("EMPLOYED")
+              .startLabelledAs("Person")
+              .endLabelledAs("Company")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("id" to 1L, "role" to "SWE"))
+              .hasRelationshipKeys(listOf(mapOf("id" to 1L, "role" to "SWE"), mapOf("id" to 1L)))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO)
