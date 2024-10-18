@@ -614,6 +614,46 @@ abstract class Neo4jCdcSourceNodesIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      startFrom = "EARLIEST",
+      strategy = CDC,
+      cdc =
+          CdcSource(
+              topics =
+                  arrayOf(
+                      CdcSourceTopic(
+                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+  @Test
+  fun `should publish with multiple keys on the same property`(
+      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
+      session: Session
+  ) {
+    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE (n.prop1, n.prop2) IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE n.prop1 IS KEY").consume()
+    session
+        .run(
+            "CREATE (n:TestSource) SET n = ${'$'}props",
+            mapOf("props" to mapOf("prop1" to "value1", "prop2" to "value2")))
+        .consume()
+
+    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
+        .assertMessageValue { value ->
+          assertThat(value)
+              .hasEventType(NODE)
+              .hasOperation(CREATE)
+              .hasNodeKeys(
+                  mapOf(
+                      "TestSource" to
+                          listOf(
+                              mapOf("prop1" to "value1", "prop2" to "value2"),
+                              mapOf("prop1" to "value1"))))
+              .labelledAs("TestSource")
+              .hasNoBeforeState()
+              .hasAfterStateProperties(mapOf("prop1" to "value1", "prop2" to "value2"))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO)

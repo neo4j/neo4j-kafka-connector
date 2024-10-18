@@ -202,6 +202,8 @@ class ChangeEventConverter() {
   }
 
   private fun schemaForKeys(keys: List<Map<String, Any>>?): Schema {
+    val addedFields = mutableSetOf<String>()
+
     return SchemaBuilder.array(
             // We need to define a uniform structure of key array elements. Because all elements
             // must have identical structure, we list all available keys as optional fields.
@@ -209,10 +211,11 @@ class ChangeEventConverter() {
                 .apply {
                   keys?.forEach { key ->
                     key.forEach {
-                      field(
-                          it.key,
-                          DynamicTypes.toConnectSchema(
-                              it.value, optional = true, forceMapsAsStruct = true))
+                      if (addedFields.add(it.key)) {
+                        field(
+                            it.key,
+                            toConnectSchema(it.value, optional = true, forceMapsAsStruct = true))
+                      }
                     }
                   }
                 }
