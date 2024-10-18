@@ -584,9 +584,6 @@ abstract class Neo4jCdcSourceNodesIT {
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
       session: Session
   ) {
-    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE (n.prop1, n.prop2) IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE (n.prop3) IS KEY").consume()
-
     session
         .run(
             "CREATE (n:TestSource) SET n = ${'$'}props",
@@ -602,7 +599,6 @@ abstract class Neo4jCdcSourceNodesIT {
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
         .assertMessageValue { value ->
-          println(value)
           assertThat(value)
               .hasEventType(NODE)
               .hasOperation(CREATE)
