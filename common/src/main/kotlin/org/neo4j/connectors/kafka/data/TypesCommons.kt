@@ -55,8 +55,6 @@ enum class SimpleTypes(builder: () -> SchemaBuilder) {
   LOCALTIME({ SchemaBuilder.string().namespaced("LocalTime") }),
   ZONEDDATETIME({ SchemaBuilder.string().namespaced("ZonedDateTime") }),
   OFFSETTIME({ SchemaBuilder.string().namespaced("OffsetTime") }),
-  // PROTOBUF converter does not persist our provided version value hence looses it during reads
-  // That's why we suffix the type names with an explicit version specifier
   DURATION({
     SchemaBuilder(Schema.Type.STRUCT)
         .namespaced("Duration")
