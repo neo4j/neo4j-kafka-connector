@@ -459,31 +459,6 @@ internal fun Struct.toRelationshipEvent(): RelationshipEvent =
           after)
     }
 
-// @Suppress("UNCHECKED_CAST")
-// internal fun Struct.toNodeState(): Pair<NodeState?, NodeState?> =
-//    Pair(
-//        getStruct("before")?.let {
-//          val labels = it.getArray<String>("labels")
-//          val properties = it.getMap<String, Any?>("properties")
-//          NodeState(
-//              labels,
-//              DynamicTypes.fromConnectValue(
-//                  it.schema().field("properties").schema(), properties, true) as Map<String,
-// Any?>,
-//          )
-//        },
-//        getStruct("after")?.let {
-//          val labels = it.getArray<String>("labels")
-//          val properties = it.getMap<String, Any?>("properties")
-//          NodeState(
-//              labels,
-//              DynamicTypes.fromConnectValue(
-//                  it.schema().field("properties").schema(), properties, true) as Map<String,
-// Any?>,
-//          )
-//        },
-//    )
-
 @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
 internal fun Struct.toNodeState(): Pair<NodeState?, NodeState?> =
     Pair(
