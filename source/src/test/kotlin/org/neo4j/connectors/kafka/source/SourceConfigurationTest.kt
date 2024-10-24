@@ -639,6 +639,24 @@ class SourceConfigurationTest {
   }
 
   @Test
+  fun `fail validation on invalid serialize type`() {
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+              mapOf(
+                  Neo4jConfiguration.URI to "neo4j://localhost",
+                  SourceConfiguration.STRATEGY to "QUERY",
+                  SourceConfiguration.QUERY to "MATCH (n) RETURN n",
+                  SourceConfiguration.QUERY_TOPIC to "my-topic",
+                  SourceConfiguration.START_FROM to "EARLIEST",
+                  SourceConfiguration.PAYLOAD_MODE to "invalid"))
+        }
+        .also {
+          it shouldHaveMessage
+              "Invalid value invalid for configuration neo4j.payload-mode: Must be one of: 'EXTENDED', 'COMPACT'."
+        }
+  }
+
+  @Test
   fun `should return correct telemetry data for cdc strategy`() {
     val originals =
         mapOf(

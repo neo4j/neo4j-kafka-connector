@@ -21,6 +21,7 @@ import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -200,13 +201,26 @@ abstract class Neo4jSourceQueryIT {
   }
 }
 
-@KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSourceAvroIT : Neo4jSourceQueryIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
+class Neo4jSourceAvroExtendedIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jSourceJsonSchemaIT : Neo4jSourceQueryIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceAvroCompactIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
-class Neo4jSourceJsonEmbeddedIT : Neo4jSourceQueryIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
+class Neo4jSourceJsonSchemaExtendedIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jSourceProtobufIT : Neo4jSourceQueryIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceJsonSchemaCompactIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
+class Neo4jSourceJsonEmbeddedExtendedIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceJsonEmbeddedCompactIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
+class Neo4jSourceProtobufExtendedIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceProtobufCompactIT : Neo4jSourceQueryIT()

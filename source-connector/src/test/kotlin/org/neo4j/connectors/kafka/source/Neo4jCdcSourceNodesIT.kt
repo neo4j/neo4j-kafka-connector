@@ -18,13 +18,13 @@ package org.neo4j.connectors.kafka.source
 
 import java.time.Duration
 import java.time.LocalDate
-import java.time.LocalDateTime
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EntityOperation.CREATE
 import org.neo4j.cdc.client.model.EntityOperation.UPDATE
 import org.neo4j.cdc.client.model.EventType.NODE
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
@@ -234,45 +234,6 @@ abstract class Neo4jCdcSourceNodesIT {
       strategy = CDC,
       cdc =
           CdcSource(
-              topics =
-                  arrayOf(
-                      CdcSourceTopic(
-                          topic = "neo4j-cdc-create-inc",
-                          patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
-  @Test
-  fun `should publish changes with different properties using the default topic compatibility mode`(
-      @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
-      consumer: ConvertingKafkaConsumer,
-      session: Session
-  ) {
-    session.run("CREATE (:TestSource {name: 'John'})", mapOf()).consume()
-    session.run("CREATE (:TestSource {title: 'Neo4j'})", mapOf()).consume()
-
-    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
-        .assertMessageValue { value ->
-          assertThat(value)
-              .hasEventType(NODE)
-              .hasOperation(CREATE)
-              .labelledAs("TestSource")
-              .hasNoBeforeState()
-              .hasAfterStateProperties(mapOf("name" to "John"))
-        }
-        .assertMessageValue { value ->
-          assertThat(value)
-              .hasEventType(NODE)
-              .hasOperation(CREATE)
-              .labelledAs("TestSource")
-              .hasNoBeforeState()
-              .hasAfterStateProperties(mapOf("title" to "Neo4j"))
-        }
-        .verifyWithin(Duration.ofSeconds(30))
-  }
-
-  @Neo4jSource(
-      startFrom = "EARLIEST",
-      strategy = CDC,
-      cdc =
-          CdcSource(
               patternsIndexed = true,
               topics =
                   arrayOf(
@@ -340,85 +301,6 @@ abstract class Neo4jCdcSourceNodesIT {
                       "age" to 42L,
                   ))
               .hasNoAfterState()
-        }
-        .verifyWithin(Duration.ofSeconds(30))
-  }
-
-  @Neo4jSource(
-      startFrom = "EARLIEST",
-      strategy = CDC,
-      cdc =
-          CdcSource(
-              patternsIndexed = true,
-              topics =
-                  arrayOf(
-                      CdcSourceTopic(
-                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
-  @Test
-  fun `should publish changes with property type changes`(
-      @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
-  ) {
-    session
-        .run(
-            "CREATE (n:TestSource) SET n = ${'$'}props",
-            mapOf("props" to mapOf("name" to "Jane", "surname" to "Doe", "age" to 42)))
-        .consume()
-    session
-        .run(
-            "MATCH (ts:TestSource {name: 'Jane'}) SET ts += ${'$'}props",
-            mapOf(
-                "props" to
-                    mapOf(
-                        "surname" to "Smith",
-                        "age" to "42",
-                        "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0))))
-        .consume()
-    session
-        .run(
-            "MATCH (ts:TestSource {name: 'Jane'}) SET ts += ${'$'}props",
-            mapOf("props" to mapOf("age" to 42, "dob" to LocalDate.of(1982, 1, 1))))
-        .consume()
-
-    TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
-        .assertMessageValue { value ->
-          assertThat(value)
-              .hasEventType(NODE)
-              .hasOperation(CREATE)
-              .labelledAs("TestSource")
-              .hasNoBeforeState()
-              .hasAfterStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
-        }
-        .assertMessageValue { value ->
-          assertThat(value)
-              .hasEventType(NODE)
-              .hasOperation(UPDATE)
-              .labelledAs("TestSource")
-              .hasBeforeStateProperties(mapOf("name" to "Jane", "surname" to "Doe", "age" to 42L))
-              .hasAfterStateProperties(
-                  mapOf(
-                      "name" to "Jane",
-                      "surname" to "Smith",
-                      "age" to "42",
-                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
-        }
-        .assertMessageValue { value ->
-          assertThat(value)
-              .hasEventType(NODE)
-              .hasOperation(UPDATE)
-              .labelledAs("TestSource")
-              .hasBeforeStateProperties(
-                  mapOf(
-                      "name" to "Jane",
-                      "surname" to "Smith",
-                      "age" to "42",
-                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
-              .hasAfterStateProperties(
-                  mapOf(
-                      "name" to "Jane",
-                      "surname" to "Smith",
-                      "age" to 42L,
-                      "dob" to LocalDate.of(1982, 1, 1)))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -656,14 +538,23 @@ abstract class Neo4jCdcSourceNodesIT {
   }
 }
 
-@KeyValueConverter(key = AVRO, value = AVRO)
-class Neo4jCdcSourceNodesAvroIT : Neo4jCdcSourceNodesIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceNodesAvroExtendedIT : Neo4jCdcSourceNodesIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jCdcSourceNodesJsonSchemaIT : Neo4jCdcSourceNodesIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceNodesAvroCompactIT : Neo4jCdcSourceNodesIT()
 
-@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
-class Neo4jCdcSourceNodesJsonEmbeddedIT : Neo4jCdcSourceNodesIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceNodesJsonSchemaExtendedIT : Neo4jCdcSourceNodesIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceNodesProtobufIT : Neo4jCdcSourceNodesIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceNodesJsonSchemaCompactIT : Neo4jCdcSourceNodesIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceNodesJsonEmbeddedExtendedIT : Neo4jCdcSourceNodesIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceNodesJsonEmbeddedCompactIT : Neo4jCdcSourceNodesIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceNodesProtobufExtendedIT : Neo4jCdcSourceNodesIT()

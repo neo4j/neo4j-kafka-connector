@@ -39,7 +39,7 @@ class TopicVerifier<K, V>(
     private val keyConverter: Converter,
     private val valueConverter: Converter,
     private val keyAssertionClass: Class<K>,
-    private val valueAssertionClass: Class<V>
+    private val valueAssertionClass: Class<V>,
 ) {
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -115,7 +115,7 @@ class TopicVerifier<K, V>(
       converter: Converter,
       assertionClass: Class<V>,
       topic: String,
-      value: ByteArray?
+      value: ByteArray?,
   ): Any? {
     return when (val sourceValue = converter.toConnectData(topic, value).value()) {
       is Struct ->

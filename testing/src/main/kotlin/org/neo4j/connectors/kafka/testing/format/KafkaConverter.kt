@@ -28,6 +28,7 @@ import org.apache.kafka.connect.json.JsonConverter
 import org.apache.kafka.connect.storage.Converter
 import org.apache.kafka.connect.storage.StringConverter
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.format.avro.AvroSerializer
 import org.neo4j.connectors.kafka.testing.format.json.JsonEmbeddedSerializer
@@ -94,12 +95,17 @@ enum class KafkaConverter(
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class KeyValueConverter(val key: KafkaConverter, val value: KafkaConverter)
+annotation class KeyValueConverter(
+    val key: KafkaConverter,
+    val value: KafkaConverter,
+    val payloadMode: PayloadMode = PayloadMode.EXTENDED
+)
 
 class KeyValueConverterResolver {
 
   private lateinit var keyConverter: KafkaConverter
   private lateinit var valueConverter: KafkaConverter
+  private lateinit var payloadMode: PayloadMode
 
   fun resolveKeyConverter(context: ExtensionContext?): KafkaConverter {
     initializeKeyValueConverters(context)
@@ -111,6 +117,11 @@ class KeyValueConverterResolver {
     return valueConverter
   }
 
+  fun resolvePayloadMode(context: ExtensionContext?): PayloadMode {
+    initializeKeyValueConverters(context)
+    return payloadMode
+  }
+
   private fun initializeKeyValueConverters(context: ExtensionContext?) {
     if (this::keyConverter.isInitialized && this::valueConverter.isInitialized) {
       return
@@ -120,9 +131,11 @@ class KeyValueConverterResolver {
     if (annotation == null) {
       keyConverter = KafkaConverter.AVRO
       valueConverter = KafkaConverter.AVRO
+      payloadMode = PayloadMode.EXTENDED
     } else {
       keyConverter = annotation.key
       valueConverter = annotation.value
+      payloadMode = annotation.payloadMode
     }
   }
 }

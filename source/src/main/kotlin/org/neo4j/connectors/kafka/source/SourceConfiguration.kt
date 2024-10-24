@@ -34,6 +34,7 @@ import org.neo4j.cdc.client.selector.Selector
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
@@ -68,6 +69,9 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   val strategy
     get(): SourceType = SourceType.valueOf(getString(STRATEGY))
+
+  val payloadMode
+    get(): PayloadMode = PayloadMode.valueOf(getString(PAYLOAD_MODE))
 
   val query
     get(): String = getString(QUERY)
@@ -454,6 +458,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_TOPIC = "neo4j.query.topic"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
+    const val PAYLOAD_MODE = "neo4j.payload-mode"
     private const val GROUP_NAME_TOPIC = "topic"
     private const val GROUP_NAME_INDEX = "index"
     private const val GROUP_NAME_METADATA = "metadata"
@@ -664,6 +669,14 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                })
+            .define(
+                ConfigKeyBuilder.of(PAYLOAD_MODE, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = PayloadMode.EXTENDED.name
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.enum(PayloadMode::class.java)
+                  recommender = Recommenders.enum(PayloadMode::class.java)
                 })
   }
 }
