@@ -322,7 +322,7 @@ object DynamicTypes {
   }
 
   fun toConnectSchema(
-      payloadMode: PayloadMode = PayloadMode.EXTENDED,
+      payloadMode: PayloadMode,
       value: Any?,
       optional: Boolean = false,
       forceMapsAsStruct: Boolean = false
