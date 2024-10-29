@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -120,14 +121,23 @@ abstract class Neo4jCdcSourceValueStrategyIT {
   }
 }
 
-@KeyValueConverter(key = AVRO, value = AVRO)
-class Neo4jCdcSourceValueStrategyAvroIT : Neo4jCdcSourceValueStrategyIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceValueStrategyAvroExtendedIT : Neo4jCdcSourceValueStrategyIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jCdcSourceValueStrategyJsonSchemaIT : Neo4jCdcSourceValueStrategyIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceValueStrategyAvroCompactIT : Neo4jCdcSourceValueStrategyIT()
 
-@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
-class Neo4jCdcSourceValueStrategyJsonEmbeddedIT : Neo4jCdcSourceValueStrategyIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceValueStrategyJsonSchemaExtendedIT : Neo4jCdcSourceValueStrategyIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceValueStrategyProtobufIT : Neo4jCdcSourceValueStrategyIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceValueStrategyJsonSchemaCompactIT : Neo4jCdcSourceValueStrategyIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceValueStrategyJsonEmbeddedExtendedIT : Neo4jCdcSourceValueStrategyIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceValueStrategyJsonEmbeddedCompactIT : Neo4jCdcSourceValueStrategyIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceValueStrategyProtobufExtendedIT : Neo4jCdcSourceValueStrategyIT()

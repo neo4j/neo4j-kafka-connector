@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.unregisterConnector
@@ -48,6 +49,7 @@ internal class Neo4jSourceRegistration(
     cdcMetadata: Map<String, List<Map<String, String>>>,
     cdcKeySerializations: Map<String, String>,
     cdcValueSerializations: Map<String, String>,
+    payloadMode: PayloadMode
 ) {
 
   private val name: String = randomizedName("Neo4jSourceConnector")
@@ -74,6 +76,8 @@ internal class Neo4jSourceRegistration(
         put("neo4j.start-from.value", startFromValue)
       }
       put("neo4j.source-strategy", strategy.name.uppercase())
+
+      put("neo4j.payload-mode", payloadMode.name)
 
       if (keyConverter.supportsSchemaRegistry) {
         put("key.converter.schema.registry.url", schemaControlRegistryUri)

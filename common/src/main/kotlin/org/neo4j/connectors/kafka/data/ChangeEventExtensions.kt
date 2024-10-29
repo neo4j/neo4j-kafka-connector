@@ -31,9 +31,10 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes.toConnectSchema
 
-class ChangeEventConverter() {
+class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EXTENDED) {
 
   fun toConnectValue(changeEvent: ChangeEvent): SchemaAndValue {
     val schema = toConnectSchema(changeEvent)
@@ -69,15 +70,22 @@ class ChangeEventConverter() {
           .field("connectionServer", Schema.OPTIONAL_STRING_SCHEMA)
           .field("serverId", Schema.STRING_SCHEMA)
           .field("captureMode", Schema.STRING_SCHEMA)
-          .field("txStartTime", PropertyType.schema)
-          .field("txCommitTime", PropertyType.schema)
+          .field(
+              "txStartTime",
+              if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
+              else SimpleTypes.ZONEDDATETIME.schema)
+          .field(
+              "txCommitTime",
+              if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
+              else SimpleTypes.ZONEDDATETIME.schema)
           .field(
               "txMetadata",
-              toConnectSchema(metadata.txMetadata, optional = true, forceMapsAsStruct = true)
+              toConnectSchema(
+                      payloadMode, metadata.txMetadata, optional = true, forceMapsAsStruct = true)
                   .schema())
           .also {
             metadata.additionalEntries.forEach { entry ->
-              it.field(entry.key, toConnectSchema(entry.value, optional = true))
+              it.field(entry.key, toConnectSchema(payloadMode, entry.value, optional = true))
             }
           }
           .build()
@@ -92,9 +100,17 @@ class ChangeEventConverter() {
         it.put("serverId", metadata.serverId)
         it.put("captureMode", metadata.captureMode.name)
         it.put(
-            "txStartTime", DynamicTypes.toConnectValue(PropertyType.schema, metadata.txStartTime))
+            "txStartTime",
+            DynamicTypes.toConnectValue(
+                if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
+                else SimpleTypes.ZONEDDATETIME.schema,
+                metadata.txStartTime))
         it.put(
-            "txCommitTime", DynamicTypes.toConnectValue(PropertyType.schema, metadata.txCommitTime))
+            "txCommitTime",
+            DynamicTypes.toConnectValue(
+                if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
+                else SimpleTypes.ZONEDDATETIME.schema,
+                metadata.txCommitTime))
         it.put(
             "txMetadata",
             DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), metadata.txMetadata))
@@ -214,7 +230,8 @@ class ChangeEventConverter() {
                       if (addedFields.add(it.key)) {
                         field(
                             it.key,
-                            toConnectSchema(it.value, optional = true, forceMapsAsStruct = true))
+                            toConnectSchema(
+                                payloadMode, it.value, optional = true, forceMapsAsStruct = true))
                       }
                     }
                   }
@@ -232,7 +249,22 @@ class ChangeEventConverter() {
               this.field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
               this.field(
                   "properties",
-                  SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
+                  if (payloadMode == PayloadMode.EXTENDED)
+                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+                  else
+                      SchemaBuilder.struct()
+                          .also {
+                            val combinedProperties =
+                                (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
+                            combinedProperties.toSortedMap().forEach { entry ->
+                              if (it.field(entry.key) == null) {
+                                it.field(
+                                    entry.key,
+                                    toConnectSchema(payloadMode, entry.value, optional = true))
+                              }
+                            }
+                          }
+                          .build())
             }
             .optional()
             .build()
@@ -249,9 +281,13 @@ class ChangeEventConverter() {
                 it.put("labels", before.labels)
                 it.put(
                     "properties",
-                    before.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
-                    })
+                    if (payloadMode == PayloadMode.EXTENDED)
+                        before.properties.mapValues { e ->
+                          DynamicTypes.toConnectValue(PropertyType.schema, e.value)
+                        }
+                    else
+                        DynamicTypes.toConnectValue(
+                            it.schema().field("properties").schema(), before.properties))
               })
         }
 
@@ -262,9 +298,13 @@ class ChangeEventConverter() {
                 it.put("labels", after.labels)
                 it.put(
                     "properties",
-                    after.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
-                    })
+                    if (payloadMode == PayloadMode.EXTENDED)
+                        after.properties.mapValues { e ->
+                          DynamicTypes.toConnectValue(PropertyType.schema, e.value)
+                        }
+                    else
+                        DynamicTypes.toConnectValue(
+                            it.schema().field("properties").schema(), after.properties))
               })
         }
       }
@@ -278,7 +318,22 @@ class ChangeEventConverter() {
             .apply {
               this.field(
                   "properties",
-                  SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
+                  if (payloadMode == PayloadMode.EXTENDED)
+                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+                  else
+                      SchemaBuilder.struct()
+                          .also {
+                            val combinedProperties =
+                                (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
+                            combinedProperties.toSortedMap().forEach { entry ->
+                              if (it.field(entry.key) == null) {
+                                it.field(
+                                    entry.key,
+                                    toConnectSchema(payloadMode, entry.value, optional = true))
+                              }
+                            }
+                          }
+                          .build())
             }
             .optional()
             .build()
@@ -298,9 +353,13 @@ class ChangeEventConverter() {
               Struct(this.schema().field("before").schema()).also {
                 it.put(
                     "properties",
-                    before.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
-                    })
+                    if (payloadMode == PayloadMode.EXTENDED)
+                        before.properties.mapValues { e ->
+                          DynamicTypes.toConnectValue(PropertyType.schema, e.value)
+                        }
+                    else
+                        DynamicTypes.toConnectValue(
+                            it.schema().field("properties").schema(), before.properties))
               })
         }
 
@@ -310,9 +369,13 @@ class ChangeEventConverter() {
               Struct(this.schema().field("after").schema()).also {
                 it.put(
                     "properties",
-                    after.properties.mapValues { e ->
-                      DynamicTypes.toConnectValue(PropertyType.schema, e.value)
-                    })
+                    if (payloadMode == PayloadMode.EXTENDED)
+                        after.properties.mapValues { e ->
+                          DynamicTypes.toConnectValue(PropertyType.schema, e.value)
+                        }
+                    else
+                        DynamicTypes.toConnectValue(
+                            it.schema().field("properties").schema(), after.properties))
               })
         }
       }
@@ -396,44 +459,68 @@ internal fun Struct.toRelationshipEvent(): RelationshipEvent =
           after)
     }
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
 internal fun Struct.toNodeState(): Pair<NodeState?, NodeState?> =
     Pair(
         getStruct("before")?.let {
           val labels = it.getArray<String>("labels")
-          val properties = it.getMap<String, Any?>("properties")
+          val propertiesField = it.schema().field("properties")
+          val properties =
+              when (propertiesField.schema().type()) {
+                Schema.Type.MAP -> it.getMap<String, Any?>("properties")
+                Schema.Type.STRUCT -> it.getStruct("properties")
+                else -> throw IllegalArgumentException("Unsupported schema type for properties")
+              }
           NodeState(
               labels,
-              DynamicTypes.fromConnectValue(
-                  it.schema().field("properties").schema(), properties, true) as Map<String, Any?>,
+              DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
+                  as Map<String, Any?>,
           )
         },
         getStruct("after")?.let {
           val labels = it.getArray<String>("labels")
-          val properties = it.getMap<String, Any?>("properties")
+          val propertiesField = it.schema().field("properties")
+          val properties =
+              when (propertiesField.schema().type()) {
+                Schema.Type.MAP -> it.getMap<String, Any?>("properties")
+                Schema.Type.STRUCT -> it.getStruct("properties")
+                else -> throw IllegalArgumentException("Unsupported schema type for properties")
+              }
           NodeState(
               labels,
-              DynamicTypes.fromConnectValue(
-                  it.schema().field("properties").schema(), properties, true) as Map<String, Any?>,
+              DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
+                  as Map<String, Any?>,
           )
         },
     )
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
 internal fun Struct.toRelationshipState(): Pair<RelationshipState?, RelationshipState?> =
     Pair(
         getStruct("before")?.let {
-          val properties = it.getMap<String, Any?>("properties")
+          val propertiesField = it.schema().field("properties")
+          val properties =
+              when (propertiesField.schema().type()) {
+                Schema.Type.MAP -> it.getMap<String, Any?>("properties")
+                Schema.Type.STRUCT -> it.getStruct("properties")
+                else -> throw IllegalArgumentException("Unsupported schema type for properties")
+              }
           RelationshipState(
-              DynamicTypes.fromConnectValue(
-                  it.schema().field("properties").schema(), properties, true) as Map<String, Any?>,
+              DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
+                  as Map<String, Any?>,
           )
         },
         getStruct("after")?.let {
-          val properties = it.getMap<String, Any?>("properties")
+          val propertiesField = it.schema().field("properties")
+          val properties =
+              when (propertiesField.schema().type()) {
+                Schema.Type.MAP -> it.getMap<String, Any?>("properties")
+                Schema.Type.STRUCT -> it.getStruct("properties")
+                else -> throw IllegalArgumentException("Unsupported schema type for properties")
+              }
           RelationshipState(
-              DynamicTypes.fromConnectValue(
-                  it.schema().field("properties").schema(), properties, true) as Map<String, Any?>,
+              DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
+                  as Map<String, Any?>,
           )
         },
     )

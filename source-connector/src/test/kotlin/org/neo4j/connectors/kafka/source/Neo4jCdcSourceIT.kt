@@ -24,6 +24,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
@@ -188,13 +189,23 @@ abstract class Neo4jCdcSourceIT {
   }
 }
 
-@KeyValueConverter(key = AVRO, value = AVRO) class Neo4jCdcSourceAvroIT : Neo4jCdcSourceIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceAvroExtendedIT : Neo4jCdcSourceIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA)
-class Neo4jCdcSourceJsonSchemaIT : Neo4jCdcSourceIT()
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceAvroCompactIT : Neo4jCdcSourceIT()
 
-@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED)
-class Neo4jCdcSourceJsonEmbeddedIT : Neo4jCdcSourceIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceJsonSchemaExtendedIT : Neo4jCdcSourceIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF)
-class Neo4jCdcSourceProtobufIT : Neo4jCdcSourceIT()
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceJsonSchemaCompactIT : Neo4jCdcSourceIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceJsonEmbeddedExtendedIT : Neo4jCdcSourceIT()
+
+@KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
+class Neo4jCdcSourceJsonEmbeddedCompactIT : Neo4jCdcSourceIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
+class Neo4jCdcSourceProtobufExtendedIT : Neo4jCdcSourceIT()
