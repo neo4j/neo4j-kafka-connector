@@ -36,17 +36,7 @@ import org.neo4j.driver.types.Point
 
 @Suppress("UNCHECKED_CAST")
 object PropertyType {
-  internal const val MONTHS = "months"
-  internal const val DAYS = "days"
-  internal const val SECONDS = "seconds"
-  internal const val NANOS = "nanoseconds"
-  internal const val SR_ID = "srid"
-  internal const val X = "x"
-  internal const val Y = "y"
-  internal const val Z = "z"
-  internal const val DIMENSION = "dimension"
-  internal const val TWO_D: Byte = 2
-  internal const val THREE_D: Byte = 3
+  internal const val TYPE = "type"
 
   internal const val BOOLEAN = "B"
   internal const val BOOLEAN_LIST = "LB"
@@ -122,6 +112,7 @@ object PropertyType {
   val schema: Schema =
       SchemaBuilder.struct()
           .namespaced("Neo4jPropertyType")
+          .field(TYPE, Schema.STRING_SCHEMA)
           .field(BOOLEAN, Schema.OPTIONAL_BOOLEAN_SCHEMA)
           .field(LONG, Schema.OPTIONAL_INT64_SCHEMA)
           .field(FLOAT, Schema.OPTIONAL_FLOAT64_SCHEMA)
@@ -151,67 +142,61 @@ object PropertyType {
   fun toConnectValue(value: Any?): Struct? {
     return when (value) {
       null -> null
-      is Boolean -> Struct(schema).put(BOOLEAN, value)
-      is Float -> Struct(schema).put(FLOAT, value.toDouble())
-      is Double -> Struct(schema).put(FLOAT, value)
-      is Number -> Struct(schema).put(LONG, value.toLong())
-      is String -> Struct(schema).put(STRING, value)
-      is Char -> Struct(schema).put(STRING, value.toString())
-      is CharArray -> Struct(schema).put(STRING, String(value))
+      is Boolean -> getPropertyStruct(BOOLEAN, value)
+      is Float -> getPropertyStruct(FLOAT, value.toDouble())
+      is Double -> getPropertyStruct(FLOAT, value)
+      is Number -> getPropertyStruct(LONG, value.toLong())
+      is String -> getPropertyStruct(STRING, value)
+      is Char -> getPropertyStruct(STRING, value.toString())
+      is CharArray -> getPropertyStruct(STRING, String(value))
       is CharSequence ->
-          Struct(schema).put(STRING, value.codePoints().toArray().let { String(it, 0, it.size) })
-      is ByteArray -> Struct(schema).put(BYTES, value)
-      is ByteBuffer -> Struct(schema).put(BYTES, value.array())
-      is LocalDate -> Struct(schema).put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(value))
+          getPropertyStruct(STRING, value.codePoints().toArray().let { String(it, 0, it.size) })
+      is ByteArray -> getPropertyStruct(BYTES, value)
+      is ByteBuffer -> getPropertyStruct(BYTES, value.array())
+      is LocalDate -> getPropertyStruct(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(value))
       is LocalDateTime ->
-          Struct(schema).put(LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
-      is LocalTime -> Struct(schema).put(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(value))
+          getPropertyStruct(LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+      is LocalTime -> getPropertyStruct(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(value))
       is OffsetDateTime ->
-          Struct(schema).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+          getPropertyStruct(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
       is ZonedDateTime ->
-          Struct(schema).put(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
-      is OffsetTime -> Struct(schema).put(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(value))
-      is IsoDuration ->
-          Struct(schema)
-              .put(
-                  DURATION,
-                  Struct(durationSchema)
-                      .put(MONTHS, value.months())
-                      .put(DAYS, value.days())
-                      .put(SECONDS, value.seconds())
-                      .put(NANOS, value.nanoseconds()))
-      is Point ->
-          Struct(schema)
-              .put(
-                  POINT,
-                  Struct(pointSchema)
-                      .put(SR_ID, value.srid())
-                      .put(X, value.x())
-                      .put(Y, value.y())
-                      .also {
-                        it.put(DIMENSION, if (value.z().isNaN()) TWO_D else THREE_D)
-                        if (!value.z().isNaN()) {
-                          it.put(Z, value.z())
-                        }
-                      })
-      is ShortArray -> Struct(schema).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
-      is IntArray -> Struct(schema).put(LONG_LIST, value.map { s -> s.toLong() }.toList())
-      is LongArray -> Struct(schema).put(LONG_LIST, value.toList())
-      is FloatArray -> Struct(schema).put(FLOAT_LIST, value.map { s -> s.toDouble() }.toList())
-      is DoubleArray -> Struct(schema).put(FLOAT_LIST, value.toList())
-      is BooleanArray -> Struct(schema).put(BOOLEAN_LIST, value.toList())
+          getPropertyStruct(ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(value))
+      is OffsetTime -> getPropertyStruct(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(value))
+      is IsoDuration -> {
+        val durationStruct =
+            Struct(durationSchema)
+                .put(MONTHS, value.months())
+                .put(DAYS, value.days())
+                .put(SECONDS, value.seconds())
+                .put(NANOS, value.nanoseconds())
+        getPropertyStruct(DURATION, durationStruct)
+      }
+      is Point -> {
+        val pointStruct =
+            Struct(pointSchema).put(SR_ID, value.srid()).put(X, value.x()).put(Y, value.y()).also {
+              it.put(DIMENSION, if (value.z().isNaN()) TWO_D else THREE_D)
+              if (!value.z().isNaN()) {
+                it.put(Z, value.z())
+              }
+            }
+        getPropertyStruct(POINT, pointStruct)
+      }
+      is ShortArray -> getPropertyStruct(LONG_LIST, value.map { it.toLong() })
+      is IntArray -> getPropertyStruct(LONG_LIST, value.map { it.toLong() })
+      is LongArray -> getPropertyStruct(LONG_LIST, value.toList())
+      is FloatArray -> getPropertyStruct(FLOAT_LIST, value.map { it.toDouble() })
+      is DoubleArray -> getPropertyStruct(FLOAT_LIST, value.toList())
+      is BooleanArray -> getPropertyStruct(BOOLEAN_LIST, value.toList())
       is Array<*> -> asList(value.toList(), value::class.java.componentType.kotlin)
       is Iterable<*> -> {
         val elementTypes = value.map { it?.javaClass?.kotlin }.toSet()
         if (elementTypes.isEmpty()) {
           return asList(value, Int::class)
         }
-
         val elementType = elementTypes.singleOrNull()
         if (elementType != null) {
           return asList(value, elementType)
         }
-
         throw IllegalArgumentException(
             "collections with multiple element types are not supported: ${elementTypes.joinToString { it?.java?.name ?: "null" }}")
       }
@@ -219,154 +204,128 @@ object PropertyType {
     }
   }
 
-  private fun asList(value: Iterable<*>, componentType: KClass<*>): Struct? =
-      when (componentType) {
-        Boolean::class -> Struct(schema).put(BOOLEAN_LIST, value)
-        Byte::class -> Struct(schema).put(BYTES, (value as List<Byte>).toByteArray())
-        Short::class ->
-            Struct(schema).put(LONG_LIST, (value as List<Short>).map { s -> s.toLong() })
-        Int::class -> Struct(schema).put(LONG_LIST, (value as List<Int>).map { s -> s.toLong() })
-        Long::class -> Struct(schema).put(LONG_LIST, value)
-        Float::class ->
-            Struct(schema).put(FLOAT_LIST, (value as List<Float>).map { s -> s.toDouble() })
-        Double::class -> Struct(schema).put(FLOAT_LIST, value)
-        String::class -> Struct(schema).put(STRING_LIST, value)
-        LocalDate::class ->
-            Struct(schema)
-                .put(
-                    LOCAL_DATE_LIST,
-                    (value as List<LocalDate>).map { s -> DateTimeFormatter.ISO_DATE.format(s) })
-        LocalDateTime::class ->
-            Struct(schema)
-                .put(
-                    LOCAL_DATE_TIME_LIST,
-                    (value as List<LocalDateTime>).map { s ->
-                      DateTimeFormatter.ISO_DATE_TIME.format(s)
-                    })
-        LocalTime::class ->
-            Struct(schema)
-                .put(
-                    LOCAL_TIME_LIST,
-                    (value as List<LocalTime>).map { s -> DateTimeFormatter.ISO_TIME.format(s) })
-        OffsetDateTime::class ->
-            Struct(schema)
-                .put(
-                    ZONED_DATE_TIME_LIST,
-                    (value as List<OffsetDateTime>).map { s ->
-                      DateTimeFormatter.ISO_DATE_TIME.format(s)
-                    })
-        ZonedDateTime::class ->
-            Struct(schema)
-                .put(
-                    ZONED_DATE_TIME_LIST,
-                    (value as List<ZonedDateTime>).map { s ->
-                      DateTimeFormatter.ISO_DATE_TIME.format(s)
-                    })
-        OffsetTime::class ->
-            Struct(schema)
-                .put(
-                    OFFSET_TIME_LIST,
-                    (value as List<OffsetTime>).map { s -> DateTimeFormatter.ISO_TIME.format(s) })
-        else ->
-            if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
-              Struct(schema)
-                  .put(
-                      DURATION_LIST,
-                      value
-                          .map { s -> s as IsoDuration }
-                          .map {
-                            Struct(durationSchema)
-                                .put(MONTHS, it.months())
-                                .put(DAYS, it.days())
-                                .put(SECONDS, it.seconds())
-                                .put(NANOS, it.nanoseconds())
-                          })
-            } else if (Point::class.java.isAssignableFrom(componentType.java)) {
-              Struct(schema)
-                  .put(
-                      POINT_LIST,
-                      value
-                          .map { s -> s as Point }
-                          .map { s ->
-                            Struct(pointSchema)
-                                .put(SR_ID, s.srid())
-                                .put(X, s.x())
-                                .put(Y, s.y())
-                                .also {
-                                  it.put(DIMENSION, if (s.z().isNaN()) TWO_D else THREE_D)
-                                  if (!s.z().isNaN()) {
-                                    it.put(Z, s.z())
-                                  }
-                                }
-                          })
-            } else {
-              throw IllegalArgumentException(
-                  "unsupported array type: array of ${componentType.java.name}")
-            }
+  private fun asList(value: Iterable<*>, componentType: KClass<*>): Struct? {
+    return when (componentType) {
+      Boolean::class -> getPropertyStruct(BOOLEAN_LIST, value)
+      Byte::class -> getPropertyStruct(BYTES, (value as List<Byte>).toByteArray())
+      Short::class -> getPropertyStruct(LONG_LIST, (value as List<Short>).map { it.toLong() })
+      Int::class -> getPropertyStruct(LONG_LIST, (value as List<Int>).map { it.toLong() })
+      Long::class -> getPropertyStruct(LONG_LIST, value)
+      Float::class -> getPropertyStruct(FLOAT_LIST, (value as List<Float>).map { it.toDouble() })
+      Double::class -> getPropertyStruct(FLOAT_LIST, value)
+      String::class -> getPropertyStruct(STRING_LIST, value)
+      LocalDate::class ->
+          getPropertyStruct(
+              LOCAL_DATE_LIST,
+              (value as List<LocalDate>).map { DateTimeFormatter.ISO_DATE.format(it) })
+      LocalDateTime::class ->
+          getPropertyStruct(
+              LOCAL_DATE_TIME_LIST,
+              (value as List<LocalDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+      LocalTime::class ->
+          getPropertyStruct(
+              LOCAL_TIME_LIST,
+              (value as List<LocalTime>).map { DateTimeFormatter.ISO_TIME.format(it) })
+      OffsetDateTime::class ->
+          getPropertyStruct(
+              ZONED_DATE_TIME_LIST,
+              (value as List<OffsetDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+      ZonedDateTime::class ->
+          getPropertyStruct(
+              ZONED_DATE_TIME_LIST,
+              (value as List<ZonedDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+      OffsetTime::class ->
+          getPropertyStruct(
+              OFFSET_TIME_LIST,
+              (value as List<OffsetTime>).map { DateTimeFormatter.ISO_TIME.format(it) })
+      else -> {
+        if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
+          getPropertyStruct(
+              DURATION_LIST,
+              value
+                  .map { it as IsoDuration }
+                  .map {
+                    Struct(durationSchema)
+                        .put(MONTHS, it.months())
+                        .put(DAYS, it.days())
+                        .put(SECONDS, it.seconds())
+                        .put(NANOS, it.nanoseconds())
+                  })
+        } else if (Point::class.java.isAssignableFrom(componentType.java)) {
+          getPropertyStruct(
+              POINT_LIST,
+              value
+                  .map { it as Point }
+                  .map { point ->
+                    Struct(pointSchema)
+                        .put(SR_ID, point.srid())
+                        .put(X, point.x())
+                        .put(Y, point.y())
+                        .also {
+                          it.put(DIMENSION, if (point.z().isNaN()) TWO_D else THREE_D)
+                          if (!point.z().isNaN()) {
+                            it.put(Z, point.z())
+                          }
+                        }
+                  })
+        } else {
+          throw IllegalArgumentException(
+              "unsupported array type: array of ${componentType.java.name}")
+        }
       }
+    }
+  }
 
   fun fromConnectValue(value: Struct?): Any? {
     return value?.let {
-      val simpleFieldAndValue =
-          SIMPLE_TYPE_FIELDS.firstNotNullOfOrNull { f ->
-            val fieldValue = it.getWithoutDefault(f)
-            if (fieldValue != null) Pair(f, fieldValue) else null
+      val fieldType = it.getString(TYPE)
+      if (SIMPLE_TYPE_FIELDS.contains(fieldType)) {
+        return when (fieldType) {
+          BOOLEAN -> it.getWithoutDefault(BOOLEAN) as Boolean
+          LONG -> it.getWithoutDefault(LONG) as Long
+          FLOAT -> it.getWithoutDefault(FLOAT) as Double
+          STRING -> it.getWithoutDefault(STRING) as String
+          BYTES -> {
+            when (val bytes = it.getWithoutDefault(BYTES)) {
+              is ByteArray -> bytes
+              is ByteBuffer -> bytes.array()
+              else ->
+                  throw IllegalArgumentException(
+                      "unsupported BYTES value: ${bytes?.javaClass?.name}")
+            }
           }
-      if (simpleFieldAndValue != null) {
-        return when (simpleFieldAndValue.first) {
-          BOOLEAN -> simpleFieldAndValue.second as Boolean
-          LONG -> simpleFieldAndValue.second as Long
-          FLOAT -> simpleFieldAndValue.second as Double
-          STRING -> simpleFieldAndValue.second as String
-          BYTES ->
-              when (val bytes = simpleFieldAndValue.second) {
-                is ByteArray -> bytes
-                is ByteBuffer -> bytes.array()
-                else ->
-                    throw IllegalArgumentException(
-                        "unsupported BYTES value: ${bytes.javaClass.name}")
-              }
-          LOCAL_DATE -> parseLocalDate((simpleFieldAndValue.second as String))
-          LOCAL_TIME -> parseLocalTime((simpleFieldAndValue.second as String))
-          LOCAL_DATE_TIME -> parseLocalDateTime((simpleFieldAndValue.second as String))
-          ZONED_DATE_TIME -> parseZonedDateTime((simpleFieldAndValue.second as String))
-          OFFSET_TIME -> parseOffsetTime((simpleFieldAndValue.second as String))
-          DURATION -> toDuration((simpleFieldAndValue.second as Struct))
-          POINT -> toPoint((simpleFieldAndValue.second as Struct))
+          LOCAL_DATE -> parseLocalDate(it.getWithoutDefault(LOCAL_DATE) as String)
+          LOCAL_TIME -> parseLocalTime(it.getWithoutDefault(LOCAL_TIME) as String)
+          LOCAL_DATE_TIME -> parseLocalDateTime(it.getWithoutDefault(LOCAL_DATE_TIME) as String)
+          ZONED_DATE_TIME -> parseZonedDateTime(it.getWithoutDefault(ZONED_DATE_TIME) as String)
+          OFFSET_TIME -> parseOffsetTime(it.getWithoutDefault(OFFSET_TIME) as String)
+          DURATION -> toDuration(it.getWithoutDefault(DURATION) as Struct)
+          POINT -> toPoint(it.getWithoutDefault(POINT) as Struct)
           else ->
               throw IllegalArgumentException(
-                  "unsupported simple type: ${simpleFieldAndValue.first}: ${simpleFieldAndValue.second.javaClass.name}")
+                  "unsupported simple type: $fieldType: ${it.getWithoutDefault(fieldType)?.javaClass?.name}")
         }
       }
 
-      val listFieldAndValue =
-          LIST_TYPE_FIELDS.firstNotNullOfOrNull { f ->
-            val fieldValue = it.getWithoutDefault(f)
-            if (fieldValue != null && (fieldValue is Collection<*> && fieldValue.isNotEmpty()))
-                Pair(f, fieldValue)
-            else null
+      if (LIST_TYPE_FIELDS.contains(fieldType)) {
+        val fieldValue = it.getWithoutDefault(fieldType)
+        if (fieldValue != null && (fieldValue is Collection<*> && fieldValue.isNotEmpty())) {
+          return when (fieldType) {
+            BOOLEAN_LIST,
+            LONG_LIST,
+            FLOAT_LIST,
+            STRING_LIST -> fieldValue as List<*>
+            LOCAL_DATE_LIST -> (fieldValue as List<String>).map { s -> parseLocalDate(s) }
+            LOCAL_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalTime(s) }
+            LOCAL_DATE_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalDateTime(s) }
+            ZONED_DATE_TIME_LIST -> (fieldValue as List<String>).map { s -> parseZonedDateTime(s) }
+            OFFSET_TIME_LIST -> (fieldValue as List<String>).map { s -> parseOffsetTime(s) }
+            DURATION_LIST -> (fieldValue as List<Struct>).map { s -> toDuration(s) }
+            POINT_LIST -> (fieldValue as List<Struct>).map { s -> toPoint(s) }
+            else ->
+                throw IllegalArgumentException(
+                    "unsupported list type: ${fieldType}: ${fieldValue.javaClass.name}")
           }
-      if (listFieldAndValue != null) {
-        return when (listFieldAndValue.first) {
-          BOOLEAN_LIST -> listFieldAndValue.second as List<*>
-          LONG_LIST -> listFieldAndValue.second as List<*>
-          FLOAT_LIST -> listFieldAndValue.second as List<*>
-          STRING_LIST -> listFieldAndValue.second as List<*>
-          LOCAL_DATE_LIST ->
-              (listFieldAndValue.second as List<String>).map { s -> parseLocalDate(s) }
-          LOCAL_TIME_LIST ->
-              (listFieldAndValue.second as List<String>).map { s -> parseLocalTime(s) }
-          LOCAL_DATE_TIME_LIST ->
-              (listFieldAndValue.second as List<String>).map { s -> parseLocalDateTime(s) }
-          ZONED_DATE_TIME_LIST ->
-              (listFieldAndValue.second as List<String>).map { s -> parseZonedDateTime(s) }
-          OFFSET_TIME_LIST ->
-              (listFieldAndValue.second as List<String>).map { s -> parseOffsetTime(s) }
-          DURATION_LIST -> (listFieldAndValue.second as List<Struct>).map { s -> toDuration(s) }
-          POINT_LIST -> (listFieldAndValue.second as List<Struct>).map { s -> toPoint(s) }
-          else ->
-              throw IllegalArgumentException(
-                  "unsupported list type: ${listFieldAndValue.first}: ${listFieldAndValue.second.javaClass.name}")
         }
       }
 
@@ -375,6 +334,10 @@ object PropertyType {
       // assume the value is an empty list.
       return emptyList<Any>()
     }
+  }
+
+  fun getPropertyStruct(type: String, value: Any?): Struct {
+    return Struct(schema).put(TYPE, type).put(type, value)
   }
 
   private fun parseLocalDate(s: String): LocalDate =

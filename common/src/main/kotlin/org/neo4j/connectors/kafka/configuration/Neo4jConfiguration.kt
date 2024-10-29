@@ -226,7 +226,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   }
 
   companion object {
-    const val DEFAULT_MAX_RETRY_ATTEMPTS = 5
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
 
     const val URI = "neo4j.uri"

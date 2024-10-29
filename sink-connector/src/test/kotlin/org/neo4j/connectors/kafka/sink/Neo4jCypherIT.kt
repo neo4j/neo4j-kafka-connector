@@ -42,6 +42,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
@@ -468,7 +469,7 @@ abstract class Neo4jCypherIT {
             "lastName" to "doe",
             "dob" to LocalDate.of(1999, 1, 1),
             "siblings" to 3)
-    DynamicTypes.toConnectSchema(value).let { mapSchema ->
+    DynamicTypes.toConnectSchema(PayloadMode.EXTENDED, value).let { mapSchema ->
       // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
       SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
         producer.publish(

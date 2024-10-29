@@ -31,7 +31,6 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.function.Function
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -42,14 +41,16 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
-import org.neo4j.driver.Value
 import org.neo4j.driver.Values
-import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
-import org.neo4j.driver.types.Relationship
 
-class DynamicTypesTest {
+class DynamicTypesExtendedTest {
+
+  companion object {
+    val payloadMode = PayloadMode.EXTENDED
+  }
 
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(PropertyTypedValueProvider::class)
@@ -58,8 +59,8 @@ class DynamicTypesTest {
       value: Any?,
       expectedIfDifferent: Any?
   ) {
-    DynamicTypes.toConnectSchema(value, false) shouldBe PropertyType.schema
-    DynamicTypes.toConnectSchema(value, true) shouldBe PropertyType.schema
+    DynamicTypes.toConnectSchema(payloadMode, value, false) shouldBe PropertyType.schema
+    DynamicTypes.toConnectSchema(payloadMode, value, true) shouldBe PropertyType.schema
 
     val converted = DynamicTypes.toConnectValue(PropertyType.schema, value)
     converted shouldBe PropertyType.toConnectValue(value)
@@ -210,13 +211,14 @@ class DynamicTypesTest {
   @Test
   fun `should derive schema for entity types correctly`() {
     // Node
-    DynamicTypes.toConnectSchema(TestNode(0, emptyList(), emptyMap()), false) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, TestNode(0, emptyList(), emptyMap()), false) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .build()
 
     DynamicTypes.toConnectSchema(
+        payloadMode,
         TestNode(
             0,
             listOf("Person"),
@@ -230,7 +232,8 @@ class DynamicTypesTest {
             .build()
 
     // Relationship
-    DynamicTypes.toConnectSchema(TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
+    DynamicTypes.toConnectSchema(
+        payloadMode, TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<type>", Schema.STRING_SCHEMA)
@@ -238,6 +241,7 @@ class DynamicTypesTest {
             .field("<end.id>", Schema.INT64_SCHEMA)
             .build()
     DynamicTypes.toConnectSchema(
+        payloadMode,
         TestRelationship(
             0,
             1,
@@ -259,17 +263,17 @@ class DynamicTypesTest {
   fun `empty collections should map to property type`() {
     listOf(listOf<Any>(), setOf<Any>()).forEach { collection ->
       withClue(collection) {
-        DynamicTypes.toConnectSchema(collection, false) shouldBe PropertyType.schema
-        DynamicTypes.toConnectSchema(collection, true) shouldBe PropertyType.schema
+        DynamicTypes.toConnectSchema(payloadMode, collection, false) shouldBe PropertyType.schema
+        DynamicTypes.toConnectSchema(payloadMode, collection, true) shouldBe PropertyType.schema
       }
     }
   }
 
   @Test
   fun `empty arrays should map to an array of property type`() {
-    DynamicTypes.toConnectSchema(arrayOf<Any>(), false) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, arrayOf<Any>(), false) shouldBe
         SchemaBuilder.array(PropertyType.schema).build()
-    DynamicTypes.toConnectSchema(arrayOf<Any>(), true) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, arrayOf<Any>(), true) shouldBe
         SchemaBuilder.array(PropertyType.schema).optional().build()
   }
 
@@ -283,8 +287,8 @@ class DynamicTypesTest {
             arrayOf<Point>())
         .forEach { array ->
           withClue(array) {
-            DynamicTypes.toConnectSchema(array, false) shouldBe PropertyType.schema
-            DynamicTypes.toConnectSchema(array, true) shouldBe PropertyType.schema
+            DynamicTypes.toConnectSchema(payloadMode, array, false) shouldBe PropertyType.schema
+            DynamicTypes.toConnectSchema(payloadMode, array, true) shouldBe PropertyType.schema
           }
         }
   }
@@ -295,9 +299,9 @@ class DynamicTypesTest {
       name: String,
       value: Any?
   ) {
-    DynamicTypes.toConnectSchema(value, false) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, value, false) shouldBe
         SchemaBuilder.array(PropertyType.schema).build()
-    DynamicTypes.toConnectSchema(value, true) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, value, true) shouldBe
         SchemaBuilder.array(PropertyType.schema).optional().build()
   }
 
@@ -322,25 +326,25 @@ class DynamicTypesTest {
 
   @Test
   fun `empty maps should map to an empty struct schema`() {
-    DynamicTypes.toConnectSchema(mapOf<String, Any>(), false) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, mapOf<String, Any>(), false) shouldBe
         SchemaBuilder.struct().build()
-    DynamicTypes.toConnectSchema(mapOf<String, Any>(), true) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, mapOf<String, Any>(), true) shouldBe
         SchemaBuilder.struct().optional().build()
   }
 
   @Test
   fun `map keys should be enforced to be a string`() {
     shouldThrow<IllegalArgumentException> {
-      DynamicTypes.toConnectSchema(mapOf(1 to 5, "a" to "b"), false)
+      DynamicTypes.toConnectSchema(payloadMode, mapOf(1 to 5, "a" to "b"), false)
     } shouldHaveMessage ("unsupported map key type java.lang.Integer")
   }
 
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(PropertyTypedMapProvider::class)
   fun `maps with property typed values should map to a map schema`(name: String, value: Any?) {
-    DynamicTypes.toConnectSchema(value, false) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, value, false) shouldBe
         SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
-    DynamicTypes.toConnectSchema(value, true) shouldBe
+    DynamicTypes.toConnectSchema(payloadMode, value, true) shouldBe
         SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).optional().build()
   }
 
@@ -372,7 +376,7 @@ class DynamicTypesTest {
     data class Test(val a: String)
 
     listOf(object {}, java.sql.Date(0), object : Entity(emptyMap()) {}, Test("a string")).forEach {
-      shouldThrow<IllegalArgumentException> { DynamicTypes.toConnectSchema(it, false) }
+      shouldThrow<IllegalArgumentException> { DynamicTypes.toConnectSchema(payloadMode, it, false) }
     }
   }
 
@@ -391,7 +395,7 @@ class DynamicTypesTest {
                     "c" to PropertyType.toConnectValue(3L)))
         .forEach { (value, expected) ->
           withClue(value) {
-            val schema = DynamicTypes.toConnectSchema(value, false)
+            val schema = DynamicTypes.toConnectSchema(payloadMode, value, false)
             val converted = DynamicTypes.toConnectValue(schema, value)
 
             converted shouldBe expected
@@ -409,7 +413,7 @@ class DynamicTypesTest {
             0,
             listOf("Person", "Employee"),
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
-    val schema = DynamicTypes.toConnectSchema(node, false)
+    val schema = DynamicTypes.toConnectSchema(payloadMode, node, false)
     val converted = DynamicTypes.toConnectValue(schema, node)
 
     converted shouldBe
@@ -437,7 +441,7 @@ class DynamicTypesTest {
             2,
             "KNOWS",
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
-    val schema = DynamicTypes.toConnectSchema(rel, false)
+    val schema = DynamicTypes.toConnectSchema(payloadMode, rel, false)
     val converted = DynamicTypes.toConnectValue(schema, rel)
 
     converted shouldBe
@@ -469,7 +473,7 @@ class DynamicTypesTest {
             "dob" to LocalDate.of(1999, 12, 31),
             "employed" to true,
             "nullable" to null)
-    val schema = DynamicTypes.toConnectSchema(map, false)
+    val schema = DynamicTypes.toConnectSchema(payloadMode, map, false)
     val converted = DynamicTypes.toConnectValue(schema, map)
 
     converted shouldBe
@@ -477,8 +481,8 @@ class DynamicTypesTest {
             "name" to PropertyType.toConnectValue("john"),
             "age" to PropertyType.toConnectValue(21L),
             "dob" to
-                Struct(PropertyType.schema)
-                    .put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
+                PropertyType.getPropertyStruct(
+                    LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
             "employed" to PropertyType.toConnectValue(true),
             "nullable" to null)
 
@@ -489,15 +493,15 @@ class DynamicTypesTest {
   @Test
   fun `collections with elements of different types should be returned as list of property types and should be converted back`() {
     val coll = listOf("john", 21, LocalDate.of(1999, 12, 31), true, null)
-    val schema = DynamicTypes.toConnectSchema(coll, false)
+    val schema = DynamicTypes.toConnectSchema(payloadMode, coll, false)
     val converted = DynamicTypes.toConnectValue(schema, coll)
 
     converted shouldBe
         listOf(
             PropertyType.toConnectValue("john"),
             PropertyType.toConnectValue(21L),
-            Struct(PropertyType.schema)
-                .put(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
+            PropertyType.getPropertyStruct(
+                LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(LocalDate.of(1999, 12, 31))),
             PropertyType.toConnectValue(true),
             null)
 
@@ -570,52 +574,4 @@ class DynamicTypesTest {
             "events_of_interest" to
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
   }
-}
-
-private abstract class Entity(val props: Map<String, Value>) {
-  fun keys(): Iterable<String> = props.keys
-
-  fun containsKey(key: String?): Boolean = props.containsKey(key)
-
-  fun get(key: String?): Value? = props[key]
-
-  fun size(): Int = props.size
-
-  fun values(): Iterable<Value> = props.values
-
-  fun <T : Any?> values(mapFunction: Function<Value, T>): Iterable<T> =
-      props.values.map { mapFunction.apply(it) }
-
-  fun asMap(): Map<String, Any> = props
-
-  fun <T : Any?> asMap(mapFunction: Function<Value, T>): Map<String, T> =
-      props.mapValues { mapFunction.apply(it.value) }
-}
-
-private class TestNode(val id: Long, val labels: List<String>, props: Map<String, Value>) :
-    Entity(props), Node {
-
-  override fun id(): Long = id
-
-  override fun labels(): Iterable<String> = labels
-
-  override fun hasLabel(label: String?): Boolean = label in labels
-}
-
-private class TestRelationship(
-    val id: Long,
-    val startId: Long,
-    val endId: Long,
-    val type: String,
-    props: Map<String, Value>
-) : Entity(props), Relationship {
-  override fun id(): Long = id
-
-  override fun startNodeId(): Long = startId
-
-  override fun endNodeId(): Long = endId
-
-  override fun type(): String = type
-
-  override fun hasType(relationshipType: String?): Boolean = type == relationshipType
 }

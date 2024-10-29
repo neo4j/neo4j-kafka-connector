@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.neo4j.connectors.kafka</groupId>
         <artifactId>parent</artifactId>
-        <version>5.1.4-SNAPSHOT</version>
+        <version>5.1.5-SNAPSHOT</version>
     </parent>
     <artifactId>sink</artifactId>
     <packaging>jar</packaging>
@@ -13,7 +13,7 @@
     <description>Neo4j Connector for Kafka - Sink</description>
     <properties>
         <antlr4.version>4.13.2</antlr4.version>
-        <json-schema-validator.version>1.5.0</json-schema-validator.version>
+        <json-schema-validator.version>1.5.2</json-schema-validator.version>
     </properties>
     <dependencies>
         <dependency>
