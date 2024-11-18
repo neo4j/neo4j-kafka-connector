@@ -44,6 +44,7 @@ class TopicVerifier<K, V>(
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
+  private var inAnyOrder: Boolean = false
   private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<ByteArray, ByteArray>>>()
 
   fun assertMessageKey(schemaTopic: String? = null, assertion: (K?) -> Unit): TopicVerifier<K, V> {
@@ -89,6 +90,11 @@ class TopicVerifier<K, V>(
     return this
   }
 
+  fun inAnyOrder(): TopicVerifier<K, V> {
+    this.inAnyOrder = true
+    return this
+  }
+
   fun verifyWithin(timeout: Duration) {
     val predicates = messagePredicates.toList()
     if (predicates.isEmpty()) {
@@ -98,15 +104,38 @@ class TopicVerifier<K, V>(
     try {
       Awaitility.await().atMost(timeout).until {
         consumer.kafkaConsumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
-        val messages = receivedMessages.toList()
-        messages.size == predicates.size &&
-            predicates.foldIndexed(true) { i, prev, predicate ->
-              prev && predicate.test(messages[i])
+        val messages = receivedMessages.toList().toMutableList()
+
+        if (messages.size != predicates.size) {
+          return@until false
+        }
+
+        if (inAnyOrder) {
+          var queue = predicates.toList()
+          while (true) {
+            val predicate = queue.firstOrNull()
+            if (predicate == null) {
+              break
             }
+
+            val matched = messages.find { predicate.test(it) }
+            if (matched == null) {
+              return@until false
+            }
+
+            messages.remove(matched)
+            queue = queue.drop(1)
+          }
+
+          true
+        } else {
+          predicates.foldIndexed(true) { i, prev, predicate -> prev && predicate.test(messages[i]) }
+        }
       }
     } catch (e: ConditionTimeoutException) {
       throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages",
+      )
     }
   }
 
