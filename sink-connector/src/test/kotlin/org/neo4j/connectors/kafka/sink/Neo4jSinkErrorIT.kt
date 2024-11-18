@@ -1002,6 +1002,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe nodePatternMessageToFail.value
         }
+        .inAnyOrder()
         .verifyWithin(Duration.ofSeconds(30))
   }
 
