@@ -16,9 +16,13 @@
  */
 package org.neo4j.connectors.kafka.testing.source
 
+import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.shouldBe
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.KProperty1
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -218,6 +222,28 @@ internal class Neo4jSourceExtension(
         session.createDatabase(neo4jDatabase)
         if (sourceAnnotation.strategy == SourceStrategy.CDC) {
           session.enableCdc(neo4jDatabase)
+        }
+      }
+
+      // want to make sure that CDC is functional before running the test
+      if (sourceAnnotation.strategy == SourceStrategy.CDC) {
+        runBlocking {
+          eventually(30.seconds) {
+            driver.session(SessionConfig.forDatabase(neo4jDatabase)).use { session ->
+              try {
+                val earliest = session.run("CALL db.cdc.earliest").single().get(0).asString()
+                val count =
+                    session
+                        .run("CALL db.cdc.query(${'$'}from)", mapOf("from" to earliest))
+                        .list()
+                        .count()
+
+                count shouldBe 0
+              } catch (e: Exception) {
+                log.trace("error received while waiting for cdc to be available", e)
+              }
+            }
+          }
         }
       }
     }

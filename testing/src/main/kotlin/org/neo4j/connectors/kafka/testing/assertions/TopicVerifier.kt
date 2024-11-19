@@ -44,6 +44,7 @@ class TopicVerifier<K, V>(
 
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
+  private var inAnyOrder: Boolean = false
   private var messagePredicates = mutableListOf<Predicate<ConsumerRecord<ByteArray, ByteArray>>>()
 
   fun assertMessageKey(schemaTopic: String? = null, assertion: (K?) -> Unit): TopicVerifier<K, V> {
@@ -69,23 +70,33 @@ class TopicVerifier<K, V>(
                         keyConverter,
                         keyAssertionClass,
                         schemaTopic ?: record.topic(),
-                        record.key())
+                        record.key(),
+                    )
                         as K,
                 value =
                     convert(
                         valueConverter,
                         valueAssertionClass,
                         schemaTopic ?: record.topic(),
-                        record.value())
-                        as V)
+                        record.value(),
+                    )
+                        as V,
+            )
 
+        log.trace("testing message {} against assertion", genericRecord)
         assertion(genericRecord)
+        log.trace("assertion successful")
         true
       } catch (e: java.lang.AssertionError) {
-        log.debug("Assertion has failed", e)
+        log.debug("assertion failed", e)
         false
       }
     }
+    return this
+  }
+
+  fun inAnyOrder(): TopicVerifier<K, V> {
+    this.inAnyOrder = true
     return this
   }
 
@@ -98,15 +109,46 @@ class TopicVerifier<K, V>(
     try {
       Awaitility.await().atMost(timeout).until {
         consumer.kafkaConsumer.poll(Duration.ofMillis(500)).forEach { receivedMessages.add(it) }
-        val messages = receivedMessages.toList()
-        messages.size == predicates.size &&
-            predicates.foldIndexed(true) { i, prev, predicate ->
-              prev && predicate.test(messages[i])
+        val messages = receivedMessages.toList().toMutableList()
+
+        log.trace("received {} messages", messages.size)
+        if (messages.size != predicates.size) {
+          log.trace("did not receive enough messages to test {} assertions", predicates.size)
+          return@until false
+        }
+
+        if (inAnyOrder) {
+          log.trace("running assertions in any order")
+          var queue = predicates.toList()
+          while (true) {
+            val predicate = queue.firstOrNull()
+            if (predicate == null) {
+              break
             }
+
+            log.trace("testing assertion {}", predicates.size - queue.size)
+            val matched = messages.find { predicate.test(it) }
+            if (matched == null) {
+              return@until false
+            }
+
+            messages.remove(matched)
+            queue = queue.drop(1)
+          }
+
+          true
+        } else {
+          log.trace("running assertions in strict order")
+          predicates.foldIndexed(true) { i, prev, predicate ->
+            log.trace("testing assertion {}", i)
+            prev && predicate.test(messages[i])
+          }
+        }
       }
     } catch (e: ConditionTimeoutException) {
       throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages")
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages",
+      )
     }
   }
 
@@ -141,8 +183,10 @@ class TopicVerifier<K, V>(
             keyConverter.configure(
                 mapOf(
                     AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                        consumer.schemaRegistryUrlProvider()),
-                true)
+                        consumer.schemaRegistryUrlProvider(),
+                ),
+                true,
+            )
       }
 
       val valueConverter = consumer.valueConverter.converterProvider()
@@ -164,7 +208,8 @@ class TopicVerifier<K, V>(
           keyConverter = keyConverter,
           valueConverter = valueConverter,
           keyAssertionClass = K::class.java,
-          valueAssertionClass = V::class.java)
+          valueAssertionClass = V::class.java,
+      )
     }
 
     fun createForMap(consumer: ConvertingKafkaConsumer) =

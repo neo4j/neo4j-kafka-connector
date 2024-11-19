@@ -1002,6 +1002,7 @@ abstract class Neo4jSinkErrorIT {
 
           it.value shouldBe nodePatternMessageToFail.value
         }
+        .inAnyOrder() // we can't enforce any ordering in how Kafka Connect delivers these
         .verifyWithin(Duration.ofSeconds(30))
   }
 
