@@ -195,8 +195,10 @@ internal class Neo4jSourceExtension(
       session.close()
       driver.close()
     } else {
-      createDriver().use { dr ->
-        dr.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+      if (!testFailed) {
+        createDriver().use { dr ->
+          dr.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+        }
       }
     }
   }
