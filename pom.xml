@@ -307,10 +307,6 @@
     </dependencyManagement>
     <repositories>
         <repository>
-            <id>github</id>
-            <url>https://maven.pkg.github.com/neo4j/neo4j-cdc-client</url>
-        </repository>
-        <repository>
             <id>confluent</id>
             <url>https://packages.confluent.io/maven/</url>
         </repository>
