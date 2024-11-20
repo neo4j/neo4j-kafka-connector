@@ -44,7 +44,7 @@
         <avro.version>1.12.0</avro.version>
         <awaitility.version>4.2.2</awaitility.version>
         <build-resources.version>2024-11.1</build-resources.version>
-        <byte-buddy.version>1.15.4</byte-buddy.version>
+        <byte-buddy.version>1.15.10</byte-buddy.version>
         <cdc.version>1.0.8</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
@@ -87,7 +87,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
-        <testcontainers.version>1.20.2</testcontainers.version>
+        <testcontainers.version>1.20.3</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
