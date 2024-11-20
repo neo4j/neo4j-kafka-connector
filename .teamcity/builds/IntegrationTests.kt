@@ -23,28 +23,13 @@ class IntegrationTests(
           this.name = "$name (Java ${javaVersion.version}) (Confluent Platform $platformVersion)"
           init()
 
-          // we uploaded a custom settings.xml file in Teamcity UI, under Connectors project
-          // with the following content, so we set the relevant environment variables here.
-
-          /*
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
-                                        http://maven.apache.org/xsd/settings-1.0.0.xsd">
-              <servers>
-                <server>
-                  <id>github</id>
-                  <username>${env.PACKAGES_USERNAME}</username>
-                  <password>${env.PACKAGES_PASSWORD}</password>
-                </server>
-              </servers>
-          </settings>
-           */
+          artifactRules =
+              """
+              +:diagnostics => diagnostics
+              """
+                  .trimIndent()
 
           params {
-            text("env.PACKAGES_USERNAME", "%github-packages-user%")
-            password("env.PACKAGES_PASSWORD", "%github-packages-token%")
-
             text("env.BROKER_EXTERNAL_HOST", "broker:29092")
             text("env.SCHEMA_CONTROL_REGISTRY_URI", "http://schema-registry:8081")
             text("env.SCHEMA_CONTROL_REGISTRY_EXTERNAL_URI", "http://schema-registry:8081")
@@ -99,7 +84,27 @@ class IntegrationTests(
                 apt-get install --yes ruby-full
                 gem install dip
                 curl -fsSL https://get.docker.com | sh
-                dip compose logs --no-color
+                mkdir diagnostics
+                dip compose cp neo4j:/data diagnostics/data
+                dip compose logs --no-color > ./diagnostics/docker-compose.logs
+            """
+                      .trimIndent()
+              formatStderrAsError = true
+
+              executionMode = BuildStep.ExecutionMode.RUN_ON_FAILURE
+              dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+              dockerImage = javaVersion.dockerImage
+              dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+            }
+            script {
+              scriptContent =
+                  """
+                #!/bin/bash -eu
+                # TODO: publish custom image instead
+                apt-get update
+                apt-get install --yes ruby-full
+                gem install dip
+                curl -fsSL https://get.docker.com | sh
                 dip compose down --rmi local
             """
                       .trimIndent()

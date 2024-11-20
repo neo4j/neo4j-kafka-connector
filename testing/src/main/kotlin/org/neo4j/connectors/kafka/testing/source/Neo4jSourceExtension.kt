@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
+import org.junit.jupiter.api.extension.TestWatcher
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -59,7 +60,7 @@ internal class Neo4jSourceExtension(
         { properties, topic ->
           ConsumerResolver.getSubscribedConsumer(properties, topic)
         },
-) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
+) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver, TestWatcher {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
 
@@ -80,6 +81,8 @@ internal class Neo4jSourceExtension(
   private lateinit var session: Session
 
   private lateinit var neo4jDatabase: String
+
+  private var testFailed: Boolean = false
 
   private val brokerExternalHost =
       AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
@@ -174,12 +177,21 @@ internal class Neo4jSourceExtension(
 
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     topicRegistry.log()
+
+    testFailed = false
+  }
+
+  override fun testFailed(context: ExtensionContext?, cause: Throwable?) {
+    // we do not drop database if the test fails
+    testFailed = true
   }
 
   override fun afterEach(context: ExtensionContext?) {
     source.unregister()
     if (this::driver.isInitialized) {
-      driver.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+      if (!testFailed) {
+        driver.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+      }
       session.close()
       driver.close()
     } else {
@@ -227,6 +239,7 @@ internal class Neo4jSourceExtension(
 
       // want to make sure that CDC is functional before running the test
       if (sourceAnnotation.strategy == SourceStrategy.CDC) {
+        log.info("waiting cdc to be available")
         runBlocking {
           eventually(30.seconds) {
             driver.session(SessionConfig.forDatabase(neo4jDatabase)).use { session ->
@@ -240,11 +253,12 @@ internal class Neo4jSourceExtension(
 
                 count shouldBe 0
               } catch (e: Exception) {
-                log.trace("error received while waiting for cdc to be available", e)
+                log.debug("error received while waiting for cdc to be available", e)
               }
             }
           }
         }
+        log.info("cdc is available")
       }
     }
   }

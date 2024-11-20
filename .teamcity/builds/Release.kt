@@ -31,8 +31,6 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
                 label = "Version on the next snapshot after the release",
             )
 
-            text("env.PACKAGES_USERNAME", "%github-packages-user%")
-            password("env.PACKAGES_PASSWORD", "%github-packages-token%")
             password("env.JRELEASER_GITHUB_TOKEN", "%github-pull-request-token%")
           }
 
