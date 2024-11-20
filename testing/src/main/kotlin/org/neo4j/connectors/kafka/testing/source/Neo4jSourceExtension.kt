@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
-import org.junit.jupiter.api.extension.TestWatcher
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -60,7 +60,12 @@ internal class Neo4jSourceExtension(
         { properties, topic ->
           ConsumerResolver.getSubscribedConsumer(properties, topic)
         },
-) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver, TestWatcher {
+) :
+    ExecutionCondition,
+    BeforeEachCallback,
+    AfterEachCallback,
+    ParameterResolver,
+    TestExecutionExceptionHandler {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
 
@@ -181,9 +186,11 @@ internal class Neo4jSourceExtension(
     testFailed = false
   }
 
-  override fun testFailed(context: ExtensionContext?, cause: Throwable?) {
+  override fun handleTestExecutionException(context: ExtensionContext?, throwable: Throwable) {
     // we do not drop database if the test fails
     testFailed = true
+
+    throw throwable
   }
 
   override fun afterEach(context: ExtensionContext?) {
