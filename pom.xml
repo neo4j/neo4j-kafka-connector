@@ -44,12 +44,12 @@
         <avro.version>1.12.0</avro.version>
         <awaitility.version>4.2.2</awaitility.version>
         <build-resources.version>2024-11.1</build-resources.version>
-        <byte-buddy.version>1.15.4</byte-buddy.version>
+        <byte-buddy.version>1.15.10</byte-buddy.version>
         <cdc.version>1.0.8</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <hamcrest.version>3.0</hamcrest.version>
-        <jackson.version>2.18.0</jackson.version>
+        <jackson.version>2.18.1</jackson.version>
         <java.version>11</java.version>
         <joda-time.version>2.13.0</joda-time.version>
         <jreleaser-maven-plugin.version>1.15.0</jreleaser-maven-plugin.version>
@@ -61,7 +61,7 @@
         <kafka.version>3.8.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.9.0</kotlin.coroutines.version>
-        <kotlin.version>2.0.20</kotlin.version>
+        <kotlin.version>2.0.21</kotlin.version>
         <license-maven-plugin.version>4.6</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
@@ -83,11 +83,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
         <protobuf.version>3.24.4</protobuf.version>
-        <reactor.version>2023.0.10</reactor.version>
+        <reactor.version>2024.0.0</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
-        <testcontainers.version>1.20.2</testcontainers.version>
+        <testcontainers.version>1.20.3</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
