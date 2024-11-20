@@ -25,7 +25,7 @@ class IntegrationTests(
 
           artifactRules =
               """
-              +:diagnostics => diagnostics
+              +:diagnostics => diagnostics.zip
               """
                   .trimIndent()
 
