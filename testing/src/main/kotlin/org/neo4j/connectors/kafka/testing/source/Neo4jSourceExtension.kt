@@ -181,6 +181,7 @@ internal class Neo4jSourceExtension(
             payloadMode = keyValueConverterResolver.resolvePayloadMode(context))
 
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
+    log.info("registered source connector with name {}", source.name)
     topicRegistry.log()
 
     testFailed = false

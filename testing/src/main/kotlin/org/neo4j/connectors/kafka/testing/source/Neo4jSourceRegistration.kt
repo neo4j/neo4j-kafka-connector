@@ -52,7 +52,7 @@ internal class Neo4jSourceRegistration(
     payloadMode: PayloadMode
 ) {
 
-  private val name: String = randomizedName("Neo4jSourceConnector")
+  val name: String = randomizedName("Neo4jSourceConnector")
   private val payload: Map<String, Any>
 
   init {
