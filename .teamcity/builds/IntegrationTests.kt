@@ -86,6 +86,7 @@ class IntegrationTests(
                 curl -fsSL https://get.docker.com | sh
                 mkdir diagnostics
                 dip compose cp neo4j:/data diagnostics/data
+                dip compose cp neo4j:/logs diagnostics/logs
                 dip compose logs --no-color > ./diagnostics/docker-compose.logs
             """
                       .trimIndent()
