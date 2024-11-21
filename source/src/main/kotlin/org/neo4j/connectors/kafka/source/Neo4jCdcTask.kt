@@ -88,7 +88,7 @@ class Neo4jCdcTask : SourceTask() {
 
   @OptIn(ExperimentalCoroutinesApi::class)
   override fun poll(): MutableList<SourceRecord> {
-    log.debug("polling")
+    log.info("polling from offset: ${offset.get()}")
     val list = mutableListOf<SourceRecord>()
 
     runBlocking {
@@ -114,7 +114,7 @@ class Neo4jCdcTask : SourceTask() {
       }
     }
 
-    log.debug("poll resulted in {} messages", list.size)
+    log.info("poll resulted in {} messages", list.size)
     return list
   }
 
