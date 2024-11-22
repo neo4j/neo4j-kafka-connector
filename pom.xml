@@ -45,7 +45,7 @@
         <awaitility.version>4.2.2</awaitility.version>
         <build-resources.version>2024-11.1</build-resources.version>
         <byte-buddy.version>1.15.10</byte-buddy.version>
-        <cdc.version>1.0.8</cdc.version>
+        <cdc.version>1.0.9</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <hamcrest.version>3.0</hamcrest.version>
@@ -58,7 +58,7 @@
         <!-- as well as versions in the docker-compose.yml file -->
         <kafka-schema-registry.version>7.2.9</kafka-schema-registry.version>
         <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
-        <kafka.version>3.8.0</kafka.version>
+        <kafka.version>3.8.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.9.0</kotlin.coroutines.version>
         <kotlin.version>2.0.21</kotlin.version>
@@ -80,6 +80,7 @@
         <mockito.version>5.14.2</mockito.version>
         <neo4j-cypher-dsl.version>2022.11.0</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>4.4.18</neo4j-java-driver.version>
+        <netty.version>4.1.115.Final</netty.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
         <protobuf.version>3.24.4</protobuf.version>
@@ -87,7 +88,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
-        <testcontainers.version>1.20.3</testcontainers.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -95,6 +96,13 @@
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
