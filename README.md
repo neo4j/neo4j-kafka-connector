@@ -15,7 +15,14 @@ don't be shy to send a Pull Request.
 
 ### Build locally
 
-Make sure you install [dip](https://github.com/bibendi/dip) and [direnv](https://direnv.net/).
+Make sure you install [ruby](https://www.ruby-lang.org/en/documentation/installation/) and [direnv](https://direnv.net/)
+and configure `direnv` for your bash.
+
+First, install the configured version of [dip](https://github.com/bibendi/dip) using ruby bundle:
+
+```shell
+bundle install
+```
 
 For the end-to-end tests, you need to provision a local Kafka cluster, Kafka Connect instance and a Neo4j server.
 This is done by running (re-running recreates the containers):

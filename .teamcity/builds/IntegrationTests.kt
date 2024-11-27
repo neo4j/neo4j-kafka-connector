@@ -49,7 +49,7 @@ class IntegrationTests(
                 # TODO: publish custom image instead
                 apt-get update
                 apt-get install --yes ruby-full
-                gem install dip
+                bundle install
                 curl -fsSL https://get.docker.com | sh
                 dip compose up -d neo4j zookeeper broker schema-registry control-center
                 until [ "`docker inspect -f {{.State.Health.Status}} control-center`"=="healthy" ]; do
@@ -82,7 +82,7 @@ class IntegrationTests(
                 # TODO: publish custom image instead
                 apt-get update
                 apt-get install --yes ruby-full
-                gem install dip
+                bundle install
                 curl -fsSL https://get.docker.com | sh
                 mkdir diagnostics
                 dip compose cp neo4j:/data diagnostics/data
@@ -104,7 +104,7 @@ class IntegrationTests(
                 # TODO: publish custom image instead
                 apt-get update
                 apt-get install --yes ruby-full
-                gem install dip
+                bundle install
                 curl -fsSL https://get.docker.com | sh
                 dip compose down --rmi local
             """
