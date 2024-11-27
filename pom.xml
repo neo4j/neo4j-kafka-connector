@@ -45,7 +45,7 @@
         <awaitility.version>4.2.2</awaitility.version>
         <build-resources.version>2024-11.1</build-resources.version>
         <byte-buddy.version>1.15.10</byte-buddy.version>
-        <cdc.version>1.0.9</cdc.version>
+        <cdc.version>1.0.10</cdc.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <hamcrest.version>3.0</hamcrest.version>

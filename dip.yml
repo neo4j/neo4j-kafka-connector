@@ -24,7 +24,6 @@ interaction:
     service: connect
     compose:
       method: down
-      service: connect
       run_options: [ volumes, rmi local ]
 
   start-connect:
@@ -32,7 +31,6 @@ interaction:
     service: connect
     compose:
       method: up
-      service: connect
       run_options: [ detach ]
 
   relaunch:
