@@ -181,6 +181,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       session: Session
   ) {
     session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
+    session.run("CALL db.awaitIndexes()").consume()
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
     TopicVerifier.createForMap(consumer)
@@ -241,6 +242,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       session: Session
   ) {
     session.run("CREATE CONSTRAINT FOR ()-[to:TO]-() REQUIRE to.name IS RELATIONSHIP KEY").consume()
+    session.run("CALL db.awaitIndexes()").consume()
     session.run("CREATE (:Source)-[:TO {name: 'somewhere'}]->(:Destination)").consume()
 
     TopicVerifier.createForMap(consumer)

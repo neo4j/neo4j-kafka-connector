@@ -431,6 +431,7 @@ abstract class Neo4jCdcSourceNodesIT {
     session
         .run("CREATE CONSTRAINT employedId FOR (n:Employee) REQUIRE n.employeeId IS NODE KEY")
         .consume()
+    session.run("CALL db.awaitIndexes()").consume()
 
     session
         .run("CREATE (:TestSource:Employee {id: 1, name: 'John', employeeId: 456})", mapOf())
@@ -513,6 +514,7 @@ abstract class Neo4jCdcSourceNodesIT {
   ) {
     session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE (n.prop1, n.prop2) IS KEY").consume()
     session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE n.prop1 IS KEY").consume()
+    session.run("CALL db.awaitIndexes()").consume()
     session
         .run(
             "CREATE (n:TestSource) SET n = ${'$'}props",
