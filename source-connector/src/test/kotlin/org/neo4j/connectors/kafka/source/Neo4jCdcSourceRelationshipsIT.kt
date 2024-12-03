@@ -429,6 +429,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run(
             "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.role IS RELATIONSHIP KEY")
         .consume()
+    session.run("CALL db.awaitIndexes()").consume()
 
     session.run("CREATE (:Person)-[:EMPLOYED {id: 1, role: 'SWE'}]->(:Company)").consume()
 
@@ -519,6 +520,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
         .run(
             "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.id IS RELATIONSHIP KEY")
         .consume()
+    session.run("CALL db.awaitIndexes()").consume()
 
     session.run("CREATE (:Person)-[:EMPLOYED {id: 1, role: 'SWE'}]->(:Company)").consume()
 

@@ -22,11 +22,13 @@ object DatabaseSupport {
 
   internal const val DEFAULT_DATABASE = "neo4j"
 
-  internal fun Session.createDatabase(database: String): Session {
+  internal fun Session.createDatabase(database: String, withCdc: Boolean = false): Session {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run("CREATE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
+    this.run(
+        "CREATE DATABASE \$db_name OPTIONS { txLogEnrichment: '${if (withCdc) { "FULL" } else "OFF"}' } WAIT 30 SECONDS",
+        mapOf("db_name" to database))
     return this
   }
 
@@ -35,13 +37,6 @@ object DatabaseSupport {
       return this
     }
     this.run("DROP DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
-    return this
-  }
-
-  internal fun Session.enableCdc(database: String = "neo4j"): Session {
-    this.run(
-        "ALTER DATABASE \$db_name SET OPTION txLogEnrichment \"FULL\" WAIT 30 SECONDS",
-        mapOf("db_name" to database))
     return this
   }
 }

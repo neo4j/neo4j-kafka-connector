@@ -37,7 +37,6 @@ import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
-import org.neo4j.connectors.kafka.testing.DatabaseSupport.enableCdc
 import org.neo4j.connectors.kafka.testing.ParameterResolvers
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConsumerResolver
@@ -241,10 +240,8 @@ internal class Neo4jSourceExtension(
     )
     createDriver().use { driver ->
       driver.session(SessionConfig.forDatabase("system")).use { session ->
-        session.createDatabase(neo4jDatabase)
-        if (sourceAnnotation.strategy == SourceStrategy.CDC) {
-          session.enableCdc(neo4jDatabase)
-        }
+        session.createDatabase(
+            neo4jDatabase, withCdc = sourceAnnotation.strategy == SourceStrategy.CDC)
       }
 
       // want to make sure that CDC is functional before running the test
