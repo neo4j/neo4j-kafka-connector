@@ -48,7 +48,7 @@ class IntegrationTests(
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
-                apt-get install --yes ruby-full ruby-bundler
+                apt-get install --yes ruby-full ruby-bundler build-essential
                 bundle install
                 curl -fsSL https://get.docker.com | sh
                 dip compose up -d neo4j zookeeper broker schema-registry control-center
@@ -81,7 +81,7 @@ class IntegrationTests(
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
-                apt-get install --yes ruby-full ruby-bundler
+                apt-get install --yes ruby-full ruby-bundler build-essential
                 bundle install
                 curl -fsSL https://get.docker.com | sh
                 mkdir diagnostics
@@ -103,7 +103,7 @@ class IntegrationTests(
                 #!/bin/bash -eu
                 # TODO: publish custom image instead
                 apt-get update
-                apt-get install --yes ruby-full ruby-bundler
+                apt-get install --yes ruby-full ruby-bundler build-essential
                 bundle install
                 curl -fsSL https://get.docker.com | sh
                 dip compose down --rmi local
