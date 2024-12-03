@@ -56,7 +56,7 @@
         <junit-jupiter.version>5.11.3</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
-        <kafka-schema-registry.version>7.2.9</kafka-schema-registry.version>
+        <kafka-schema-registry.version>7.8.0</kafka-schema-registry.version>
         <!-- kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <kafka.version>3.8.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
