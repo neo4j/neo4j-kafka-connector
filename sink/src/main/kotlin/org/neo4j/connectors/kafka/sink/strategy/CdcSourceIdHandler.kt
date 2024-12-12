@@ -68,19 +68,10 @@ class CdcSourceIdHandler(
     val node = buildNode(event.elementId, "n")
     val stmt =
         Cypher.merge(node)
-            .mutate(node, Cypher.parameter("nProps", event.mutatedProperties()))
+            .mutate(node, Cypher.parameter("nProps", event.after.properties))
             .let {
-              val addedLabels = event.addedLabels()
-              if (addedLabels.isNotEmpty()) {
-                it.set(node, addedLabels)
-              } else {
-                it
-              }
-            }
-            .let {
-              val removedLabels = event.removedLabels()
-              if (removedLabels.isNotEmpty()) {
-                it.remove(node, removedLabels)
+              if (event.after.labels.isNotEmpty()) {
+                it.set(node, event.after.labels)
               } else {
                 it
               }
