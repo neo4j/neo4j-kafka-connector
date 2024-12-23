@@ -63,7 +63,7 @@
         <!-- so we set the version to the first version that the vulnerability is resolved -->
         <kafka.version>3.8.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
-        <kotlin.coroutines.version>1.10.0</kotlin.coroutines.version>
+        <kotlin.coroutines.version>1.10.1</kotlin.coroutines.version>
         <kotlin.version>2.1.0</kotlin.version>
         <license-maven-plugin.version>4.6</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
