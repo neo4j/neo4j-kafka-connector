@@ -22,6 +22,8 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -33,9 +35,13 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.stream.Stream
 import kotlin.time.Duration.Companion.seconds
+import org.apache.kafka.connect.data.Date
+import org.apache.kafka.connect.data.Decimal
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.data.Time
+import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
@@ -45,6 +51,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -217,7 +224,7 @@ abstract class Neo4jCypherIT {
       cypher = [CypherStrategy(TOPIC, "CREATE (p:Data) SET p.value = event")],
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE)
   @ParameterizedTest
-  @ArgumentsSource(AvroSimpleTypes::class)
+  @ArgumentsSource(SimpleTypes::class)
   fun `should support connect simple types`(
       schema: Schema,
       value: Any?,
@@ -236,7 +243,7 @@ abstract class Neo4jCypherIT {
         }
   }
 
-  object AvroSimpleTypes : ArgumentsProvider {
+  object SimpleTypes : ArgumentsProvider {
     override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(Schema.INT8_SCHEMA, Byte.MAX_VALUE, Byte.MAX_VALUE),
@@ -260,7 +267,47 @@ abstract class Neo4jCypherIT {
           Arguments.of(
               Schema.OPTIONAL_BYTES_SCHEMA,
               "a string".encodeToByteArray(),
-              "a string".encodeToByteArray()))
+              "a string".encodeToByteArray()),
+      )
+    }
+  }
+
+  @Neo4jSink(
+      cypher = [CypherStrategy(TOPIC, "CREATE (p:Data) SET p.value = event")],
+      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE)
+  @ParameterizedTest
+  @ArgumentsSource(ConnectTypes::class)
+  fun `should support connect types`(
+      schema: Schema,
+      value: Any?,
+      expected: Any?,
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    producer.publish(valueSchema = schema, value = value)
+
+    eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("Data")
+          it.asMap() shouldBe mapOf("value" to expected)
+        }
+  }
+
+  object ConnectTypes : ArgumentsProvider {
+    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+      return Stream.of(
+          Arguments.of(Date.SCHEMA, DateSupport.date(2000, 1, 1), LocalDate.of(2000, 1, 1)),
+          Arguments.of(
+              Time.SCHEMA, DateSupport.time(23, 59, 59, 999), LocalTime.of(23, 59, 59, 999000000)),
+          Arguments.of(
+              Timestamp.SCHEMA,
+              DateSupport.timestamp(2000, 1, 1, 23, 59, 59, 999),
+              LocalDateTime.of(2000, 1, 1, 23, 59, 59, 999000000)),
+          Arguments.of(Decimal.schema(4), BigDecimal(BigInteger("1234567890"), 4), "123456.7890"),
+          Arguments.of(
+              Decimal.schema(6), BigDecimal(BigInteger("1234567890000"), 6), "1234567.890000"))
     }
   }
 
