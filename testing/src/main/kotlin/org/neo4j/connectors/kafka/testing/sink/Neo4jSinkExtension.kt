@@ -246,6 +246,7 @@ internal class Neo4jSinkExtension(
             valueConverter = keyValueConverterResolver.resolveValueConverter(context),
             topics = topics.distinct(),
             strategies = strategies,
+            excludeErrorHandling = sinkAnnotation.excludeErrorHandling,
             errorTolerance = errorTolerance.resolve(sinkAnnotation),
             errorDlqTopic = topicRegistry.resolveTopic(errorDlqTopic.resolve(sinkAnnotation)),
             enableErrorHeaders = sinkAnnotation.enableErrorHeaders)

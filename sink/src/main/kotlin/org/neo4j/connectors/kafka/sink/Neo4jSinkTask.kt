@@ -70,7 +70,14 @@ class Neo4jSinkTask : SinkTask() {
       if (unhandled.size > 1) {
         unhandled.forEach { m -> processMessages(handler, listOf(m)) }
       } else {
-        unhandled.forEach { m -> context.errantRecordReporter()?.report(m.record, e)?.get() }
+        unhandled.forEach { m ->
+          val reporter = context.errantRecordReporter()
+          if (reporter != null) {
+            reporter.report(m.record, e).get()
+          } else {
+            throw e
+          }
+        }
       }
     }
   }
