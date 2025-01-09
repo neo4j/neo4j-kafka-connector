@@ -105,6 +105,29 @@ abstract class Neo4jCypherIT {
           [
               CypherStrategy(
                   TOPIC,
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName RETURN p")])
+  @Test
+  fun `should create node with a statement that returns a value`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    producer.publish(
+        valueSchema = Schema.STRING_SCHEMA, value = """{"firstName": "john", "lastName": "doe"}""")
+
+    eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("name" to "john", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(
+      cypher =
+          [
+              CypherStrategy(
+                  TOPIC,
                   "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName")])
   @Test
   fun `should create node from json string`(

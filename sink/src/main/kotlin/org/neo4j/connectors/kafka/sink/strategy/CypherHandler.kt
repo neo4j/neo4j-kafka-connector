@@ -74,6 +74,7 @@ class CypherHandler(
                       }
                     })
                 .callRawCypher("WITH * $query")
+                .returning(Cypher.literalNull())
                 .build())
 
     logger.debug("using cypher query '{}' for topic '{}'", rewrittenQuery, topic)
