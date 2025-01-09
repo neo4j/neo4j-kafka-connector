@@ -41,6 +41,7 @@ annotation class Neo4jSink(
     val nodePattern: Array<NodePatternStrategy> = [],
     val relationshipPattern: Array<RelationshipPatternStrategy> = [],
     val cud: Array<CudStrategy> = [],
+    val excludeErrorHandling: Boolean = false,
     val errorTolerance: String = "none",
     val errorDlqTopic: String = "",
     val enableErrorHeaders: Boolean = false,

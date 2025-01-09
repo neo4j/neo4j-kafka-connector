@@ -33,6 +33,7 @@ class Neo4jSinkRegistration(
     neo4jUser: String,
     neo4jPassword: String,
     neo4jDatabase: String,
+    excludeErrorHandling: Boolean = false,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
     errorTolerance: String = "none",
@@ -64,18 +65,20 @@ class Neo4jSinkRegistration(
                       put("connector.class", "org.neo4j.connectors.kafka.sink.Neo4jConnector")
                       put("key.converter", keyConverter.className)
                       put("value.converter", valueConverter.className)
-                      put("errors.retry.timeout", retryTimeout.inWholeMilliseconds)
-                      put("errors.retry.delay.max.ms", retryMaxDelay.inWholeMilliseconds)
-                      put("errors.tolerance", errorTolerance)
-                      if (errorDlqTopic.trim().isNotEmpty()) {
-                        put("errors.deadletterqueue.topic.name", errorDlqTopic)
-                        put(
-                            "errors.deadletterqueue.topic.replication.factor",
-                            DLQ_TOPIC_REPLICATION_FACTOR)
+                      if (!excludeErrorHandling) {
+                        put("errors.retry.timeout", retryTimeout.inWholeMilliseconds)
+                        put("errors.retry.delay.max.ms", retryMaxDelay.inWholeMilliseconds)
+                        put("errors.tolerance", errorTolerance)
+                        if (errorDlqTopic.trim().isNotEmpty()) {
+                          put("errors.deadletterqueue.topic.name", errorDlqTopic)
+                          put(
+                              "errors.deadletterqueue.topic.replication.factor",
+                              DLQ_TOPIC_REPLICATION_FACTOR)
+                        }
+                        put("errors.deadletterqueue.context.headers.enable", enableErrorHeaders)
+                        put("errors.log.enable", enableErrorLog)
+                        put("errors.log.include.messages", includeMessagesInErrorLog)
                       }
-                      put("errors.deadletterqueue.context.headers.enable", enableErrorHeaders)
-                      put("errors.log.enable", enableErrorLog)
-                      put("errors.log.include.messages", includeMessagesInErrorLog)
                       put("neo4j.uri", neo4jUri)
                       put("neo4j.authentication.type", "BASIC")
                       put("neo4j.authentication.basic.username", neo4jUser)
