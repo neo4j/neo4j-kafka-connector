@@ -54,7 +54,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event CALL {WITH * CREATE (n:Node) SET n = event} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -90,7 +90,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __value} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -126,7 +126,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __key}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __key} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -168,7 +168,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -211,7 +211,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
+                        "UNWIND ${'$'}events AS message WITH message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -253,7 +253,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = __header} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -308,7 +308,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     messages.slice(0..4),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value} RETURN NULL",
                         mapOf(
                             "events" to
                                 (1..5).map { seq ->
@@ -325,7 +325,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     messages.slice(5..9),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value} RETURN NULL",
                         mapOf(
                             "events" to
                                 (6..10).map { seq ->
@@ -342,7 +342,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     messages.slice(10..12),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value}",
+                        "UNWIND ${'$'}events AS message WITH message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n.id = __value} RETURN NULL",
                         mapOf(
                             "events" to
                                 (11..13).map { seq ->
@@ -369,7 +369,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -401,7 +401,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -440,7 +440,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
@@ -480,7 +480,7 @@ class CypherHandlerTest : HandlerTest() {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event}",
+                        "UNWIND ${'$'}events AS message WITH message.value AS event, message.timestamp AS __timestamp, message.header AS __header, message.key AS __key, message.value AS __value CALL {WITH * CREATE (n:Node) SET n = event} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(
