@@ -79,16 +79,18 @@ data class SinkMessage(val record: SinkRecord) {
 
   private fun fromConnectValue(schema: Schema?, value: Any?): Any? {
     return schema?.let {
-      var converted = DynamicTypes.fromConnectValue(schema, value)
-      if (converted is String || converted is ByteArray) {
-        converted =
-            try {
-              JSONUtils.readValue<Any?>(converted)
-            } catch (ex: JsonParseException) {
-              converted
-            }
+      DynamicTypes.fromConnectValue(it, value)?.let {
+        // if incoming schema is a built-in BYTES or STRING, then we try a json parsing for backward
+        // compatibility
+        if (schema.name().isNullOrEmpty() &&
+            (schema.type() == Schema.Type.STRING || schema.type() == Schema.Type.BYTES)) {
+          try {
+            JSONUtils.readValue<Any?>(it)
+          } catch (ex: JsonParseException) {
+            it
+          }
+        } else it
       }
-      converted
     } ?: value
   }
 

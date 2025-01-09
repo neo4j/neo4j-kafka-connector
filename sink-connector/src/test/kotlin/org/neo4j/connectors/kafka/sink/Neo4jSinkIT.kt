@@ -16,6 +16,9 @@
  */
 package org.neo4j.connectors.kafka.sink
 
+import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 import org.apache.kafka.connect.data.Schema
@@ -23,6 +26,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -31,6 +35,7 @@ import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.sink.CypherStrategy
 import org.neo4j.connectors.kafka.testing.sink.Neo4jSink
+import org.neo4j.connectors.kafka.testing.sink.Neo4jSinkRegistration
 import org.neo4j.connectors.kafka.testing.sink.TopicProducer
 import org.neo4j.driver.Session
 
@@ -72,6 +77,31 @@ abstract class Neo4jSinkIT {
           )
           .single()["result"]
           .asBoolean()
+    }
+  }
+
+  @Neo4jSink(
+      cypher =
+          [
+              CypherStrategy(
+                  TOPIC,
+                  "MERGE (p:Person {name: event.name, surname: event.surname}) INVALID CYPHER",
+              ),
+          ],
+      excludeErrorHandling = true)
+  @Test
+  fun `should fail connector on errors when errant reporter is not set`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      sink: Neo4jSinkRegistration
+  ) = runTest {
+    producer.publish(
+        value = "{ \"name\": \"Jane\", \"surname\": \"Doe\" }", valueSchema = Schema.STRING_SCHEMA)
+
+    // after the failure
+    eventually(30.seconds) {
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
     }
   }
 }

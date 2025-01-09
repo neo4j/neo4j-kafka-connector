@@ -22,15 +22,23 @@ import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.time.Duration.Companion.seconds
+import org.apache.kafka.connect.data.Date
+import org.apache.kafka.connect.data.Decimal
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.data.Time
+import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
+import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -112,6 +120,74 @@ abstract class Neo4jRelationshipPatternIT {
           {
             it.labels() shouldBe listOf("Product")
             it.asMap() shouldBe mapOf("productId" to 2L)
+          }
+    }
+  }
+
+  @Neo4jSink(
+      relationshipPattern =
+          [
+              RelationshipPatternStrategy(
+                  TOPIC,
+                  "(:Person{!id: p1Id})-[:GAVE_BIRTH]->(:Person{!id: p2Id,height,dob,tob})",
+                  mergeNodeProperties = false,
+                  mergeRelationshipProperties = false)])
+  @Test
+  fun `should create nodes and relationship from struct containing connect types`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+
+    SchemaBuilder.struct()
+        .field("p1Id", Schema.INT64_SCHEMA)
+        .field("p2Id", Schema.INT64_SCHEMA)
+        .field("height", Decimal.schema(2))
+        .field("dob", Date.SCHEMA)
+        .field("tob", Time.SCHEMA)
+        .field("tsob", Timestamp.SCHEMA)
+        .build()
+        .let { schema ->
+          producer.publish(
+              valueSchema = schema,
+              value =
+                  Struct(schema)
+                      .put("p1Id", 1L)
+                      .put("p2Id", 2L)
+                      .put("height", BigDecimal.valueOf(185, 2))
+                      .put("dob", DateSupport.date(1978, 1, 15))
+                      .put("tob", DateSupport.time(7, 45, 12, 999))
+                      .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999)))
+        }
+
+    eventually(30.seconds) {
+      val result =
+          session
+              .run("MATCH (p1:Person)-[b:GAVE_BIRTH]->(p2:Person) RETURN p1, b, p2", emptyMap())
+              .single()
+
+      result.get("p1").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe mapOf("id" to 1L)
+          }
+
+      result.get("b").asRelationship() should
+          {
+            it.type() shouldBe "GAVE_BIRTH"
+            it.asMap() shouldBe mapOf("tsob" to LocalDateTime.of(1978, 1, 15, 7, 45, 12, 999000000))
+          }
+
+      result.get("p2").asNode() should
+          {
+            it.labels() shouldBe listOf("Person")
+            it.asMap() shouldBe
+                mapOf(
+                    "id" to 2L,
+                    "height" to "1.85",
+                    "dob" to LocalDate.of(1978, 1, 15),
+                    "tob" to LocalTime.of(7, 45, 12, 999000000),
+                )
           }
     }
   }
