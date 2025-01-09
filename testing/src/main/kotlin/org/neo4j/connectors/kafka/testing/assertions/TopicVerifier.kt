@@ -242,7 +242,7 @@ class RingBuffer<E>(capacity: Int) {
         return emptyList()
       }
       val start = if (this.size < this.data.size) 0 else this.index
-      val indices = (start ..< this.size) + (0 ..< start)
+      val indices = (start..<this.size) + (0..<start)
       return indices.map { i -> data[i] as E }.toList()
     }
   }

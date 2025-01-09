@@ -754,7 +754,7 @@ class CudHandlerTest : HandlerTest() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), batchSize)
 
     val messages =
-        (0 ..< 100)
+        (0..<100)
             .map {
               val id = it / modulo
               when (it % modulo) {
@@ -793,7 +793,7 @@ class CudHandlerTest : HandlerTest() {
     val result = handler.handle(messages)
 
     result shouldBe
-        (0 ..< 100)
+        (0..<100)
             .map {
               val id = it / modulo
 
@@ -836,7 +836,7 @@ class CudHandlerTest : HandlerTest() {
     val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), batchSize)
 
     val messages =
-        (0 ..< 100)
+        (0..<100)
             .map {
               val id = it / modulo
               when (it % modulo) {
@@ -880,7 +880,7 @@ class CudHandlerTest : HandlerTest() {
     val result = handler.handle(messages)
 
     result shouldBe
-        (0 ..< 100)
+        (0..<100)
             .map {
               val id = it / modulo
 

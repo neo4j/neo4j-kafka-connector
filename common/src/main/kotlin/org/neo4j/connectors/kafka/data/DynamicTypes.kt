@@ -233,7 +233,7 @@ object DynamicTypes {
 
     when {
       value.javaClass.isArray ->
-          for (i in 0 ..< java.lang.reflect.Array.getLength(value)) {
+          for (i in 0..<java.lang.reflect.Array.getLength(value)) {
             result.add(
                 fromConnectValue(
                     schema.valueSchema(),
