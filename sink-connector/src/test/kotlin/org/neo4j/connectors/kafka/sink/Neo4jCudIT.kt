@@ -20,15 +20,23 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.time.Duration.Companion.seconds
+import org.apache.kafka.connect.data.Date
+import org.apache.kafka.connect.data.Decimal
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.apache.kafka.connect.data.Time
+import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
+import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -628,6 +636,62 @@ abstract class Neo4jCudIT {
           .get("count")
           .asLong() shouldBe 1000
     }
+  }
+
+  @Neo4jSink(cud = [CudStrategy(TOPIC)])
+  @Test
+  fun `should create node from struct with connect types`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session
+  ) = runTest {
+    session.run("CREATE CONSTRAINT FOR (n:Foo) REQUIRE n.id IS KEY").consume()
+    session.run("CREATE CONSTRAINT FOR (n:Bar) REQUIRE n.id IS KEY").consume()
+
+    val propertiesSchema =
+        SchemaBuilder.struct()
+            .field("id", Schema.INT64_SCHEMA)
+            .field("height", Decimal.schema(2))
+            .field("dob", Date.SCHEMA)
+            .field("tob", Time.SCHEMA)
+            .field("tsob", Timestamp.SCHEMA)
+            .build()
+    val createNodeSchema =
+        SchemaBuilder.struct()
+            .field("type", Schema.STRING_SCHEMA)
+            .field("op", Schema.STRING_SCHEMA)
+            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA))
+            .field("properties", propertiesSchema)
+            .build()
+
+    producer.publish(
+        valueSchema = createNodeSchema,
+        value =
+            Struct(createNodeSchema)
+                .put("type", "node")
+                .put("op", "create")
+                .put("labels", listOf("Foo", "Bar"))
+                .put(
+                    "properties",
+                    Struct(propertiesSchema)
+                        .put("id", 1L)
+                        .put("height", BigDecimal.valueOf(185, 2))
+                        .put("dob", DateSupport.date(1978, 1, 15))
+                        .put("tob", DateSupport.time(7, 45, 12, 999))
+                        .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999))))
+
+    eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("Foo", "Bar")
+          it.asMap() shouldBe
+              mapOf(
+                  "id" to 1L,
+                  "height" to "1.85",
+                  "dob" to LocalDate.of(1978, 1, 15),
+                  "tob" to LocalTime.of(7, 45, 12, 999000000),
+                  "tsob" to LocalDateTime.of(1978, 1, 15, 7, 45, 12, 999000000))
+        }
   }
 
   @Neo4jSink(cud = [CudStrategy(TOPIC)])
