@@ -72,6 +72,7 @@ enum class SimpleTypes(builder: () -> SchemaBuilder) {
         .field(Y, Schema.FLOAT64_SCHEMA)
         .field(Z, Schema.OPTIONAL_FLOAT64_SCHEMA)
   });
+
   // fully namespaced schema name
   val id: String
   // just schema name, excluding namespace

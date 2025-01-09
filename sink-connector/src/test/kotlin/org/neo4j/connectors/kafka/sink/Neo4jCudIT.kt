@@ -1514,7 +1514,7 @@ abstract class Neo4jCudIT {
     session.run("CREATE CONSTRAINT FOR (n:Bar) REQUIRE n.id IS KEY").consume()
 
     val kafkaMessages = mutableListOf<KafkaMessage>()
-    for (i in 0 ..< 100) {
+    for (i in 0..<100) {
       kafkaMessages.add(
           KafkaMessage(
               valueSchema = Schema.STRING_SCHEMA,
@@ -1553,7 +1553,7 @@ abstract class Neo4jCudIT {
 
     val modulo = 4
     kafkaMessages.addAll(
-        (0 ..< 100)
+        (0..<100)
             .map {
               when (it % modulo) {
                 0 ->

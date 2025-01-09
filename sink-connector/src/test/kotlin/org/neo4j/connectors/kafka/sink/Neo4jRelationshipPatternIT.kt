@@ -645,7 +645,8 @@ abstract class Neo4jRelationshipPatternIT {
     session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
 
     session
-        .run("""CREATE (u:User) SET u.id = 1 
+        .run(
+            """CREATE (u:User) SET u.id = 1 
            CREATE (p:Product) SET p.id = 2""")
         .consume()
 
