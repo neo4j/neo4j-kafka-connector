@@ -25,7 +25,6 @@ import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.configuration.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
 import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
@@ -80,7 +79,7 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  private val dialect: Dialect by lazy {
+  val dialect: Dialect by lazy {
     driver.session(sessionConfig()).use {
       val name = Cypher.name("name")
       val versions = Cypher.name("versions")
@@ -91,11 +90,14 @@ class SinkConfiguration : Neo4jConfiguration {
               .returning(Cypher.valueAt(versions, 0))
               .build()
 
-      val version = Neo4jVersion.of(it.run(stmt.cypher, stmt.parameters).single().get(0).asString())
-      if (version < Neo4jVersion.v5) {
+      val version = it.run(stmt.cypher, stmt.parameters).single().get(0).asString()
+      if (version.startsWith("5")) {
+        return@lazy Dialect.NEO4J_5
+      } else if (version.startsWith("4")) {
         return@lazy Dialect.DEFAULT
       }
-      return@lazy Dialect.NEO4J_5
+
+      throw ConfigException("unsupported Neo4j version: $version")
     }
   }
 
