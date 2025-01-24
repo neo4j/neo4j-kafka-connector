@@ -91,13 +91,11 @@ class SinkConfiguration : Neo4jConfiguration {
               .build()
 
       val version = it.run(stmt.cypher, stmt.parameters).single().get(0).asString()
-      if (version.startsWith("5")) {
-        return@lazy Dialect.NEO4J_5
-      } else if (version.startsWith("4")) {
+      if (version.startsWith("4.")) {
         return@lazy Dialect.DEFAULT
       }
 
-      throw ConfigException("unsupported Neo4j version: $version")
+      return@lazy Dialect.NEO4J_5
     }
   }
 
