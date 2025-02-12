@@ -51,7 +51,6 @@
         <hamcrest.version>3.0</hamcrest.version>
         <jackson.version>2.18.2</jackson.version>
         <java.version>11</java.version>
-        <joda-time.version>2.13.0</joda-time.version>
         <jreleaser-maven-plugin.version>1.16.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.11.4</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
@@ -206,12 +205,6 @@
                 <groupId>io.kotest</groupId>
                 <artifactId>kotest-assertions-core-jvm</artifactId>
                 <version>${kotest-assertions-core-jvm.version}</version>
-            </dependency>
-            <dependency>
-                <!-- dependency of confluent serializers -->
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>${joda-time.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.bytebuddy</groupId>
