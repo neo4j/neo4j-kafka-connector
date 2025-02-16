@@ -22,6 +22,9 @@ import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
+import org.jetbrains.annotations.TestOnly
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.detectedWith
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
@@ -30,9 +33,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Configuration
-import org.neo4j.cypherdsl.core.renderer.Dialect
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration : Neo4jConfiguration {
@@ -40,6 +40,7 @@ class SinkConfiguration : Neo4jConfiguration {
 
   constructor(original: Map<String, *>) : this(original, null)
 
+  @TestOnly
   constructor(
       originals: Map<String, *>,
       renderer: Renderer?
@@ -79,29 +80,9 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  val dialect: Dialect by lazy {
-    driver.session(sessionConfig()).use {
-      val name = Cypher.name("name")
-      val versions = Cypher.name("versions")
-      val stmt =
-          Cypher.call("dbms.components")
-              .yield(name, versions)
-              .where(name.eq(Cypher.anonParameter("Neo4j Kernel")))
-              .returning(Cypher.valueAt(versions, 0))
-              .build()
+  val neo4j: Neo4j by lazy { Neo4j.detectedWith(driver) }
 
-      val version = it.run(stmt.cypher, stmt.parameters).single().get(0).asString()
-      if (version.startsWith("4.")) {
-        return@lazy Dialect.DEFAULT
-      }
-
-      return@lazy Dialect.NEO4J_5
-    }
-  }
-
-  val renderer: Renderer by lazy {
-    fixedRenderer ?: Renderer.getRenderer(Configuration.newConfig().withDialect(dialect).build())
-  }
+  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j) }
 
   val topicNames: List<String>
     get() =
