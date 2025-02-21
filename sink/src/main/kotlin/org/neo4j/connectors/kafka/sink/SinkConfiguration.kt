@@ -24,7 +24,7 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.TestOnly
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.detectedWith
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
@@ -80,7 +80,7 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  val neo4j: Neo4j by lazy { Neo4j.detectedWith(driver) }
+  val neo4j: Neo4j by lazy { Neo4jDetector.detect(driver) }
 
   val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j) }
 
