@@ -54,6 +54,18 @@ class Cypher5RendererTest {
       return Stream.of(
           Arguments.of(
               Neo4j(
+                  Neo4jVersion(5, 21, 0),
+                  Neo4jEdition.ENTERPRISE,
+                  Neo4jDeploymentType.SELF_MANAGED)),
+          Arguments.of(
+              Neo4j(Neo4jVersion(5, 21, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)),
+          Arguments.of(
+              Neo4j(
+                  Neo4jVersion(5, 21, 0),
+                  Neo4jEdition.COMMUNITY,
+                  Neo4jDeploymentType.SELF_MANAGED)),
+          Arguments.of(
+              Neo4j(
                   Neo4jVersion(5, 26, 0),
                   Neo4jEdition.ENTERPRISE,
                   Neo4jDeploymentType.SELF_MANAGED)),
@@ -136,16 +148,17 @@ class Cypher5RendererTest {
                   Neo4jVersion(5, 8, 0), Neo4jEdition.COMMUNITY, Neo4jDeploymentType.SELF_MANAGED)),
           Arguments.of(
               Neo4j(
-                  Neo4jVersion(5, 21, 0),
+                  Neo4jVersion(5, 20, 0),
                   Neo4jEdition.ENTERPRISE,
                   Neo4jDeploymentType.SELF_MANAGED)),
           Arguments.of(
-              Neo4j(Neo4jVersion(5, 21, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)),
+              Neo4j(Neo4jVersion(5, 20, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)),
           Arguments.of(
               Neo4j(
-                  Neo4jVersion(5, 21, 0),
+                  Neo4jVersion(5, 20, 0),
                   Neo4jEdition.COMMUNITY,
-                  Neo4jDeploymentType.SELF_MANAGED)))
+                  Neo4jDeploymentType.SELF_MANAGED)),
+      )
     }
   }
 }
