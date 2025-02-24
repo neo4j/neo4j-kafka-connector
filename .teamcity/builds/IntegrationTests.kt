@@ -65,7 +65,7 @@ class IntegrationTests(
             maven {
               this.goals = "verify"
               this.runnerArgs =
-                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Dkafka-schema-registry.version=$platformVersion -DskipUnitTests"
+                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests"
 
               // this is the settings name we uploaded to Connectors project
               userSettingsSelection = "github"

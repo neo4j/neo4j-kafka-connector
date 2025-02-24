@@ -10,7 +10,6 @@ class Maven(
     name: String,
     goals: String,
     javaVersion: JavaVersion,
-    schemaRegistryVersion: String,
     args: String? = null
 ) :
     BuildType({
@@ -23,7 +22,7 @@ class Maven(
         commonMaven(javaVersion) {
           this.goals = goals
           this.runnerArgs =
-              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Dkafka-schema-registry.version=$schemaRegistryVersion ${args ?: ""}"
+              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} ${args ?: ""}"
         }
       }
 
