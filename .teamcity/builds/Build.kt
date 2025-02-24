@@ -7,15 +7,13 @@ import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
 enum class JavaPlatform(
     val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
-    val schemaRegistryVersion: String = DEFAULT_CONFLUENT_PLATFORM_VERSION,
     val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
 ) {
   JDK_11(
       JavaVersion.V_11,
-      schemaRegistryVersion = "7.2.9",
       platformITVersions = listOf("7.2.9", "7.7.0"),
   ),
-  JDK_17(JavaVersion.V_17, schemaRegistryVersion = "7.7.0", platformITVersions = listOf("7.7.0"))
+  JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0"))
 }
 
 class Build(
@@ -44,7 +42,6 @@ class Build(
                         "package",
                         "package",
                         it.javaVersion,
-                        it.schemaRegistryVersion,
                         "-pl :packaging -am -DskipTests",
                     )
 
@@ -55,7 +52,6 @@ class Build(
                           "build",
                           "test-compile",
                           it.javaVersion,
-                          it.schemaRegistryVersion,
                       ),
                   )
                   dependentBuildType(
@@ -64,7 +60,6 @@ class Build(
                           "unit tests",
                           "test",
                           it.javaVersion,
-                          it.schemaRegistryVersion,
                       ),
                   )
                   dependentBuildType(collectArtifacts(packaging))

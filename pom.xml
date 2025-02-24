@@ -58,7 +58,7 @@
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <!-- refer to https://www.confluent.io/previous-versions/ for previous versions of Confluent Platform -->
-        <kafka-schema-registry.version>7.9.0</kafka-schema-registry.version>
+        <kafka-schema-registry.version>7.8.1</kafka-schema-registry.version>
         <!-- although our baseline version is 3.1, kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
         <!-- so we set the version to the first version that the vulnerability is resolved -->
