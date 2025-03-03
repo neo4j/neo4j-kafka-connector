@@ -53,7 +53,7 @@
         <jackson.version>2.18.3</jackson.version>
         <java.version>11</java.version>
         <joda-time.version>2.13.1</joda-time.version>
-        <jreleaser-maven-plugin.version>1.16.0</jreleaser-maven-plugin.version>
+        <jreleaser-maven-plugin.version>1.17.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.12.0</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
