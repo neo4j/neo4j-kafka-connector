@@ -68,3 +68,5 @@ Please raise any documentation updates by creating a PR against it.
 
 Neo4j Connector for Kafka is licensed under the terms of the Apache License, version 2.0. See `LICENSE` for more
 details. 
+
+Test change
