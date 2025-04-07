@@ -23,6 +23,7 @@ import java.time.LocalDate
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.connect.ConnectHeader
@@ -42,6 +43,10 @@ import org.neo4j.connectors.kafka.testing.source.SourceStrategy.CDC
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
+@EnabledIfSystemProperty(
+    named = "neo4j.cdc",
+    matches = "true",
+    disabledReason = "CDC is not available with this version of Neo4j")
 abstract class Neo4jCdcSourceIT {
 
   @Neo4jSource(

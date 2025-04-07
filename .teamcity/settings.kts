@@ -1,4 +1,5 @@
 import builds.Build
+import builds.CompatibilityBuild
 import builds.Neo4jKafkaConnectorVcs
 import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.version
@@ -37,4 +38,5 @@ project {
               """
                   .trimIndent(),
           forPullRequests = true))
+  subProject(CompatibilityBuild(name = "compat"))
 }

@@ -14,13 +14,15 @@ class IntegrationTests(
     id: String,
     name: String,
     javaVersion: JavaVersion,
-    platformVersion: String,
+    confluentPlatformVersion: String,
+    neo4jVersion: Neo4jVersion,
     init: BuildType.() -> Unit
 ) :
     BuildType(
         {
-          this.id("${id}-${javaVersion.version}-${platformVersion}".toId())
-          this.name = "$name (Java ${javaVersion.version}) (Confluent Platform $platformVersion)"
+          this.id("${id}-${javaVersion.version}-${confluentPlatformVersion}".toId())
+          this.name =
+              "$name (Java ${javaVersion.version}) (Confluent Platform $confluentPlatformVersion)"
           init()
 
           artifactRules =
@@ -38,7 +40,8 @@ class IntegrationTests(
             text("env.NEO4J_EXTERNAL_URI", "neo4j://neo4j")
             text("env.NEO4J_USER", "neo4j")
             text("env.NEO4J_PASSWORD", "password")
-            text("env.CONFLUENT_PLATFORM_VERSION", platformVersion)
+            text("env.CONFLUENT_PLATFORM_VERSION", confluentPlatformVersion)
+            text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage)
           }
 
           steps {
@@ -65,7 +68,7 @@ class IntegrationTests(
             maven {
               this.goals = "verify"
               this.runnerArgs =
-                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests"
+                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests -D${neo4jVersion.activationProperty}"
 
               // this is the settings name we uploaded to Connectors project
               userSettingsSelection = "github"

@@ -21,6 +21,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
@@ -41,6 +42,10 @@ import org.neo4j.connectors.kafka.testing.source.SourceStrategy
 import org.neo4j.connectors.kafka.testing.source.TopicConsumer
 import org.neo4j.driver.Session
 
+@EnabledIfSystemProperty(
+    named = "neo4j.cdc",
+    matches = "true",
+    disabledReason = "CDC is not available with this version of Neo4j")
 abstract class Neo4jCdcSourceKeyStrategyIT {
 
   @Neo4jSource(

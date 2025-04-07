@@ -673,6 +673,39 @@
     </build>
     <profiles>
         <profile>
+            <id>neo4j-4.4</id>
+            <activation>
+                <property>
+                    <name>neo4j-44</name>
+                </property>
+            </activation>
+            <properties>
+                <neo4j.cdc>false</neo4j.cdc>
+            </properties>
+        </profile>
+        <profile>
+            <id>neo4j-5</id>
+            <activation>
+                <property>
+                    <name>neo4j-5</name>
+                </property>
+            </activation>
+            <properties>
+                <neo4j.cdc>true</neo4j.cdc>
+            </properties>
+        </profile>
+        <profile>
+            <id>neo4j-2025</id>
+            <activation>
+                <property>
+                    <name>neo4j-2025</name>
+                </property>
+            </activation>
+            <properties>
+                <neo4j.cdc>true</neo4j.cdc>
+            </properties>
+        </profile>
+        <profile>
             <id>skip-unit-tests</id>
             <activation>
                 <property>

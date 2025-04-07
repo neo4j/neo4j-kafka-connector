@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.ArgumentMatchers
@@ -36,6 +37,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -46,11 +48,15 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
+@EnabledIfSystemProperty(
+    named = "neo4j.cdc",
+    matches = "true",
+    disabledReason = "CDC is not available with this version of Neo4j")
 class Neo4jCdcTaskTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withoutAuthentication()
 

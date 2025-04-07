@@ -37,6 +37,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Named
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -68,7 +69,7 @@ class TypesTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withoutAuthentication()
 
@@ -85,6 +86,12 @@ class TypesTest {
     fun tearDownContainer() {
       driver.close()
     }
+
+    @JvmStatic
+    fun neo4jImage(): String =
+        System.getenv("NEO4J_TEST_IMAGE").ifBlank {
+          throw IllegalArgumentException("NEO4J_TEST_IMAGE environment variable is not defined!")
+        }
   }
 
   @BeforeEach
@@ -626,6 +633,10 @@ class TypesTest {
   }
 
   @Test
+  @EnabledIfSystemProperty(
+      named = "neo4j.cdc",
+      matches = "true",
+      disabledReason = "CDC is not available with this version of Neo4j")
   fun `should build schema and value for change events and convert back with extended payload`() {
     val payloadMode = PayloadMode.EXTENDED
     // set-up cdc
@@ -696,6 +707,10 @@ class TypesTest {
   }
 
   @Test
+  @EnabledIfSystemProperty(
+      named = "neo4j.cdc",
+      matches = "true",
+      disabledReason = "CDC is not available with this version of Neo4j")
   fun `should build schema and value for change events and convert back with compact payload`() {
     val payloadMode = PayloadMode.COMPACT
     // set-up cdc
