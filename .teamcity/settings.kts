@@ -40,16 +40,17 @@ project {
         this.id("compatibility")
         name = "compatibility"
 
-        Neo4jVersion.entries.forEach { neo4j ->
-          Build(name = "${neo4j.version}", forPullRequests = false, neo4jVersion = neo4j) {
-            schedule {
-              daily {
-                hour = 8
-                minute = 0
+        subProject(
+            Neo4jVersion.entries.forEach { neo4j ->
+              Build(name = "${neo4j.version}", forPullRequests = false, neo4jVersion = neo4j) {
+                schedule {
+                  daily {
+                    hour = 8
+                    minute = 0
+                  }
+                  triggerBuild = always()
+                }
               }
-              triggerBuild = always()
-            }
-          }
-        }
+            })
       })
 }
