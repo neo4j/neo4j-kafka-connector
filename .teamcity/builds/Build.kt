@@ -84,9 +84,9 @@ class Build(
                               artifacts(packaging) {
                                 artifactRules =
                                     """
-                      +:packages/*.jar => docker/plugins
-                      -:packages/*-kc-oss.jar
-                    """
+                                    +:packages/*.jar => docker/plugins
+                                    -:packages/*-kc-oss.jar
+                                    """
                                         .trimIndent()
                               }
                             }
@@ -135,17 +135,17 @@ class CompatibilityBuild(name: String) :
           val bts = sequential {
             parallel {
               JavaPlatform.entries.forEach { javaPlatform ->
-                val packaging =
-                    Maven(
-                        "${name}-package-${javaPlatform.javaVersion.version}",
-                        "package (${javaPlatform.javaVersion.version})",
-                        "package",
-                        javaPlatform.javaVersion,
-                        DEFAULT_NEO4J_VERSION,
-                        "-pl :packaging -am -DskipTests",
-                    )
-
                 sequential {
+                  val packaging =
+                      Maven(
+                          "${name}-package-${javaPlatform.javaVersion.version}",
+                          "package (${javaPlatform.javaVersion.version})",
+                          "package",
+                          javaPlatform.javaVersion,
+                          DEFAULT_NEO4J_VERSION,
+                          "-pl :packaging -am -DskipTests",
+                      )
+
                   dependentBuildType(
                       Maven(
                           "${name}-build-${javaPlatform.javaVersion.version}",
@@ -155,41 +155,45 @@ class CompatibilityBuild(name: String) :
                           DEFAULT_NEO4J_VERSION),
                   )
 
-                  Neo4jVersion.entries.forEach { neo4jVersion ->
-                    dependentBuildType(
-                        Maven(
-                            "${name}-unit-tests-${javaPlatform.javaVersion.version}-${neo4jVersion.version}",
-                            "unit tests (${javaPlatform.javaVersion.version}, ${neo4jVersion.version})",
-                            "test",
-                            javaPlatform.javaVersion,
-                            neo4jVersion,
-                        ),
-                    )
+                  dependentBuildType(collectArtifacts(packaging))
 
-                    dependentBuildType(collectArtifacts(packaging))
-
-                    parallel {
-                      javaPlatform.platformITVersions.forEach { confluentPlatformVersion ->
+                  parallel {
+                    Neo4jVersion.entries.forEach { neo4jVersion ->
+                      sequential {
                         dependentBuildType(
-                            IntegrationTests(
-                                "${name}-integration-tests-${javaPlatform.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
-                                "integration tests (${javaPlatform.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                            Maven(
+                                "${name}-unit-tests-${javaPlatform.javaVersion.version}-${neo4jVersion.version}",
+                                "unit tests (${javaPlatform.javaVersion.version}, ${neo4jVersion.version})",
+                                "test",
                                 javaPlatform.javaVersion,
-                                confluentPlatformVersion,
                                 neo4jVersion,
-                            ) {
-                              dependencies {
-                                artifacts(packaging) {
-                                  artifactRules =
-                                      """
+                            ),
+                        )
+
+                        parallel {
+                          javaPlatform.platformITVersions.forEach { confluentPlatformVersion ->
+                            dependentBuildType(
+                                IntegrationTests(
+                                    "${name}-integration-tests-${javaPlatform.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
+                                    "integration tests (${javaPlatform.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                                    javaPlatform.javaVersion,
+                                    confluentPlatformVersion,
+                                    neo4jVersion,
+                                ) {
+                                  dependencies {
+                                    artifacts(packaging) {
+                                      artifactRules =
+                                          """
                                       +:packages/*.jar => docker/plugins
                                       -:packages/*-kc-oss.jar
                                       """
-                                          .trimIndent()
-                                }
-                              }
-                            },
-                        )
+                                              .trimIndent()
+                                    }
+                                  }
+                                },
+                            )
+                          }
+                        }
                       }
                     }
                   }
