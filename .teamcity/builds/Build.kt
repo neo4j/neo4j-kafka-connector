@@ -1,10 +1,9 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.Triggers
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
-import jetbrains.buildServer.configs.kotlin.triggers.schedule
-import jetbrains.buildServer.configs.kotlin.triggers.vcs
 
 enum class JavaPlatform(
     val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
@@ -21,9 +20,9 @@ val DEFAULT_NEO4J_VERSION = Neo4jVersion.V_2025
 
 class Build(
     name: String,
-    branchFilter: String,
     forPullRequests: Boolean,
-    triggerRules: String? = null
+    neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
+    triggers: Triggers.() -> Unit = {}
 ) :
     Project(
         {
@@ -45,7 +44,7 @@ class Build(
                         "package (${java.javaVersion.version})",
                         "package",
                         java.javaVersion,
-                        DEFAULT_NEO4J_VERSION,
+                        neo4jVersion,
                         "-pl :packaging -am -DskipTests",
                     )
 
@@ -56,7 +55,7 @@ class Build(
                           "build (${java.javaVersion.version})",
                           "test-compile",
                           java.javaVersion,
-                          DEFAULT_NEO4J_VERSION,
+                          neo4jVersion,
                       ),
                   )
                   dependentBuildType(
@@ -65,7 +64,7 @@ class Build(
                           "unit tests (${java.javaVersion.version})",
                           "test",
                           java.javaVersion,
-                          DEFAULT_NEO4J_VERSION,
+                          neo4jVersion,
                       ),
                   )
                   dependentBuildType(collectArtifacts(packaging))
@@ -74,11 +73,11 @@ class Build(
                     java.platformITVersions.forEach { confluentPlatformVersion ->
                       dependentBuildType(
                           IntegrationTests(
-                              "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${DEFAULT_JAVA_VERSION.version}",
-                              "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${DEFAULT_NEO4J_VERSION.version})",
+                              "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
+                              "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
                               java.javaVersion,
                               confluentPlatformVersion,
-                              DEFAULT_NEO4J_VERSION,
+                              neo4jVersion,
                           ) {
                             dependencies {
                               artifacts(packaging) {
@@ -115,114 +114,6 @@ class Build(
             buildType(it)
           }
 
-          complete.triggers {
-            vcs {
-              this.branchFilter = branchFilter
-              this.triggerRules = triggerRules
-            }
-          }
-        },
-    )
-
-class CompatibilityBuild(name: String) :
-    Project(
-        {
-          this.id(name.toId())
-          this.name = name
-
-          val complete = Empty("${name}-complete", "complete")
-
-          val bts = sequential {
-            parallel {
-              JavaPlatform.entries.forEach { javaPlatform ->
-                sequential {
-                  val packaging =
-                      Maven(
-                          "${name}-package-${javaPlatform.javaVersion.version}",
-                          "package (${javaPlatform.javaVersion.version})",
-                          "package",
-                          javaPlatform.javaVersion,
-                          DEFAULT_NEO4J_VERSION,
-                          "-pl :packaging -am -DskipTests",
-                      )
-
-                  dependentBuildType(
-                      Maven(
-                          "${name}-build-${javaPlatform.javaVersion.version}",
-                          "build (${javaPlatform.javaVersion.version})",
-                          "test-compile",
-                          javaPlatform.javaVersion,
-                          DEFAULT_NEO4J_VERSION),
-                  )
-
-                  dependentBuildType(collectArtifacts(packaging))
-
-                  parallel {
-                    Neo4jVersion.entries.forEach { neo4jVersion ->
-                      sequential {
-                        dependentBuildType(
-                            Maven(
-                                "${name}-unit-tests-${javaPlatform.javaVersion.version}-${neo4jVersion.version}",
-                                "unit tests (${javaPlatform.javaVersion.version}, ${neo4jVersion.version})",
-                                "test",
-                                javaPlatform.javaVersion,
-                                neo4jVersion,
-                            ),
-                        )
-
-                        parallel {
-                          javaPlatform.platformITVersions.forEach { confluentPlatformVersion ->
-                            dependentBuildType(
-                                IntegrationTests(
-                                    "${name}-integration-tests-${javaPlatform.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
-                                    "integration tests (${javaPlatform.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
-                                    javaPlatform.javaVersion,
-                                    confluentPlatformVersion,
-                                    neo4jVersion,
-                                ) {
-                                  dependencies {
-                                    artifacts(packaging) {
-                                      artifactRules =
-                                          """
-                                      +:packages/*.jar => docker/plugins
-                                      -:packages/*-kc-oss.jar
-                                      """
-                                              .trimIndent()
-                                    }
-                                  }
-                                },
-                            )
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            dependentBuildType(complete)
-          }
-
-          bts.buildTypes().forEach {
-            it.thisVcs()
-
-            it.features {
-              requireDiskSpace("5gb")
-              enableCommitStatusPublisher()
-            }
-
-            buildType(it)
-          }
-
-          complete.triggers {
-            schedule {
-              daily {
-                hour = 8
-                minute = 0
-              }
-              triggerBuild = always()
-            }
-          }
+          complete.triggers.apply(triggers)
         },
     )
