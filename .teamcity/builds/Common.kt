@@ -40,7 +40,7 @@ enum class Neo4jVersion(
   V_4_4("4.4", "neo4j:4.4-enterprise", "neo4j-44"),
   V_4_4_DEV(
       "4.4-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-nightly",
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-debian-nightly",
       "neo4j-44"),
   V_5("5", "neo4j:5-enterprise", "neo4j-5"),
   V_5_DEV(
@@ -50,7 +50,7 @@ enum class Neo4jVersion(
   V_2025("2025", "neo4j:2025-enterprise", "neo4j-2025"),
   V_2025_DEV(
       "2025-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025.01.0-enterprise-debian-rc-amd64",
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025-enterprise-debian-nightly",
       "neo4j-2025"),
 }
 
