@@ -20,9 +20,9 @@ class IntegrationTests(
 ) :
     BuildType(
         {
-          this.id("${id}-${javaVersion.version}-${confluentPlatformVersion}".toId())
-          this.name =
-              "$name (Java ${javaVersion.version}) (Confluent Platform $confluentPlatformVersion)"
+          this.id(id.toId())
+          this.name = name
+
           init()
 
           artifactRules =

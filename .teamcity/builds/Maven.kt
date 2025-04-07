@@ -14,8 +14,8 @@ class Maven(
     args: String? = null
 ) :
     BuildType({
-      this.id("${id}-${javaVersion.version}".toId())
-      this.name = "$name (Java ${javaVersion.version})"
+      this.id(id.toId())
+      this.name = name
 
       params {
         text("env.JAVA_VERSION", javaVersion.version)
