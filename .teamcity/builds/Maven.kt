@@ -26,7 +26,7 @@ class Maven(
         commonMaven(javaVersion) {
           this.goals = goals
           this.runnerArgs =
-              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -D${neo4jVersion.activationProperty}  ${args ?: ""}"
+              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} ${args ?: ""}"
         }
       }
 
