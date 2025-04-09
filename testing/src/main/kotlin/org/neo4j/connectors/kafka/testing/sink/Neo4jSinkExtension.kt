@@ -26,6 +26,8 @@ import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -60,7 +62,9 @@ internal class Neo4jSinkExtension(
               Session::class.java to ::resolveSession,
               ConvertingKafkaProducer::class.java to ::resolveGenericProducer,
               ConvertingKafkaConsumer::class.java to ::resolveGenericConsumer,
-              Neo4jSinkRegistration::class.java to ::resolveSinkRegistration))
+              Neo4jSinkRegistration::class.java to ::resolveSinkRegistration,
+              Neo4j::class.java to ::resolveNeo4j,
+          ))
 
   private lateinit var sinkAnnotation: Neo4jSink
 
@@ -296,6 +300,11 @@ internal class Neo4jSinkExtension(
     driver = driver ?: createDriver()
     session = driver!!.session(SessionConfig.forDatabase(neo4jDatabase))
     return session!!
+  }
+
+  private fun resolveNeo4j(parameterContext: ParameterContext?, context: ExtensionContext?): Neo4j {
+    driver = driver ?: createDriver()
+    return Neo4jDetector.detect(driver!!)
   }
 
   private fun createDriver(): Driver {

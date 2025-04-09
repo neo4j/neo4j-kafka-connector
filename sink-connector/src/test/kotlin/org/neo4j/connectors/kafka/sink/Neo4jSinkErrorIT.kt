@@ -33,6 +33,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -43,6 +44,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -120,9 +122,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report an error with all error headers when headers are enabled`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val schemaWithMissingSurname =
         SchemaBuilder.struct()
@@ -171,9 +174,10 @@ abstract class Neo4jSinkErrorIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      sink: Neo4jSinkRegistration
+      sink: Neo4jSinkRegistration,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val schemaWithMissingSurname =
         SchemaBuilder.struct()
             .field("id", Schema.INT64_SCHEMA)
@@ -220,9 +224,10 @@ abstract class Neo4jSinkErrorIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      sink: Neo4jSinkRegistration
+      sink: Neo4jSinkRegistration,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val schemaWithMissingSurname =
         SchemaBuilder.struct()
             .field("id", Schema.INT64_SCHEMA)
@@ -268,9 +273,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val schema =
         SchemaBuilder.struct()
@@ -351,9 +357,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with node pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val message1 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
@@ -425,10 +432,11 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with relationship pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Item) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
+    session.createNodeKeyConstraint(neo4j, "item_id", "Item", "id")
 
     val message1 =
         KafkaMessage(valueSchema = Schema.STRING_SCHEMA, value = """{"personId": 1, "itemId": 1}""")
@@ -541,9 +549,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with cud strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val message1ToFail =
         KafkaMessage(
@@ -660,9 +669,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with cdc schema strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val event1ToFail =
         newEvent(
@@ -774,9 +784,10 @@ abstract class Neo4jSinkErrorIT {
   fun `should report failed events with cdc source id strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val event1 =
         newEvent(

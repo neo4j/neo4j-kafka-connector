@@ -158,6 +158,14 @@
             <artifactId>junit-jupiter-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>caniuse-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>caniuse-neo4j-detection</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.connectors</groupId>
             <artifactId>cdc</artifactId>
         </dependency>
