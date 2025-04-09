@@ -19,6 +19,9 @@ package org.neo4j.connectors.kafka.source
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import java.util.UUID
+import kotlin.collections.get
+import kotlin.run
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 import org.apache.kafka.connect.source.SourceTask
@@ -26,6 +29,7 @@ import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -34,8 +38,15 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.ArgumentMatchers
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Dbms
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
+import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
+import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -49,52 +60,50 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class Neo4jCdcTaskTest {
   companion object {
     @Container
-    val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+    val container: Neo4jContainer<*> =
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withoutAuthentication()
 
     private lateinit var driver: Driver
-    private lateinit var session: Session
+    private lateinit var neo4j: Neo4j
 
     @BeforeAll
     @JvmStatic
     fun setUpContainer() {
-      driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
-      session = driver.session()
+      driver = GraphDatabase.driver(container.boltUrl, AuthTokens.none())
+      neo4j = Neo4jDetector.detect(driver)
     }
 
     @AfterAll
     @JvmStatic
     fun tearDownContainer() {
-      session.close()
       driver.close()
-    }
-
-    fun currentChangeId(): String {
-      return session.run("CALL cdc.current").single().get(0).asString()
-    }
-
-    fun earliestChangeId(): String {
-      return session.run("CALL cdc.earliest").single().get(0).asString()
     }
   }
 
   private lateinit var task: SourceTask
+  private lateinit var db: String
+  private lateinit var session: Session
 
   @AfterEach
   fun after() {
+    session.close()
     task.stop()
   }
 
   @BeforeEach
   fun before() {
+    Assumptions.assumeTrue(canIUse(Dbms.changeDataCapture()).withNeo4j(neo4j))
+
+    db = "test-${UUID.randomUUID()}"
     driver.session(SessionConfig.forDatabase("system")).use {
       it.run(
               "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
-              mapOf("db" to "neo4j", "mode" to "FULL"))
+              mapOf("db" to db, "mode" to "FULL"))
           .consume()
     }
+    session = driver.session(SessionConfig.forDatabase(db))
 
     task = Neo4jCdcTask()
     task.initialize(newTaskContextWithOffset())
@@ -108,8 +117,9 @@ class Neo4jCdcTaskTest {
     // start task with EARLIEST, previous changes should be visible
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             "neo4j.cdc.topic.nodes.patterns" to "()",
@@ -130,8 +140,9 @@ class Neo4jCdcTaskTest {
     // start task with NOW, previous changes should NOT be visible
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             "neo4j.cdc.topic.nodes.patterns" to "()",
@@ -161,8 +172,9 @@ class Neo4jCdcTaskTest {
     // start task with USER_PROVIDED, with value set as captured change identifier
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
             SourceConfiguration.START_FROM_VALUE to changeId,
@@ -191,8 +203,9 @@ class Neo4jCdcTaskTest {
     // start task with provided START_FROM, with the mocked task context
     task.start(
         buildMap {
-          put(Neo4jConfiguration.URI, neo4j.boltUrl)
+          put(Neo4jConfiguration.URI, container.boltUrl)
           put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
+          put(Neo4jConfiguration.DATABASE, db)
           put(SourceConfiguration.STRATEGY, SourceType.CDC.toString())
           put(SourceConfiguration.START_FROM, startFrom.toString())
           if (startFrom == StartFrom.USER_PROVIDED) {
@@ -223,8 +236,9 @@ class Neo4jCdcTaskTest {
     // start task with EARLIEST, previous changes should be visible
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true",
@@ -249,8 +263,9 @@ class Neo4jCdcTaskTest {
     // start task with NOW, previous changes should NOT be visible
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true",
@@ -278,8 +293,9 @@ class Neo4jCdcTaskTest {
     // start task with USER_PROVIDED, previous changes should NOT be visible
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
             SourceConfiguration.START_FROM_VALUE to currentChangeId(),
@@ -299,11 +315,9 @@ class Neo4jCdcTaskTest {
 
   @Test
   fun `should route change events based on matched selectors`() {
-    session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (n:Person) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (n:Company) REQUIRE n.id IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT IF NOT EXISTS FOR ()-[r:WORKS_FOR]->() REQUIRE r.id IS KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
+    session.createNodeKeyConstraint(neo4j, "company_id", "Company", "id")
+    session.createRelationshipKeyConstraint(neo4j, "works_for_id", "WORKS_FOR", "id")
 
     session
         .run("UNWIND RANGE(1, 100) AS n CREATE (p:Person) SET p.id = n, p.name = 'name ' + n")
@@ -324,8 +338,9 @@ class Neo4jCdcTaskTest {
 
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             "neo4j.cdc.topic.nodes.patterns" to "()",
@@ -360,8 +375,9 @@ class Neo4jCdcTaskTest {
   fun `batch size should be respected`() {
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.BATCH_SIZE to "5",
@@ -387,8 +403,9 @@ class Neo4jCdcTaskTest {
   fun `poll duration should be respected`() {
     task.start(
         mapOf(
-            Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.CDC_POLL_DURATION to "5s",
@@ -424,5 +441,13 @@ class Neo4jCdcTaskTest {
         }
 
     return mock<SourceTaskContext> { on { offsetStorageReader() } doReturn offsetStorageReader }
+  }
+
+  fun currentChangeId(): String {
+    return session.run("CALL cdc.current").single().get(0).asString()
+  }
+
+  fun earliestChangeId(): String {
+    return session.run("CALL cdc.earliest").single().get(0).asString()
   }
 }

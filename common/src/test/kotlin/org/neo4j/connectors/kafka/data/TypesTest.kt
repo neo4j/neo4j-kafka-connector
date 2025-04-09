@@ -33,6 +33,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Named
@@ -42,6 +43,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Dbms
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
@@ -68,7 +72,7 @@ class TypesTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withoutAuthentication()
 
@@ -85,6 +89,12 @@ class TypesTest {
     fun tearDownContainer() {
       driver.close()
     }
+
+    @JvmStatic
+    fun neo4jImage(): String =
+        System.getenv("NEO4J_TEST_IMAGE").ifBlank {
+          throw IllegalArgumentException("NEO4J_TEST_IMAGE environment variable is not defined!")
+        }
   }
 
   @BeforeEach
@@ -627,6 +637,9 @@ class TypesTest {
 
   @Test
   fun `should build schema and value for change events and convert back with extended payload`() {
+    Assumptions.assumeTrue(
+        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver)))
+
     val payloadMode = PayloadMode.EXTENDED
     // set-up cdc
     driver.session().use {
@@ -697,6 +710,9 @@ class TypesTest {
 
   @Test
   fun `should build schema and value for change events and convert back with compact payload`() {
+    Assumptions.assumeTrue(
+        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver)))
+
     val payloadMode = PayloadMode.COMPACT
     // set-up cdc
     driver.session().use {

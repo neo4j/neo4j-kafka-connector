@@ -35,11 +35,13 @@ import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
@@ -69,10 +71,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     SchemaBuilder.struct()
         .field("userId", Schema.INT64_SCHEMA)
@@ -135,9 +138,10 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship from struct containing connect types`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     SchemaBuilder.struct()
         .field("p1Id", Schema.INT64_SCHEMA)
@@ -203,10 +207,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship from json string`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
@@ -242,10 +247,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship from byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
@@ -282,10 +288,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with excluded properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
@@ -340,10 +347,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with simpler pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
@@ -380,10 +388,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with aliased properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -420,10 +429,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with relationship key and properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -466,10 +476,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with explicit properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -518,12 +529,13 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create nodes and relationship with multiple labels pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Item) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
+    session.createNodeKeyConstraint(neo4j, "item_id", "Item", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
@@ -559,10 +571,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should add non id values to relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -603,10 +616,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
@@ -639,10 +653,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should add only relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
@@ -678,10 +693,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create, delete and recreate relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         KafkaMessage(
@@ -742,10 +758,11 @@ abstract class Neo4jRelationshipPatternIT {
   fun `should create multiple relationships from different topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer1.publish(
         valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
@@ -775,10 +792,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should create 1000 relationships`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     val kafkaMessages = mutableListOf<KafkaMessage>()
     for (i in 1..1000) {
@@ -811,10 +829,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
@@ -861,10 +880,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should not merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
@@ -910,10 +930,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should merge relationship properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session.run("""CREATE (:User {id: 1})-[:BOUGHT {amount: 10}]->(:Product {id: 2})""").consume()
 
@@ -950,10 +971,11 @@ abstract class Neo4jRelationshipPatternIT {
   @Test
   fun `should not merge relationship properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session.run("""CREATE (:User {id: 1})-[:BOUGHT {amount: 10}]->(:Product {id: 2})""").consume()
 

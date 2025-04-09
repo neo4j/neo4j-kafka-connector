@@ -33,6 +33,10 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Dbms
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -73,6 +77,7 @@ internal class Neo4jSourceExtension(
           mapOf(
               Session::class.java to ::resolveSession,
               ConvertingKafkaConsumer::class.java to ::resolveTopicConsumer,
+              Neo4j::class.java to ::resolveNeo4j,
           ),
       )
 
@@ -149,6 +154,18 @@ internal class Neo4jSourceExtension(
     }
 
     this.sourceAnnotation = metadata
+
+    if (metadata.strategy == SourceStrategy.CDC) {
+      createDriver().use {
+        var version = Neo4jDetector.detect(it)
+        if (!canIUse(Dbms.changeDataCapture()).withNeo4j(version)) {
+          return ConditionEvaluationResult.disabled(
+              "CDC is not available with this version of Neo4j: $version",
+          )
+        }
+      }
+    }
+
     return ConditionEvaluationResult.enabled("@Neo4jSource and environment properly configured")
   }
 
@@ -275,6 +292,13 @@ internal class Neo4jSourceExtension(
       context: ExtensionContext?
   ): ConvertingKafkaConsumer {
     return consumerResolver.resolveGenericConsumer(parameterContext, context)
+  }
+
+  private fun resolveNeo4j(parameterContext: ParameterContext?, context: ExtensionContext?): Neo4j {
+    if (!::driver.isInitialized) {
+      driver = createDriver()
+    }
+    return Neo4jDetector.detect(driver)
   }
 
   private fun CdcSource.paramAsMap(

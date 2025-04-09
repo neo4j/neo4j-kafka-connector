@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EntityOperation.CREATE
@@ -27,6 +28,7 @@ import org.neo4j.cdc.client.model.EventType.NODE
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -420,17 +422,12 @@ abstract class Neo4jCdcSourceNodesIT {
   fun `should publish changes containing node keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session
-        .run("CREATE CONSTRAINT testSourceId FOR (n:TestSource) REQUIRE n.id IS NODE KEY")
-        .consume()
-    session
-        .run("CREATE CONSTRAINT testSourceName FOR (n:TestSource) REQUIRE n.name IS NODE KEY")
-        .consume()
-    session
-        .run("CREATE CONSTRAINT employedId FOR (n:Employee) REQUIRE n.employeeId IS NODE KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "testSourceId", "TestSource", "id")
+    session.createNodeKeyConstraint(neo4j, "testSourceName", "TestSource", "name")
+    session.createNodeKeyConstraint(neo4j, "employedId", "Employee", "employeeId")
     session.run("CALL db.awaitIndexes()").consume()
 
     session
@@ -510,10 +507,11 @@ abstract class Neo4jCdcSourceNodesIT {
   @Test
   fun `should publish with multiple keys on the same property`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE (n.prop1, n.prop2) IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:TestSource) REQUIRE n.prop1 IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "test_key1", "TestSource", "prop1", "prop2")
+    session.createNodeKeyConstraint(neo4j, "test_key2", "TestSource", "prop1")
     session.run("CALL db.awaitIndexes()").consume()
     session
         .run(

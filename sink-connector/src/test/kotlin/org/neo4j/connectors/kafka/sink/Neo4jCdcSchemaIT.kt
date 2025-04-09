@@ -24,6 +24,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.seconds
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -36,6 +37,7 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
@@ -874,8 +876,9 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT KNOWS_KEY FOR ()-[r:KNOWS]-() REQUIRE r.id IS KEY").consume()
+    session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
         .run(
             """
@@ -1194,8 +1197,9 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT KNOWS_KEY FOR ()-[r:KNOWS]-() REQUIRE r.id IS KEY").consume()
+    session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
         .run(
             """

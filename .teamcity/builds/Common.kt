@@ -32,6 +32,21 @@ enum class JavaVersion(val version: String, val dockerImage: String) {
   V_17(version = "17", dockerImage = "eclipse-temurin:17-jdk"),
 }
 
+enum class Neo4jVersion(val version: String, val dockerImage: String) {
+  V_4_4("4.4", "neo4j:4.4-enterprise"),
+  V_4_4_DEV(
+      "4.4-dev",
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-debian-nightly"),
+  V_5("5", "neo4j:5-enterprise"),
+  V_5_DEV(
+      "5-dev",
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:5-enterprise-debian-nightly"),
+  V_2025("2025", "neo4j:2025-enterprise"),
+  V_2025_DEV(
+      "2025-dev",
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025-enterprise-debian-nightly"),
+}
+
 object Neo4jKafkaConnectorVcs :
     GitVcsRoot(
         {

@@ -40,6 +40,7 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -57,7 +58,7 @@ class Neo4jQueryTaskTest {
   companion object {
     @Container
     val neo4j: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withoutAuthentication()
 

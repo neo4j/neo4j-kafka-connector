@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.source
 import java.time.Duration
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation.CREATE
 import org.neo4j.cdc.client.model.EntityOperation.DELETE
@@ -27,6 +28,7 @@ import org.neo4j.cdc.client.model.EventType.RELATIONSHIP
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert.Companion.assertThat
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -419,16 +421,11 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should publish changes containing relationship keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session
-        .run(
-            "CREATE CONSTRAINT employedId FOR ()-[r:EMPLOYED]->() REQUIRE r.id IS RELATIONSHIP KEY")
-        .consume()
-    session
-        .run(
-            "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.role IS RELATIONSHIP KEY")
-        .consume()
+    session.createRelationshipKeyConstraint(neo4j, "employedId", "EMPLOYED", "id")
+    session.createRelationshipKeyConstraint(neo4j, "employedRole", "EMPLOYED", "role")
     session.run("CALL db.awaitIndexes()").consume()
 
     session.run("CREATE (:Person)-[:EMPLOYED {id: 1, role: 'SWE'}]->(:Company)").consume()
@@ -510,16 +507,11 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   fun `should publish with multiple keys on the same property`(
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session
-        .run(
-            "CREATE CONSTRAINT employedId FOR ()-[r:EMPLOYED]->() REQUIRE (r.id, r.role) IS RELATIONSHIP KEY")
-        .consume()
-    session
-        .run(
-            "CREATE CONSTRAINT employedRole FOR ()-[r:EMPLOYED]->() REQUIRE r.id IS RELATIONSHIP KEY")
-        .consume()
+    session.createRelationshipKeyConstraint(neo4j, "employedId", "EMPLOYED", "id", "role")
+    session.createRelationshipKeyConstraint(neo4j, "employedRole", "EMPLOYED", "id")
     session.run("CALL db.awaitIndexes()").consume()
 
     session.run("CREATE (:Person)-[:EMPLOYED {id: 1, role: 'SWE'}]->(:Company)").consume()

@@ -21,12 +21,15 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.EventType
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.assertions.ChangeEventAssert
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
+import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
@@ -178,9 +181,10 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as node keys`(
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-node-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session.run("CREATE CONSTRAINT FOR (ts:TestSource) REQUIRE ts.name IS NODE KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "test_id", "TestSource", "name")
     session.run("CALL db.awaitIndexes()").consume()
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -239,9 +243,10 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
   fun `supports serialization of keys as rel keys`(
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) {
-    session.run("CREATE CONSTRAINT FOR ()-[to:TO]-() REQUIRE to.name IS RELATIONSHIP KEY").consume()
+    session.createRelationshipKeyConstraint(neo4j, "to_id", "TO", "name")
     session.run("CALL db.awaitIndexes()").consume()
     session.run("CREATE (:Source)-[:TO {name: 'somewhere'}]->(:Destination)").consume()
 

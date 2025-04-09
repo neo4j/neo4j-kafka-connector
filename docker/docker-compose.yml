@@ -1,7 +1,7 @@
 ---
 services:
   neo4j:
-    image: neo4j:5-enterprise
+    image: ${NEO4J_TEST_IMAGE}
     hostname: neo4j
     container_name: neo4j
     ports:

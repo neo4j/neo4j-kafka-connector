@@ -10,13 +10,17 @@ class Maven(
     name: String,
     goals: String,
     javaVersion: JavaVersion,
+    neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
     args: String? = null
 ) :
     BuildType({
-      this.id("${id}-${javaVersion.version}".toId())
-      this.name = "$name (Java ${javaVersion.version})"
+      this.id(id.toId())
+      this.name = name
 
-      params { text("env.JAVA_VERSION", javaVersion.version) }
+      params {
+        text("env.JAVA_VERSION", javaVersion.version)
+        text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage)
+      }
 
       steps {
         commonMaven(javaVersion) {

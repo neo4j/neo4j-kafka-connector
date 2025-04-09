@@ -36,11 +36,13 @@ import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
@@ -64,9 +66,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node from json string`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -89,9 +92,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     SchemaBuilder.struct()
         .field("id", Schema.INT64_SCHEMA)
@@ -141,9 +145,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node from struct containing connect types`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     SchemaBuilder.struct()
         .field("id", Schema.INT64_SCHEMA)
@@ -185,9 +190,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node from json byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
@@ -212,10 +218,11 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with multiple labels pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
@@ -242,9 +249,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -269,9 +277,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create and delete node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -306,9 +315,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     session
         .run(
@@ -337,9 +347,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create, delete and recreate node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         KafkaMessage(
@@ -369,9 +380,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create multiple nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         KafkaMessage(
@@ -405,9 +417,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with composite key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE (n.id, n.name) IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id_name", "User", "id", "name")
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -429,9 +442,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with nested properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -461,9 +475,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with excluded properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -492,10 +507,11 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create node with timestamp`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
     val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -522,9 +538,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create and delete node with explicit properties from message key`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     producer.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -559,9 +576,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     session
         .run(
@@ -595,9 +613,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should update node with aliases`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     session.run(
         "CREATE (n:User) SET n = ${'$'}props",
@@ -628,10 +647,11 @@ abstract class Neo4jNodePatternIT {
   fun `should create nodes from multiple topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Account) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
+    session.createNodeKeyConstraint(neo4j, "account_id", "Account", "id")
 
     producer1.publish(
         keySchema = Schema.STRING_SCHEMA,
@@ -667,9 +687,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should create 1000 nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
 
     val kafkaMessages = mutableListOf<KafkaMessage>()
     for (i in 1..1000) {
@@ -696,9 +717,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session
         .run(
             "CREATE (n:User) SET n = ${'$'}props",
@@ -726,9 +748,10 @@ abstract class Neo4jNodePatternIT {
   @Test
   fun `should not merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
+      neo4j: Neo4j
   ) = runTest {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.id IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session
         .run(
             "CREATE (n:User) SET n = ${'$'}props",

@@ -39,14 +39,21 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.testing.JUnitSupport.annotatedParameterContextForType
 import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
 import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.driver.Driver
+import org.neo4j.driver.Record
+import org.neo4j.driver.Result
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.Values
 
 class Neo4jSourceExtensionTest {
 
@@ -116,12 +123,7 @@ class Neo4jSourceExtensionTest {
         mapOf(
             "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
         )
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, _) = setupDetectableDriver()
     val extension = Neo4jSourceExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -161,12 +163,7 @@ class Neo4jSourceExtensionTest {
   @MethodSource("validMethods")
   @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
   fun `resolves Session parameter`(name: String, method: KFunction<Unit>) {
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, session) = setupDetectableDriver()
     val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)
@@ -183,7 +180,10 @@ class Neo4jSourceExtensionTest {
   @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
   fun `resolves consumer parameter`(name: String, method: KFunction<Unit>) {
     val consumer = mock<KafkaConsumer<ByteArray, ByteArray>>()
-    val extension = Neo4jSourceExtension(consumerFactory = { _, _ -> consumer })
+    val (driver, _) = setupDetectableDriver()
+    val extension =
+        Neo4jSourceExtension(
+            consumerFactory = { _, _ -> consumer }, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
@@ -195,6 +195,42 @@ class Neo4jSourceExtensionTest {
 
     assertIs<ConvertingKafkaConsumer>(convertingKafkaConsumer)
     assertSame(consumer, convertingKafkaConsumer.kafkaConsumer)
+  }
+
+  @ParameterizedTest(name = "$DISPLAY_NAME_PLACEHOLDER [{0}]")
+  @MethodSource("validMethods")
+  @Suppress("UNUSED_PARAMETER") // Kotlin compiler not smart enough to see name param is used
+  fun `resolves neo4j parameter`(name: String, method: KFunction<Unit>) {
+    val (driver, _) = setupDetectableDriver()
+    val extension = Neo4jSourceExtension(driverFactory = { _, _ -> driver })
+    val extensionContext = extensionContextFor(method)
+    extension.evaluateExecutionCondition(extensionContext)
+
+    val neo4j = extension.resolveParameter(parameterContextForType(Neo4j::class), extensionContext)
+
+    assertIs<Neo4j>(neo4j)
+    assertEquals(
+        Neo4j(Neo4jVersion(5, 26, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED),
+        neo4j)
+  }
+
+  private fun setupDetectableDriver(): Pair<Driver, Session> {
+    val record =
+        mock<Record> {
+          on { get("version") } doReturn Values.value("5.26.0")
+          on { get("edition") } doReturn Values.value("enterprise")
+        }
+    val result = mock<Result> { on { single() } doReturn record }
+    val session =
+        mock<Session> {
+          on { run(any(String::class.java), any<Map<String, Any>>()) } doReturn result
+        }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    return Pair(driver, session)
   }
 
   @Test
