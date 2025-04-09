@@ -555,9 +555,6 @@
                     <includes>
                         <include>**/*IT.*</include>
                     </includes>
-                    <systemPropertyVariables>
-                        <neo4j.cdc>${neo4j.cdc}</neo4j.cdc>
-                    </systemPropertyVariables>
                 </configuration>
                 <executions>
                     <execution>
