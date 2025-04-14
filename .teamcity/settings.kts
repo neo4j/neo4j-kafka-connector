@@ -24,20 +24,22 @@ project {
 
   subProject(
       Build(name = "main", forPullRequests = false) {
-        vcs {
-          this.branchFilter = "+:main"
-          this.triggerRules =
-              """
+        triggers {
+          vcs {
+            this.branchFilter = "+:main"
+            this.triggerRules =
+                """
               -:comment=^build.*release version.*:**
               -:comment=^build.*update version.*:**
               """
-                  .trimIndent()
+                    .trimIndent()
+          }
         }
       })
 
   subProject(
       Build(name = "pull-request", forPullRequests = true) {
-        vcs { this.branchFilter = "+:pull/*" }
+        triggers { vcs { this.branchFilter = "+:pull/*" } }
       })
 
   subProject(
