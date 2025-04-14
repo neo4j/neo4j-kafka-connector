@@ -20,11 +20,14 @@ import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Schema
 import org.neo4j.driver.Session
+import org.testcontainers.utility.DockerImageName
 
-fun neo4jImage(): String =
-    System.getenv("NEO4J_TEST_IMAGE").ifBlank {
-      throw IllegalArgumentException("NEO4J_TEST_IMAGE environment variable is not defined!")
-    }
+fun neo4jImage(): DockerImageName =
+    System.getenv("NEO4J_TEST_IMAGE")
+        .ifBlank {
+          throw IllegalArgumentException("NEO4J_TEST_IMAGE environment variable is not defined!")
+        }
+        .run { DockerImageName.parse(this).asCompatibleSubstituteFor("neo4j") }
 
 fun Session.createNodeKeyConstraint(
     neo4j: Neo4j,

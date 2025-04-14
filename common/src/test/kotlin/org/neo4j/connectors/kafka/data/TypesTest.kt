@@ -66,6 +66,7 @@ import org.neo4j.driver.Values
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.utility.DockerImageName
 
 @Testcontainers
 class TypesTest {
@@ -91,10 +92,13 @@ class TypesTest {
     }
 
     @JvmStatic
-    fun neo4jImage(): String =
-        System.getenv("NEO4J_TEST_IMAGE").ifBlank {
-          throw IllegalArgumentException("NEO4J_TEST_IMAGE environment variable is not defined!")
-        }
+    fun neo4jImage(): DockerImageName =
+        System.getenv("NEO4J_TEST_IMAGE")
+            .ifBlank {
+              throw IllegalArgumentException(
+                  "NEO4J_TEST_IMAGE environment variable is not defined!")
+            }
+            .run { DockerImageName.parse(this).asCompatibleSubstituteFor("neo4j") }
   }
 
   @BeforeEach
