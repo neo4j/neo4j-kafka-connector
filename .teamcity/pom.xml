@@ -1,69 +1,91 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project>
     <modelVersion>4.0.0</modelVersion>
-    <name>Connectors_Neo4jKafkaConnector Config DSL Script</name>
-    <groupId>Connectors_Neo4jKafkaConnector</groupId>
-    <artifactId>teamcity-pipeline</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
     <parent>
         <groupId>org.jetbrains.teamcity</groupId>
         <artifactId>configs-dsl-kotlin-parent</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath></relativePath>
+        <relativePath/>
     </parent>
-
+    <groupId>Connectors_Neo4jKafkaConnector</groupId>
+    <artifactId>teamcity-pipeline</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Connectors_Neo4jKafkaConnector Config DSL Script</name>
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.40.0</spotless-maven-plugin.version>
     </properties>
-
+    <dependencies>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-script-runtime</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.teamcity</groupId>
+            <artifactId>configs-dsl-kotlin-latest</artifactId>
+            <version>${teamcity.dsl.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.teamcity</groupId>
+            <artifactId>configs-dsl-kotlin-plugins-latest</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
     <repositories>
         <repository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
             <id>jetbrains-all</id>
             <url>https://download.jetbrains.com/teamcity-repository</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
         </repository>
         <repository>
-            <id>teamcity-server</id>
-            <url>https://live.neo4j-build.io/app/dsl-plugins-repository</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+            <id>teamcity-server</id>
+            <url>https://live.neo4j-build.io/app/dsl-plugins-repository</url>
         </repository>
     </repositories>
-
     <pluginRepositories>
         <pluginRepository>
             <id>JetBrains</id>
             <url>https://download.jetbrains.com/teamcity-repository</url>
         </pluginRepository>
     </pluginRepositories>
-
     <build>
-        <sourceDirectory>${basedir}</sourceDirectory>
         <plugins>
             <plugin>
-                <artifactId>kotlin-maven-plugin</artifactId>
                 <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
                 <version>${kotlin.version}</version>
-
                 <configuration/>
                 <executions>
                     <execution>
                         <id>compile</id>
-                        <phase>process-sources</phase>
                         <goals>
                             <goal>compile</goal>
                         </goals>
+                        <phase>process-sources</phase>
                     </execution>
                     <execution>
                         <id>test-compile</id>
-                        <phase>process-test-sources</phase>
                         <goals>
                             <goal>test-compile</goal>
                         </goals>
+                        <phase>process-test-sources</phase>
                     </execution>
                 </executions>
             </plugin>
@@ -75,6 +97,32 @@
                     <format>kotlin</format>
                     <dstDir>target/generated-configs</dstDir>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.ekryd.sortpom</groupId>
+                <artifactId>sortpom-maven-plugin</artifactId>
+                <version>${sortpom-maven-plugin.version}</version>
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <keepBlankLines>false</keepBlankLines>
+                    <indentAttribute>schemaLocation</indentAttribute>
+                    <nrOfIndentSpace>4</nrOfIndentSpace>
+                    <sortProperties>true</sortProperties>
+                    <sortDependencies>scope,groupId,artifactId</sortDependencies>
+                    <createBackupFile>false</createBackupFile>
+                    <expandEmptyElements>false</expandEmptyElements>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <verifyFail>STOP</verifyFail>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
@@ -107,33 +155,6 @@
                 </executions>
             </plugin>
         </plugins>
+        <sourceDirectory>${basedir}</sourceDirectory>
     </build>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.jetbrains.teamcity</groupId>
-            <artifactId>configs-dsl-kotlin-latest</artifactId>
-            <version>${teamcity.dsl.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.teamcity</groupId>
-            <artifactId>configs-dsl-kotlin-plugins-latest</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <type>pom</type>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-script-runtime</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
 </project>
