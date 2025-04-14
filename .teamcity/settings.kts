@@ -69,7 +69,7 @@ project {
                     firstSuccessAfterFailure = true
                     buildProbablyHanging = true
 
-                    slackNotifier {
+                    notifierSettings = slackNotifier {
                       connection = SLACK_CONNECTION_ID
                       sendTo = SLACK_CHANNEL
                       messageFormat = simpleMessageFormat()
