@@ -9,8 +9,6 @@ import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.triggers.schedule
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
 import jetbrains.buildServer.configs.kotlin.version
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
 
 version = "2025.03"
 
@@ -54,9 +52,10 @@ project {
                   vcs { enabled = false }
 
                   schedule {
+                    branchFilter = "+:main"
                     schedulingPolicy = daily {
-                      hours = 8
-                      minutes = 0
+                      hour = 8
+                      minute = 0
                     }
                     triggerBuild = always()
                   }
@@ -64,16 +63,16 @@ project {
 
                 features {
                   notifications {
+                    buildFailedToStart = true
+                    buildFailed = true
+                    firstFailureAfterSuccess = true
+                    firstSuccessAfterFailure = true
+                    buildProbablyHanging = true
+
                     slackNotifier {
                       connection = SLACK_CONNECTION_ID
                       sendTo = SLACK_CHANNEL
                       messageFormat = simpleMessageFormat()
-
-                      buildFailedToStart = true
-                      buildFailed = true
-                      firstFailureAfterSuccess = true
-                      firstSuccessAfterFailure = true
-                      buildProbablyHanging = true
                     }
                   }
                 }
