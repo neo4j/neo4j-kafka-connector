@@ -44,7 +44,8 @@ class IntegrationTests(
           }
 
           steps {
-            neo4jVersion.pullImage()
+            pullImage(neo4jVersion)
+
             script {
               scriptContent =
                   """

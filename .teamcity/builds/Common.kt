@@ -13,6 +13,7 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
 import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
 import jetbrains.buildServer.configs.kotlin.buildSteps.DockerCommandStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.dockerCommand
 import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
@@ -54,14 +55,6 @@ enum class Neo4jVersion(val version: String, val dockerImage: String) {
   V_2025_DEV(
       "2025-dev",
       "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025-enterprise-debian-nightly"),
-}
-
-fun Neo4jVersion.pullImage(): DockerCommandStep = DockerCommandStep {
-  name = "pull neo4j test image"
-  commandType = other {
-    subCommand = "image"
-    commandArgs = "pull ${this@pullImage.dockerImage}"
-  }
 }
 
 object Neo4jKafkaConnectorVcs :
@@ -149,3 +142,12 @@ fun BuildSteps.commonMaven(
   init(maven)
   return maven
 }
+
+fun BuildSteps.pullImage(version: Neo4jVersion): DockerCommandStep =
+    this.dockerCommand {
+      name = "pull neo4j test image"
+      commandType = other {
+        subCommand = "image"
+        commandArgs = "pull ${version.dockerImage}"
+      }
+    }

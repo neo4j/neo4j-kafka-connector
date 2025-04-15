@@ -22,7 +22,7 @@ class Maven(
       }
 
       steps {
-        neo4jVersion.pullImage()
+        pullImage(neo4jVersion)
 
         commonMaven(javaVersion) {
           this.goals = goals
