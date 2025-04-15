@@ -24,7 +24,7 @@ project {
       Build(name = "main", forPullRequests = false) {
         triggers {
           vcs {
-            this.branchFilter = "+:main"
+            this.branchFilter = "+:fix-test-containers"
             this.triggerRules =
                 """
               -:comment=^build.*release version.*:**
@@ -56,7 +56,7 @@ project {
                       vcs { enabled = false }
 
                       schedule {
-                        branchFilter = "+:main"
+                        branchFilter = "+:fix-test-containers"
                         schedulingPolicy = daily {
                           hour = 8
                           minute = 0
@@ -73,7 +73,7 @@ project {
                         firstSuccessAfterFailure = true
                         buildProbablyHanging = true
 
-                        branchFilter = "+:main"
+                        branchFilter = "+:fix-test-containers"
 
                         notifierSettings = slackNotifier {
                           connection = SLACK_CONNECTION_ID
