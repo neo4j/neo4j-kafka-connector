@@ -43,6 +43,7 @@ enum class JavaVersion(val version: String, val dockerImage: String) {
 }
 
 enum class Neo4jVersion(val version: String, val dockerImage: String) {
+  V_NONE("", ""),
   V_4_4("4.4", "neo4j:4.4-enterprise"),
   V_4_4_DEV(
       "4.4-dev",

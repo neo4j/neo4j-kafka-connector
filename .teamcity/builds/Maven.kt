@@ -9,7 +9,7 @@ class Maven(
     name: String,
     goals: String,
     javaVersion: JavaVersion,
-    neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
+    neo4jVersion: Neo4jVersion,
     args: String? = null
 ) :
     BuildType({
@@ -22,7 +22,9 @@ class Maven(
       }
 
       steps {
-        pullImage(neo4jVersion)
+        if (neo4jVersion != Neo4jVersion.V_NONE) {
+          pullImage(neo4jVersion)
+        }
 
         commonMaven(javaVersion) {
           this.goals = goals

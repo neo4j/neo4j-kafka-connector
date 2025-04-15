@@ -45,7 +45,7 @@ class Build(
                         "package (${java.javaVersion.version})",
                         "package",
                         java.javaVersion,
-                        neo4jVersion,
+                        Neo4jVersion.V_NONE,
                         "-pl :packaging -am -DskipTests",
                     )
 
@@ -56,7 +56,7 @@ class Build(
                           "build (${java.javaVersion.version})",
                           "test-compile",
                           java.javaVersion,
-                          neo4jVersion,
+                          Neo4jVersion.V_NONE,
                       ),
                   )
                   dependentBuildType(
@@ -109,7 +109,7 @@ class Build(
             it.features {
               loginToECR()
               requireDiskSpace("5gb")
-              enableCommitStatusPublisher()
+              if (!forCompatibility) enableCommitStatusPublisher()
               if (forPullRequests) enablePullRequests()
             }
 
