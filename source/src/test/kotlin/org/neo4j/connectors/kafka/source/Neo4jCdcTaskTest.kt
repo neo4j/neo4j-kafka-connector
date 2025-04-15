@@ -89,8 +89,8 @@ class Neo4jCdcTaskTest {
 
   @AfterEach
   fun after() {
-    session.close()
-    task.stop()
+    if (this::session.isInitialized) session.close()
+    if (this::task.isInitialized) task.stop()
   }
 
   @BeforeEach
