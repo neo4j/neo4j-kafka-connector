@@ -61,11 +61,11 @@ enum class Neo4jVersion(val version: String, val dockerImage: String) {
 object Neo4jKafkaConnectorVcs :
     GitVcsRoot(
         {
-          id("Connectors_AliNeo4jKafkaConnector_Build")
+          id("Connectors_Neo4jKafkaConnector_Build")
 
           name = "neo4j-kafka-connector"
-          url = "git@github.com:ali-ince/neo4j-kafka-connector.git"
-          branch = "refs/heads/fix-test-containers"
+          url = "git@github.com:neo4j/neo4j-kafka-connector.git"
+          branch = "refs/heads/main"
           branchSpec = "refs/heads/*"
 
           authMethod = defaultPrivateKey { userName = "git" }
