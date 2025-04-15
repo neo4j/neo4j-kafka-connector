@@ -45,7 +45,7 @@ project {
         this.id("compatibility")
         name = "compatibility"
 
-        Neo4jVersion.entries.forEach { neo4j ->
+        Neo4jVersion.entries.minus(Neo4jVersion.V_NONE).forEach { neo4j ->
           subProject(
               Build(
                   name = "${neo4j.version}",
