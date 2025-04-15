@@ -8,6 +8,7 @@ import jetbrains.buildServer.configs.kotlin.FailureAction
 import jetbrains.buildServer.configs.kotlin.Requirements
 import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
 import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
+import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerRegistryConnections
 import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
 import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
@@ -21,6 +22,13 @@ const val MAVEN_DEFAULT_ARGS =
 
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
+
+// Look into Root Project's settings -> Connections
+const val SLACK_CONNECTION_ID = "PROJECT_EXT_83"
+const val SLACK_CHANNEL = "#C05R4RURYLA" // #team-connectors-feed
+
+// Look into Root Project's settings -> Connections
+const val ECR_CONNECTION_ID = "PROJECT_EXT_124"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
@@ -90,6 +98,11 @@ fun BuildFeatures.enablePullRequests() = pullRequests {
 fun BuildFeatures.requireDiskSpace(size: String = "3gb") = freeDiskSpace {
   requiredSpace = size
   failBuild = true
+}
+
+fun BuildFeatures.loginToECR() = dockerRegistryConnections {
+  cleanupPushedImages = true
+  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID }
 }
 
 fun CompoundStage.dependentBuildType(bt: BuildType) =

@@ -1,7 +1,7 @@
 package builds
 
+import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.Project
-import jetbrains.buildServer.configs.kotlin.Triggers
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -22,7 +22,7 @@ class Build(
     name: String,
     forPullRequests: Boolean,
     neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
-    triggers: Triggers.() -> Unit = {}
+    customizeCompletion: BuildType.() -> Unit = {}
 ) :
     Project(
         {
@@ -106,6 +106,7 @@ class Build(
             it.thisVcs()
 
             it.features {
+              loginToECR()
               requireDiskSpace("5gb")
               enableCommitStatusPublisher()
               if (forPullRequests) enablePullRequests()
@@ -114,6 +115,6 @@ class Build(
             buildType(it)
           }
 
-          complete.triggers.apply(triggers)
+          complete.apply(customizeCompletion)
         },
     )

@@ -3,7 +3,6 @@ package builds
 import jetbrains.buildServer.configs.kotlin.BuildSteps
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.ParameterDisplay
-import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
@@ -59,8 +58,6 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
                 "build: update version to %nextSnapshotVersion%",
             )
           }
-
-          features { dockerSupport {} }
 
           requirements { runOnLinux(LinuxSize.SMALL) }
         },

@@ -2,7 +2,6 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
-import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.toId
 
 class Maven(
@@ -31,8 +30,6 @@ class Maven(
       }
 
       features {
-        dockerSupport {}
-
         buildCache {
           this.name = "neo4j-kafka-connector"
           publish = true
