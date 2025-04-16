@@ -11,7 +11,9 @@ import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerRegistryConnections
 import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
 import jetbrains.buildServer.configs.kotlin.buildFeatures.pullRequests
+import jetbrains.buildServer.configs.kotlin.buildSteps.DockerCommandStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.dockerCommand
 import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
@@ -41,6 +43,7 @@ enum class JavaVersion(val version: String, val dockerImage: String) {
 }
 
 enum class Neo4jVersion(val version: String, val dockerImage: String) {
+  V_NONE("", ""),
   V_4_4("4.4", "neo4j:4.4-enterprise"),
   V_4_4_DEV(
       "4.4-dev",
@@ -140,3 +143,12 @@ fun BuildSteps.commonMaven(
   init(maven)
   return maven
 }
+
+fun BuildSteps.pullImage(version: Neo4jVersion): DockerCommandStep =
+    this.dockerCommand {
+      name = "pull neo4j test image"
+      commandType = other {
+        subCommand = "image"
+        commandArgs = "pull ${version.dockerImage}"
+      }
+    }

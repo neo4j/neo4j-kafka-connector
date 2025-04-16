@@ -63,6 +63,7 @@ class Neo4jCdcTaskTest {
     val container: Neo4jContainer<*> =
         Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withExposedPorts(7687)
             .withoutAuthentication()
 
     private lateinit var driver: Driver
@@ -88,8 +89,8 @@ class Neo4jCdcTaskTest {
 
   @AfterEach
   fun after() {
-    session.close()
-    task.stop()
+    if (this::session.isInitialized) session.close()
+    if (this::task.isInitialized) task.stop()
   }
 
   @BeforeEach

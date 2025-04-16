@@ -21,6 +21,7 @@ val DEFAULT_NEO4J_VERSION = Neo4jVersion.V_2025
 class Build(
     name: String,
     forPullRequests: Boolean,
+    forCompatibility: Boolean = false,
     neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
     customizeCompletion: BuildType.() -> Unit = {}
 ) :
@@ -44,7 +45,7 @@ class Build(
                         "package (${java.javaVersion.version})",
                         "package",
                         java.javaVersion,
-                        neo4jVersion,
+                        Neo4jVersion.V_NONE,
                         "-pl :packaging -am -DskipTests",
                     )
 
@@ -55,7 +56,7 @@ class Build(
                           "build (${java.javaVersion.version})",
                           "test-compile",
                           java.javaVersion,
-                          neo4jVersion,
+                          Neo4jVersion.V_NONE,
                       ),
                   )
                   dependentBuildType(
@@ -98,7 +99,7 @@ class Build(
             }
 
             dependentBuildType(complete)
-            if (!forPullRequests)
+            if (!forPullRequests && !forCompatibility)
                 dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
           }
 
@@ -108,7 +109,7 @@ class Build(
             it.features {
               loginToECR()
               requireDiskSpace("5gb")
-              enableCommitStatusPublisher()
+              if (!forCompatibility) enableCommitStatusPublisher()
               if (forPullRequests) enablePullRequests()
             }
 

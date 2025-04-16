@@ -26,9 +26,13 @@ object DatabaseSupport {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run(
-        "CREATE DATABASE \$db_name OPTIONS { txLogEnrichment: '${if (withCdc) { "FULL" } else "OFF"}' } WAIT 30 SECONDS",
-        mapOf("db_name" to database))
+    if (withCdc) {
+      this.run(
+          "CREATE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
+          mapOf("db_name" to database))
+    } else {
+      this.run("CREATE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
+    }
     return this
   }
 

@@ -45,38 +45,44 @@ project {
         this.id("compatibility")
         name = "compatibility"
 
-        Neo4jVersion.entries.forEach { neo4j ->
+        Neo4jVersion.entries.minus(Neo4jVersion.V_NONE).forEach { neo4j ->
           subProject(
-              Build(name = "${neo4j.version}", forPullRequests = false, neo4jVersion = neo4j) {
-                triggers {
-                  vcs { enabled = false }
+              Build(
+                  name = "${neo4j.version}",
+                  forPullRequests = false,
+                  forCompatibility = true,
+                  neo4jVersion = neo4j) {
+                    triggers {
+                      vcs { enabled = false }
 
-                  schedule {
-                    branchFilter = "+:main"
-                    schedulingPolicy = daily {
-                      hour = 8
-                      minute = 0
+                      schedule {
+                        branchFilter = "+:main"
+                        schedulingPolicy = daily {
+                          hour = 8
+                          minute = 0
+                        }
+                        triggerBuild = always()
+                      }
                     }
-                    triggerBuild = always()
-                  }
-                }
 
-                features {
-                  notifications {
-                    buildFailedToStart = true
-                    buildFailed = true
-                    firstFailureAfterSuccess = true
-                    firstSuccessAfterFailure = true
-                    buildProbablyHanging = true
+                    features {
+                      notifications {
+                        buildFailedToStart = true
+                        buildFailed = true
+                        firstFailureAfterSuccess = true
+                        firstSuccessAfterFailure = true
+                        buildProbablyHanging = true
 
-                    notifierSettings = slackNotifier {
-                      connection = SLACK_CONNECTION_ID
-                      sendTo = SLACK_CHANNEL
-                      messageFormat = simpleMessageFormat()
+                        branchFilter = "+:main"
+
+                        notifierSettings = slackNotifier {
+                          connection = SLACK_CONNECTION_ID
+                          sendTo = SLACK_CHANNEL
+                          messageFormat = simpleMessageFormat()
+                        }
+                      }
                     }
-                  }
-                }
-              })
+                  })
         }
       })
 }
