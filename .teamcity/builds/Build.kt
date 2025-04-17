@@ -60,6 +60,7 @@ class Build(
                       ),
                   )
 
+                  println("neo4jVersions = $neo4jVersions")
                   neo4jVersions.forEach { neo4jVersion ->
                     {
                       dependentBuildType(
