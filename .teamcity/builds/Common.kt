@@ -27,7 +27,7 @@ const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
 // Look into Root Project's settings -> Connections
 const val SLACK_CONNECTION_ID = "PROJECT_EXT_83"
-const val SLACK_CHANNEL = "#C05R4RURYLA" // #team-connectors-feed
+const val SLACK_CHANNEL = "#team-connectors-feed"
 
 // Look into Root Project's settings -> Connections
 const val ECR_CONNECTION_ID = "PROJECT_EXT_124"
@@ -65,7 +65,7 @@ object Neo4jKafkaConnectorVcs :
 
           name = "neo4j-kafka-connector"
           url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-          branch = "refs/heads/main"
+          branch = "refs/heads/update-ci"
           branchSpec = "refs/heads/*"
 
           authMethod = defaultPrivateKey { userName = "git" }

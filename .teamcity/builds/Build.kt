@@ -2,6 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.buildFeatures.notifications
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -22,7 +23,7 @@ class Build(
     name: String,
     forPullRequests: Boolean,
     forCompatibility: Boolean = false,
-    neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
+    neo4jVersions: Set<Neo4jVersion>,
     customizeCompletion: BuildType.() -> Unit = {}
 ) :
     Project(
@@ -59,39 +60,44 @@ class Build(
                           Neo4jVersion.V_NONE,
                       ),
                   )
-                  dependentBuildType(
-                      Maven(
-                          "${name}-unit-tests-${java.javaVersion.version}",
-                          "unit tests (${java.javaVersion.version})",
-                          "test",
-                          java.javaVersion,
-                          neo4jVersion,
-                      ),
-                  )
-                  dependentBuildType(collectArtifacts(packaging))
 
-                  parallel {
-                    java.platformITVersions.forEach { confluentPlatformVersion ->
+                  neo4jVersions.forEach { neo4jVersion ->
+                    {
                       dependentBuildType(
-                          IntegrationTests(
-                              "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
-                              "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                          Maven(
+                              "${name}-unit-tests-${java.javaVersion.version}",
+                              "unit tests (${java.javaVersion.version})",
+                              "test",
                               java.javaVersion,
-                              confluentPlatformVersion,
                               neo4jVersion,
-                          ) {
-                            dependencies {
-                              artifacts(packaging) {
-                                artifactRules =
-                                    """
+                          ),
+                      )
+                      dependentBuildType(collectArtifacts(packaging))
+
+                      parallel {
+                        java.platformITVersions.forEach { confluentPlatformVersion ->
+                          dependentBuildType(
+                              IntegrationTests(
+                                  "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
+                                  "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                                  java.javaVersion,
+                                  confluentPlatformVersion,
+                                  neo4jVersion,
+                              ) {
+                                dependencies {
+                                  artifacts(packaging) {
+                                    artifactRules =
+                                        """
                                     +:packages/*.jar => docker/plugins
                                     -:packages/*-kc-oss.jar
                                     """
-                                        .trimIndent()
-                              }
-                            }
-                          },
-                      )
+                                            .trimIndent()
+                                  }
+                                }
+                              },
+                          )
+                        }
+                      }
                     }
                   }
                 }
@@ -114,6 +120,26 @@ class Build(
             }
 
             buildType(it)
+          }
+
+          if (!forPullRequests) {
+            complete.features {
+              notifications {
+                buildFailedToStart = true
+                buildFailed = true
+                firstFailureAfterSuccess = true
+                firstSuccessAfterFailure = true
+                buildProbablyHanging = true
+
+                branchFilter = "+:update-ci"
+
+                notifierSettings = slackNotifier {
+                  connection = SLACK_CONNECTION_ID
+                  sendTo = SLACK_CHANNEL
+                  messageFormat = simpleMessageFormat()
+                }
+              }
+            }
           }
 
           complete.apply(customizeCompletion)
