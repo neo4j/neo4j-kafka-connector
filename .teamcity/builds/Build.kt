@@ -60,6 +60,8 @@ class Build(
                       ),
                   )
 
+                  dependentBuildType(collectArtifacts(packaging))
+
                   neo4jVersions.forEach { neo4jVersion ->
                     dependentBuildType(
                         Maven(
@@ -70,7 +72,6 @@ class Build(
                             neo4jVersion,
                         ),
                     )
-                    dependentBuildType(collectArtifacts(packaging))
 
                     java.platformITVersions.forEach { confluentPlatformVersion ->
                       dependentBuildType(
