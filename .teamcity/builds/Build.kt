@@ -21,8 +21,8 @@ enum class JavaPlatform(
 class Build(
     name: String,
     forPullRequests: Boolean,
-    forCompatibility: Boolean = false,
     neo4jVersions: Set<Neo4jVersion>,
+    forCompatibility: Boolean = false,
     customizeCompletion: BuildType.() -> Unit = {}
 ) :
     Project(
@@ -73,29 +73,27 @@ class Build(
                       )
                       dependentBuildType(collectArtifacts(packaging))
 
-                      parallel {
-                        java.platformITVersions.forEach { confluentPlatformVersion ->
-                          dependentBuildType(
-                              IntegrationTests(
-                                  "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
-                                  "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
-                                  java.javaVersion,
-                                  confluentPlatformVersion,
-                                  neo4jVersion,
-                              ) {
-                                dependencies {
-                                  artifacts(packaging) {
-                                    artifactRules =
-                                        """
+                      java.platformITVersions.forEach { confluentPlatformVersion ->
+                        dependentBuildType(
+                            IntegrationTests(
+                                "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
+                                "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                                java.javaVersion,
+                                confluentPlatformVersion,
+                                neo4jVersion,
+                            ) {
+                              dependencies {
+                                artifacts(packaging) {
+                                  artifactRules =
+                                      """
                                     +:packages/*.jar => docker/plugins
                                     -:packages/*-kc-oss.jar
                                     """
-                                            .trimIndent()
-                                  }
+                                          .trimIndent()
                                 }
-                              },
-                          )
-                        }
+                              }
+                            },
+                        )
                       }
                     }
                   }
