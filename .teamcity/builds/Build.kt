@@ -2,6 +2,8 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.ReuseBuilds
+import jetbrains.buildServer.configs.kotlin.buildFeatures.notifications
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -16,13 +18,11 @@ enum class JavaPlatform(
   JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0"))
 }
 
-val DEFAULT_NEO4J_VERSION = Neo4jVersion.V_2025
-
 class Build(
     name: String,
     forPullRequests: Boolean,
+    neo4jVersions: Set<Neo4jVersion>,
     forCompatibility: Boolean = false,
-    neo4jVersion: Neo4jVersion = DEFAULT_NEO4J_VERSION,
     customizeCompletion: BuildType.() -> Unit = {}
 ) :
     Project(
@@ -59,46 +59,55 @@ class Build(
                           Neo4jVersion.V_NONE,
                       ),
                   )
-                  dependentBuildType(
-                      Maven(
-                          "${name}-unit-tests-${java.javaVersion.version}",
-                          "unit tests (${java.javaVersion.version})",
-                          "test",
-                          java.javaVersion,
-                          neo4jVersion,
-                      ),
-                  )
+
                   dependentBuildType(collectArtifacts(packaging))
 
                   parallel {
-                    java.platformITVersions.forEach { confluentPlatformVersion ->
-                      dependentBuildType(
-                          IntegrationTests(
-                              "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
-                              "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
-                              java.javaVersion,
-                              confluentPlatformVersion,
-                              neo4jVersion,
-                          ) {
-                            dependencies {
-                              artifacts(packaging) {
-                                artifactRules =
-                                    """
+                    neo4jVersions.forEach { neo4jVersion ->
+                      sequential {
+                        dependentBuildType(
+                            Maven(
+                                "${name}-unit-tests-${java.javaVersion.version}-${neo4jVersion.version}",
+                                "unit tests (${java.javaVersion.version}, ${neo4jVersion.version})",
+                                "test",
+                                java.javaVersion,
+                                neo4jVersion,
+                            ),
+                        )
+
+                        parallel {
+                          java.platformITVersions.forEach { confluentPlatformVersion ->
+                            dependentBuildType(
+                                IntegrationTests(
+                                    "${name}-integration-tests-${java.javaVersion.version}-${confluentPlatformVersion}-${neo4jVersion.version}",
+                                    "integration tests (${java.javaVersion.version}, ${confluentPlatformVersion}, ${neo4jVersion.version})",
+                                    java.javaVersion,
+                                    confluentPlatformVersion,
+                                    neo4jVersion,
+                                ) {
+                                  dependencies {
+                                    artifacts(packaging) {
+                                      artifactRules =
+                                          """
                                     +:packages/*.jar => docker/plugins
                                     -:packages/*-kc-oss.jar
                                     """
-                                        .trimIndent()
-                              }
-                            }
-                          },
-                      )
+                                              .trimIndent()
+                                    }
+                                  }
+                                },
+                            )
+                          }
+                        }
+                      }
                     }
                   }
                 }
               }
             }
 
-            dependentBuildType(complete)
+            dependentBuildType(
+                complete, reuse = if (forCompatibility) ReuseBuilds.NO else ReuseBuilds.SUCCESSFUL)
             if (!forPullRequests && !forCompatibility)
                 dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
           }
@@ -114,6 +123,26 @@ class Build(
             }
 
             buildType(it)
+          }
+
+          if (!forPullRequests) {
+            complete.features {
+              notifications {
+                buildFailedToStart = true
+                buildFailed = true
+                firstFailureAfterSuccess = true
+                firstSuccessAfterFailure = true
+                buildProbablyHanging = true
+
+                branchFilter = "+:main"
+
+                notifierSettings = slackNotifier {
+                  connection = SLACK_CONNECTION_ID
+                  sendTo = SLACK_CHANNEL
+                  messageFormat = simpleMessageFormat()
+                }
+              }
+            }
           }
 
           complete.apply(customizeCompletion)

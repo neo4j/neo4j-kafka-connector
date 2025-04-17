@@ -6,6 +6,7 @@ import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.CompoundStage
 import jetbrains.buildServer.configs.kotlin.FailureAction
 import jetbrains.buildServer.configs.kotlin.Requirements
+import jetbrains.buildServer.configs.kotlin.ReuseBuilds
 import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
 import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerRegistryConnections
@@ -27,7 +28,7 @@ const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
 // Look into Root Project's settings -> Connections
 const val SLACK_CONNECTION_ID = "PROJECT_EXT_83"
-const val SLACK_CHANNEL = "#C05R4RURYLA" // #team-connectors-feed
+const val SLACK_CHANNEL = "#team-connectors-feed"
 
 // Look into Root Project's settings -> Connections
 const val ECR_CONNECTION_ID = "PROJECT_EXT_124"
@@ -108,10 +109,11 @@ fun BuildFeatures.loginToECR() = dockerRegistryConnections {
   loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID }
 }
 
-fun CompoundStage.dependentBuildType(bt: BuildType) =
+fun CompoundStage.dependentBuildType(bt: BuildType, reuse: ReuseBuilds = ReuseBuilds.SUCCESSFUL) =
     buildType(bt) {
       onDependencyCancel = FailureAction.CANCEL
       onDependencyFailure = FailureAction.FAIL_TO_START
+      reuseBuilds = reuse
     }
 
 fun collectArtifacts(buildType: BuildType): BuildType {

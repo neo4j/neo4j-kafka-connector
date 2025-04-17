@@ -1,10 +1,7 @@
 import builds.Build
 import builds.Neo4jKafkaConnectorVcs
 import builds.Neo4jVersion
-import builds.SLACK_CHANNEL
-import builds.SLACK_CONNECTION_ID
 import jetbrains.buildServer.configs.kotlin.Project
-import jetbrains.buildServer.configs.kotlin.buildFeatures.notifications
 import jetbrains.buildServer.configs.kotlin.project
 import jetbrains.buildServer.configs.kotlin.triggers.schedule
 import jetbrains.buildServer.configs.kotlin.triggers.vcs
@@ -21,24 +18,30 @@ project {
   vcsRoot(Neo4jKafkaConnectorVcs)
 
   subProject(
-      Build(name = "main", forPullRequests = false) {
-        triggers {
-          vcs {
-            this.branchFilter = "+:main"
-            this.triggerRules =
-                """
+      Build(
+          name = "main",
+          neo4jVersions = setOf(Neo4jVersion.V_4_4, Neo4jVersion.V_5, Neo4jVersion.V_2025),
+          forPullRequests = false) {
+            triggers {
+              vcs {
+                this.branchFilter = "+:main"
+                this.triggerRules =
+                    """
               -:comment=^build.*release version.*:**
               -:comment=^build.*update version.*:**
               """
-                    .trimIndent()
-          }
-        }
-      })
+                        .trimIndent()
+              }
+            }
+          })
 
   subProject(
-      Build(name = "pull-request", forPullRequests = true) {
-        triggers { vcs { this.branchFilter = "+:pull/*" } }
-      })
+      Build(
+          name = "pull-request",
+          neo4jVersions = setOf(Neo4jVersion.V_4_4, Neo4jVersion.V_5, Neo4jVersion.V_2025),
+          forPullRequests = true) {
+            triggers { vcs { this.branchFilter = "+:pull/*" } }
+          })
 
   subProject(
       Project {
@@ -51,7 +54,7 @@ project {
                   name = "${neo4j.version}",
                   forPullRequests = false,
                   forCompatibility = true,
-                  neo4jVersion = neo4j) {
+                  neo4jVersions = setOf(neo4j)) {
                     triggers {
                       vcs { enabled = false }
 
@@ -62,24 +65,6 @@ project {
                           minute = 0
                         }
                         triggerBuild = always()
-                      }
-                    }
-
-                    features {
-                      notifications {
-                        buildFailedToStart = true
-                        buildFailed = true
-                        firstFailureAfterSuccess = true
-                        firstSuccessAfterFailure = true
-                        buildProbablyHanging = true
-
-                        branchFilter = "+:main"
-
-                        notifierSettings = slackNotifier {
-                          connection = SLACK_CONNECTION_ID
-                          sendTo = SLACK_CHANNEL
-                          messageFormat = simpleMessageFormat()
-                        }
                       }
                     }
                   })
