@@ -2,6 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
 import jetbrains.buildServer.configs.kotlin.Project
+import jetbrains.buildServer.configs.kotlin.ReuseBuilds
 import jetbrains.buildServer.configs.kotlin.buildFeatures.notifications
 import jetbrains.buildServer.configs.kotlin.sequential
 import jetbrains.buildServer.configs.kotlin.toId
@@ -104,7 +105,8 @@ class Build(
               }
             }
 
-            dependentBuildType(complete)
+            dependentBuildType(
+                complete, reuse = if (forCompatibility) ReuseBuilds.NO else ReuseBuilds.SUCCESSFUL)
             if (!forPullRequests && !forCompatibility)
                 dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
           }

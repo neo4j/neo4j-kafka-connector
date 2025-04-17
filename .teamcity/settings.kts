@@ -59,13 +59,12 @@ project {
                       vcs { enabled = false }
 
                       schedule {
-                        branchFilter = "+:main"
+                        branchFilter = "+:update-ci"
                         schedulingPolicy = daily {
                           hour = 8
                           minute = 0
                         }
                         triggerBuild = always()
-                        dependencies { triggerBuild = always() }
                       }
                     }
                   })
