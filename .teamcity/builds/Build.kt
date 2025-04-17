@@ -18,8 +18,6 @@ enum class JavaPlatform(
   JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0"))
 }
 
-val DEFAULT_NEO4J_VERSION = Neo4jVersion.V_2025
-
 class Build(
     name: String,
     forPullRequests: Boolean,
