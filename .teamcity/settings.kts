@@ -24,7 +24,7 @@ project {
           forPullRequests = false) {
             triggers {
               vcs {
-                this.branchFilter = "+:update-ci"
+                this.branchFilter = "+:main"
                 this.triggerRules =
                     """
               -:comment=^build.*release version.*:**
@@ -59,7 +59,7 @@ project {
                       vcs { enabled = false }
 
                       schedule {
-                        branchFilter = "+:update-ci"
+                        branchFilter = "+:main"
                         schedulingPolicy = daily {
                           hour = 8
                           minute = 0

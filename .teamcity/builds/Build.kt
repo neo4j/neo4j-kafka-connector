@@ -134,7 +134,7 @@ class Build(
                 firstSuccessAfterFailure = true
                 buildProbablyHanging = true
 
-                branchFilter = "+:update-ci"
+                branchFilter = "+:main"
 
                 notifierSettings = slackNotifier {
                   connection = SLACK_CONNECTION_ID

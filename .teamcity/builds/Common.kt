@@ -65,8 +65,8 @@ object Neo4jKafkaConnectorVcs :
           id("Connectors_Neo4jKafkaConnector_Build")
 
           name = "neo4j-kafka-connector"
-          url = "git@github.com:ali-ince/neo4j-kafka-connector.git"
-          branch = "refs/heads/update-ci"
+          url = "git@github.com:neo4j/neo4j-kafka-connector.git"
+          branch = "refs/heads/main"
           branchSpec = "refs/heads/*"
 
           authMethod = defaultPrivateKey { userName = "git" }
