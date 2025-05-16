@@ -128,12 +128,18 @@ class Build(
           if (!forPullRequests) {
             complete.features {
               notifications {
-                buildFailedToStart = true
-                buildFailed = true
-                buildFinishedSuccessfully = true
-                buildProbablyHanging = true
+                branchFilter =
+                    """
+                  +:$DEFAULT_BRANCH
+                  ${if (forPullRequests) "+:pull/*" else ""}
+                  """
+                        .trimIndent()
 
-                branchFilter = "+:main"
+                queuedBuildRequiresApproval = forPullRequests
+                buildFailedToStart = !forPullRequests
+                buildFailed = !forPullRequests
+                buildFinishedSuccessfully = !forPullRequests
+                buildProbablyHanging = !forPullRequests
 
                 notifierSettings = slackNotifier {
                   connection = SLACK_CONNECTION_ID
