@@ -1,4 +1,5 @@
 import builds.Build
+import builds.DEFAULT_BRANCH
 import builds.Neo4jKafkaConnectorVcs
 import builds.Neo4jVersion
 import jetbrains.buildServer.configs.kotlin.Project
@@ -24,7 +25,7 @@ project {
           forPullRequests = false) {
             triggers {
               vcs {
-                this.branchFilter = "+:main"
+                this.branchFilter = "+:$DEFAULT_BRANCH"
                 this.triggerRules =
                     """
               -:comment=^build.*release version.*:**
@@ -59,12 +60,15 @@ project {
                       vcs { enabled = false }
 
                       schedule {
-                        branchFilter = "+:main"
+                        branchFilter = "+:$DEFAULT_BRANCH"
                         schedulingPolicy = daily {
                           hour = 8
                           minute = 0
                         }
                         triggerBuild = always()
+                        withPendingChangesOnly = false
+                        enforceCleanCheckout = true
+                        enforceCleanCheckoutForDependencies = true
                       }
                     }
                   })

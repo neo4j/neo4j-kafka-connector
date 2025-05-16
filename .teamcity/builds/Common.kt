@@ -22,6 +22,7 @@ const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
 const val MAVEN_DEFAULT_ARGS =
     "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository"
+const val DEFAULT_BRANCH = "main"
 
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
@@ -52,11 +53,11 @@ enum class Neo4jVersion(val version: String, val dockerImage: String) {
   V_5("5", "neo4j:5-enterprise"),
   V_5_DEV(
       "5-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:5-enterprise-debian-nightly"),
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:5-enterprise-debian-nightly-bundle"),
   V_2025("2025", "neo4j:2025-enterprise"),
   V_2025_DEV(
       "2025-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025-enterprise-debian-nightly"),
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2025-enterprise-debian-nightly-bundle"),
 }
 
 object Neo4jKafkaConnectorVcs :
@@ -66,7 +67,7 @@ object Neo4jKafkaConnectorVcs :
 
           name = "neo4j-kafka-connector"
           url = "git@github.com:neo4j/neo4j-kafka-connector.git"
-          branch = "refs/heads/main"
+          branch = "refs/heads/$DEFAULT_BRANCH"
           branchSpec = "refs/heads/*"
 
           authMethod = defaultPrivateKey { userName = "git" }
