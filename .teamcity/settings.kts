@@ -65,6 +65,9 @@ project {
                           minute = 0
                         }
                         triggerBuild = always()
+                        withPendingChangesOnly = false
+                        enforceCleanCheckout = true
+                        enforceCleanCheckoutForDependencies = true
                       }
                     }
                   })

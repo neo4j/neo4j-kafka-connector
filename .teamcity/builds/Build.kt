@@ -130,8 +130,7 @@ class Build(
               notifications {
                 buildFailedToStart = true
                 buildFailed = true
-                firstFailureAfterSuccess = true
-                firstSuccessAfterFailure = true
+                buildFinishedSuccessfully = true
                 buildProbablyHanging = true
 
                 branchFilter = "+:main"
