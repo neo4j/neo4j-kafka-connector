@@ -27,6 +27,7 @@ import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_RAW
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -238,6 +239,11 @@ class Neo4jSourceJsonEmbeddedExtendedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceJsonEmbeddedCompactIT : Neo4jSourceQueryIT()
+
+// it doesn't make sense to add EXTENDED mode for JSON_RAW since it's not a schema supporting
+// converter
+@KeyValueConverter(key = JSON_RAW, value = JSON_RAW, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
 class Neo4jSourceProtobufExtendedIT : Neo4jSourceQueryIT()
