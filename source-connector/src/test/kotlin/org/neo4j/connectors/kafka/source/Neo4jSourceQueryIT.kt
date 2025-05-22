@@ -199,6 +199,26 @@ abstract class Neo4jSourceQueryIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      topic = TOPIC,
+      strategy = SourceStrategy.QUERY,
+      streamingProperty = "timestamp",
+      startFrom = "USER_PROVIDED",
+      startFromValue = "1704067200000", // 2024-01-01T00:00:00
+      query =
+          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp")
+  @Test
+  fun serializes_list_of_heterogeneous_objects_as_list(
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
+  ) = runTest {
+    TopicVerifier.createForMap(consumer)
+        .assertMessageValue { value ->
+          val list = (value["data"] as Map<*, *>)["list"]
+          list shouldBe listOf(mapOf("property1" to "value1"), mapOf("property2" to "value2"))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
