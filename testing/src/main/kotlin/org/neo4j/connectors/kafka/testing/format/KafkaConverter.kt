@@ -76,6 +76,7 @@ enum class KafkaConverter(
       converterProvider = { JsonConverter() },
       serializerClass = KafkaJsonSerializer::class.java,
       testShimSerializer = JsonRawSerializer,
+      supportsSchemaRegistry = false,
       additionalProperties = JSON_RAW_OPTIONS,
   ),
   PROTOBUF(
