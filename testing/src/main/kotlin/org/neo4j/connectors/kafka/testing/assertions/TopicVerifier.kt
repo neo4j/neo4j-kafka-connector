@@ -179,6 +179,7 @@ class TopicVerifier<K, V>(
       when (consumer.keyConverter) {
         KafkaConverter.JSON_EMBEDDED ->
             keyConverter.configure(mapOf("schemas.enable" to true), true)
+        KafkaConverter.JSON_RAW -> keyConverter.configure(mapOf("schemas.enable" to false), true)
         else ->
             keyConverter.configure(
                 mapOf(
@@ -193,6 +194,7 @@ class TopicVerifier<K, V>(
       when (consumer.valueConverter) {
         KafkaConverter.JSON_EMBEDDED ->
             valueConverter.configure(mapOf("schemas.enable" to true), false)
+        KafkaConverter.JSON_RAW -> valueConverter.configure(mapOf("schemas.enable" to false), false)
         else ->
             valueConverter.configure(
                 mapOf(
