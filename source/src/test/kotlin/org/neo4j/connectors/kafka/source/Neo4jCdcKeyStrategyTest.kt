@@ -28,6 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -73,7 +74,10 @@ class Neo4jCdcKeyStrategyTest {
 }
 
 class KeySchemaSerializationArgument : ArgumentsProvider {
-  override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
+  override fun provideArguments(
+      parameters: ParameterDeclarations?,
+      context: ExtensionContext?
+  ): Stream<out Arguments?>? {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
         Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.schema()),
@@ -88,7 +92,10 @@ class KeySchemaSerializationArgument : ArgumentsProvider {
 }
 
 class KeyValueSerializationArgument : ArgumentsProvider {
-  override fun provideArguments(ignored: ExtensionContext?): Stream<out Arguments> {
+  override fun provideArguments(
+      parameters: ParameterDeclarations?,
+      context: ExtensionContext?
+  ): Stream<out Arguments?>? {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
         Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.value()),

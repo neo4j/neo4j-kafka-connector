@@ -48,6 +48,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
@@ -267,7 +268,10 @@ abstract class Neo4jCypherIT {
   }
 
   object SimpleTypes : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Schema.INT8_SCHEMA, Byte.MAX_VALUE, Byte.MAX_VALUE),
           Arguments.of(Schema.INT16_SCHEMA, Short.MAX_VALUE, Short.MAX_VALUE),
@@ -319,7 +323,10 @@ abstract class Neo4jCypherIT {
   }
 
   object ConnectTypes : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Date.SCHEMA, DateSupport.date(2000, 1, 1), LocalDate.of(2000, 1, 1)),
           Arguments.of(
@@ -358,7 +365,10 @@ abstract class Neo4jCypherIT {
   }
 
   object OptionalSchemas : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_INT8_SCHEMA),
@@ -398,7 +408,10 @@ abstract class Neo4jCypherIT {
   }
 
   object KnownTypes : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(PropertyType.schema, true),
           Arguments.of(PropertyType.schema, false),
@@ -470,7 +483,10 @@ abstract class Neo4jCypherIT {
   }
 
   object ArrayElementTypes : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(
               Schema.INT8_SCHEMA, listOf(1.toByte(), 2.toByte(), 3.toByte()), listOf(1L, 2L, 3L)),
