@@ -31,8 +31,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.params.ParameterizedInvocationConstants.DISPLAY_NAME_PLACEHOLDER
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.ParameterizedTest.DISPLAY_NAME_PLACEHOLDER
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito.any
 import org.mockito.kotlin.doReturn
