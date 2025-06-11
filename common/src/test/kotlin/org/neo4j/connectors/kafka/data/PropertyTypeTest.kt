@@ -37,6 +37,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
 import org.neo4j.connectors.kafka.data.PropertyType.BYTES
 import org.neo4j.connectors.kafka.data.PropertyType.DURATION
@@ -79,7 +80,10 @@ class PropertyTypeTest {
   }
 
   object PropertyTypedValues : ArgumentsProvider {
-    override fun provideArguments(p0: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of("null", null, null, null),
           Arguments.of("boolean", true, getPropertyStruct(BOOLEAN, true), true),

@@ -30,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -2300,7 +2301,10 @@ class ChangeEventExtensionsTest {
   }
 
   object PayloadModeValues : ArgumentsProvider {
-    override fun provideArguments(context: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of("extended", PayloadMode.EXTENDED),
           Arguments.of("compact", PayloadMode.COMPACT))

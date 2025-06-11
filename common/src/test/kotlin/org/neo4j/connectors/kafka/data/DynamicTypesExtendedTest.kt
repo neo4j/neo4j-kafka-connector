@@ -41,6 +41,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_DATE
 import org.neo4j.driver.Values
@@ -70,7 +71,10 @@ class DynamicTypesExtendedTest {
   }
 
   object PropertyTypedValueProvider : ArgumentsProvider {
-    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of("null", null, null),
           Arguments.of("byte", 8.toByte(), 8L),
@@ -306,7 +310,10 @@ class DynamicTypesExtendedTest {
   }
 
   object PropertyTypedCollectionProvider : ArgumentsProvider {
-    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(
               "list of mixed simple types",
@@ -349,7 +356,10 @@ class DynamicTypesExtendedTest {
   }
 
   object PropertyTypedMapProvider : ArgumentsProvider {
-    override fun provideArguments(ctx: ExtensionContext?): Stream<out Arguments> {
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?
+    ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of("string to int", mapOf("a" to 1, "b" to 2, "c" to 3)),
           Arguments.of("string to string", mapOf("a" to "a", "b" to "b", "c" to "c")),
