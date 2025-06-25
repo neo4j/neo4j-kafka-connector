@@ -49,7 +49,8 @@ internal class Neo4jSourceRegistration(
     cdcMetadata: Map<String, List<Map<String, String>>>,
     cdcKeySerializations: Map<String, String>,
     cdcValueSerializations: Map<String, String>,
-    payloadMode: PayloadMode
+    payloadMode: PayloadMode,
+    forceMapsAsStruct: Boolean
 ) {
 
   val name: String = randomizedName("Neo4jSourceConnector")
@@ -92,6 +93,7 @@ internal class Neo4jSourceRegistration(
       if (strategy == QUERY) {
         put("neo4j.query.topic", topic)
         put("neo4j.query", query)
+        put("neo4j.query.force-maps-as-struct", forceMapsAsStruct)
         put("neo4j.query.streaming-property", streamingProperty)
         put("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms")
         put("neo4j.query.poll-duration", "${pollDuration.toMillis()}ms")

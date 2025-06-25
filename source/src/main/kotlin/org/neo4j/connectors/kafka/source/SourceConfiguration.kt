@@ -58,6 +58,9 @@ enum class StartFrom {
 class SourceConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SOURCE) {
 
+  val forceMapsAsStruct: Boolean
+    get(): Boolean = getBoolean(QUERY_FORCE_MAPS_AS_STRUCT)
+
   val startFrom
     get(): StartFrom = StartFrom.valueOf(getString(START_FROM))
 
@@ -456,6 +459,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_POLL_DURATION = "neo4j.query.poll-duration"
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
     const val QUERY_TOPIC = "neo4j.query.topic"
+    const val QUERY_FORCE_MAPS_AS_STRUCT = "neo4j.query.force-maps-as-struct"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
     const val PAYLOAD_MODE = "neo4j.payload-mode"
@@ -489,6 +493,8 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_QUERY_TIMEOUT = 0.seconds
+    private const val DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT = true
+
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
     private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
@@ -642,6 +648,14 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                })
+            .define(
+                ConfigKeyBuilder.of(QUERY_FORCE_MAPS_AS_STRUCT, ConfigDef.Type.BOOLEAN) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                 })
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
