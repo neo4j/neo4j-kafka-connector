@@ -184,6 +184,7 @@ internal class Neo4jSourceExtension(
             startFrom = sourceAnnotation.startFrom,
             startFromValue = sourceAnnotation.startFromValue,
             query = sourceAnnotation.query,
+            forceMapsAsStruct = sourceAnnotation.forceMapsAsStruct,
             strategy = sourceAnnotation.strategy,
             keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
             valueConverter = keyValueConverterResolver.resolveValueConverter(context),

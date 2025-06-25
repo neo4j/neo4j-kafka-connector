@@ -159,7 +159,8 @@ class TopicVerifier<K, V>(
       topic: String,
       value: ByteArray?,
   ): Any? {
-    return when (val sourceValue = converter.toConnectData(topic, value).value()) {
+    val connectData = converter.toConnectData(topic, value)
+    return when (val sourceValue = connectData.value()) {
       is Struct ->
           when (assertionClass) {
             ChangeEvent::class.java -> sourceValue.toChangeEvent()
@@ -167,6 +168,14 @@ class TopicVerifier<K, V>(
                 DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue, true)
             else -> sourceValue as V
           }
+      is Map<*, *> -> {
+        val schema = connectData.schema()
+        if (schema == null) {
+          sourceValue
+        } else {
+          DynamicTypes.fromConnectValue(schema, sourceValue, true)
+        }
+      }
       else -> sourceValue
     }
   }
