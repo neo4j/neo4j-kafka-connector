@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.sink
 
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
@@ -129,7 +130,7 @@ abstract class Neo4jCdcSchemaIT {
 
       result.get("n").asNode() should
           {
-            it.labels() shouldBe listOf("Person", "Employee")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("Person", "Employee")
             it.asMap() shouldBe
                 mapOf(
                     "id" to 5L,

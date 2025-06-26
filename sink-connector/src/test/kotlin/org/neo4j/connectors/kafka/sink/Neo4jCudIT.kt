@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import java.math.BigDecimal
@@ -36,7 +37,6 @@ import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
-import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -88,7 +88,7 @@ abstract class Neo4jCudIT {
         .get("n")
         .asNode() should
         {
-          it.labels() shouldBe listOf("Foo", "Bar")
+          it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
           it.asMap() shouldBe mapOf("id" to 1L, "foo" to "foo-value")
         }
   }
@@ -118,7 +118,7 @@ abstract class Neo4jCudIT {
         .get("n")
         .asNode() should
         {
-          it.labels() shouldBe listOf("Foo", "Bar")
+          it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
           it.asMap() shouldBe mapOf("id" to 1L, "foo" to "foo-value")
         }
   }
@@ -174,7 +174,7 @@ abstract class Neo4jCudIT {
         .get("n")
         .asNode() should
         {
-          it.labels() shouldBe listOf("Foo", "Bar")
+          it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
           it.asMap() shouldBe
               mapOf(
                   "id" to 1L,
@@ -241,7 +241,7 @@ abstract class Neo4jCudIT {
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
           {
-            it.labels() shouldBe listOf("Foo", "Bar")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
             it.asMap() shouldBe
                 mapOf(
                     "id" to 1L,
@@ -311,7 +311,7 @@ abstract class Neo4jCudIT {
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
           {
-            it.labels() shouldBe listOf("Foo", "Bar")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
             it.asMap() shouldBe
                 mapOf(
                     "id" to 1L,
@@ -611,7 +611,7 @@ abstract class Neo4jCudIT {
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
           {
-            it.labels() shouldBe listOf("Foo", "Bar")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
             it.asMap() shouldBe mapOf("id" to 1L, "foo" to "foo-value-new")
           }
     }
@@ -699,7 +699,7 @@ abstract class Neo4jCudIT {
         .get("n")
         .asNode() should
         {
-          it.labels() shouldBe listOf("Foo", "Bar")
+          it.labels().toList() shouldContainExactlyInAnyOrder listOf("Foo", "Bar")
           it.asMap() shouldBe
               mapOf(
                   "id" to 1L,
