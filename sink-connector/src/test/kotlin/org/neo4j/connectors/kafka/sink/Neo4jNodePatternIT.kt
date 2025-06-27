@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import java.math.BigDecimal
@@ -234,7 +235,7 @@ abstract class Neo4jNodePatternIT {
         .get("n")
         .asNode() should
         {
-          it.labels() shouldBe listOf("User", "Person")
+          it.labels().toList() shouldContainExactlyInAnyOrder listOf("User", "Person")
           it.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "surname" to "doe")
         }
   }

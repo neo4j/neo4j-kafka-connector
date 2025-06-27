@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.sink
 
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
@@ -124,7 +125,8 @@ abstract class Neo4jCdcSourceIdIT {
 
       result.get("n").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person", "Employee")
+            it.labels().toList() shouldContainExactlyInAnyOrder
+                listOf("SourceEvent", "Person", "Employee")
             it.asMap() shouldBe
                 mapOf(
                     "sourceId" to "person1",
@@ -217,12 +219,12 @@ abstract class Neo4jCdcSourceIdIT {
           }
       result.get("start").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe")
           }
       result.get("end").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")
           }
     }
@@ -279,12 +281,12 @@ abstract class Neo4jCdcSourceIdIT {
           }
       result.get("start").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe")
           }
       result.get("end").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")
           }
     }
@@ -402,13 +404,13 @@ abstract class Neo4jCdcSourceIdIT {
       result.get("r").asRelationship() should { it.asMap() shouldBe mapOf("sourceId" to "knows1") }
       result.get("start").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe
                 mapOf("sourceId" to "person1", "id" to 1L, "name" to "john", "surname" to "doe")
           }
       result.get("end").asNode() should
           {
-            it.labels() shouldBe listOf("SourceEvent", "Person")
+            it.labels().toList() shouldContainExactlyInAnyOrder listOf("SourceEvent", "Person")
             it.asMap() shouldBe
                 mapOf("sourceId" to "person2", "id" to 2L, "name" to "mary", "surname" to "doe")
           }
