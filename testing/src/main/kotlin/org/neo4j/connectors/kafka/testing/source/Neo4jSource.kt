@@ -40,6 +40,7 @@ annotation class Neo4jSource(
     val topic: String = "",
     val streamingProperty: String = "",
     val query: String = "",
+    val forceMapsAsStruct: Boolean = true,
 
     // CDC strategy
     val cdc: CdcSource = CdcSource()

@@ -159,7 +159,8 @@ class TopicVerifier<K, V>(
       topic: String,
       value: ByteArray?,
   ): Any? {
-    return when (val sourceValue = converter.toConnectData(topic, value).value()) {
+    val connectData = converter.toConnectData(topic, value)
+    return when (val sourceValue = connectData.value()) {
       is Struct ->
           when (assertionClass) {
             ChangeEvent::class.java -> sourceValue.toChangeEvent()
@@ -167,6 +168,14 @@ class TopicVerifier<K, V>(
                 DynamicTypes.fromConnectValue(sourceValue.schema(), sourceValue, true)
             else -> sourceValue as V
           }
+      is Map<*, *> -> {
+        val schema = connectData.schema()
+        if (schema == null) {
+          sourceValue
+        } else {
+          DynamicTypes.fromConnectValue(schema, sourceValue, true)
+        }
+      }
       else -> sourceValue
     }
   }
@@ -179,6 +188,7 @@ class TopicVerifier<K, V>(
       when (consumer.keyConverter) {
         KafkaConverter.JSON_EMBEDDED ->
             keyConverter.configure(mapOf("schemas.enable" to true), true)
+        KafkaConverter.JSON_RAW -> keyConverter.configure(mapOf("schemas.enable" to false), true)
         else ->
             keyConverter.configure(
                 mapOf(
@@ -193,6 +203,7 @@ class TopicVerifier<K, V>(
       when (consumer.valueConverter) {
         KafkaConverter.JSON_EMBEDDED ->
             valueConverter.configure(mapOf("schemas.enable" to true), false)
+        KafkaConverter.JSON_RAW -> valueConverter.configure(mapOf("schemas.enable" to false), false)
         else ->
             valueConverter.configure(
                 mapOf(
