@@ -27,6 +27,7 @@ import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.assertions.TopicVerifier
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.AVRO
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_EMBEDDED
+import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_RAW
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.JSON_SCHEMA
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter.PROTOBUF
 import org.neo4j.connectors.kafka.testing.format.KeyValueConverter
@@ -39,7 +40,7 @@ import org.neo4j.driver.Session
 abstract class Neo4jSourceQueryIT {
 
   companion object {
-    private const val TOPIC = "neo4j-source-topic"
+    const val TOPIC = "neo4j-source-topic"
   }
 
   @Neo4jSource(
@@ -218,6 +219,54 @@ class Neo4jSourceJsonEmbeddedExtendedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceJsonEmbeddedCompactIT : Neo4jSourceQueryIT()
+
+// it doesn't make sense to add EXTENDED mode for JSON_RAW since it's not a schema supporting
+// converter
+@KeyValueConverter(key = JSON_RAW, value = JSON_RAW, payloadMode = PayloadMode.COMPACT)
+class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT() {
+
+  @Neo4jSource(
+      topic = TOPIC,
+      strategy = SourceStrategy.QUERY,
+      streamingProperty = "timestamp",
+      startFrom = "USER_PROVIDED",
+      startFromValue = "1704067200000", // 2024-01-01T00:00:00
+      query =
+          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp")
+  @Test
+  fun `serializes list of heterogeneous objects as map by default`(
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
+  ) = runTest {
+    TopicVerifier.createForMap(consumer)
+        .assertMessageValue { value ->
+          val list = (value["data"] as Map<*, *>)["list"]
+          list shouldBe
+              mapOf("e0" to mapOf("property1" to "value1"), "e1" to mapOf("property2" to "value2"))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+
+  @Neo4jSource(
+      topic = TOPIC,
+      strategy = SourceStrategy.QUERY,
+      streamingProperty = "timestamp",
+      startFrom = "USER_PROVIDED",
+      startFromValue = "1704067200000", // 2024-01-01T00:00:00
+      forceMapsAsStruct = false,
+      query =
+          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp")
+  @Test
+  fun `serializes list of heterogeneous objects as list when not forcing structs for map values with homogeneous value types`(
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
+  ) = runTest {
+    TopicVerifier.createForMap(consumer)
+        .assertMessageValue { value ->
+          val list = (value["data"] as Map<*, *>)["list"]
+          list shouldBe listOf(mapOf("property1" to "value1"), mapOf("property2" to "value2"))
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
+}
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.EXTENDED)
 class Neo4jSourceProtobufExtendedIT : Neo4jSourceQueryIT()
