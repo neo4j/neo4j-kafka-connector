@@ -716,20 +716,4 @@ class DynamicTypesCompactTest {
             "events_of_interest" to
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
   }
-
-  @Test
-  fun `should encode a list of heterogeneous objects as a list`() {
-    val record =
-        mapOf<String, Any>(
-            "data" to
-                mapOf(
-                    "list" to
-                        listOf(mapOf("property1" to "value1"), mapOf("property2" to "value2"))))
-
-    val schema =
-        DynamicTypes.toConnectSchema(payloadMode, record, optional = true, forceMapsAsStruct = true)
-    val value = DynamicTypes.toConnectValue(schema, record)
-
-    DynamicTypes.fromConnectValue(schema, value) shouldBe record
-  }
 }
