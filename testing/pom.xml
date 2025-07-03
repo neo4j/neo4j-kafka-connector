@@ -28,6 +28,16 @@
                     <groupId>com.101tec</groupId>
                     <artifactId>zkclient</artifactId>
                 </exclusion>
+                <exclusion>
+                    <!-- breaks dependency convergence too -->
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <!-- breaks dependency convergence too -->
+                    <groupId>com.google.re2j</groupId>
+                    <artifactId>re2j</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
