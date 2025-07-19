@@ -48,7 +48,8 @@ class ValidatorsTest {
           Validators.and(
                   ConfigDef.Validator { name, value ->
                     throw ConfigException(name, value, "Invalid data")
-                  })
+                  }
+              )
               .ensureValid("my.property", "abc")
         }
         .also {
@@ -60,7 +61,8 @@ class ValidatorsTest {
                   ConfigDef.Validator { _, _ -> run {} },
                   ConfigDef.Validator { name, value ->
                     throw ConfigException(name, value, "Invalid data")
-                  })
+                  },
+              )
               .ensureValid("my.property", "abc")
         }
         .also {
@@ -77,7 +79,8 @@ class ValidatorsTest {
               ConfigDef.Validator { _, _ -> run {} },
               ConfigDef.Validator { name, value ->
                 throw ConfigException(name, value, "Invalid data")
-              })
+              },
+          )
           .ensureValid("my.property", "value")
       Validators.or(ConfigDef.Validator { _, _ -> run {} }, ConfigDef.Validator { _, _ -> run {} })
           .ensureValid("my.property", "value")
@@ -90,12 +93,15 @@ class ValidatorsTest {
                   },
                   ConfigDef.Validator { name, value ->
                     throw ConfigException(name, value, "Invalid data 2")
-                  })
+                  },
+              )
               .ensureValid("my.property", "abc")
         }
         .also {
           assertEquals(
-              "Invalid value abc for configuration my.property: Invalid data 2", it.message)
+              "Invalid value abc for configuration my.property: Invalid data 2",
+              it.message,
+          )
         }
   }
 
@@ -109,7 +115,9 @@ class ValidatorsTest {
     assertFailsWith(ConfigException::class) { Validators.blank().ensureValid("my.property", "abc") }
         .also {
           assertEquals(
-              "Invalid value abc for configuration my.property: Must be blank.", it.message)
+              "Invalid value abc for configuration my.property: Must be blank.",
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -117,7 +125,9 @@ class ValidatorsTest {
         }
         .also {
           assertEquals(
-              "Invalid value [abc] for configuration my.property: Must be empty.", it.message)
+              "Invalid value [abc] for configuration my.property: Must be empty.",
+              it.message,
+          )
         }
   }
 
@@ -130,7 +140,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value $v for configuration my.property: Must be a String or a List.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -141,7 +152,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value SAML for configuration my.property: Must be one of: 'NONE', 'BASIC'.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -164,7 +176,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value $v for configuration my.property: Must be a String or a List.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -177,7 +190,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value SAML for configuration my.property: Must be one of: 'NONE', 'BASIC', 'KERBEROS', 'BEARER', 'CUSTOM'.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -199,7 +213,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value $v for configuration my.property: Must be a String or a List.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -210,7 +225,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value abc for configuration my.property: Must match pattern '\\d+'.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -230,7 +246,8 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value $v for configuration my.property: Must be a String or a List.",
-                it.message)
+                it.message,
+            )
           }
     }
 
@@ -239,7 +256,9 @@ class ValidatorsTest {
         }
         .also {
           assertEquals(
-              "Invalid value  for configuration my.property: Must not be blank.", it.message)
+              "Invalid value  for configuration my.property: Must not be blank.",
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -247,7 +266,9 @@ class ValidatorsTest {
         }
         .also {
           assertEquals(
-              "Invalid value [] for configuration my.property: Must not be empty.", it.message)
+              "Invalid value [] for configuration my.property: Must not be empty.",
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -258,7 +279,8 @@ class ValidatorsTest {
     listOf(
             "ftp://localhost/a.tar",
             listOf("ftp://localhost/a.tar"),
-            listOf("http://localhost", "ftp://localhost/a.tar"))
+            listOf("http://localhost", "ftp://localhost/a.tar"),
+        )
         .forEach { v ->
           assertFailsWith(ConfigException::class) {
                 Validators.uri("http", "https").apply { this.ensureValid("my.property", v) }
@@ -266,7 +288,8 @@ class ValidatorsTest {
               .also {
                 assertEquals(
                     "Invalid value ftp://localhost/a.tar for configuration my.property: Scheme must be one of: 'http', 'https'.",
-                    it.message)
+                    it.message,
+                )
               }
         }
 
@@ -286,14 +309,17 @@ class ValidatorsTest {
           .also {
             assertEquals(
                 "Invalid value $v for configuration my.property: Must be a String or a List.",
-                it.message)
+                it.message,
+            )
           }
     }
 
     assertFailsWith(ConfigException::class) { Validators.file().ensureValid("my.property", "") }
         .also {
           assertEquals(
-              "Invalid value  for configuration my.property: Must not be blank.", it.message)
+              "Invalid value  for configuration my.property: Must not be blank.",
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -301,7 +327,9 @@ class ValidatorsTest {
         }
         .also {
           assertEquals(
-              "Invalid value [] for configuration my.property: Must not be empty.", it.message)
+              "Invalid value [] for configuration my.property: Must not be empty.",
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -310,7 +338,8 @@ class ValidatorsTest {
         .also {
           assertEquals(
               "Invalid value deneme.txt for configuration my.property: Must be an absolute path.",
-              it.message)
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -319,7 +348,8 @@ class ValidatorsTest {
         .also {
           assertEquals(
               "Invalid value deneme.txt for configuration my.property: Must be an absolute path.",
-              it.message)
+              it.message,
+          )
         }
 
     assertFailsWith(ConfigException::class) {
@@ -345,7 +375,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("BOOL_CONFIG", null as Boolean?, emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("BOOL_CONFIG")
 
@@ -357,7 +389,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("INT_CONFIG", null as Int?, emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("INT_CONFIG")
 
@@ -370,7 +404,9 @@ class ValidatorsTest {
               listOf(
                   ConfigValue("STRING_CONFIG", s, emptyList(), mutableListOf()).also {
                     it.visible(true)
-                  }))
+                  }
+              )
+          )
           .apply {
             validateNonEmptyIfVisible("STRING_CONFIG")
 
@@ -384,7 +420,9 @@ class ValidatorsTest {
               listOf(
                   ConfigValue("PASSWORD_CONFIG", s, emptyList(), mutableListOf()).also {
                     it.visible(true)
-                  }))
+                  }
+              )
+          )
           .apply {
             validateNonEmptyIfVisible("PASSWORD_CONFIG")
 
@@ -398,7 +436,9 @@ class ValidatorsTest {
               listOf(
                   ConfigValue("LIST_CONFIG", s, emptyList(), mutableListOf()).also {
                     it.visible(true)
-                  }))
+                  }
+              )
+          )
           .apply {
             validateNonEmptyIfVisible("LIST_CONFIG")
 
@@ -414,7 +454,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("BOOL_CONFIG", true, emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("BOOL_CONFIG")
 
@@ -425,7 +467,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("INT_CONFIG", 10_000, emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("INT_CONFIG")
 
@@ -436,7 +480,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("STRING_CONFIG", "value", emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("STRING_CONFIG")
 
@@ -446,7 +492,9 @@ class ValidatorsTest {
     Config(
             listOf(
                 ConfigValue("PASSWORD_CONFIG", Password("value"), emptyList(), mutableListOf())
-                    .also { it.visible(true) }))
+                    .also { it.visible(true) }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("PASSWORD_CONFIG")
 
@@ -457,7 +505,9 @@ class ValidatorsTest {
             listOf(
                 ConfigValue("LIST_CONFIG", listOf("value"), emptyList(), mutableListOf()).also {
                   it.visible(true)
-                }))
+                }
+            )
+        )
         .apply {
           validateNonEmptyIfVisible("LIST_CONFIG")
 

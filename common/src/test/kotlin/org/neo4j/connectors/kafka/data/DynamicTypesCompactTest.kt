@@ -83,7 +83,8 @@ class DynamicTypesCompactTest {
 
               override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
                   value.subSequence(startIndex, endIndex)
-            })
+            },
+        )
         .forEach { string ->
           withClue(string) {
             DynamicTypes.toConnectSchema(payloadMode, string, false) shouldBe
@@ -181,42 +182,59 @@ class DynamicTypesCompactTest {
         SimpleTypes.LOCALTIME.schema(true)
 
     DynamicTypes.toConnectSchema(
-        payloadMode, LocalDateTime.of(1999, 12, 31, 23, 59, 59), optional = false) shouldBe
-        SimpleTypes.LOCALDATETIME.schema()
+        payloadMode,
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
+        optional = false,
+    ) shouldBe SimpleTypes.LOCALDATETIME.schema()
     DynamicTypes.toConnectSchema(
-        payloadMode, LocalDateTime.of(1999, 12, 31, 23, 59, 59), optional = true) shouldBe
-        SimpleTypes.LOCALDATETIME.schema(true)
+        payloadMode,
+        LocalDateTime.of(1999, 12, 31, 23, 59, 59),
+        optional = true,
+    ) shouldBe SimpleTypes.LOCALDATETIME.schema(true)
 
     DynamicTypes.toConnectSchema(
-        payloadMode, OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), optional = false) shouldBe
-        SimpleTypes.OFFSETTIME.schema()
+        payloadMode,
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
+        optional = false,
+    ) shouldBe SimpleTypes.OFFSETTIME.schema()
     DynamicTypes.toConnectSchema(
-        payloadMode, OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC), optional = true) shouldBe
-        SimpleTypes.OFFSETTIME.schema(true)
+        payloadMode,
+        OffsetTime.of(23, 59, 59, 0, ZoneOffset.UTC),
+        optional = true,
+    ) shouldBe SimpleTypes.OFFSETTIME.schema(true)
 
     DynamicTypes.toConnectSchema(
         payloadMode,
         OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
-        optional = false) shouldBe SimpleTypes.ZONEDDATETIME.schema()
+        optional = false,
+    ) shouldBe SimpleTypes.ZONEDDATETIME.schema()
     DynamicTypes.toConnectSchema(
-        payloadMode, OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC), true) shouldBe
-        SimpleTypes.ZONEDDATETIME.schema(true)
+        payloadMode,
+        OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneOffset.UTC),
+        true,
+    ) shouldBe SimpleTypes.ZONEDDATETIME.schema(true)
 
     DynamicTypes.toConnectSchema(
         payloadMode,
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = false) shouldBe SimpleTypes.ZONEDDATETIME.schema()
+        optional = false,
+    ) shouldBe SimpleTypes.ZONEDDATETIME.schema()
     DynamicTypes.toConnectSchema(
         payloadMode,
         ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 0, ZoneId.of("Europe/London")),
-        optional = true) shouldBe SimpleTypes.ZONEDDATETIME.schema(true)
+        optional = true,
+    ) shouldBe SimpleTypes.ZONEDDATETIME.schema(true)
 
     DynamicTypes.toConnectSchema(
-        payloadMode, Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), false) shouldBe
-        SimpleTypes.DURATION.schema()
+        payloadMode,
+        Values.isoDuration(12, 12, 59, 1230).asIsoDuration(),
+        false,
+    ) shouldBe SimpleTypes.DURATION.schema()
     DynamicTypes.toConnectSchema(
-        payloadMode, Values.isoDuration(12, 12, 59, 1230).asIsoDuration(), true) shouldBe
-        SimpleTypes.DURATION.schema(true)
+        payloadMode,
+        Values.isoDuration(12, 12, 59, 1230).asIsoDuration(),
+        true,
+    ) shouldBe SimpleTypes.DURATION.schema(true)
 
     // Point
     listOf(Values.point(4326, 1.0, 2.0).asPoint(), Values.point(4326, 1.0, 2.0, 3.0).asPoint())
@@ -241,8 +259,10 @@ class DynamicTypesCompactTest {
         TestNode(
             0,
             listOf("Person"),
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
-        false) shouldBe
+            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
+        ),
+        false,
+    ) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
@@ -252,7 +272,10 @@ class DynamicTypesCompactTest {
 
     // Relationship
     DynamicTypes.toConnectSchema(
-        payloadMode, TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
+        payloadMode,
+        TestRelationship(0, 1, 2, "KNOWS", emptyMap()),
+        false,
+    ) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
@@ -266,8 +289,10 @@ class DynamicTypesCompactTest {
             1,
             2,
             "KNOWS",
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe"))),
-        false) shouldBe
+            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
+        ),
+        false,
+    ) shouldBe
         SchemaBuilder.struct()
             .field("<id>", Schema.INT64_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
@@ -347,7 +372,8 @@ class DynamicTypesCompactTest {
     listOf(
             mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.INT64_SCHEMA,
             mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.INT64_SCHEMA)
+            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.INT64_SCHEMA,
+        )
         .forEach { (map, valueSchema) ->
           withClue("not optional: $map") {
             DynamicTypes.toConnectSchema(payloadMode, map, false) shouldBe
@@ -358,7 +384,8 @@ class DynamicTypesCompactTest {
     listOf(
             mapOf("a" to 1, "b" to 2, "c" to 3) to Schema.OPTIONAL_INT64_SCHEMA,
             mapOf("a" to "a", "b" to "b", "c" to "c") to Schema.OPTIONAL_STRING_SCHEMA,
-            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.OPTIONAL_INT64_SCHEMA)
+            mapOf("a" to 1, "b" to 2.toShort(), "c" to 3.toLong()) to Schema.OPTIONAL_INT64_SCHEMA,
+        )
         .forEach { (map, valueSchema) ->
           withClue("optional: $map") {
             DynamicTypes.toConnectSchema(payloadMode, map, true) shouldBe
@@ -372,7 +399,8 @@ class DynamicTypesCompactTest {
     DynamicTypes.toConnectSchema(
         payloadMode,
         mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()),
-        false) shouldBe
+        false,
+    ) shouldBe
         SchemaBuilder.struct()
             .field("a", Schema.INT64_SCHEMA)
             .field("b", Schema.BOOLEAN_SCHEMA)
@@ -383,7 +411,8 @@ class DynamicTypesCompactTest {
     DynamicTypes.toConnectSchema(
         payloadMode,
         mapOf("a" to 1, "b" to true, "c" to "string", "d" to 5.toFloat()),
-        true) shouldBe
+        true,
+    ) shouldBe
         SchemaBuilder.struct()
             .field("a", Schema.OPTIONAL_INT64_SCHEMA)
             .field("b", Schema.OPTIONAL_BOOLEAN_SCHEMA)
@@ -418,7 +447,8 @@ class DynamicTypesCompactTest {
             'c' to "c",
             "string" to "string",
             "string".toCharArray() to "string",
-            "string".toByteArray() to "string".toByteArray())
+            "string".toByteArray() to "string".toByteArray(),
+        )
         .forEach { (value, expected) ->
           withClue(value) {
             val schema = DynamicTypes.toConnectSchema(payloadMode, value, false)
@@ -439,7 +469,8 @@ class DynamicTypesCompactTest {
                     .put("months", 5L)
                     .put("days", 2L)
                     .put("seconds", 0L)
-                    .put("nanoseconds", 9999))
+                    .put("nanoseconds", 9999)
+        )
         .forEach { (value, expected) ->
           withClue(value) {
             val schema = DynamicTypes.toConnectSchema(payloadMode, value, false)
@@ -480,7 +511,8 @@ class DynamicTypesCompactTest {
             Array(1) { "string" } to Array(1) { "string" },
             listOf(1, 2, 3) to arrayOf(1L, 2L, 3L),
             listOf("a", "b", "c") to arrayOf("a", "b", "c"),
-            setOf(true, false) to arrayOf(true, false))
+            setOf(true, false) to arrayOf(true, false),
+        )
         .forEach { (value, expected) ->
           withClue(value) {
             val schema = DynamicTypes.toConnectSchema(payloadMode, value, false)
@@ -498,7 +530,8 @@ class DynamicTypesCompactTest {
   fun `maps should be returned as maps and should be converted back`() {
     listOf(
             mapOf("a" to "x", "b" to "y", "c" to "z") to mapOf("a" to "x", "b" to "y", "c" to "z"),
-            mapOf("a" to 1, "b" to 2, "c" to 3) to mapOf("a" to 1L, "b" to 2L, "c" to 3L))
+            mapOf("a" to 1, "b" to 2, "c" to 3) to mapOf("a" to 1L, "b" to 2L, "c" to 3L),
+        )
         .forEach { (value, expected) ->
           withClue(value) {
             val schema = DynamicTypes.toConnectSchema(payloadMode, value, false)
@@ -555,7 +588,8 @@ class DynamicTypesCompactTest {
         TestNode(
             0,
             listOf("Person", "Employee"),
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
+            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
+        )
     val schema = DynamicTypes.toConnectSchema(payloadMode, node, false)
     val converted = DynamicTypes.toConnectValue(schema, node)
 
@@ -572,7 +606,8 @@ class DynamicTypesCompactTest {
             "<id>" to 0L,
             "<labels>" to listOf("Person", "Employee"),
             "name" to "john",
-            "surname" to "doe")
+            "surname" to "doe",
+        )
   }
 
   @Test
@@ -583,7 +618,8 @@ class DynamicTypesCompactTest {
             1,
             2,
             "KNOWS",
-            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")))
+            mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
+        )
     val schema = DynamicTypes.toConnectSchema(payloadMode, rel, false)
     val converted = DynamicTypes.toConnectValue(schema, rel)
 
@@ -604,7 +640,8 @@ class DynamicTypesCompactTest {
             "<end.id>" to 2L,
             "<type>" to "KNOWS",
             "name" to "john",
-            "surname" to "doe")
+            "surname" to "doe",
+        )
   }
 
   @Test
@@ -615,7 +652,8 @@ class DynamicTypesCompactTest {
             "age" to 21,
             "dob" to LocalDate.of(1999, 12, 31),
             "employed" to true,
-            "nullable" to null)
+            "nullable" to null,
+        )
     val schema = DynamicTypes.toConnectSchema(payloadMode, map, false)
     val converted = DynamicTypes.toConnectValue(schema, map)
 
@@ -667,7 +705,8 @@ class DynamicTypesCompactTest {
             .put("last_name", "doe")
             .put(
                 "dob",
-                DynamicTypes.toConnectValue(SimpleTypes.LOCALDATE.schema, LocalDate.of(2000, 1, 1)))
+                DynamicTypes.toConnectValue(SimpleTypes.LOCALDATE.schema, LocalDate.of(2000, 1, 1)),
+            )
 
     DynamicTypes.fromConnectValue(schema, struct) shouldBe
         mapOf("id" to 1, "name" to "john", "last_name" to "doe", "dob" to LocalDate.of(2000, 1, 1))
@@ -689,7 +728,9 @@ class DynamicTypesCompactTest {
             .field("address", addressSchema)
             .field("years_of_interest", SchemaBuilder.array(Schema.INT32_SCHEMA))
             .field(
-                "events_of_interest", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA))
+                "events_of_interest",
+                SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA),
+            )
             .build()
     val struct =
         Struct(schema)
@@ -698,12 +739,14 @@ class DynamicTypesCompactTest {
             .put("last_name", "doe")
             .put(
                 "dob",
-                DynamicTypes.toConnectValue(SimpleTypes.LOCALDATE.schema, LocalDate.of(2000, 1, 1)))
+                DynamicTypes.toConnectValue(SimpleTypes.LOCALDATE.schema, LocalDate.of(2000, 1, 1)),
+            )
             .put("address", Struct(addressSchema).put("city", "london").put("country", "uk"))
             .put("years_of_interest", listOf(2000, 2005, 2017))
             .put(
                 "events_of_interest",
-                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
+                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"),
+            )
 
     DynamicTypes.fromConnectValue(schema, struct) shouldBe
         mapOf(
@@ -714,6 +757,7 @@ class DynamicTypesCompactTest {
             "address" to mapOf("city" to "london", "country" to "uk"),
             "years_of_interest" to listOf(2000, 2005, 2017),
             "events_of_interest" to
-                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"))
+                mapOf("2000" to "birth", "2005" to "school", "2017" to "college"),
+        )
   }
 }

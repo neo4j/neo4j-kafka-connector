@@ -56,7 +56,7 @@ class TestRelationship(
     val startId: Long,
     val endId: Long,
     val type: String,
-    props: Map<String, Value>
+    props: Map<String, Value>,
 ) : Entity(props), Relationship {
   override fun id(): Long = id
 

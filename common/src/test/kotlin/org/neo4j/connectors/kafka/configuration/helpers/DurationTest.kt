@@ -43,7 +43,8 @@ class DurationTest {
     assertEquals(65.seconds + 550.milliseconds, Duration.parseSimpleString("65s550ms"))
     assertEquals(
         1.days + 23.hours + 59.minutes + 59.seconds + 10.milliseconds,
-        Duration.parseSimpleString("1d23h59m59s10ms"))
+        Duration.parseSimpleString("1d23h59m59s10ms"),
+    )
     assertEquals(2.days, Duration.parseSimpleString("1d23h59m60s"))
   }
 

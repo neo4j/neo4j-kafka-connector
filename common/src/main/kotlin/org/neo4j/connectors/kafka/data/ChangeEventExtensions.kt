@@ -57,7 +57,8 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         it.put("seq", changeEvent.seq.toLong())
         it.put(
             "metadata",
-            metadataToConnectValue(changeEvent.metadata, schema.field("metadata").schema()))
+            metadataToConnectValue(changeEvent.metadata, schema.field("metadata").schema()),
+        )
         it.put("event", eventToConnectValue(changeEvent.event, schema.field("event").schema()))
       }
 
@@ -73,16 +74,23 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
           .field(
               "txStartTime",
               if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
-              else SimpleTypes.ZONEDDATETIME.schema)
+              else SimpleTypes.ZONEDDATETIME.schema,
+          )
           .field(
               "txCommitTime",
               if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
-              else SimpleTypes.ZONEDDATETIME.schema)
+              else SimpleTypes.ZONEDDATETIME.schema,
+          )
           .field(
               "txMetadata",
               toConnectSchema(
-                      payloadMode, metadata.txMetadata, optional = true, forceMapsAsStruct = true)
-                  .schema())
+                      payloadMode,
+                      metadata.txMetadata,
+                      optional = true,
+                      forceMapsAsStruct = true,
+                  )
+                  .schema(),
+          )
           .also {
             metadata.additionalEntries.forEach { entry ->
               it.field(entry.key, toConnectSchema(payloadMode, entry.value, optional = true))
@@ -104,20 +112,27 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
             DynamicTypes.toConnectValue(
                 if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
                 else SimpleTypes.ZONEDDATETIME.schema,
-                metadata.txStartTime))
+                metadata.txStartTime,
+            ),
+        )
         it.put(
             "txCommitTime",
             DynamicTypes.toConnectValue(
                 if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
                 else SimpleTypes.ZONEDDATETIME.schema,
-                metadata.txCommitTime))
+                metadata.txCommitTime,
+            ),
+        )
         it.put(
             "txMetadata",
-            DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), metadata.txMetadata))
+            DynamicTypes.toConnectValue(schema.field("txMetadata").schema(), metadata.txMetadata),
+        )
 
         metadata.additionalEntries.forEach { entry ->
           it.put(
-              entry.key, DynamicTypes.toConnectValue(schema.field(entry.key).schema(), entry.value))
+              entry.key,
+              DynamicTypes.toConnectValue(schema.field(entry.key).schema(), entry.value),
+          )
         }
       }
 
@@ -127,7 +142,8 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         is RelationshipEvent -> relationshipEventToConnectSchema(event)
         else ->
             throw IllegalArgumentException(
-                "unsupported event type in change data: ${event.javaClass.name}")
+                "unsupported event type in change data: ${event.javaClass.name}"
+            )
       }
 
   private fun eventToConnectValue(event: Event, schema: Schema): Struct =
@@ -158,7 +174,8 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         it.put("keys", keys)
         it.put(
             "state",
-            nodeStateValue(schema.field("state").schema(), nodeEvent.before, nodeEvent.after))
+            nodeStateValue(schema.field("state").schema(), nodeEvent.before, nodeEvent.after),
+        )
       }
 
   internal fun relationshipEventToConnectSchema(relationshipEvent: RelationshipEvent): Schema =
@@ -171,12 +188,14 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
           .field("end", nodeToConnectSchema(relationshipEvent.end))
           .field("keys", schemaForKeys(relationshipEvent.keys))
           .field(
-              "state", relationshipStateSchema(relationshipEvent.before, relationshipEvent.after))
+              "state",
+              relationshipStateSchema(relationshipEvent.before, relationshipEvent.after),
+          )
           .build()
 
   internal fun relationshipEventToConnectValue(
       relationshipEvent: RelationshipEvent,
-      schema: Schema
+      schema: Schema,
   ): Struct =
       Struct(schema).also {
         val keys =
@@ -192,7 +211,11 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         it.put(
             "state",
             relationshipStateValue(
-                schema.field("state").schema(), relationshipEvent.before, relationshipEvent.after))
+                schema.field("state").schema(),
+                relationshipEvent.before,
+                relationshipEvent.after,
+            ),
+        )
       }
 
   internal fun nodeToConnectSchema(node: Node): Schema {
@@ -231,13 +254,19 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                         field(
                             it.key,
                             toConnectSchema(
-                                payloadMode, it.value, optional = true, forceMapsAsStruct = true))
+                                payloadMode,
+                                it.value,
+                                optional = true,
+                                forceMapsAsStruct = true,
+                            ),
+                        )
                       }
                     }
                   }
                 }
                 .optional()
-                .build())
+                .build()
+        )
         .optional()
         .build()
   }
@@ -260,11 +289,13 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                               if (it.field(entry.key) == null) {
                                 it.field(
                                     entry.key,
-                                    toConnectSchema(payloadMode, entry.value, optional = true))
+                                    toConnectSchema(payloadMode, entry.value, optional = true),
+                                )
                               }
                             }
                           }
-                          .build())
+                          .build(),
+              )
             }
             .optional()
             .build()
@@ -287,8 +318,12 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                         }
                     else
                         DynamicTypes.toConnectValue(
-                            it.schema().field("properties").schema(), before.properties))
-              })
+                            it.schema().field("properties").schema(),
+                            before.properties,
+                        ),
+                )
+              },
+          )
         }
 
         if (after != null) {
@@ -304,14 +339,18 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                         }
                     else
                         DynamicTypes.toConnectValue(
-                            it.schema().field("properties").schema(), after.properties))
-              })
+                            it.schema().field("properties").schema(),
+                            after.properties,
+                        ),
+                )
+              },
+          )
         }
       }
 
   private fun relationshipStateSchema(
       before: RelationshipState?,
-      after: RelationshipState?
+      after: RelationshipState?,
   ): Schema {
     val stateSchema =
         SchemaBuilder.struct()
@@ -329,11 +368,13 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                               if (it.field(entry.key) == null) {
                                 it.field(
                                     entry.key,
-                                    toConnectSchema(payloadMode, entry.value, optional = true))
+                                    toConnectSchema(payloadMode, entry.value, optional = true),
+                                )
                               }
                             }
                           }
-                          .build())
+                          .build(),
+              )
             }
             .optional()
             .build()
@@ -344,7 +385,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
   private fun relationshipStateValue(
       schema: Schema,
       before: RelationshipState?,
-      after: RelationshipState?
+      after: RelationshipState?,
   ): Struct =
       Struct(schema).apply {
         if (before != null) {
@@ -359,8 +400,12 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                         }
                     else
                         DynamicTypes.toConnectValue(
-                            it.schema().field("properties").schema(), before.properties))
-              })
+                            it.schema().field("properties").schema(),
+                            before.properties,
+                        ),
+                )
+              },
+          )
         }
 
         if (after != null) {
@@ -375,8 +420,12 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                         }
                     else
                         DynamicTypes.toConnectValue(
-                            it.schema().field("properties").schema(), after.properties))
-              })
+                            it.schema().field("properties").schema(),
+                            after.properties,
+                        ),
+                )
+              },
+          )
         }
       }
 }
@@ -388,14 +437,12 @@ fun SchemaAndValue.extractEventSchema(): Schema {
 fun SchemaAndValue.extractEventValue(): Struct {
   val value = this.value()
   if (value !is Struct) {
-    throw IllegalArgumentException(
-        "expected value to be a struct, but got: ${value?.javaClass}",
-    )
+    throw IllegalArgumentException("expected value to be a struct, but got: ${value?.javaClass}")
   }
   val eventData = value.get("event")
   if (eventData !is Struct) {
     throw IllegalArgumentException(
-        "expected event attribute to be a struct, but got: ${value.javaClass}",
+        "expected event attribute to be a struct, but got: ${value.javaClass}"
     )
   }
   return eventData
@@ -452,11 +499,14 @@ internal fun Struct.toRelationshipEvent(): RelationshipEvent =
           getStruct("start").toNode(),
           getStruct("end").toNode(),
           DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(), get("keys"), skipNullValuesInMaps = true)
-              as List<Map<String, Any>>?,
+              schema().field("keys").schema(),
+              get("keys"),
+              skipNullValuesInMaps = true,
+          ) as List<Map<String, Any>>?,
           EntityOperation.valueOf(getString("operation")),
           before,
-          after)
+          after,
+      )
     }
 
 @Suppress("UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
@@ -507,7 +557,7 @@ internal fun Struct.toRelationshipState(): Pair<RelationshipState?, Relationship
               }
           RelationshipState(
               DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
-                  as Map<String, Any?>,
+                  as Map<String, Any?>
           )
         },
         getStruct("after")?.let {
@@ -520,7 +570,7 @@ internal fun Struct.toRelationshipState(): Pair<RelationshipState?, Relationship
               }
           RelationshipState(
               DynamicTypes.fromConnectValue(propertiesField.schema(), properties, true)
-                  as Map<String, Any?>,
+                  as Map<String, Any?>
           )
         },
     )

@@ -45,7 +45,8 @@ internal fun Pattern.propertiesAsText(): String {
         this.append(
             keyProperties.joinToString(", ") { m ->
               "!${trySanitize(m.to)}: ${trySanitize(m.from)}"
-            })
+            }
+        )
       }
       .apply {
         if (keyProperties.isNotEmpty() && includeProperties.isNotEmpty()) {
@@ -54,19 +55,24 @@ internal fun Pattern.propertiesAsText(): String {
         this.append(
             includeProperties.joinToString(", ") { m ->
               "${trySanitize(m.to)}: ${trySanitize(m.from)}"
-            })
+            }
+        )
       }
       .apply {
-        if ((keyProperties.isNotEmpty() || includeProperties.isNotEmpty()) &&
-            excludeProperties.isNotEmpty()) {
+        if (
+            (keyProperties.isNotEmpty() || includeProperties.isNotEmpty()) &&
+                excludeProperties.isNotEmpty()
+        ) {
           this.append(", ")
         }
         this.append(excludeProperties.joinToString(", ") { "-" + trySanitize(it) })
       }
       .apply {
-        if ((keyProperties.isNotEmpty() ||
-            includeProperties.isNotEmpty() ||
-            excludeProperties.isNotEmpty()) && includeAllValueProperties) {
+        if (
+            (keyProperties.isNotEmpty() ||
+                includeProperties.isNotEmpty() ||
+                excludeProperties.isNotEmpty()) && includeAllValueProperties
+        ) {
           this.append(", ")
         }
 

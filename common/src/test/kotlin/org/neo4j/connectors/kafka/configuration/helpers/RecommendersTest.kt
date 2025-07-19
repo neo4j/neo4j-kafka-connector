@@ -31,7 +31,8 @@ class RecommendersTest {
     Recommenders.and(
             Recommenders.enum(ConnectorType::class.java),
             Recommenders.visibleIf("test.1", Predicate.isEqual("a")),
-            Recommenders.visibleIf("test.2", Predicate.isEqual("b")))
+            Recommenders.visibleIf("test.2", Predicate.isEqual("b")),
+        )
         .apply {
           assertEquals(listOf("SINK", "SOURCE"), this.validValues("my.property", mapOf()))
 
@@ -48,15 +49,21 @@ class RecommendersTest {
       assertTrue(this.visible("my.property", emptyMap()))
       assertEquals(
           listOf("NONE", "BASIC", "KERBEROS", "BEARER", "CUSTOM"),
-          this.validValues("my.property", mapOf()))
+          this.validValues("my.property", mapOf()),
+      )
     }
 
     Recommenders.enum(
-            AuthenticationType::class.java, AuthenticationType.NONE, AuthenticationType.CUSTOM)
+            AuthenticationType::class.java,
+            AuthenticationType.NONE,
+            AuthenticationType.CUSTOM,
+        )
         .apply {
           assertTrue(this.visible("my.property", emptyMap()))
           assertEquals(
-              listOf("BASIC", "KERBEROS", "BEARER"), this.validValues("my.property", mapOf()))
+              listOf("BASIC", "KERBEROS", "BEARER"),
+              this.validValues("my.property", mapOf()),
+          )
         }
   }
 
@@ -99,7 +106,10 @@ class RecommendersTest {
           // dependent is multiple values, one empty
           assertTrue(
               this.visible(
-                  "my.property", mapOf("test.1" to "value", "test.2" to "value", "test.3" to "")))
+                  "my.property",
+                  mapOf("test.1" to "value", "test.2" to "value", "test.3" to ""),
+              )
+          )
         }
   }
 }

@@ -33,7 +33,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -46,13 +47,16 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end)
                       SET r += ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
                 "keys" to emptyMap(),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
+        )
   }
 
   @Test
@@ -63,7 +67,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -76,13 +81,16 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end)
                       SET r += ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
                 "keys" to emptyMap(),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
+        )
   }
 
   @Test
@@ -93,7 +101,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
             mapOf("id" to 3),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -106,13 +115,16 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {id: ${'$'}keys.id}]->(end)
                       SET r += ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
                 "keys" to mapOf("id" to 3),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
+        )
   }
 
   @Test
@@ -123,7 +135,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA"), mapOf("_id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_id" to 2), LookupMode.MATCH),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -136,13 +149,15 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end) 
                       SET r += ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("_id" to 1)),
                 "end" to mapOf("keys" to mapOf("_id" to 2)),
                 "keys" to emptyMap(),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -154,7 +169,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA"), mapOf("_elementId" to "db:1"), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_elementId" to "db:2"), LookupMode.MATCH),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -172,7 +188,8 @@ class UpdateRelationshipTest {
                 "start" to mapOf("keys" to mapOf("_elementId" to "db:1")),
                 "end" to mapOf("keys" to mapOf("_elementId" to "db:2")),
                 "keys" to emptyMap(),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -184,7 +201,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MATCH),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -197,13 +215,16 @@ class UpdateRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end)
                       SET r += ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
                 "keys" to emptyMap(),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
+        )
   }
 
   @Test
@@ -230,7 +251,8 @@ class UpdateRelationshipTest {
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MERGE),
             emptyMap(),
-            mapOf("prop1" to 1))
+            mapOf("prop1" to 1),
+        )
 
     org.junit.jupiter.api.assertThrows<InvalidDataException> {
       operation.toQuery()

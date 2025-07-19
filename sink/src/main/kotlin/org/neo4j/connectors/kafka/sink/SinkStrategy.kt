@@ -82,8 +82,10 @@ data class SinkMessage(val record: SinkRecord) {
       DynamicTypes.fromConnectValue(it, value)?.let {
         // if incoming schema is a built-in BYTES or STRING, then we try a json parsing for backward
         // compatibility
-        if (schema.name().isNullOrEmpty() &&
-            (schema.type() == Schema.Type.STRING || schema.type() == Schema.Type.BYTES)) {
+        if (
+            schema.name().isNullOrEmpty() &&
+                (schema.type() == Schema.Type.STRING || schema.type() == Schema.Type.BYTES)
+        ) {
           try {
             JSONUtils.readValue<Any?>(it)
           } catch (ex: JsonParseException) {
@@ -105,14 +107,14 @@ enum class SinkStrategy(val description: String) {
   CYPHER("cypher"),
   CUD("cud"),
   NODE_PATTERN("node-pattern"),
-  RELATIONSHIP_PATTERN("relationship-pattern")
+  RELATIONSHIP_PATTERN("relationship-pattern"),
 }
 
 data class ChangeQuery(
     val txId: Long?,
     val seq: Int?,
     val messages: Iterable<SinkMessage>,
-    val query: Query
+    val query: Query,
 )
 
 interface SinkStrategyHandler {
@@ -150,7 +152,8 @@ interface SinkStrategyHandler {
                 bindHeaderAs = config.cypherBindHeaderAs,
                 bindKeyAs = config.cypherBindKeyAs,
                 bindValueAs = config.cypherBindValueAs,
-                bindValueAsEvent = config.cypherBindValueAsEvent)
+                bindValueAsEvent = config.cypherBindValueAsEvent,
+            )
       }
 
       val pattern = originals[SinkConfiguration.PATTERN_TOPIC_PREFIX + topic]
@@ -171,7 +174,8 @@ interface SinkStrategyHandler {
                       bindTimestampAs = config.patternBindTimestampAs,
                       bindHeaderAs = config.patternBindHeaderAs,
                       bindKeyAs = config.patternBindKeyAs,
-                      bindValueAs = config.patternBindValueAs)
+                      bindValueAs = config.patternBindValueAs,
+                  )
               is RelationshipPattern ->
                   RelationshipPatternHandler(
                       topic,
@@ -185,10 +189,12 @@ interface SinkStrategyHandler {
                       bindTimestampAs = config.patternBindTimestampAs,
                       bindHeaderAs = config.patternBindHeaderAs,
                       bindKeyAs = config.patternBindKeyAs,
-                      bindValueAs = config.patternBindValueAs)
+                      bindValueAs = config.patternBindValueAs,
+                  )
               else ->
                   throw IllegalArgumentException(
-                      "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}")
+                      "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}"
+                  )
             }
 
         patternHandler.validate(fetchConstraintData(config.driver, config.sessionConfig()))
@@ -251,7 +257,8 @@ interface SinkStrategyHandler {
           is RelationshipPattern -> SinkStrategy.RELATIONSHIP_PATTERN
           else ->
               throw IllegalArgumentException(
-                  "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}")
+                  "Invalid pattern provided for PatternHandler: ${parsedPattern.javaClass.name}"
+              )
         }
       }
 

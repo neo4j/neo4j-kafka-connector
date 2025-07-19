@@ -57,11 +57,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 null,
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
+            ),
+        )
 
     schema.nestedSchema("id") shouldBe Schema.STRING_SCHEMA
     schema.nestedSchema("txId") shouldBe Schema.INT64_SCHEMA
@@ -83,7 +87,8 @@ class ChangeEventExtensionsTest {
                     .field("user", PropertyType.schema)
                     .field("app", PropertyType.schema)
                     .optional()
-                    .build())
+                    .build(),
+            )
             .build()
 
     value.get("id") shouldBe change.id.id
@@ -101,12 +106,14 @@ class ChangeEventExtensionsTest {
             .put("txStartTime", change.metadata.txStartTime.let { PropertyType.toConnectValue(it) })
             .put(
                 "txCommitTime",
-                change.metadata.txCommitTime.let { PropertyType.toConnectValue(it) })
+                change.metadata.txCommitTime.let { PropertyType.toConnectValue(it) },
+            )
             .put(
                 "txMetadata",
                 Struct(schema.nestedSchema("metadata.txMetadata"))
                     .put("user", PropertyType.toConnectValue("app_user"))
-                    .put("app", PropertyType.toConnectValue("hr")))
+                    .put("app", PropertyType.toConnectValue("hr")),
+            )
   }
 
   @Test
@@ -120,11 +127,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 null,
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
+            ),
+        )
 
     schema.nestedSchema("id") shouldBe Schema.STRING_SCHEMA
     schema.nestedSchema("txId") shouldBe Schema.INT64_SCHEMA
@@ -146,7 +157,8 @@ class ChangeEventExtensionsTest {
                     .field("user", Schema.OPTIONAL_STRING_SCHEMA)
                     .field("app", Schema.OPTIONAL_STRING_SCHEMA)
                     .optional()
-                    .build())
+                    .build(),
+            )
             .build()
 
     value.get("id") shouldBe change.id.id
@@ -163,15 +175,18 @@ class ChangeEventExtensionsTest {
             .put("captureMode", change.metadata.captureMode.name)
             .put(
                 "txStartTime",
-                change.metadata.txStartTime.let { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+                change.metadata.txStartTime.let { DateTimeFormatter.ISO_DATE_TIME.format(it) },
+            )
             .put(
                 "txCommitTime",
-                change.metadata.txCommitTime.let { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+                change.metadata.txCommitTime.let { DateTimeFormatter.ISO_DATE_TIME.format(it) },
+            )
             .put(
                 "txMetadata",
                 Struct(schema.nestedSchema("metadata.txMetadata"))
                     .put("user", "app_user")
-                    .put("app", "hr"))
+                    .put("app", "hr"),
+            )
   }
 
   @Test
@@ -185,11 +200,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 null,
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -207,20 +226,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", PropertyType.schema)
                                     .field("surname", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -230,21 +254,24 @@ class ChangeEventExtensionsTest {
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -261,12 +288,17 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
                                 .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))))
+                                .put("surname", PropertyType.toConnectValue("doe"))
+                        ),
+                    )
                     .put(
                         "Label2",
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L)))))
+                                .put("id", PropertyType.toConnectValue(5L))
+                        ),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -279,7 +311,11 @@ class ChangeEventExtensionsTest {
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
                                     "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe")))))
+                                    "surname" to PropertyType.toConnectValue("doe"),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -296,11 +332,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 null,
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -318,20 +358,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -345,9 +390,11 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -358,10 +405,13 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -378,11 +428,14 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedValueSchema("event.keys.Label1"))
                                 .put("name", "john")
-                                .put("surname", "doe")))
+                                .put("surname", "doe")
+                        ),
+                    )
                     .put(
                         "Label2",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L))))
+                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -395,7 +448,10 @@ class ChangeEventExtensionsTest {
                                 Struct(schema.nestedSchema("event.state.after.properties"))
                                     .put("id", 5L)
                                     .put("name", "john")
-                                    .put("surname", "doe"))))
+                                    .put("surname", "doe"),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -412,13 +468,18 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe")),
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
+                ),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -436,20 +497,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", PropertyType.schema)
                                     .field("surname", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -459,21 +525,24 @@ class ChangeEventExtensionsTest {
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -490,12 +559,17 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
                                 .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))))
+                                .put("surname", PropertyType.toConnectValue("doe"))
+                        ),
+                    )
                     .put(
                         "Label2",
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L)))))
+                                .put("id", PropertyType.toConnectValue(5L))
+                        ),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -508,7 +582,10 @@ class ChangeEventExtensionsTest {
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
                                     "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe"))))
+                                    "surname" to PropertyType.toConnectValue("doe"),
+                                ),
+                            ),
+                    )
                     .put(
                         "after",
                         Struct(schema.nestedSchema("event.state.after"))
@@ -519,7 +596,11 @@ class ChangeEventExtensionsTest {
                                     "id" to PropertyType.toConnectValue(5L),
                                     "name" to PropertyType.toConnectValue("john"),
                                     "surname" to PropertyType.toConnectValue("doe"),
-                                    "age" to PropertyType.toConnectValue(25L)))))
+                                    "age" to PropertyType.toConnectValue(25L),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -536,13 +617,18 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 NodeState(
                     listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe")),
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
+                ),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L))))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
+                ),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -560,20 +646,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -588,9 +679,11 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -602,10 +695,13 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -622,11 +718,14 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedValueSchema("event.keys.Label1"))
                                 .put("name", "john")
-                                .put("surname", "doe")))
+                                .put("surname", "doe")
+                        ),
+                    )
                     .put(
                         "Label2",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L))))
+                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -639,7 +738,9 @@ class ChangeEventExtensionsTest {
                                 Struct(schema.nestedSchema("event.state.before.properties"))
                                     .put("id", 5L)
                                     .put("name", "john")
-                                    .put("surname", "doe")))
+                                    .put("surname", "doe"),
+                            ),
+                    )
                     .put(
                         "after",
                         Struct(schema.nestedSchema("event.state.after"))
@@ -650,7 +751,10 @@ class ChangeEventExtensionsTest {
                                     .put("id", 5L)
                                     .put("name", "john")
                                     .put("surname", "doe")
-                                    .put("age", 25L))))
+                                    .put("age", 25L),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -667,11 +771,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2", "Label3"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L)),
-                null))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
+                ),
+                null,
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -689,20 +797,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", PropertyType.schema)
                                     .field("surname", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -712,21 +825,24 @@ class ChangeEventExtensionsTest {
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -743,12 +859,17 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
                                 .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))))
+                                .put("surname", PropertyType.toConnectValue("doe"))
+                        ),
+                    )
                     .put(
                         "Label2",
                         listOf(
                             Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L)))))
+                                .put("id", PropertyType.toConnectValue(5L))
+                        ),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -762,7 +883,11 @@ class ChangeEventExtensionsTest {
                                     "id" to PropertyType.toConnectValue(5L),
                                     "name" to PropertyType.toConnectValue("john"),
                                     "surname" to PropertyType.toConnectValue("doe"),
-                                    "age" to PropertyType.toConnectValue(25L)))))
+                                    "age" to PropertyType.toConnectValue(25L),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -779,11 +904,15 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2", "Label3"),
                 mapOf(
                     "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L))),
+                    "Label2" to listOf(mapOf("id" to 5L)),
+                ),
                 NodeState(
                     listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L)),
-                null))
+                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
+                ),
+                null,
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -801,20 +930,25 @@ class ChangeEventExtensionsTest {
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "Label2",
                         SchemaBuilder.array(
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -829,9 +963,11 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -843,10 +979,13 @@ class ChangeEventExtensionsTest {
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                     .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -863,11 +1002,14 @@ class ChangeEventExtensionsTest {
                         listOf(
                             Struct(schema.nestedValueSchema("event.keys.Label1"))
                                 .put("name", "john")
-                                .put("surname", "doe")))
+                                .put("surname", "doe")
+                        ),
+                    )
                     .put(
                         "Label2",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L))))
+                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
+                    ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -881,7 +1023,10 @@ class ChangeEventExtensionsTest {
                                     .put("id", 5L)
                                     .put("name", "john")
                                     .put("surname", "doe")
-                                    .put("age", 25L))))
+                                    .put("age", 25L),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -896,15 +1041,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31)))))
+                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -926,12 +1077,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -946,18 +1101,24 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build())
+                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -966,20 +1127,23 @@ class ChangeEventExtensionsTest {
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1002,8 +1166,13 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.start.keys.Person")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("john"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("john"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1018,13 +1187,20 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.end.keys.Company")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("acme corp"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("acme corp"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "keys",
                 listOf(
                     Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))))
+                        .put("id", PropertyType.toConnectValue(5L))
+                ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -1036,7 +1212,11 @@ class ChangeEventExtensionsTest {
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
                                     "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31))))))
+                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1051,15 +1231,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31)))))
+                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -1081,12 +1267,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -1101,21 +1291,27 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
                         SchemaBuilder.struct()
                             .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                             .optional()
-                            .build())
+                            .build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -1127,9 +1323,11 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -1138,10 +1336,13 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1162,7 +1363,11 @@ class ChangeEventExtensionsTest {
                                 "Person",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")))))
+                                        .put("name", "john")
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1175,7 +1380,11 @@ class ChangeEventExtensionsTest {
                                 "Company",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")))))
+                                        .put("name", "acme corp")
+                                ),
+                            ),
+                    ),
+            )
             .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
             .put(
                 "state",
@@ -1190,7 +1399,12 @@ class ChangeEventExtensionsTest {
                                     .put(
                                         "since",
                                         DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(1999, 12, 31))))))
+                                            LocalDate.of(1999, 12, 31)
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1205,15 +1419,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1)))))
+                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -1235,12 +1455,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -1255,18 +1479,24 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build())
+                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -1275,20 +1505,23 @@ class ChangeEventExtensionsTest {
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1311,8 +1544,13 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.start.keys.Person")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("john"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("john"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1327,13 +1565,20 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.end.keys.Company")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("acme corp"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("acme corp"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "keys",
                 listOf(
                     Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))))
+                        .put("id", PropertyType.toConnectValue(5L))
+                ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -1345,7 +1590,10 @@ class ChangeEventExtensionsTest {
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
                                     "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)))))
+                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)),
+                                ),
+                            ),
+                    )
                     .put(
                         "after",
                         Struct(schema.nestedSchema("event.state.after"))
@@ -1353,8 +1601,11 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
-                                    "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(2000, 1, 1))))))
+                                    "since" to PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1369,15 +1620,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1)))))
+                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -1399,12 +1656,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -1419,21 +1680,27 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
                         SchemaBuilder.struct()
                             .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                             .optional()
-                            .build())
+                            .build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -1445,9 +1712,11 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -1456,10 +1725,13 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1480,7 +1752,11 @@ class ChangeEventExtensionsTest {
                                 "Person",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")))))
+                                        .put("name", "john")
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1493,7 +1769,11 @@ class ChangeEventExtensionsTest {
                                 "Company",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")))))
+                                        .put("name", "acme corp")
+                                ),
+                            ),
+                    ),
+            )
             .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
             .put(
                 "state",
@@ -1508,7 +1788,11 @@ class ChangeEventExtensionsTest {
                                     .put(
                                         "since",
                                         DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(1999, 12, 31)))))
+                                            LocalDate.of(1999, 12, 31)
+                                        ),
+                                    ),
+                            ),
+                    )
                     .put(
                         "after",
                         Struct(schema.nestedSchema("event.state.after"))
@@ -1518,8 +1802,11 @@ class ChangeEventExtensionsTest {
                                     .put("id", 5L)
                                     .put(
                                         "since",
-                                        DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(2000, 1, 1))))))
+                                        DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 1)),
+                                    ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1534,15 +1821,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-                null))
+                null,
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -1564,12 +1857,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -1584,18 +1881,24 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", PropertyType.schema)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build())
+                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -1604,20 +1907,23 @@ class ChangeEventExtensionsTest {
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
                             .field(
                                 "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
-                                    .build())
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1640,8 +1946,13 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.start.keys.Person")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("john"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("john"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1656,13 +1967,20 @@ class ChangeEventExtensionsTest {
                                     Struct(
                                             schema
                                                 .nestedSchema("event.end.keys.Company")
-                                                .valueSchema())
-                                        .put("name", PropertyType.toConnectValue("acme corp"))))))
+                                                .valueSchema()
+                                        )
+                                        .put("name", PropertyType.toConnectValue("acme corp"))
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "keys",
                 listOf(
                     Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))))
+                        .put("id", PropertyType.toConnectValue(5L))
+                ),
+            )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
@@ -1673,8 +1991,11 @@ class ChangeEventExtensionsTest {
                                 "properties",
                                 mapOf(
                                     "id" to PropertyType.toConnectValue(5L),
-                                    "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(2000, 1, 1))))))
+                                    "since" to PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)),
+                                ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1689,15 +2010,21 @@ class ChangeEventExtensionsTest {
                 "rel-0",
                 "WORKS_FOR",
                 Node(
-                    "node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john")))),
+                    "node-0",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("name" to "john"))),
+                ),
                 Node(
                     "node-1",
                     listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp")))),
+                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
+                ),
                 listOf(mapOf("id" to 5L)),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-                null))
+                null,
+            ),
+        )
 
     schema.nestedSchema("event") shouldBe
         SchemaBuilder.struct()
@@ -1719,12 +2046,16 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "end",
                 SchemaBuilder.struct()
@@ -1739,21 +2070,27 @@ class ChangeEventExtensionsTest {
                                         SchemaBuilder.struct()
                                             .field("name", Schema.OPTIONAL_STRING_SCHEMA)
                                             .optional()
-                                            .build())
+                                            .build()
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .field(
                 "keys",
                 SchemaBuilder.array(
                         SchemaBuilder.struct()
                             .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                             .optional()
-                            .build())
+                            .build()
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .field(
                 "state",
                 SchemaBuilder.struct()
@@ -1765,9 +2102,11 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "after",
                         SchemaBuilder.struct()
@@ -1776,10 +2115,13 @@ class ChangeEventExtensionsTest {
                                 SchemaBuilder.struct()
                                     .field("id", Schema.OPTIONAL_INT64_SCHEMA)
                                     .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
-                    .build())
+                            .build(),
+                    )
+                    .build(),
+            )
             .build()
 
     value.get("event") shouldBe
@@ -1800,7 +2142,11 @@ class ChangeEventExtensionsTest {
                                 "Person",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")))))
+                                        .put("name", "john")
+                                ),
+                            ),
+                    ),
+            )
             .put(
                 "end",
                 Struct(schema.nestedSchema("event.end"))
@@ -1813,7 +2159,11 @@ class ChangeEventExtensionsTest {
                                 "Company",
                                 listOf(
                                     Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")))))
+                                        .put("name", "acme corp")
+                                ),
+                            ),
+                    ),
+            )
             .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
             .put(
                 "state",
@@ -1827,8 +2177,11 @@ class ChangeEventExtensionsTest {
                                     .put("id", 5L)
                                     .put(
                                         "since",
-                                        DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(2000, 1, 1))))))
+                                        DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 1)),
+                                    ),
+                            ),
+                    ),
+            )
 
     val reverted = value.toChangeEvent()
     reverted shouldBe change
@@ -1838,7 +2191,7 @@ class ChangeEventExtensionsTest {
   @ArgumentsSource(PayloadModeValues::class)
   fun `node event keys should be nullified when node keys are not defined`(
       name: String,
-      payloadMode: PayloadMode
+      payloadMode: PayloadMode,
   ) {
     val (_, _, schema, value) =
         newChangeEvent(
@@ -1849,7 +2202,9 @@ class ChangeEventExtensionsTest {
                 listOf("Label1", "Label2"),
                 mapOf(),
                 null,
-                NodeState(listOf("Label1"), mapOf("id" to 5L))))
+                NodeState(listOf("Label1"), mapOf("id" to 5L)),
+            ),
+        )
 
     val expectedKeySchema = SchemaBuilder.struct().optional().build()
     schema.nestedSchema("event.keys") shouldBe expectedKeySchema
@@ -1860,7 +2215,7 @@ class ChangeEventExtensionsTest {
   @ArgumentsSource(PayloadModeValues::class)
   fun `relationship event keys should be nullified when rel keys are not defined`(
       name: String,
-      payloadMode: PayloadMode
+      payloadMode: PayloadMode,
   ) {
     val (_, _, schema, value) =
         newChangeEvent(
@@ -1873,7 +2228,9 @@ class ChangeEventExtensionsTest {
                 listOf(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("id" to 5L)),
-                null))
+                null,
+            ),
+        )
 
     val expectedKeySchema =
         SchemaBuilder.array(SchemaBuilder.struct().optional().build()).optional().build()
@@ -1899,7 +2256,8 @@ class ChangeEventExtensionsTest {
             startTime,
             commitTime,
             mapOf("user" to "app_user", "app" to "hr", "xyz" to mapOf("a" to 1L, "b" to 2L)),
-            mapOf("new_field" to "abc", "another_field" to 1L))
+            mapOf("new_field" to "abc", "another_field" to 1L),
+        )
 
     val changeEventConverter = ChangeEventConverter(PayloadMode.EXTENDED)
     val schema = changeEventConverter.metadataToConnectSchema(metadata)
@@ -1925,7 +2283,9 @@ class ChangeEventExtensionsTest {
                         "xyz",
                         Struct(schema.nestedSchema("txMetadata.xyz"))
                             .put("a", PropertyType.toConnectValue(1L))
-                            .put("b", PropertyType.toConnectValue(2L))))
+                            .put("b", PropertyType.toConnectValue(2L)),
+                    ),
+            )
             .put("new_field", PropertyType.toConnectValue("abc"))
             .put("another_field", PropertyType.toConnectValue(1L))
 
@@ -1950,7 +2310,8 @@ class ChangeEventExtensionsTest {
             startTime,
             commitTime,
             mapOf("user" to "app_user", "app" to "hr", "xyz" to mapOf("a" to 1L, "b" to 2L)),
-            mapOf("new_field" to "abc", "another_field" to 1L))
+            mapOf("new_field" to "abc", "another_field" to 1L),
+        )
 
     val changeEventConverter = ChangeEventConverter(PayloadMode.COMPACT)
     val schema = changeEventConverter.metadataToConnectSchema(metadata)
@@ -1974,7 +2335,9 @@ class ChangeEventExtensionsTest {
                     .put("app", "hr")
                     .put(
                         "xyz",
-                        Struct(schema.nestedSchema("txMetadata.xyz")).put("a", 1L).put("b", 2L)))
+                        Struct(schema.nestedSchema("txMetadata.xyz")).put("a", 1L).put("b", 2L),
+                    ),
+            )
             .put("new_field", "abc")
             .put("another_field", 1L)
 
@@ -1986,7 +2349,7 @@ class ChangeEventExtensionsTest {
   @ArgumentsSource(PayloadModeValues::class)
   fun `node events should be converted to struct and back with extended payload`(
       name: String,
-      payloadMode: PayloadMode
+      payloadMode: PayloadMode,
   ) {
     val changeEventConverter = ChangeEventConverter(payloadMode)
 
@@ -2003,7 +2366,10 @@ class ChangeEventExtensionsTest {
                         "id" to 1L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1)))),
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             NodeEvent(
                 "rel-1",
                 EntityOperation.CREATE,
@@ -2016,7 +2382,10 @@ class ChangeEventExtensionsTest {
                         "id" to 1L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1)))),
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             NodeEvent(
                 "rel-1",
                 EntityOperation.CREATE,
@@ -2024,7 +2393,8 @@ class ChangeEventExtensionsTest {
                 mapOf(
                     "Person" to
                         listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                    "Employee" to listOf(mapOf("id" to 1L))),
+                    "Employee" to listOf(mapOf("id" to 1L)),
+                ),
                 null,
                 NodeState(
                     listOf("Person", "Employee"),
@@ -2032,7 +2402,10 @@ class ChangeEventExtensionsTest {
                         "id" to 1L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1)))),
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             NodeEvent(
                 "rel-1",
                 EntityOperation.UPDATE,
@@ -2040,7 +2413,8 @@ class ChangeEventExtensionsTest {
                 mapOf(
                     "Person" to
                         listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                    "Employee" to listOf(mapOf("id" to 1L))),
+                    "Employee" to listOf(mapOf("id" to 1L)),
+                ),
                 NodeState(
                     listOf("Person"),
                     mapOf(
@@ -2048,14 +2422,19 @@ class ChangeEventExtensionsTest {
                         "name" to "john",
                         "surname" to "doe",
                         "dob" to LocalDate.of(1990, 1, 1),
-                        "pob" to "London")),
+                        "pob" to "London",
+                    ),
+                ),
                 NodeState(
                     listOf("Person", "Employee"),
                     mapOf(
                         "id" to 1L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1)))),
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+            ),
             NodeEvent(
                 "rel-1",
                 EntityOperation.DELETE,
@@ -2063,15 +2442,20 @@ class ChangeEventExtensionsTest {
                 mapOf(
                     "Person" to
                         listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                    "Employee" to listOf(mapOf("id" to 1L))),
+                    "Employee" to listOf(mapOf("id" to 1L)),
+                ),
                 NodeState(
                     listOf("Person", "Employee"),
                     mapOf(
                         "id" to 1L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1))),
-                null))
+                        "dob" to LocalDate.of(1990, 1, 1),
+                    ),
+                ),
+                null,
+            ),
+        )
         .forEach { event ->
           val schema = changeEventConverter.nodeEventToConnectSchema(event)
           val converted = changeEventConverter.nodeEventToConnectValue(event, schema)
@@ -2091,7 +2475,9 @@ class ChangeEventExtensionsTest {
             listOf("Person", "Employee"),
             mapOf(
                 "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L))))
+                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L)),
+            ),
+        )
     val schema = changeEventConverter.nodeToConnectSchema(node)
     val converted = changeEventConverter.nodeToConnectValue(node, schema)
 
@@ -2109,13 +2495,18 @@ class ChangeEventExtensionsTest {
                                 .put("id", PropertyType.toConnectValue(1L)),
                             Struct(schema.nestedSchema("keys.Person").valueSchema())
                                 .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))))
+                                .put("surname", PropertyType.toConnectValue("doe")),
+                        ),
+                    )
                     .put(
                         "Employee",
                         listOf(
                             Struct(schema.nestedSchema("keys.Employee").valueSchema())
                                 .put("id", PropertyType.toConnectValue(5L))
-                                .put("company_id", PropertyType.toConnectValue(7L)))))
+                                .put("company_id", PropertyType.toConnectValue(7L))
+                        ),
+                    ),
+            )
 
     val reverted = converted.toNode()
     reverted shouldBe node
@@ -2131,7 +2522,9 @@ class ChangeEventExtensionsTest {
             listOf("Person", "Employee"),
             mapOf(
                 "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L))))
+                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L)),
+            ),
+        )
     val schema = changeEventConverter.nodeToConnectSchema(node)
     val converted = changeEventConverter.nodeToConnectValue(node, schema)
 
@@ -2148,13 +2541,18 @@ class ChangeEventExtensionsTest {
                             Struct(schema.nestedSchema("keys.Person").valueSchema()).put("id", 1L),
                             Struct(schema.nestedSchema("keys.Person").valueSchema())
                                 .put("name", "john")
-                                .put("surname", "doe")))
+                                .put("surname", "doe"),
+                        ),
+                    )
                     .put(
                         "Employee",
                         listOf(
                             Struct(schema.nestedSchema("keys.Employee").valueSchema())
                                 .put("id", 5L)
-                                .put("company_id", 7L))))
+                                .put("company_id", 7L)
+                        ),
+                    ),
+            )
 
     val reverted = converted.toNode()
     reverted shouldBe node
@@ -2164,7 +2562,7 @@ class ChangeEventExtensionsTest {
   @ArgumentsSource(PayloadModeValues::class)
   fun `relationship events should be converted to struct and back`(
       name: String,
-      payloadMode: PayloadMode
+      payloadMode: PayloadMode,
   ) {
     val changeEventConverter = ChangeEventConverter(payloadMode)
 
@@ -2177,20 +2575,22 @@ class ChangeEventExtensionsTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                            listOf(mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe"))
+                    ),
+                ),
                 Node(
                     "node-2",
                     listOf("Person"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                            listOf(mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe"))
+                    ),
+                ),
                 null,
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(
-                    mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London"))),
+                RelationshipState(mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London")),
+            ),
             RelationshipEvent(
                 "rel-1",
                 "KNOWS",
@@ -2199,20 +2599,22 @@ class ChangeEventExtensionsTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                            listOf(mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe"))
+                    ),
+                ),
                 Node(
                     "node-2",
                     listOf("Person"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                            listOf(mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe"))
+                    ),
+                ),
                 listOf(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(
-                    mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London"))),
+                RelationshipState(mapOf("since" to LocalDate.of(2012, 10, 1), "met_at" to "London")),
+            ),
             RelationshipEvent(
                 "rel-1",
                 "KNOWS",
@@ -2221,15 +2623,17 @@ class ChangeEventExtensionsTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                            listOf(mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe"))
+                    ),
+                ),
                 Node(
                     "node-2",
                     listOf("Person"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                            listOf(mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe"))
+                    ),
+                ),
                 listOf(mapOf("a" to 1L), mapOf("b" to "another")),
                 EntityOperation.CREATE,
                 null,
@@ -2238,7 +2642,10 @@ class ChangeEventExtensionsTest {
                         "since" to LocalDate.of(2012, 10, 1),
                         "met_at" to "London",
                         "a" to 1L,
-                        "b" to "another"))),
+                        "b" to "another",
+                    )
+                ),
+            ),
             RelationshipEvent(
                 "rel-1",
                 "KNOWS",
@@ -2247,15 +2654,17 @@ class ChangeEventExtensionsTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                            listOf(mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe"))
+                    ),
+                ),
                 Node(
                     "node-2",
                     listOf("Person"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                            listOf(mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe"))
+                    ),
+                ),
                 listOf(mapOf("a" to 1L), mapOf("b" to "another")),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("a" to 1L, "b" to "another", "c" to 5L)),
@@ -2264,7 +2673,10 @@ class ChangeEventExtensionsTest {
                         "since" to LocalDate.of(2012, 10, 1),
                         "met_at" to "London",
                         "a" to 1L,
-                        "b" to "another"))),
+                        "b" to "another",
+                    )
+                ),
+            ),
             RelationshipEvent(
                 "rel-1",
                 "KNOWS",
@@ -2273,15 +2685,17 @@ class ChangeEventExtensionsTest {
                     listOf("Person", "Employee"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe")))),
+                            listOf(mapOf("id" to 5L), mapOf("name" to "john", "surname" to "doe"))
+                    ),
+                ),
                 Node(
                     "node-2",
                     listOf("Person"),
                     mapOf(
                         "Person" to
-                            listOf(
-                                mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe")))),
+                            listOf(mapOf("id" to 4L), mapOf("name" to "mary", "surname" to "doe"))
+                    ),
+                ),
                 listOf(mapOf("a" to 1L), mapOf("b" to "another")),
                 EntityOperation.DELETE,
                 RelationshipState(
@@ -2289,8 +2703,12 @@ class ChangeEventExtensionsTest {
                         "since" to LocalDate.of(2012, 10, 1),
                         "met_at" to "London",
                         "a" to 1L,
-                        "b" to "another")),
-                null))
+                        "b" to "another",
+                    )
+                ),
+                null,
+            ),
+        )
         .forEach { event ->
           val schema = changeEventConverter.relationshipEventToConnectSchema(event)
           val converted = changeEventConverter.relationshipEventToConnectValue(event, schema)
@@ -2303,11 +2721,12 @@ class ChangeEventExtensionsTest {
   object PayloadModeValues : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of("extended", PayloadMode.EXTENDED),
-          Arguments.of("compact", PayloadMode.COMPACT))
+          Arguments.of("compact", PayloadMode.COMPACT),
+      )
     }
   }
 
@@ -2315,7 +2734,7 @@ class ChangeEventExtensionsTest {
       val event: T,
       val change: ChangeEvent,
       val schema: Schema,
-      val converted: Struct
+      val converted: Struct,
   )
 
   private fun <T : Event> newChangeEvent(payloadMode: PayloadMode, event: T): ChangeEventResult<T> {
@@ -2337,12 +2756,18 @@ class ChangeEventExtensionsTest {
                 ZonedDateTime.now().minusSeconds(1),
                 ZonedDateTime.now(),
                 mapOf("user" to "app_user", "app" to "hr"),
-                emptyMap()),
-            event)
+                emptyMap(),
+            ),
+            event,
+        )
     val schemaAndValue = changeEventConverter.toConnectValue(change)
 
     return ChangeEventResult(
-        event, change, schemaAndValue.schema(), schemaAndValue.value() as Struct)
+        event,
+        change,
+        schemaAndValue.schema(),
+        schemaAndValue.value() as Struct,
+    )
   }
 
   private fun Schema.nestedSchema(path: String): Schema {

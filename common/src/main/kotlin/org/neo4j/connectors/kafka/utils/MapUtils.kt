@@ -29,7 +29,8 @@ object MapUtils {
               it as T
             } else {
               throw InvalidDataException(
-                  "Elements of '$key' is not an instance of ${T::class.simpleName}")
+                  "Elements of '$key' is not an instance of ${T::class.simpleName}"
+              )
             }
           }
       else -> throw InvalidDataException("Map element '$key' is not an instance of Iterable")
@@ -44,11 +45,13 @@ object MapUtils {
               .map {
                 if (!K::class.isInstance(it.key)) {
                   throw InvalidDataException(
-                      "Keys of '$key' is not an instance of ${K::class.simpleName}")
+                      "Keys of '$key' is not an instance of ${K::class.simpleName}"
+                  )
                 }
                 if (!V::class.isInstance(it.value)) {
                   throw InvalidDataException(
-                      "Values of '$key' is not an instance of ${V::class.simpleName}")
+                      "Values of '$key' is not an instance of ${V::class.simpleName}"
+                  )
                 }
 
                 (it.key as K) to (it.value as V)
@@ -71,7 +74,7 @@ object MapUtils {
   @Suppress("UNCHECKED_CAST")
   fun Map<String, Any?>.flatten(
       map: Map<String, Any?> = this,
-      prefix: String = ""
+      prefix: String = "",
   ): Map<String, Any?> {
     return map.flatMap {
           val key = it.key
