@@ -24,7 +24,7 @@ data class ConvertingKafkaConsumer(
     val keyConverter: KafkaConverter,
     val valueConverter: KafkaConverter,
     val schemaRegistryUrlProvider: () -> String,
-    val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>
+    val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>,
 )
 
 data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)

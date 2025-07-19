@@ -88,7 +88,10 @@ object Validators {
         if (value is String) {
           if (values.isNotEmpty() && !values.contains(value)) {
             throw ConfigException(
-                name, value, "Must be one of: ${values.joinToString { "'$it'" }}.")
+                name,
+                value,
+                "Must be one of: ${values.joinToString { "'$it'" }}.",
+            )
           }
         } else if (value is List<*>) {
           value.forEach { ensureValid(name, it) }
@@ -101,7 +104,8 @@ object Validators {
 
   fun <T : Enum<T>> enum(cls: Class<T>, vararg exclude: T): ConfigDef.Validator {
     return string(
-        *cls.enumConstants.filterNot { exclude.contains(it) }.map { it.name }.toTypedArray())
+        *cls.enumConstants.filterNot { exclude.contains(it) }.map { it.name }.toTypedArray()
+    )
   }
 
   fun bool(): ConfigDef.Validator {
@@ -142,7 +146,10 @@ object Validators {
 
               if (schemes.isNotEmpty() && !schemes.contains(parsed.scheme)) {
                 throw ConfigException(
-                    name, value, "Scheme must be one of: ${schemes.joinToString { "'$it'" }}.")
+                    name,
+                    value,
+                    "Scheme must be one of: ${schemes.joinToString { "'$it'" }}.",
+                )
               }
             } catch (t: URISyntaxException) {
               throw ConfigException(name, value, "Must be a valid URI: ${t.message}")
@@ -189,18 +196,21 @@ object Validators {
     this.configValues()
         .first { it.name() == name }
         .let { config ->
-          if (config.visible() &&
-              (when (val value = config.value()) {
-                null -> true
-                is Int -> false
-                is Boolean -> false
-                is String -> value.isEmpty()
-                is Password -> value.value().isNullOrEmpty()
-                is List<*> -> value.isEmpty()
-                else ->
-                    throw IllegalArgumentException(
-                        "unexpected value '$value' for configuration $name")
-              })) {
+          if (
+              config.visible() &&
+                  (when (val value = config.value()) {
+                    null -> true
+                    is Int -> false
+                    is Boolean -> false
+                    is String -> value.isEmpty()
+                    is Password -> value.value().isNullOrEmpty()
+                    is List<*> -> value.isEmpty()
+                    else ->
+                        throw IllegalArgumentException(
+                            "unexpected value '$value' for configuration $name"
+                        )
+                  })
+          ) {
             config.addErrorMessage("Invalid value for configuration $name: Must not be blank.")
           }
         }

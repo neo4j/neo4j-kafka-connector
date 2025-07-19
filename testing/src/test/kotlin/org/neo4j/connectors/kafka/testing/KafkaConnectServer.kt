@@ -46,7 +46,7 @@ class KafkaConnectServer : AutoCloseable {
       unregistrationHandler: (HttpExchange) -> Boolean = {
         it.sendResponseHeaders(204, -1)
         true
-      }
+      },
   ) {
 
     httpServer.createContext("/connectors") { exchange ->
@@ -80,9 +80,9 @@ class KafkaConnectServer : AutoCloseable {
   }
 
   private fun handleRegistration(exchange: HttpExchange, handler: (HttpExchange) -> Boolean) {
-    if (!validateMethod(exchange, "POST") ||
-        !validateJsonIn(exchange) ||
-        !validateJsonOut(exchange)) {
+    if (
+        !validateMethod(exchange, "POST") || !validateJsonIn(exchange) || !validateJsonOut(exchange)
+    ) {
       return
     }
     if (!handler(exchange)) {
@@ -123,8 +123,9 @@ class KafkaConnectServer : AutoCloseable {
 
   private fun validateJsonOut(exchange: HttpExchange): Boolean {
     val acceptedMedia = exchange.requestHeaders["Accept"]!!
-    if (acceptedMedia.isNotEmpty() &&
-        acceptedMedia.none { CANDIDATE_ACCEPT_HEADERS.contains(it) }) {
+    if (
+        acceptedMedia.isNotEmpty() && acceptedMedia.none { CANDIDATE_ACCEPT_HEADERS.contains(it) }
+    ) {
       exchange.sendResponseHeaders(406, -1)
       return false
     }

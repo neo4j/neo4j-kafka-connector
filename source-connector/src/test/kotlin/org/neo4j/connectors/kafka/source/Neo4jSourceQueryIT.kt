@@ -49,20 +49,23 @@ abstract class Neo4jSourceQueryIT {
       streamingProperty = "timestamp",
       startFrom = "EARLIEST",
       query =
-          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp")
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp",
+  )
   @Test
   fun `reads latest changes from Neo4j source starting from EARLIEST`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     session.run("CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: 0})").consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: datetime().epochMillis})")
+            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: datetime().epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime().epochMillis})")
+            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime().epochMillis})"
+        )
         .consume()
 
     TopicVerifier.createForMap(consumer)
@@ -86,11 +89,12 @@ abstract class Neo4jSourceQueryIT {
       query =
           "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck " +
               "RETURN ts.name as name, ts.surname as surname, ts.timestamp as timestamp, " +
-              "{key1: {subKey1: 'value', subKey2: 'value'}, key2: {subKey1: 'value', subKey2: true}} AS nested")
+              "{key1: {subKey1: 'value', subKey2: 'value'}, key2: {subKey1: 'value', subKey2: true}} AS nested",
+  )
   @Test
   fun `should return nested object`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     session.run("CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: 0})").consume()
 
@@ -104,7 +108,9 @@ abstract class Neo4jSourceQueryIT {
                   "nested" to
                       mapOf(
                           "key1" to mapOf("subKey1" to "value", "subKey2" to "value"),
-                          "key2" to mapOf("subKey1" to "value", "subKey2" to true)))
+                          "key2" to mapOf("subKey1" to "value", "subKey2" to true),
+                      ),
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -115,23 +121,27 @@ abstract class Neo4jSourceQueryIT {
       streamingProperty = "timestamp",
       startFrom = "NOW",
       query =
-          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp")
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp",
+  )
   @Test
   fun `reads latest changes from Neo4j source starting from NOW`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
-            "CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: (datetime() - duration('PT10S')).epochMillis})")
+            "CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: (datetime() - duration('PT10S')).epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: (datetime() + duration('PT10S')).epochMillis})")
+            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: (datetime() + duration('PT10S')).epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: (datetime() + duration('PT10S')).epochMillis})")
+            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: (datetime() + duration('PT10S')).epochMillis})"
+        )
         .consume()
 
     TopicVerifier.createForMap(consumer)
@@ -151,27 +161,32 @@ abstract class Neo4jSourceQueryIT {
       startFrom = "USER_PROVIDED",
       startFromValue = "1704067200000", // 2024-01-01T00:00:00
       query =
-          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp")
+          "MATCH (ts:TestSource) WHERE ts.timestamp > \$lastCheck RETURN ts.name AS name, ts.surname AS surname, ts.timestamp AS timestamp",
+  )
   @Test
   fun `reads latest changes from Neo4j source starting from USER_PROVIDED`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
-            "CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: datetime('2023-12-31T23:59:59Z').epochMillis})")
+            "CREATE (:TestSource {name: 'jane', surname: 'doe', timestamp: datetime('2023-12-31T23:59:59Z').epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: datetime('2024-01-01T12:00:00Z').epochMillis})")
+            "CREATE (:TestSource {name: 'john', surname: 'doe', timestamp: datetime('2024-01-01T12:00:00Z').epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime('2024-01-03T00:00:00Z').epochMillis})")
+            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime('2024-01-03T00:00:00Z').epochMillis})"
+        )
         .consume()
     session
         .run(
-            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime().epochMillis})")
+            "CREATE (:TestSource {name: 'mary', surname: 'doe', timestamp: datetime().epochMillis})"
+        )
         .consume()
 
     TopicVerifier.createForMap(consumer)
@@ -183,7 +198,8 @@ abstract class Neo4jSourceQueryIT {
                   "timestamp" to
                       OffsetDateTime.of(2024, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC)
                           .toInstant()
-                          .toEpochMilli())
+                          .toEpochMilli(),
+              )
         }
         .assertMessageValue { value ->
           value shouldBe
@@ -193,7 +209,8 @@ abstract class Neo4jSourceQueryIT {
                   "timestamp" to
                       OffsetDateTime.of(2024, 1, 3, 0, 0, 0, 0, ZoneOffset.UTC)
                           .toInstant()
-                          .toEpochMilli())
+                          .toEpochMilli(),
+              )
         }
         .assertMessageValue { value ->
           value.excludingKeys("timestamp") shouldBe mapOf("name" to "mary", "surname" to "doe")
@@ -232,7 +249,8 @@ class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT() {
       startFrom = "USER_PROVIDED",
       startFromValue = "1704067200000", // 2024-01-01T00:00:00
       query =
-          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp")
+          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp",
+  )
   @Test
   fun `serializes list of heterogeneous objects as map by default`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
@@ -254,7 +272,8 @@ class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT() {
       startFromValue = "1704067200000", // 2024-01-01T00:00:00
       forceMapsAsStruct = false,
       query =
-          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp")
+          "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp",
+  )
   @Test
   fun `serializes list of heterogeneous objects as list when not forcing structs for map values with homogeneous value types`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer

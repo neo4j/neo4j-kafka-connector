@@ -44,7 +44,7 @@ object DateSupport {
       hour: Int,
       minute: Int,
       second: Int,
-      millis: Int
+      millis: Int,
   ): Date {
     val calendar = Calendar.getInstance(UTC)
     calendar.set(year, month - 1, day, hour, minute, second)

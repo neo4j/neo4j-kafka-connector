@@ -30,19 +30,23 @@ class CreateNodeTest {
     operation.toQuery() shouldBe
         Query(
             "CREATE (n:`Person` {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")))
+            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+        )
   }
 
   @Test
   fun `should create correct statement with multiple labels`() {
     val operation =
         CreateNode(
-            setOf("Person", "Employee"), mapOf("id" to 1, "name" to "john", "surname" to "doe"))
+            setOf("Person", "Employee"),
+            mapOf("id" to 1, "name" to "john", "surname" to "doe"),
+        )
 
     operation.toQuery() shouldBe
         Query(
             "CREATE (n:`Person`:`Employee` {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")))
+            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+        )
   }
 
   @Test
@@ -52,6 +56,7 @@ class CreateNodeTest {
     operation.toQuery() shouldBe
         Query(
             "CREATE (n {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")))
+            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+        )
   }
 }

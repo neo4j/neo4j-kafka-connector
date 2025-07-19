@@ -59,7 +59,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         newEvent(
@@ -73,7 +73,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 NodeState(emptyList(), mapOf("id" to 5L, "name" to "john", "surname" to "doe")),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -92,7 +92,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -121,7 +121,7 @@ abstract class Neo4jCdcSchemaIT {
                     ),
                 ),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -146,7 +146,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -167,7 +167,7 @@ abstract class Neo4jCdcSchemaIT {
                 NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
                 null,
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -182,7 +182,7 @@ abstract class Neo4jCdcSchemaIT {
   fun `should fail to delete a node when keys is empty `(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      sink: Neo4jSinkRegistration
+      sink: Neo4jSinkRegistration,
   ) = runTest {
     session
         .run(
@@ -203,7 +203,7 @@ abstract class Neo4jCdcSchemaIT {
                 NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -224,7 +224,7 @@ abstract class Neo4jCdcSchemaIT {
   fun `should fail to delete a node when keys is effectively empty `(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      sink: Neo4jSinkRegistration
+      sink: Neo4jSinkRegistration,
   ) = runTest {
     session
         .run(
@@ -245,7 +245,7 @@ abstract class Neo4jCdcSchemaIT {
                 NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -265,7 +265,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -294,7 +294,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -351,7 +351,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -400,7 +400,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -449,7 +449,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -498,7 +498,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -546,14 +546,10 @@ abstract class Neo4jCdcSchemaIT {
                 EntityOperation.CREATE,
                 null,
                 RelationshipState(
-                    mapOf(
-                        "id" to 1L,
-                        "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend",
-                    ),
+                    mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1), "type" to "friend")
                 ),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -572,7 +568,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -603,7 +599,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -662,7 +658,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -727,7 +723,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -792,7 +788,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -856,7 +852,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -877,7 +873,7 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
@@ -891,11 +887,7 @@ abstract class Neo4jCdcSchemaIT {
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
                 "knows" to
-                    mapOf(
-                        "id" to 3L,
-                        "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend",
-                    ),
+                    mapOf("id" to 3L, "since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
             ),
         )
         .consume()
@@ -912,15 +904,11 @@ abstract class Neo4jCdcSchemaIT {
                 listOf(mapOf("id" to 3L)),
                 EntityOperation.UPDATE,
                 RelationshipState(
-                    mapOf(
-                        "id" to 3L,
-                        "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend",
-                    ),
+                    mapOf("id" to 3L, "since" to LocalDate.of(2000, 1, 1), "type" to "friend")
                 ),
                 RelationshipState(mapOf("id" to 3L, "since" to LocalDate.of(1999, 1, 1))),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -947,7 +935,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -978,7 +966,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -1024,7 +1012,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -1075,7 +1063,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -1126,7 +1114,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -1177,7 +1165,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     // sink connector should transition into FAILED state
@@ -1198,7 +1186,7 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
@@ -1212,11 +1200,7 @@ abstract class Neo4jCdcSchemaIT {
                 "person1" to mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
                 "person2" to mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
                 "knows" to
-                    mapOf(
-                        "id" to 3L,
-                        "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend",
-                    ),
+                    mapOf("id" to 3L, "since" to LocalDate.of(2000, 1, 1), "type" to "friend"),
             ),
         )
         .consume()
@@ -1235,7 +1219,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("id" to 3L, "since" to LocalDate.of(1999, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -1253,7 +1237,7 @@ abstract class Neo4jCdcSchemaIT {
   @Test
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         newEvent(
@@ -1265,12 +1249,9 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                NodeState(
-                    listOf("Person"),
-                    mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                ),
+                NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")),
             ),
-        ),
+        )
     )
 
     producer.publish(
@@ -1283,12 +1264,9 @@ abstract class Neo4jCdcSchemaIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 null,
-                NodeState(
-                    listOf("Person"),
-                    mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                ),
+                NodeState(listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")),
             ),
-        ),
+        )
     )
 
     producer.publish(
@@ -1305,7 +1283,7 @@ abstract class Neo4jCdcSchemaIT {
                 null,
                 RelationshipState(emptyMap()),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -1349,7 +1327,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(emptyMap()),
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {
@@ -1386,7 +1364,7 @@ abstract class Neo4jCdcSchemaIT {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
                 null,
             ),
-        ),
+        )
     )
     producer.publish(
         newEvent(
@@ -1403,7 +1381,7 @@ abstract class Neo4jCdcSchemaIT {
                 ),
                 null,
             ),
-        ),
+        )
     )
     producer.publish(
         newEvent(
@@ -1420,7 +1398,7 @@ abstract class Neo4jCdcSchemaIT {
                 ),
                 null,
             ),
-        ),
+        )
     )
 
     eventually(30.seconds) {

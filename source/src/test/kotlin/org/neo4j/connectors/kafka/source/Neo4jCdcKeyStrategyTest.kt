@@ -53,7 +53,7 @@ class Neo4jCdcKeyStrategyTest {
   fun `serializes key schema`(
       message: SchemaAndValue,
       strategy: Neo4jCdcKeyStrategy,
-      expectedKeySchema: Schema?
+      expectedKeySchema: Schema?,
   ) {
     val actualKeySchema = strategy.schema(message)
 
@@ -65,7 +65,7 @@ class Neo4jCdcKeyStrategyTest {
   fun `serializes key value`(
       message: SchemaAndValue,
       strategy: Neo4jCdcKeyStrategy,
-      expectedKeyValue: Any?
+      expectedKeyValue: Any?,
   ) {
     val actualKeyValue = strategy.value(message)
 
@@ -76,7 +76,7 @@ class Neo4jCdcKeyStrategyTest {
 class KeySchemaSerializationArgument : ArgumentsProvider {
   override fun provideArguments(
       parameters: ParameterDeclarations?,
-      context: ExtensionContext?
+      context: ExtensionContext?,
   ): Stream<out Arguments?>? {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
@@ -94,7 +94,7 @@ class KeySchemaSerializationArgument : ArgumentsProvider {
 class KeyValueSerializationArgument : ArgumentsProvider {
   override fun provideArguments(
       parameters: ParameterDeclarations?,
-      context: ExtensionContext?
+      context: ExtensionContext?,
   ): Stream<out Arguments?>? {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
@@ -133,7 +133,8 @@ object TestData {
               SchemaBuilder.struct()
                   .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
                   .optional()
-                  .build())
+                  .build(),
+          )
           .optional()
           .build()
 
@@ -147,9 +148,10 @@ object TestData {
                       listOf(
                           Struct(propertySchema)
                               .put("foo", PropertyType.toConnectValue("fighters"))
-                              .put("bar", PropertyType.toConnectValue(42L)),
+                              .put("bar", PropertyType.toConnectValue(42L))
                       ),
-                  ))
+                  ),
+          )
 
   val relKeysSchema: Schema =
       SchemaBuilder.struct()
@@ -164,8 +166,9 @@ object TestData {
               listOf(
                   Struct(propertySchema)
                       .put("foo", PropertyType.toConnectValue("fighters"))
-                      .put("bar", PropertyType.toConnectValue(42L)),
-              ))
+                      .put("bar", PropertyType.toConnectValue(42L))
+              ),
+          )
 
   val nodeChange =
       ChangeEventConverter()
@@ -181,7 +184,10 @@ object TestData {
                       listOf(LABEL),
                       mapOf(LABEL to listOf(mapOf("foo" to "fighters", "bar" to 42L))),
                       NodeState(listOf(LABEL), mapOf()),
-                      NodeState(listOf(LABEL), mapOf("foo" to "fighters", "bar" to 42L)))))
+                      NodeState(listOf(LABEL), mapOf("foo" to "fighters", "bar" to 42L)),
+                  ),
+              )
+          )
 
   val relChange =
       ChangeEventConverter()
@@ -199,7 +205,10 @@ object TestData {
                       listOf(mapOf("foo" to "fighters", "bar" to 42L)),
                       EntityOperation.CREATE,
                       RelationshipState(mapOf()),
-                      RelationshipState(mapOf("foo" to "fighters", "bar" to 42L)))))
+                      RelationshipState(mapOf("foo" to "fighters", "bar" to 42L)),
+                  ),
+              )
+          )
 
   private fun aTransactionId(): Long {
     return 42
@@ -224,7 +233,8 @@ object TestData {
         txStartTime,
         txCommitTime,
         mapOf("tx" to "metadata"),
-        mapOf("additional" to "entries"))
+        mapOf("additional" to "entries"),
+    )
   }
 
   private fun aRelationshipType() = "A_RELATION_TO"

@@ -61,7 +61,10 @@ class StreamsTransactionEventExtensionsTest {
                 after =
                     NodeChange(
                         properties = mapOf("name" to "john", "surname" to "doe"),
-                        labels = listOf("User"))))
+                        labels = listOf("User"),
+                    ),
+            ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -75,7 +78,9 @@ class StreamsTransactionEventExtensionsTest {
                 listOf("User"),
                 emptyMap(),
                 null,
-                NodeState(listOf("User"), mapOf("name" to "john", "surname" to "doe"))))
+                NodeState(listOf("User"), mapOf("name" to "john", "surname" to "doe")),
+            ),
+        )
   }
 
   @Test
@@ -94,14 +99,23 @@ class StreamsTransactionEventExtensionsTest {
                             mapOf(
                                 "name" to "john",
                                 "surname" to "doe",
-                                "dob" to LocalDate.of(2000, 1, 1)),
-                        labels = listOf("User"))),
+                                "dob" to LocalDate.of(2000, 1, 1),
+                            ),
+                        labels = listOf("User"),
+                    ),
+            ),
             schema =
                 Schema(
                     constraints =
                         listOf(
                             Constraint(
-                                "User", setOf("name", "surname"), StreamsConstraintType.UNIQUE))))
+                                "User",
+                                setOf("name", "surname"),
+                                StreamsConstraintType.UNIQUE,
+                            )
+                        )
+                ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -117,8 +131,10 @@ class StreamsTransactionEventExtensionsTest {
                 null,
                 NodeState(
                     listOf("User"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)))))
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)),
+                ),
+            ),
+        )
   }
 
   @Test
@@ -137,14 +153,23 @@ class StreamsTransactionEventExtensionsTest {
                             mapOf(
                                 "name" to "john",
                                 "surname" to "doe",
-                                "dob" to LocalDate.of(2000, 1, 1)),
-                        labels = listOf("User"))),
+                                "dob" to LocalDate.of(2000, 1, 1),
+                            ),
+                        labels = listOf("User"),
+                    ),
+            ),
             schema =
                 Schema(
                     constraints =
                         listOf(
                             Constraint(
-                                "User", setOf("name", "surname"), StreamsConstraintType.UNIQUE))))
+                                "User",
+                                setOf("name", "surname"),
+                                StreamsConstraintType.UNIQUE,
+                            )
+                        )
+                ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -160,8 +185,10 @@ class StreamsTransactionEventExtensionsTest {
                 NodeState(listOf("User"), mapOf("name" to "joe", "surname" to "doe")),
                 NodeState(
                     listOf("User"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)))))
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)),
+                ),
+            ),
+        )
   }
 
   @Test
@@ -179,15 +206,24 @@ class StreamsTransactionEventExtensionsTest {
                             mapOf(
                                 "name" to "john",
                                 "surname" to "doe",
-                                "dob" to LocalDate.of(2000, 1, 1)),
-                        labels = listOf("User")),
-                after = null),
+                                "dob" to LocalDate.of(2000, 1, 1),
+                            ),
+                        labels = listOf("User"),
+                    ),
+                after = null,
+            ),
             schema =
                 Schema(
                     constraints =
                         listOf(
                             Constraint(
-                                "User", setOf("name", "surname"), StreamsConstraintType.UNIQUE))))
+                                "User",
+                                setOf("name", "surname"),
+                                StreamsConstraintType.UNIQUE,
+                            )
+                        )
+                ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -202,8 +238,11 @@ class StreamsTransactionEventExtensionsTest {
                 mapOf("User" to listOf(mapOf("name" to "john", "surname" to "doe"))),
                 NodeState(
                     listOf("User"),
-                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1))),
-                null))
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(2000, 1, 1)),
+                ),
+                null,
+            ),
+        )
   }
 
   @Test
@@ -218,13 +257,20 @@ class StreamsTransactionEventExtensionsTest {
                 label = "KNOWS",
                 start =
                     RelationshipNodeChange(
-                        "1", listOf("Person"), mapOf("name" to "joe", "surname" to "doe")),
+                        "1",
+                        listOf("Person"),
+                        mapOf("name" to "joe", "surname" to "doe"),
+                    ),
                 end =
                     RelationshipNodeChange(
-                        "2", listOf("Person"), mapOf("name" to "mary", "surname" to "doe")),
+                        "2",
+                        listOf("Person"),
+                        mapOf("name" to "mary", "surname" to "doe"),
+                    ),
                 before = null,
                 after = RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1))),
-            ))
+            ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -238,15 +284,19 @@ class StreamsTransactionEventExtensionsTest {
                 Node(
                     "1",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe"))),
+                ),
                 Node(
                     "2",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe"))),
+                ),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1)))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
   }
 
   @Test
@@ -263,15 +313,18 @@ class StreamsTransactionEventExtensionsTest {
                     RelationshipNodeChange(
                         "1",
                         listOf("Person", "Employee"),
-                        mapOf("name" to "joe", "surname" to "doe")),
+                        mapOf("name" to "joe", "surname" to "doe"),
+                    ),
                 end =
                     RelationshipNodeChange(
                         "2",
                         listOf("Person", "Employee"),
-                        mapOf("name" to "mary", "surname" to "doe")),
+                        mapOf("name" to "mary", "surname" to "doe"),
+                    ),
                 before = RelationshipChange(emptyMap()),
                 after = RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1))),
-            ))
+            ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -285,15 +338,19 @@ class StreamsTransactionEventExtensionsTest {
                 Node(
                     "1",
                     listOf("Person", "Employee"),
-                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe"))),
+                ),
                 Node(
                     "2",
                     listOf("Person", "Employee"),
-                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe"))),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(emptyMap()),
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1)))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
   }
 
   @Test
@@ -308,12 +365,20 @@ class StreamsTransactionEventExtensionsTest {
                 label = "KNOWS",
                 start =
                     RelationshipNodeChange(
-                        "1", listOf("Person"), mapOf("name" to "joe", "surname" to "doe")),
+                        "1",
+                        listOf("Person"),
+                        mapOf("name" to "joe", "surname" to "doe"),
+                    ),
                 end =
                     RelationshipNodeChange(
-                        "2", listOf("Person"), mapOf("name" to "mary", "surname" to "doe")),
+                        "2",
+                        listOf("Person"),
+                        mapOf("name" to "mary", "surname" to "doe"),
+                    ),
                 before = RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1))),
-                after = null))
+                after = null,
+            ),
+        )
 
     event.toChangeEvent() shouldBe
         ChangeEvent(
@@ -327,15 +392,19 @@ class StreamsTransactionEventExtensionsTest {
                 Node(
                     "1",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "joe", "surname" to "doe"))),
+                ),
                 Node(
                     "2",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe")))),
+                    mapOf("Person" to listOf(mapOf("name" to "mary", "surname" to "doe"))),
+                ),
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
-                null))
+                null,
+            ),
+        )
   }
 
   private fun newStreamsEvent(
@@ -343,10 +412,13 @@ class StreamsTransactionEventExtensionsTest {
       operationType: OperationType,
       payload: Payload,
       meta: Meta? = null,
-      schema: Schema? = null
+      schema: Schema? = null,
   ): StreamsTransactionEvent =
       StreamsTransactionEvent(
-          meta ?: defaultMetadata(time, operationType), payload, schema ?: Schema())
+          meta ?: defaultMetadata(time, operationType),
+          payload,
+          schema ?: Schema(),
+      )
 
   private fun defaultExpectedMetadata(time: Long) =
       Metadata(
@@ -371,5 +443,6 @@ class StreamsTransactionEventExtensionsTest {
           txId = 1,
           txEventId = 0,
           txEventsCount = 3,
-          operation = operationType)
+          operation = operationType,
+      )
 }

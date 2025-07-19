@@ -637,12 +637,13 @@
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
                         <ktfmt>
-                            <version>0.53</version>
+                            <version>0.56</version>
                             <style>META</style>
                             <blockIndent>2</blockIndent>
                             <continuationIndent>4</continuationIndent>
                             <removeUnusedImports>true</removeUnusedImports>
                             <maxWidth>100</maxWidth>
+                            <manageTrailingCommas>true</manageTrailingCommas>
                         </ktfmt>
                     </kotlin>
                     <java>

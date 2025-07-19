@@ -32,7 +32,8 @@ class DeleteNodeTest {
     operation.toQuery() shouldBe
         Query(
             "MATCH (n:`Person` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")))
+            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+        )
   }
 
   @Test
@@ -50,7 +51,8 @@ class DeleteNodeTest {
     operation.toQuery() shouldBe
         Query(
             "MATCH (n) WHERE elementId(n) = ${'$'}keys._elementId DELETE n",
-            mapOf("keys" to mapOf("_elementId" to "db:1")))
+            mapOf("keys" to mapOf("_elementId" to "db:1")),
+        )
   }
 
   @Test
@@ -60,7 +62,8 @@ class DeleteNodeTest {
     operation.toQuery() shouldBe
         Query(
             "MATCH (n:`Person` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DETACH DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")))
+            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+        )
   }
 
   @Test
@@ -71,7 +74,8 @@ class DeleteNodeTest {
     operation.toQuery() shouldBe
         Query(
             "MATCH (n:`Person`:`Employee` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DETACH DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")))
+            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+        )
   }
 
   @Test

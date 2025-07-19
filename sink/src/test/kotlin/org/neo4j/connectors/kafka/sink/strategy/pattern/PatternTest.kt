@@ -41,7 +41,8 @@ class PatternTest {
               true,
               setOf(PropertyMapping("id", "id")),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA:LabelB {!id: id, *})"
     }
 
@@ -56,7 +57,8 @@ class PatternTest {
               false,
               setOf(PropertyMapping("id", "id")),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("bar", "bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA {!id: id, foo: foo, bar: bar})"
     }
 
@@ -65,7 +67,9 @@ class PatternTest {
         strings =
             [
                 "(:`LabelA`:`Label B`{!`id`,`a foo`,`b bar`,`c dar`: `c bar`})",
-                "`LabelA`:`Label B`{!`id`,`a foo`,`b bar`,`c dar`: `c bar`}"])
+                "`LabelA`:`Label B`{!`id`,`a foo`,`b bar`,`c dar`: `c bar`}",
+            ]
+    )
     fun `should extract escaped labels and properties`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -77,8 +81,10 @@ class PatternTest {
               setOf(
                   PropertyMapping("a foo", "a foo"),
                   PropertyMapping("b bar", "b bar"),
-                  PropertyMapping("c bar", "c dar")),
-              emptySet())
+                  PropertyMapping("c bar", "c dar"),
+              ),
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA:`Label B` {!id: id, `a foo`: `a foo`, `b bar`: `b bar`, `c dar`: `c bar`})"
     }
@@ -94,7 +100,8 @@ class PatternTest {
               false,
               setOf(PropertyMapping("id", "id")),
               setOf(PropertyMapping("foo.bar", "foo.bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA {!id: id, `foo.bar`: `foo.bar`})"
     }
 
@@ -109,7 +116,8 @@ class PatternTest {
               false,
               setOf(PropertyMapping("idA", "idA"), PropertyMapping("idB", "idB")),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("bar", "bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA {!idA: idA, !idB: idB, foo: foo, bar: bar})"
     }
 
@@ -124,13 +132,15 @@ class PatternTest {
               true,
               setOf(PropertyMapping("id", "id")),
               emptySet(),
-              setOf("foo", "bar"))
+              setOf("foo", "bar"),
+          )
       result.text shouldBe "(:LabelA {!id: id, -foo, -bar, *})"
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["(:LabelA:LabelB{!id: customer.id,*})", "LabelA:LabelB{!id: customer.id,*}"])
+        strings = ["(:LabelA:LabelB{!id: customer.id,*})", "LabelA:LabelB{!id: customer.id,*}"]
+    )
     fun `should extract all params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -140,7 +150,8 @@ class PatternTest {
               true,
               setOf(PropertyMapping("customer.id", "id")),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA:LabelB {!id: `customer.id`, *})"
     }
 
@@ -149,7 +160,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:product.id,foo: product.foo,bar:product.bar})",
-                "LabelA{!id:product.id,foo: product.foo,bar:product.bar}"])
+                "LabelA{!id:product.id,foo: product.foo,bar:product.bar}",
+            ]
+    )
     fun `should extract all fixed params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -159,7 +172,8 @@ class PatternTest {
               false,
               setOf(PropertyMapping("product.id", "id")),
               setOf(PropertyMapping("product.foo", "foo"), PropertyMapping("product.bar", "bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA {!id: `product.id`, foo: `product.foo`, bar: `product.bar`})"
     }
 
@@ -168,7 +182,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:product.id,foo.bar: product.foo.bar})",
-                "LabelA{!id:product.id,foo.bar:product.foo.bar}"])
+                "LabelA{!id:product.id,foo.bar:product.foo.bar}",
+            ]
+    )
     fun `should extract complex params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -178,7 +194,8 @@ class PatternTest {
               false,
               setOf(PropertyMapping("product.id", "id")),
               setOf(PropertyMapping("product.foo.bar", "foo.bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe "(:LabelA {!id: `product.id`, `foo.bar`: `product.foo.bar`})"
     }
 
@@ -187,7 +204,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!idA: product.id,!idB: stock.id,foo: product.foo,bar})",
-                "LabelA{!idA:product.id,!idB:stock.id,foo:product.foo,bar}"])
+                "LabelA{!idA:product.id,!idB:stock.id,foo:product.foo,bar}",
+            ]
+    )
     fun `should extract composite keys with fixed params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -197,14 +216,16 @@ class PatternTest {
               false,
               setOf(PropertyMapping("product.id", "idA"), PropertyMapping("stock.id", "idB")),
               setOf(PropertyMapping("product.foo", "foo"), PropertyMapping("bar", "bar")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!idA: `product.id`, !idB: `stock.id`, foo: `product.foo`, bar: bar})"
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["(:LabelA{!id:product.id,-foo,-bar})", "LabelA{!id:product.id,-foo,-bar}"])
+        strings = ["(:LabelA{!id:product.id,-foo,-bar})", "LabelA{!id:product.id,-foo,-bar}"]
+    )
     fun `should extract all excluded params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -214,7 +235,8 @@ class PatternTest {
               true,
               setOf(PropertyMapping("product.id", "id")),
               emptySet(),
-              setOf("foo", "bar"))
+              setOf("foo", "bar"),
+          )
       result.text shouldBe "(:LabelA {!id: `product.id`, -foo, -bar, *})"
     }
 
@@ -265,7 +287,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!idA,aa})-[:REL_TYPE]->(:LabelB{!idB,bb})",
-                "LabelA{!idA,aa} REL_TYPE LabelB{!idB,bb}"])
+                "LabelA{!idA,aa} REL_TYPE LabelB{!idB,bb}",
+            ]
+    )
     fun `should extract all params`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -277,17 +301,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("idA", "idA")),
                   setOf(PropertyMapping("aa", "aa")),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("idB", "idB")),
                   setOf(PropertyMapping("bb", "bb")),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!idA: idA, aa: aa})-[:REL_TYPE {*}]->(:LabelB {!idB: idB, bb: bb})"
     }
@@ -306,17 +333,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("idB", "idB")),
                   setOf(PropertyMapping("bb", "bb")),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelA"),
                   false,
                   setOf(PropertyMapping("idA", "idA")),
                   setOf(PropertyMapping("aa", "aa")),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelB {!idB: idB, bb: bb})-[:REL_TYPE {*}]->(:LabelA {!idA: idA, aa: aa})"
     }
@@ -326,7 +356,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!idA})-[:REL_TYPE{foo, BAR}]->(:LabelB{!idB})",
-                "LabelA{!idA} REL_TYPE{foo, BAR} LabelB{!idB}"])
+                "LabelA{!idA} REL_TYPE{foo, BAR} LabelB{!idB}",
+            ]
+    )
     fun `should extract all fixed params`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -338,17 +370,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("idA", "idA")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("idB", "idB")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               false,
               emptySet(),
               setOf(PropertyMapping("foo", "foo"), PropertyMapping("BAR", "BAR")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!idA: idA})-[:REL_TYPE {foo: foo, BAR: BAR}]->(:LabelB {!idB: idB})"
     }
@@ -358,7 +393,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!idA})-[:REL_TYPE{foo.BAR, BAR.foo}]->(:LabelB{!idB})",
-                "LabelA{!idA} REL_TYPE{foo.BAR, BAR.foo} LabelB{!idB}"])
+                "LabelA{!idA} REL_TYPE{foo.BAR, BAR.foo} LabelB{!idB}",
+            ]
+    )
     fun `should extract complex params`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -370,17 +407,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("idA", "idA")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("idB", "idB")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               false,
               emptySet(),
               setOf(PropertyMapping("foo.BAR", "foo.BAR"), PropertyMapping("BAR.foo", "BAR.foo")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!idA: idA})-[:REL_TYPE {`foo.BAR`: `foo.BAR`, `BAR.foo`: `BAR.foo`}]->(:LabelB {!idB: idB})"
     }
@@ -390,7 +430,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!idA})-[:REL_TYPE{-foo, -BAR}]->(:LabelB{!idB})",
-                "LabelA{!idA} REL_TYPE{-foo, -BAR} LabelB{!idB}"])
+                "LabelA{!idA} REL_TYPE{-foo, -BAR} LabelB{!idB}",
+            ]
+    )
     fun `should extract all excluded params`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -402,17 +444,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("idA", "idA")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("idB", "idB")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              setOf("foo", "BAR"))
+              setOf("foo", "BAR"),
+          )
       result.text shouldBe
           "(:LabelA {!idA: idA})-[:REL_TYPE {-foo, -BAR, *}]->(:LabelB {!idB: idB})"
     }
@@ -422,7 +467,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:start.id,aa:start.aa})-[:REL_TYPE]->(:LabelB{!id:end.id,bb:end.bb})",
-                "LabelA{!id:start.id,aa:start.aa} REL_TYPE LabelB{!id:end.id,bb:end.bb}"])
+                "LabelA{!id:start.id,aa:start.aa} REL_TYPE LabelB{!id:end.id,bb:end.bb}",
+            ]
+    )
     fun `should extract all params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -434,17 +481,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("start.id", "id")),
                   setOf(PropertyMapping("start.aa", "aa")),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("end.id", "id")),
                   setOf(PropertyMapping("end.bb", "bb")),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!id: `start.id`, aa: `start.aa`})-[:REL_TYPE {*}]->(:LabelB {!id: `end.id`, bb: `end.bb`})"
     }
@@ -464,17 +514,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("start.id", "id")),
                   setOf(PropertyMapping("start.bb", "bb")),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelA"),
                   false,
                   setOf(PropertyMapping("end.id", "id")),
                   setOf(PropertyMapping("end.aa", "aa")),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelB {!id: `start.id`, bb: `start.bb`})-[:REL_TYPE {*}]->(:LabelA {!id: `end.id`, aa: `end.aa`})"
     }
@@ -484,7 +537,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:start.id})-[:REL_TYPE{foo:rel.foo, BAR:rel.BAR}]->(:LabelB{!id:end.id})",
-                "LabelA{!id:start.id} REL_TYPE{foo:rel.foo, BAR:rel.BAR} LabelB{!id:end.id}"])
+                "LabelA{!id:start.id} REL_TYPE{foo:rel.foo, BAR:rel.BAR} LabelB{!id:end.id}",
+            ]
+    )
     fun `should extract all fixed params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -496,17 +551,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("start.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("end.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               false,
               emptySet(),
               setOf(PropertyMapping("rel.foo", "foo"), PropertyMapping("rel.BAR", "BAR")),
-              emptySet())
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!id: `start.id`})-[:REL_TYPE {foo: `rel.foo`, BAR: `rel.BAR`}]->(:LabelB {!id: `end.id`})"
     }
@@ -516,7 +574,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:start.id})-[:REL_TYPE{foo.BAR:rel.foo.BAR, BAR.foo:rel.BAR.foo}]->(:LabelB{!id:end.id})",
-                "LabelA{!id:start.id} REL_TYPE{foo.BAR:rel.foo.BAR, BAR.foo:rel.BAR.foo} LabelB{!id:end.id}"])
+                "LabelA{!id:start.id} REL_TYPE{foo.BAR:rel.foo.BAR, BAR.foo:rel.BAR.foo} LabelB{!id:end.id}",
+            ]
+    )
     fun `should extract complex params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -528,19 +588,23 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("start.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("end.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               false,
               emptySet(),
               setOf(
                   PropertyMapping("rel.foo.BAR", "foo.BAR"),
-                  PropertyMapping("rel.BAR.foo", "BAR.foo")),
-              emptySet())
+                  PropertyMapping("rel.BAR.foo", "BAR.foo"),
+              ),
+              emptySet(),
+          )
       result.text shouldBe
           "(:LabelA {!id: `start.id`})-[:REL_TYPE {`foo.BAR`: `rel.foo.BAR`, `BAR.foo`: `rel.BAR.foo`}]->(:LabelB {!id: `end.id`})"
     }
@@ -550,7 +614,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id:start.id})-[:REL_TYPE{-foo, -BAR}]->(:LabelB{!id:end.id})",
-                "LabelA{!id:start.id} REL_TYPE{-foo, -BAR} LabelB{!id:end.id}"])
+                "LabelA{!id:start.id} REL_TYPE{-foo, -BAR} LabelB{!id:end.id}",
+            ]
+    )
     fun `should extract all excluded params aliased`(pattern: String) {
       val result = Pattern.parse(pattern)
 
@@ -562,17 +628,20 @@ class PatternTest {
                   false,
                   setOf(PropertyMapping("start.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               NodePattern(
                   setOf("LabelB"),
                   false,
                   setOf(PropertyMapping("end.id", "id")),
                   emptySet(),
-                  emptySet()),
+                  emptySet(),
+              ),
               true,
               emptySet(),
               emptySet(),
-              setOf("foo", "BAR"))
+              setOf("foo", "BAR"),
+          )
       result.text shouldBe
           "(:LabelA {!id: `start.id`})-[:REL_TYPE {-foo, -BAR, *}]->(:LabelB {!id: `end.id`})"
     }
@@ -590,7 +659,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id})-[:REL_TYPE{foo}]->(:LabelB{!idB,-exclude})",
-                "LabelA{!id} REL_TYPE{foo} LabelB{!idB,-exclude}"])
+                "LabelA{!id} REL_TYPE{foo} LabelB{!idB,-exclude}",
+            ]
+    )
     fun `should throw an exception because of property exclusion`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
           "Property exclusions are not allowed on start and end node patterns."
@@ -601,7 +672,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id})-[:REL_TYPE{foo}]->(:LabelB{!idB,*})",
-                "LabelA{!id} REL_TYPE{foo} LabelB{!idB,*}"])
+                "LabelA{!id} REL_TYPE{foo} LabelB{!idB,*}",
+            ]
+    )
     fun `should throw an exception because of wildcard property inclusion`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
           "Wildcard property inclusion is not allowed on start and end node patterns."
@@ -612,7 +685,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id})-[:REL_TYPE{foo, -BAR}]->(:LabelB{!idB})",
-                "LabelA{!id} REL_TYPE{foo, -BAR} LabelB{!idB}"])
+                "LabelA{!id} REL_TYPE{foo, -BAR} LabelB{!idB}",
+            ]
+    )
     fun `should throw an exception because of mixed configuration`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
           "Property inclusions and exclusions are mutually exclusive."
@@ -623,7 +698,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{id})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})",
-                "LabelA{id} REL_TYPE{foo,BAR} LabelB{!idB}"])
+                "LabelA{id} REL_TYPE{foo,BAR} LabelB{!idB}",
+            ]
+    )
     fun `should throw an exception because the node pattern is missing a key`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) } shouldHaveMessage
           "At least one key selector must be specified in node patterns."
@@ -634,7 +711,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{})-[:REL_TYPE{foo,BAR}]->(:LabelB{!idB})",
-                "LabelA{} REL_TYPE{foo,BAR} LabelB{!idB}"])
+                "LabelA{} REL_TYPE{foo,BAR} LabelB{!idB}",
+            ]
+    )
     fun `should throw an exception because the node pattern is missing a key when selectors are empty`(
         pattern: String
     ) {
@@ -655,7 +734,9 @@ class PatternTest {
         strings =
             [
                 "(:LabelA{!id})-[REL_TYPE{foo,BAR}]->(:LabelB{!idB})",
-                "LabelA{id} :REL_TYPE{foo,BAR} LabelB{!idB}"])
+                "LabelA{id} :REL_TYPE{foo,BAR} LabelB{!idB}",
+            ]
+    )
     fun `should throw an exception because of invalid relationship pattern`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) }.message shouldStartWith
           "Invalid pattern:"
@@ -666,7 +747,9 @@ class PatternTest {
         strings =
             [
                 "(LabelA{!id})-[:REL_TYPE{-foo:abc}]->(:LabelB{!idB})",
-                "LabelA{id} :REL_TYPE{-bar:abc} LabelB{!idB}"])
+                "LabelA{id} :REL_TYPE{-bar:abc} LabelB{!idB}",
+            ]
+    )
     fun `should throw an exception because the pattern has aliased exclusion`(pattern: String) {
       assertFailsWith(PatternException::class) { Pattern.parse(pattern) }.message shouldStartWith
           "Invalid pattern:"
@@ -677,7 +760,9 @@ class PatternTest {
         strings =
             [
                 "(LabelA{!id})-[:REL_TYPE{-foo}]->(:LabelB{!idB,-prop: abc})",
-                "LabelA{id} :REL_TYPE{foo,BAR} LabelB{!idB,-bb:bb}"])
+                "LabelA{id} :REL_TYPE{foo,BAR} LabelB{!idB,-bb:bb}",
+            ]
+    )
     fun `should throw an exception because the pattern has aliased exclusion on node pattern`(
         pattern: String
     ) {

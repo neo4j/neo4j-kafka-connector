@@ -32,7 +32,8 @@ object Headers {
       listOf(
           ConnectHeader(KEY_CDC_ID, SchemaAndValue(Schema.STRING_SCHEMA, event.id.id)),
           ConnectHeader(KEY_CDC_TX_ID, SchemaAndValue(Schema.INT64_SCHEMA, event.txId)),
-          ConnectHeader(KEY_CDC_TX_SEQ, SchemaAndValue(Schema.INT32_SCHEMA, event.seq)))
+          ConnectHeader(KEY_CDC_TX_SEQ, SchemaAndValue(Schema.INT32_SCHEMA, event.seq)),
+      )
 }
 
 fun SinkRecord.isCdcMessage(): Boolean =

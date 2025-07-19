@@ -48,7 +48,8 @@ class SinkConfigurationTest {
               Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
               SinkConnector.TOPICS_CONFIG to "foo, bar",
               "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
-                  "CREATE (p:Person{name: event.firstName})")
+                  "CREATE (p:Person{name: event.firstName})",
+          )
       SinkConfiguration(originals, Renderer.getDefaultRenderer())
     } shouldHaveMessage "Topic 'bar' is not assigned a sink strategy"
   }
@@ -65,7 +66,8 @@ class SinkConfigurationTest {
                   "CREATE (p:Person{name: event.firstName})",
               "${SinkConfiguration.CYPHER_TOPIC_PREFIX}bar" to
                   "CREATE (p:Person{name: event.firstName})",
-              SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo")
+              SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
+          )
 
       SinkConfiguration(originals, Renderer.getDefaultRenderer())
     } shouldHaveMessage "Topic 'foo' has multiple strategies defined"
@@ -81,7 +83,8 @@ class SinkConfigurationTest {
             "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                 "CREATE (p:Person{name: event.firstName})",
             SinkConfiguration.BATCH_SIZE to "10",
-            Neo4jConfiguration.DATABASE to "customers")
+            Neo4jConfiguration.DATABASE to "customers",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
@@ -100,7 +103,8 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             "${SinkConfiguration.PATTERN_TOPIC_PREFIX}foo" to "(:Foo{!fooId,fooName})",
             "${SinkConfiguration.PATTERN_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
-            SinkConfiguration.BATCH_SIZE to "10")
+            SinkConfiguration.BATCH_SIZE to "10",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
@@ -112,7 +116,8 @@ class SinkConfigurationTest {
             false,
             setOf(PropertyMapping("fooId", "fooId")),
             setOf(PropertyMapping("fooName", "fooName")),
-            emptySet())
+            emptySet(),
+        )
 
     config.topicHandlers shouldHaveKey "bar"
     config.topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
@@ -122,7 +127,8 @@ class SinkConfigurationTest {
             false,
             setOf(PropertyMapping("barId", "barId")),
             setOf(PropertyMapping("barName", "barName")),
-            emptySet())
+            emptySet(),
+        )
   }
 
   @Test
@@ -136,7 +142,8 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
-            SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId)
+            SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.topicHandlers shouldHaveKey "foo"
@@ -215,7 +222,8 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar",
-            SinkConfiguration.CYPHER_TOPIC_PREFIX + "bar" to "RETURN 1")
+            SinkConfiguration.CYPHER_TOPIC_PREFIX + "bar" to "RETURN 1",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.userAgentComment() shouldBe "cypher"
@@ -230,7 +238,8 @@ class SinkConfigurationTest {
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar",
-            SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to "Label{!id}")
+            SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to "Label{!id}",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.userAgentComment() shouldBe "node-pattern"
@@ -246,7 +255,8 @@ class SinkConfigurationTest {
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SinkConnector.TOPICS_CONFIG to "bar",
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
-                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
+                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.userAgentComment() shouldBe "relationship-pattern"
@@ -264,7 +274,8 @@ class SinkConfigurationTest {
             SinkConfiguration.CUD_TOPICS to "baz",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
-                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}")
+                "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
+        )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"

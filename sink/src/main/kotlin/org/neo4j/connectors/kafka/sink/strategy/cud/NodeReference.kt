@@ -24,7 +24,7 @@ import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
 data class NodeReference(
     val labels: Set<String>,
     val ids: Map<String, Any?>,
-    val op: LookupMode = LookupMode.MATCH
+    val op: LookupMode = LookupMode.MATCH,
 ) {
   companion object {
     fun from(values: Map<String, Any?>): NodeReference {
@@ -32,7 +32,8 @@ data class NodeReference(
           values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
           values.getMap<String, Any?>(Keys.IDS)?.toMap()
               ?: throw InvalidDataException("No ${Keys.IDS} found"),
-          LookupMode.fromString(values.getTyped<String>(Keys.OPERATION)) ?: LookupMode.MATCH)
+          LookupMode.fromString(values.getTyped<String>(Keys.OPERATION)) ?: LookupMode.MATCH,
+      )
     }
   }
 }

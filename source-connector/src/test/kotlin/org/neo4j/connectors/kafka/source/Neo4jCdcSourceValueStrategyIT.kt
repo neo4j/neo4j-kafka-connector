@@ -52,16 +52,19 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-value-serialization-change-event",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          valueSerializationStrategy = "CHANGE_EVENT"),
-                  ),
+                          valueSerializationStrategy = "CHANGE_EVENT",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of values as whole change event`(
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-value-serialization-change-event", offset = "earliest")
+          topic = "neo4j-cdc-topic-value-serialization-change-event",
+          offset = "earliest",
+      )
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
 
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
@@ -88,16 +91,19 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-value-serialization-entity-event",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          valueSerializationStrategy = "ENTITY_EVENT"),
-                  ),
+                          valueSerializationStrategy = "ENTITY_EVENT",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of values as only event entity`(
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-value-serialization-entity-event", offset = "earliest")
+          topic = "neo4j-cdc-topic-value-serialization-entity-event",
+          offset = "earliest",
+      )
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -115,7 +121,10 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                           "after" to
                               mapOf(
                                   "labels" to listOf("TestSource"),
-                                  "properties" to mapOf("name" to "Jane"))))
+                                  "properties" to mapOf("name" to "Jane"),
+                              )
+                      ),
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }

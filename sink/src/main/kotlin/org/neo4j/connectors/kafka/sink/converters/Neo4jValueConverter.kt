@@ -43,7 +43,7 @@ class Neo4jValueConverter : MapValueConverter<Any>() {
   override fun setDecimalField(
       result: MutableMap<String, Any?>?,
       fieldName: String,
-      value: BigDecimal
+      value: BigDecimal,
   ) {
     val doubleValue = value.toDouble()
     val fitsScale =
@@ -60,7 +60,7 @@ class Neo4jValueConverter : MapValueConverter<Any>() {
   override fun setTimestampField(
       result: MutableMap<String, Any?>?,
       fieldName: String,
-      value: Date
+      value: Date,
   ) {
     val localDate = value.toInstant().atZone(UTC).toLocalDateTime()
     setValue(result, fieldName, localDate)

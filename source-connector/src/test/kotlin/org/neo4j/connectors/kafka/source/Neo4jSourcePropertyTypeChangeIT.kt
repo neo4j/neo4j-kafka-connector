@@ -53,16 +53,22 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
               topics =
                   arrayOf(
                       CdcSourceTopic(
-                          topic = "cdc", patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+                          topic = "cdc",
+                          patterns = arrayOf(CdcSourceParam("(:TestSource)")),
+                      )
+                  ),
+          ),
+  )
   @Test
   fun `should publish changes with property type changes for nodes`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
             "CREATE (n:TestSource) SET n = ${'$'}props",
-            mapOf("props" to mapOf("name" to "Jane", "surname" to "Doe", "age" to 42)))
+            mapOf("props" to mapOf("name" to "Jane", "surname" to "Doe", "age" to 42)),
+        )
         .consume()
     session
         .run(
@@ -72,12 +78,16 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                     mapOf(
                         "surname" to "Smith",
                         "age" to "42",
-                        "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0))))
+                        "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0),
+                    )
+            ),
+        )
         .consume()
     session
         .run(
             "MATCH (ts:TestSource {name: 'Jane'}) SET ts += ${'$'}props",
-            mapOf("props" to mapOf("age" to 42, "dob" to LocalDate.of(1982, 1, 1))))
+            mapOf("props" to mapOf("age" to 42, "dob" to LocalDate.of(1982, 1, 1))),
+        )
         .consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
@@ -100,7 +110,9 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                       "name" to "Jane",
                       "surname" to "Smith",
                       "age" to "42",
-                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
+                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0),
+                  )
+              )
         }
         .assertMessageValue { value ->
           assertThat(value)
@@ -112,13 +124,17 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                       "name" to "Jane",
                       "surname" to "Smith",
                       "age" to "42",
-                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0)))
+                      "dob" to LocalDateTime.of(1982, 1, 1, 0, 0, 0, 0),
+                  )
+              )
               .hasAfterStateProperties(
                   mapOf(
                       "name" to "Jane",
                       "surname" to "Smith",
                       "age" to 42L,
-                      "dob" to LocalDate.of(1982, 1, 1)))
+                      "dob" to LocalDate.of(1982, 1, 1),
+                  )
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -132,12 +148,16 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-create-inc",
-                          patterns = arrayOf(CdcSourceParam("(:TestSource)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:TestSource)")),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish changes with different properties using the default topic compatibility mode for nodes`(
       @TopicConsumer(topic = "neo4j-cdc-create-inc", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'John'})", mapOf()).consume()
     session.run("CREATE (:TestSource {title: 'Neo4j'})", mapOf()).consume()
@@ -172,31 +192,38 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "cdc",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
+                      )
+                  ),
+          ),
+  )
   @Test
   fun `should publish changes with property type changes for relationships`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
             "CREATE (:Person)-[r:EMPLOYED]->(:Company) SET r = ${'$'}props",
-            mapOf("props" to mapOf("role" to "SWE")))
+            mapOf("props" to mapOf("role" to "SWE")),
+        )
         .consume()
     session
         .run(
             "MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r += ${'$'}props",
             mapOf(
                 "props" to
-                    mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0))))
+                    mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0))
+            ),
+        )
         .consume()
     session
         .run(
             "MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r += ${'$'}props",
             mapOf(
-                "props" to
-                    mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1))))
+                "props" to mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1))
+            ),
+        )
         .consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
@@ -219,7 +246,8 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
               .endLabelledAs("Company")
               .hasBeforeStateProperties(mapOf("role" to "SWE"))
               .hasAfterStateProperties(
-                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0)))
+                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0))
+              )
         }
         .assertMessageValue { value ->
           assertThat(value)
@@ -229,9 +257,11 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
               .startLabelledAs("Person")
               .endLabelledAs("Company")
               .hasBeforeStateProperties(
-                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0)))
+                  mapOf("role" to "EM", "since" to LocalDateTime.of(1999, 1, 1, 0, 0, 0, 0))
+              )
               .hasAfterStateProperties(
-                  mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1)))
+                  mapOf("role" to listOf("EM", "SWE"), "since" to LocalDate.of(1999, 1, 1))
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -245,13 +275,16 @@ abstract class Neo4jSourceOnlyExtendedPayloadIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-create-inc-rel",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:IS_EMPLOYEE]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:IS_EMPLOYEE]->(:Company)")),
+                      )
+                  )
+          ),
+  )
   @Test
   open fun `should publish changes with different properties using the default topic compatibility mode for relationships`(
       @TopicConsumer(topic = "neo4j-cdc-create-inc-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:Person)-[:IS_EMPLOYEE {role: 'SWE'}]->(:Company)").consume()
     session.run("CREATE (:Person)-[:IS_EMPLOYEE {tribe: 'engineering'}]->(:Company)").consume()

@@ -72,7 +72,9 @@ class Neo4jQueryTask : SourceTask() {
                     .rxSession(config.sessionConfig())
                     .readTransaction(
                         { it.run(config.query, mapOf("lastCheck" to offset.get())).records() },
-                        config.txConfig()))
+                        config.txConfig(),
+                    )
+            )
             .take(config.batchSize.toLong())
             .asFlow()
             .map { build(it) }
@@ -100,7 +102,8 @@ class Neo4jQueryTask : SourceTask() {
             config.payloadMode,
             recordAsMap,
             optional = true,
-            forceMapsAsStruct = config.forceMapsAsStruct)
+            forceMapsAsStruct = config.forceMapsAsStruct,
+        )
     val value = DynamicTypes.toConnectValue(schema, recordAsMap)
 
     return SourceRecord(
@@ -110,20 +113,25 @@ class Neo4jQueryTask : SourceTask() {
             "value" to
                 (record.get(config.queryStreamingProperty).asObject() as? Long
                     ?: throw InvalidDataException(
-                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${record.get(config.queryStreamingProperty)}', expected a long value)."))),
+                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${record.get(config.queryStreamingProperty)}', expected a long value)."
+                    )),
+        ),
         config.topic,
         null,
         schema,
         value,
         schema,
-        value)
+        value,
+    )
   }
 
   private fun resumeFrom(config: SourceConfiguration): Long {
     val offset = context.offsetStorageReader().offset(config.partition) ?: emptyMap()
-    if (!config.ignoreStoredOffset &&
-        offset["value"] is Long &&
-        offset["property"] == config.queryStreamingProperty) {
+    if (
+        !config.ignoreStoredOffset &&
+            offset["value"] is Long &&
+            offset["property"] == config.queryStreamingProperty
+    ) {
       log.debug("previously stored offset is {}", offset["value"])
       return offset["value"] as Long
     }
@@ -140,7 +148,8 @@ class Neo4jQueryTask : SourceTask() {
         config.startFrom,
         SourceConfiguration.IGNORE_STORED_OFFSET,
         config.ignoreStoredOffset,
-        value)
+        value,
+    )
     return value
   }
 }

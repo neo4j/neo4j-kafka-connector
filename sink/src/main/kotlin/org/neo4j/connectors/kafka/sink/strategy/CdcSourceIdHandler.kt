@@ -31,7 +31,7 @@ class CdcSourceIdHandler(
     val topic: String,
     private val renderer: Renderer,
     val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
-    val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME
+    val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
 ) : CdcHandler() {
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID
@@ -154,7 +154,7 @@ class CdcSourceIdHandler(
   @Suppress("SameParameterValue")
   private fun buildRelationship(
       event: RelationshipEvent,
-      named: String
+      named: String,
   ): Triple<Node, Node, Relationship> {
     val start = buildNode(event.start.elementId, "start")
     val end = buildNode(event.end.elementId, "end")

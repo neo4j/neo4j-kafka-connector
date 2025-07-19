@@ -46,7 +46,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -57,7 +58,11 @@ class CudHandlerTest : HandlerTest() {
                     Query(
                         CypherParser.parse("CREATE (n:`Foo`:`Bar` {}) SET n = ${'$'}properties")
                             .cypher,
-                        mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                        mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value")),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -76,7 +81,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -86,7 +92,11 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse("CREATE (n {}) SET n = ${'$'}properties").cypher,
-                        mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                        mapOf("properties" to mapOf("id" to 1, "foo" to "foo-value")),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -109,7 +119,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -119,11 +130,17 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
-                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties"
+                            )
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
-                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -145,7 +162,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -155,11 +173,17 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
-                                "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MATCH (n {id: ${'$'}keys.id}) SET n += ${'$'}properties"
+                            )
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
-                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -182,7 +206,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -192,11 +217,17 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
-                                "MERGE (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MERGE (n:`Foo`:`Bar` {id: ${'$'}keys.id}) SET n += ${'$'}properties"
+                            )
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
-                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -218,7 +249,8 @@ class CudHandlerTest : HandlerTest() {
                     "foo": "foo-value"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -228,11 +260,17 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
-                                "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties")
+                                "MERGE (n {id: ${'$'}keys.id}) SET n += ${'$'}properties"
+                            )
                             .cypher,
                         mapOf(
                             "keys" to mapOf("id" to 0),
-                            "properties" to mapOf("id" to 1, "foo" to "foo-value"))))))
+                            "properties" to mapOf("id" to 1, "foo" to "foo-value"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -252,7 +290,8 @@ class CudHandlerTest : HandlerTest() {
                   },
                   "detach": true
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -262,9 +301,14 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse(
-                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DETACH DELETE n")
+                                "MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DETACH DELETE n"
+                            )
                             .cypher,
-                        mapOf("keys" to mapOf("id" to 0))))))
+                        mapOf("keys" to mapOf("id" to 0)),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -283,7 +327,8 @@ class CudHandlerTest : HandlerTest() {
                   },
                   "detach": true
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -293,7 +338,11 @@ class CudHandlerTest : HandlerTest() {
                     listOf(sinkMessage),
                     Query(
                         CypherParser.parse("MATCH (n {id: ${'$'}keys.id}) DETACH DELETE n").cypher,
-                        mapOf("keys" to mapOf("id" to 0))))))
+                        mapOf("keys" to mapOf("id" to 0)),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -312,7 +361,8 @@ class CudHandlerTest : HandlerTest() {
                     "id": 0
                   }                
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -323,7 +373,11 @@ class CudHandlerTest : HandlerTest() {
                     Query(
                         CypherParser.parse("MATCH (n:`Foo`:`Bar` {id: ${'$'}keys.id}) DELETE n")
                             .cypher,
-                        mapOf("keys" to mapOf("id" to 0))))))
+                        mapOf("keys" to mapOf("id" to 0)),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -354,7 +408,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -369,12 +424,18 @@ class CudHandlerTest : HandlerTest() {
                               MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               CREATE (start)-[r:`RELATED_TO`]->(end)
                               SET r = ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -407,7 +468,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -422,12 +484,18 @@ class CudHandlerTest : HandlerTest() {
                               MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               CREATE (start)-[r:`RELATED_TO`]->(end)
                               SET r = ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -459,7 +527,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -474,13 +543,19 @@ class CudHandlerTest : HandlerTest() {
                               MERGE (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MATCH (start)-[r:`RELATED_TO` {}]->(end)
                               SET r += ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
                             "keys" to emptyMap(),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -515,7 +590,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -530,13 +606,19 @@ class CudHandlerTest : HandlerTest() {
                               MERGE (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MATCH (start)-[r:`RELATED_TO` {id: ${'$'}keys.id}]->(end)
                               SET r += ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
                             "keys" to mapOf("id" to 5),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -568,7 +650,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -583,13 +666,19 @@ class CudHandlerTest : HandlerTest() {
                               MERGE (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MERGE (start)-[r:`RELATED_TO` {}]->(end)
                               SET r += ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
                             "keys" to emptyMap(),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -624,7 +713,8 @@ class CudHandlerTest : HandlerTest() {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -639,13 +729,19 @@ class CudHandlerTest : HandlerTest() {
                               MERGE (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MERGE (start)-[r:`RELATED_TO` {id: ${'$'}keys.id}]->(end)
                               SET r += ${'$'}properties
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
                             "keys" to mapOf("id" to 5),
-                            "properties" to mapOf("by" to "incident"))))))
+                            "properties" to mapOf("by" to "incident"),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -673,7 +769,8 @@ class CudHandlerTest : HandlerTest() {
                     }
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -688,12 +785,18 @@ class CudHandlerTest : HandlerTest() {
                               MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MATCH (start)-[r:`RELATED_TO` {}]->(end)
                               DELETE r
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
-                            "keys" to emptyMap())))))
+                            "keys" to emptyMap(),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -724,7 +827,8 @@ class CudHandlerTest : HandlerTest() {
                     "id": 5
                   }
                 }
-                """)
+                """,
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -739,12 +843,18 @@ class CudHandlerTest : HandlerTest() {
                               MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end
                               MATCH (start)-[r:`RELATED_TO` {id: ${'$'}keys.id}]->(end)
                               DELETE r
-                            """)
+                            """
+                            )
                             .cypher,
                         mapOf(
                             "start" to mapOf("keys" to mapOf("id" to 0)),
                             "end" to mapOf("keys" to mapOf("id" to 1)),
-                            "keys" to mapOf("id" to 5))))))
+                            "keys" to mapOf("id" to 5),
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @ParameterizedTest
@@ -763,14 +873,16 @@ class CudHandlerTest : HandlerTest() {
                         "type" to "NODE",
                         "op" to "CREATE",
                         "labels" to listOf("Foo"),
-                        "properties" to mapOf("id" to id))
+                        "properties" to mapOf("id" to id),
+                    )
                 1 ->
                     mapOf(
                         "type" to "NODE",
                         "op" to "UPDATE",
                         "labels" to listOf("Foo"),
                         "ids" to mapOf("id" to id),
-                        "properties" to mapOf("id" to id, "prop1" to "a value"))
+                        "properties" to mapOf("id" to id, "prop1" to "a value"),
+                    )
                 2 ->
                     mapOf(
                         "type" to "NODE",
@@ -778,13 +890,15 @@ class CudHandlerTest : HandlerTest() {
                         "labels" to listOf("Foo"),
                         "ids" to mapOf("id" to id),
                         "properties" to
-                            mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"))
+                            mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"),
+                    )
                 3 ->
                     mapOf(
                         "type" to "NODE",
                         "op" to "DELETE",
                         "labels" to listOf("Foo"),
-                        "ids" to mapOf("id" to id))
+                        "ids" to mapOf("id" to id),
+                    )
                 else -> throw IllegalArgumentException("unexpected")
               }
             }
@@ -805,26 +919,33 @@ class CudHandlerTest : HandlerTest() {
                     0 ->
                         Query(
                             "CREATE (n:`Foo` {}) SET n = ${'$'}properties",
-                            mapOf("properties" to mapOf("id" to id)))
+                            mapOf("properties" to mapOf("id" to id)),
+                        )
                     1 ->
                         Query(
                             "MATCH (n:`Foo` {id: ${'$'}keys.id}) SET n += ${'$'}properties",
                             mapOf(
                                 "keys" to mapOf("id" to id),
-                                "properties" to mapOf("id" to id, "prop1" to "a value")))
+                                "properties" to mapOf("id" to id, "prop1" to "a value"),
+                            ),
+                        )
                     2 ->
                         Query(
                             "MERGE (n:`Foo` {id: ${'$'}keys.id}) SET n += ${'$'}properties",
                             mapOf(
                                 "keys" to mapOf("id" to id),
                                 "properties" to
-                                    mapOf("id" to id, "prop1" to "a value", "prop2" to "b value")))
+                                    mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"),
+                            ),
+                        )
                     3 ->
                         Query(
                             "MATCH (n:`Foo` {id: ${'$'}keys.id}) DELETE n",
-                            mapOf("keys" to mapOf("id" to id)))
+                            mapOf("keys" to mapOf("id" to id)),
+                        )
                     else -> throw IllegalArgumentException("unexpected")
-                  })
+                  },
+              )
             }
             .chunked(batchSize)
   }
@@ -847,7 +968,8 @@ class CudHandlerTest : HandlerTest() {
                         "rel_type" to "RELATED_TO",
                         "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to id)),
                         "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to id)),
-                        "properties" to mapOf("id" to id))
+                        "properties" to mapOf("id" to id),
+                    )
                 1 ->
                     mapOf(
                         "type" to "RELATIONSHIP",
@@ -855,7 +977,8 @@ class CudHandlerTest : HandlerTest() {
                         "rel_type" to "RELATED_TO",
                         "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to id)),
                         "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to id)),
-                        "properties" to mapOf("id" to id, "prop1" to "a value"))
+                        "properties" to mapOf("id" to id, "prop1" to "a value"),
+                    )
                 2 ->
                     mapOf(
                         "type" to "relationship",
@@ -864,14 +987,16 @@ class CudHandlerTest : HandlerTest() {
                         "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to id)),
                         "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to id)),
                         "properties" to
-                            mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"))
+                            mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"),
+                    )
                 3 ->
                     mapOf(
                         "type" to "relationship",
                         "op" to "delete",
                         "rel_type" to "RELATED_TO",
                         "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to id)),
-                        "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to id)))
+                        "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to id)),
+                    )
                 else -> throw IllegalArgumentException("unexpected")
               }
             }
@@ -895,7 +1020,9 @@ class CudHandlerTest : HandlerTest() {
                             mapOf(
                                 "start" to mapOf("keys" to mapOf("id" to id)),
                                 "end" to mapOf("keys" to mapOf("id" to id)),
-                                "properties" to mapOf("id" to id)))
+                                "properties" to mapOf("id" to id),
+                            ),
+                        )
                     1 ->
                         Query(
                             "MATCH (start:`Foo` {id: ${'$'}start.keys.id}) WITH start MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end MATCH (start)-[r:`RELATED_TO` {}]->(end) SET r += ${'$'}properties",
@@ -903,7 +1030,9 @@ class CudHandlerTest : HandlerTest() {
                                 "start" to mapOf("keys" to mapOf("id" to id)),
                                 "end" to mapOf("keys" to mapOf("id" to id)),
                                 "keys" to emptyMap(),
-                                "properties" to mapOf("id" to id, "prop1" to "a value")))
+                                "properties" to mapOf("id" to id, "prop1" to "a value"),
+                            ),
+                        )
                     2 ->
                         Query(
                             "MATCH (start:`Foo` {id: ${'$'}start.keys.id}) WITH start MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end MERGE (start)-[r:`RELATED_TO` {}]->(end) SET r += ${'$'}properties",
@@ -912,16 +1041,21 @@ class CudHandlerTest : HandlerTest() {
                                 "end" to mapOf("keys" to mapOf("id" to id)),
                                 "keys" to emptyMap(),
                                 "properties" to
-                                    mapOf("id" to id, "prop1" to "a value", "prop2" to "b value")))
+                                    mapOf("id" to id, "prop1" to "a value", "prop2" to "b value"),
+                            ),
+                        )
                     3 ->
                         Query(
                             "MATCH (start:`Foo` {id: ${'$'}start.keys.id}) WITH start MATCH (end:`Bar` {id: ${'$'}end.keys.id}) WITH start, end MATCH (start)-[r:`RELATED_TO` {}]->(end) DELETE r",
                             mapOf(
                                 "start" to mapOf("keys" to mapOf("id" to id)),
                                 "end" to mapOf("keys" to mapOf("id" to id)),
-                                "keys" to emptyMap()))
+                                "keys" to emptyMap(),
+                            ),
+                        )
                     else -> throw IllegalArgumentException("unexpected")
-                  })
+                  },
+              )
             }
             .chunked(batchSize)
   }
