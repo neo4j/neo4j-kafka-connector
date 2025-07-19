@@ -20,10 +20,12 @@ import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.data.converter.CompactValueConverter
 import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
+import org.neo4j.connectors.kafka.data.converter.JsonValueConverter
 
 enum class PayloadMode(private val converter: ValueConverter) : ValueConverter {
   EXTENDED(ExtendedValueConverter()),
-  COMPACT(CompactValueConverter());
+  COMPACT(CompactValueConverter()),
+  JSON(JsonValueConverter());
 
   override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema =
       converter.schema(value, optional, forceMapsAsStruct)
