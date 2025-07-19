@@ -35,8 +35,8 @@ import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
+import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -59,6 +59,8 @@ abstract class Neo4jCudIT {
     const val TOPIC_1 = "test-1"
     const val TOPIC_2 = "test-2"
     const val TOPIC_3 = "test-3"
+
+    val converter = ExtendedValueConverter()
   }
 
   @Neo4jSink(cud = [CudStrategy(TOPIC)])
@@ -164,16 +166,10 @@ abstract class Neo4jCudIT {
                     Struct(propertiesSchema)
                         .put("id", 1L)
                         .put("foo", "foo-value")
-                        .put(
-                            "dob",
-                            DynamicTypes.toConnectValue(
-                                PropertyType.schema,
-                                LocalDate.of(1995, 1, 1),
-                            ),
-                        )
+                        .put("dob", converter.value(PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
-                            DynamicTypes.toConnectValue(
+                            converter.value(
                                 PropertyType.schema,
                                 Values.point(7203, 1.0, 2.5).asPoint(),
                             ),
@@ -241,16 +237,10 @@ abstract class Neo4jCudIT {
                     "properties",
                     Struct(propertiesSchema)
                         .put("foo", "foo-value-updated")
-                        .put(
-                            "dob",
-                            DynamicTypes.toConnectValue(
-                                PropertyType.schema,
-                                LocalDate.of(1995, 1, 1),
-                            ),
-                        )
+                        .put("dob", converter.value(PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
-                            DynamicTypes.toConnectValue(
+                            converter.value(
                                 PropertyType.schema,
                                 Values.point(7203, 1.0, 2.5).asPoint(),
                             ),
@@ -320,16 +310,10 @@ abstract class Neo4jCudIT {
                     Struct(propertiesSchema)
                         .put("id", 1L)
                         .put("foo_new", "foo-new-value-merged")
-                        .put(
-                            "dob",
-                            DynamicTypes.toConnectValue(
-                                PropertyType.schema,
-                                LocalDate.of(1995, 1, 1),
-                            ),
-                        )
+                        .put("dob", converter.value(PropertyType.schema, LocalDate.of(1995, 1, 1)))
                         .put(
                             "place",
-                            DynamicTypes.toConnectValue(
+                            converter.value(
                                 PropertyType.schema,
                                 Values.point(7203, 1.0, 2.5).asPoint(),
                             ),

@@ -37,7 +37,7 @@ import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.DateSupport
@@ -96,11 +96,11 @@ abstract class Neo4jRelationshipPatternIT {
                       .put("productId", 2L)
                       .put(
                           "at",
-                          DynamicTypes.toConnectValue(PropertyType.schema, LocalDate.of(1995, 1, 1)),
+                          PayloadMode.EXTENDED.value(PropertyType.schema, LocalDate.of(1995, 1, 1)),
                       )
                       .put(
                           "place",
-                          DynamicTypes.toConnectValue(
+                          PayloadMode.EXTENDED.value(
                               PropertyType.schema,
                               Values.point(7203, 1.0, 2.5).asPoint(),
                           ),
