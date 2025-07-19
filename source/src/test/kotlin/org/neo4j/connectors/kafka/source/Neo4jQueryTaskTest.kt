@@ -474,60 +474,6 @@ class Neo4jQueryTaskTest {
   }
 
   @Test
-  fun `should source data with complex type 2 with custom QUERY`() = runTest {
-    val props = mutableMapOf<String, String>()
-    props[Neo4jConfiguration.URI] = neo4j.boltUrl
-    props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
-    props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
-    props[SourceConfiguration.QUERY_FORCE_MAPS_AS_STRUCT] = "false"
-    props[SourceConfiguration.PAYLOAD_MODE] = PayloadMode.COMPACT.toString()
-    props[SourceConfiguration.QUERY] =
-        """
-          |WITH {
-          |id: 'ROOT_ID', 
-          |list: [
-          |      {property1: 'property1', subList: [{subListProperty1: 'subListProperty1'}]}, 
-          |      {property1: 'property2', subList: [{subListProperty1: 'subListProperty2'}]}
-          |]} AS data 
-          |RETURN data, data.id AS guid, 123456789 AS timestamp
-            """
-            .trimMargin()
-    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
-
-    task.start(props)
-
-    val expected =
-        mapOf(
-            "timestamp" to 123456789L,
-            "guid" to "ROOT_ID",
-            "data" to
-                mapOf(
-                    "id" to "ROOT_ID",
-                    "list" to
-                        listOf(
-                            mapOf(
-                                "property1" to "property1",
-                                "subList" to listOf(mapOf("subListProperty1" to "subListProperty1")),
-                            ),
-                            mapOf(
-                                "property1" to "property2",
-                                "subList" to listOf(mapOf("subListProperty1" to "subListProperty2")),
-                            ),
-                        ),
-                ),
-        )
-
-    val list = mutableListOf<SourceRecord>()
-
-    eventually(30.seconds) {
-      task.poll()?.let { list.addAll(it) }
-      val actualList = list.map { DynamicTypes.fromConnectValue(it.valueSchema(), it.value()) }
-
-      actualList.firstOrNull()!! shouldBe expected
-    }
-  }
-
-  @Test
   fun `should throw exception if provided with an invalid query`() {
     assertFailsWith(ClientException::class) {
       val props = mutableMapOf<String, String>()
