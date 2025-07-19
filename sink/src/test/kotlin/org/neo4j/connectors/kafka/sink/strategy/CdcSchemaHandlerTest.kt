@@ -123,7 +123,7 @@ class CdcSchemaHandlerTest {
               .also {
                 it shouldHaveMessage
                     Regex(
-                        "^schema strategy requires at least one node key with valid properties on node aliased '(n|start|end)'.$",
+                        "^schema strategy requires at least one node key with valid properties on node aliased '(n|start|end)'.$"
                     )
               }
         }
@@ -141,11 +141,7 @@ class CdcSchemaHandlerTest {
                 null,
                 NodeState(
                     listOf("Person"),
-                    mapOf(
-                        "name" to "john",
-                        "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1),
-                    ),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
                 ),
             ),
             1,
@@ -172,8 +168,8 @@ class CdcSchemaHandlerTest {
                                 ),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
 
@@ -187,11 +183,7 @@ class CdcSchemaHandlerTest {
                 null,
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf(
-                        "name" to "john",
-                        "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1),
-                    ),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
                 ),
             ),
             1,
@@ -218,8 +210,8 @@ class CdcSchemaHandlerTest {
                                 ),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -236,11 +228,7 @@ class CdcSchemaHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf(
-                        "name" to "john",
-                        "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1),
-                    ),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
                 ),
             ),
             1,
@@ -262,8 +250,8 @@ class CdcSchemaHandlerTest {
                             "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
 
@@ -280,11 +268,7 @@ class CdcSchemaHandlerTest {
                 ),
                 NodeState(
                     listOf("Person", "Manager"),
-                    mapOf(
-                        "name" to "john",
-                        "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1),
-                    ),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
                 ),
             ),
             1,
@@ -311,8 +295,8 @@ class CdcSchemaHandlerTest {
                                 ),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
 
@@ -332,11 +316,7 @@ class CdcSchemaHandlerTest {
                 ),
                 NodeState(
                     listOf("Person", "Manager"),
-                    mapOf(
-                        "name" to "john",
-                        "surname" to "doe",
-                        "dob" to LocalDate.of(1990, 1, 1),
-                    ),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
                 ),
             ),
             1,
@@ -364,8 +344,8 @@ class CdcSchemaHandlerTest {
                                 ),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -400,8 +380,8 @@ class CdcSchemaHandlerTest {
                         "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) DETACH DELETE n",
                         mapOf("nName" to "joe", "nSurname" to "doe"),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -450,8 +430,8 @@ class CdcSchemaHandlerTest {
                             "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1)),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -508,8 +488,8 @@ class CdcSchemaHandlerTest {
                             "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1)),
                         ),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
 
@@ -550,13 +530,10 @@ class CdcSchemaHandlerTest {
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
                             "SET r += ${'$'}rProps",
-                        mapOf(
-                            "rId" to 1001L,
-                            "rProps" to mapOf("name" to "joe"),
-                        ),
+                        mapOf("rId" to 1001L, "rProps" to mapOf("name" to "joe")),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -601,8 +578,8 @@ class CdcSchemaHandlerTest {
                             "DELETE r",
                         mapOf("startId" to 1L, "endId" to 2L),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
 
@@ -642,12 +619,10 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage1),
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf(
-                            "rId" to 1001L,
-                        ),
+                        mapOf("rId" to 1001L),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -665,7 +640,7 @@ class CdcSchemaHandlerTest {
                 newChangeEventMessage(randomChangeEvent(), 1, 0),
                 newChangeEventMessage(randomChangeEvent(), 1, 1),
                 newChangeEventMessage(randomChangeEvent(), 2, 0),
-            ),
+            )
         )
 
     result
@@ -706,12 +681,10 @@ class CdcSchemaHandlerTest {
             { third ->
               third
                   .shouldHaveSize(1)
-                  .shouldMatchInOrder(
-                      { q1 ->
-                        q1.txId shouldBe 2
-                        q1.seq shouldBe 0
-                      },
-                  )
+                  .shouldMatchInOrder({ q1 ->
+                    q1.txId shouldBe 2
+                    q1.seq shouldBe 0
+                  })
             },
         )
   }
@@ -784,10 +757,7 @@ class CdcSchemaHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                NodeState(
-                    listOf("Person", "Employee"),
-                    mapOf("name" to "joe", "surname" to "doe"),
-                ),
+                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
             0,
@@ -914,8 +884,8 @@ class CdcSchemaHandlerTest {
                         "MATCH (n:`Person` {name: ${'$'}nName}) DETACH DELETE n",
                         mapOf("nName" to "john"),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -931,12 +901,7 @@ class CdcSchemaHandlerTest {
                     listOf("Person"),
                     mapOf("Person" to listOf(mapOf("name" to "john"), mapOf("invalid" to null))),
                     null,
-                    NodeState(
-                        listOf("Person"),
-                        mapOf(
-                            "name" to "john",
-                        ),
-                    ),
+                    NodeState(listOf("Person"), mapOf("name" to "john")),
                 ),
             txId = 1,
             seq = 0,
@@ -951,16 +916,10 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MERGE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
-                        mapOf(
-                            "nName" to "john",
-                            "nProps" to
-                                mapOf(
-                                    "name" to "john",
-                                ),
-                        ),
+                        mapOf("nName" to "john", "nProps" to mapOf("name" to "john")),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -1026,11 +985,7 @@ class CdcSchemaHandlerTest {
                     listOf("Person"),
                     mapOf("Person" to listOf(mapOf("name" to "john"))),
                 ),
-                Node(
-                    "end-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to emptyList()),
-                ),
+                Node("end-element-id", listOf("Person"), mapOf("Person" to emptyList())),
                 listOf(mapOf("id" to 1L)),
                 EntityOperation.CREATE,
                 null,
@@ -1196,16 +1151,10 @@ class CdcSchemaHandlerTest {
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
                             "SET r += ${'$'}rProps",
-                        mapOf(
-                            "rId" to 1L,
-                            "rProps" to
-                                mapOf(
-                                    "since" to LocalDate.of(2000, 1, 1),
-                                ),
-                        ),
+                        mapOf("rId" to 1L, "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -1247,16 +1196,10 @@ class CdcSchemaHandlerTest {
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
                             "SET r += ${'$'}rProps",
-                        mapOf(
-                            "rId" to 1L,
-                            "rProps" to
-                                mapOf(
-                                    "since" to LocalDate.of(2000, 1, 1),
-                                ),
-                        ),
+                        mapOf("rId" to 1L, "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -1413,12 +1356,10 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf(
-                            "rId" to 1L,
-                        ),
+                        mapOf("rId" to 1L),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -1459,12 +1400,10 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf(
-                            "rId" to 1L,
-                        ),
+                        mapOf("rId" to 1L),
                     ),
-                ),
-            ),
+                )
+            )
         ),
     )
   }
@@ -1751,7 +1690,7 @@ class CdcSchemaHandlerTest {
         .also {
           it shouldHaveMessage
               Regex(
-                  "^schema strategy requires at least one node key with valid properties on node aliased '$alias'.$",
+                  "^schema strategy requires at least one node key with valid properties on node aliased '$alias'.$"
               )
         }
   }

@@ -110,7 +110,9 @@ class Neo4jConnectorTest {
                 SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
                 SinkConfiguration.CYPHER_BIND_KEY_AS to "",
                 SinkConfiguration.CYPHER_BIND_VALUE_AS to "",
-                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false"))
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false",
+            )
+        )
 
     config
         .configValues()
@@ -121,7 +123,8 @@ class Neo4jConnectorTest {
                   SinkConfiguration.CYPHER_BIND_HEADER_AS,
                   SinkConfiguration.CYPHER_BIND_KEY_AS,
                   SinkConfiguration.CYPHER_BIND_VALUE_AS,
-                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT,
+              )
         }
         .forEach {
           it.errorMessages() shouldContain
@@ -139,7 +142,9 @@ class Neo4jConnectorTest {
                 SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
                 SinkConfiguration.CYPHER_BIND_KEY_AS to "",
                 SinkConfiguration.CYPHER_BIND_VALUE_AS to "",
-                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "true"))
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "true",
+            )
+        )
 
     config
         .configValues()
@@ -149,7 +154,8 @@ class Neo4jConnectorTest {
                   SinkConfiguration.CYPHER_BIND_HEADER_AS,
                   SinkConfiguration.CYPHER_BIND_KEY_AS,
                   SinkConfiguration.CYPHER_BIND_VALUE_AS,
-                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT,
+              )
         }
         .forEach { it.errorMessages() should beEmpty<String>() }
   }
@@ -164,7 +170,9 @@ class Neo4jConnectorTest {
                 SinkConfiguration.CYPHER_BIND_HEADER_AS to "",
                 SinkConfiguration.CYPHER_BIND_KEY_AS to "",
                 SinkConfiguration.CYPHER_BIND_VALUE_AS to "__value",
-                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false"))
+                SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT to "false",
+            )
+        )
 
     config
         .configValues()
@@ -174,7 +182,8 @@ class Neo4jConnectorTest {
                   SinkConfiguration.CYPHER_BIND_HEADER_AS,
                   SinkConfiguration.CYPHER_BIND_KEY_AS,
                   SinkConfiguration.CYPHER_BIND_VALUE_AS,
-                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT)
+                  SinkConfiguration.CYPHER_BIND_VALUE_AS_EVENT,
+              )
         }
         .forEach { it.errorMessages() should beEmpty<String>() }
   }

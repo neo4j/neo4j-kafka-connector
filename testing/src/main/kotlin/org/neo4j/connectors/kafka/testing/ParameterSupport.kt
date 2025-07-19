@@ -26,14 +26,14 @@ internal class ParameterResolvers(
 
   override fun supportsParameter(
       parameterContext: ParameterContext?,
-      ignored: ExtensionContext?
+      ignored: ExtensionContext?,
   ): Boolean {
     return parameterResolvers.containsKey(parameterContext!!.parameter.type)
   }
 
   override fun resolveParameter(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     val resolver = parameterResolvers[parameterContext!!.parameter.type]!!
     return resolver(parameterContext, extensionContext)

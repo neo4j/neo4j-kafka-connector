@@ -66,7 +66,7 @@ abstract class Neo4jCudIT {
   fun `should create node from json string`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -82,7 +82,8 @@ abstract class Neo4jCudIT {
                     "id": 1,
                     "foo": "foo-value"
                   }
-                }""")
+                }""",
+    )
 
     eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
         .get("n")
@@ -98,7 +99,7 @@ abstract class Neo4jCudIT {
   fun `should create node from byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -112,7 +113,10 @@ abstract class Neo4jCudIT {
                         "type" to "node",
                         "op" to "create",
                         "labels" to listOf("Foo", "Bar"),
-                        "properties" to mapOf("id" to 1L, "foo" to "foo-value"))))
+                        "properties" to mapOf("id" to 1L, "foo" to "foo-value"),
+                    )
+                ),
+    )
 
     eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
         .get("n")
@@ -128,7 +132,7 @@ abstract class Neo4jCudIT {
   fun `should create node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -163,11 +167,18 @@ abstract class Neo4jCudIT {
                         .put(
                             "dob",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
+                                PropertyType.schema,
+                                LocalDate.of(1995, 1, 1),
+                            ),
+                        )
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema,
+                                Values.point(7203, 1.0, 2.5).asPoint(),
+                            ),
+                        ),
+                ),
     )
 
     eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
@@ -180,7 +191,8 @@ abstract class Neo4jCudIT {
                   "id" to 1L,
                   "foo" to "foo-value",
                   "dob" to LocalDate.of(1995, 1, 1),
-                  "place" to Values.point(7203, 1.0, 2.5).asPoint())
+                  "place" to Values.point(7203, 1.0, 2.5).asPoint(),
+              )
         }
   }
 
@@ -189,7 +201,7 @@ abstract class Neo4jCudIT {
   fun `should update node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -197,7 +209,8 @@ abstract class Neo4jCudIT {
     session
         .run(
             "CREATE (n:Foo:Bar) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 1L, "foo" to "foo-value")))
+            mapOf("props" to mapOf("id" to 1L, "foo" to "foo-value")),
+        )
         .consume()
 
     val idsSchema = SchemaBuilder.struct().field("id", Schema.INT64_SCHEMA).build()
@@ -231,11 +244,18 @@ abstract class Neo4jCudIT {
                         .put(
                             "dob",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
+                                PropertyType.schema,
+                                LocalDate.of(1995, 1, 1),
+                            ),
+                        )
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema,
+                                Values.point(7203, 1.0, 2.5).asPoint(),
+                            ),
+                        ),
+                ),
     )
 
     eventually(30.seconds) {
@@ -247,7 +267,8 @@ abstract class Neo4jCudIT {
                     "id" to 1L,
                     "foo" to "foo-value-updated",
                     "dob" to LocalDate.of(1995, 1, 1),
-                    "place" to Values.point(7203, 1.0, 2.5).asPoint())
+                    "place" to Values.point(7203, 1.0, 2.5).asPoint(),
+                )
           }
     }
   }
@@ -257,7 +278,7 @@ abstract class Neo4jCudIT {
   fun `should merge node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -265,7 +286,8 @@ abstract class Neo4jCudIT {
     session
         .run(
             "CREATE (n:Foo:Bar) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 0L, "foo" to "foo-value")))
+            mapOf("props" to mapOf("id" to 0L, "foo" to "foo-value")),
+        )
         .consume()
 
     val idsSchema = SchemaBuilder.struct().field("id", Schema.INT64_SCHEMA).build()
@@ -301,11 +323,18 @@ abstract class Neo4jCudIT {
                         .put(
                             "dob",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, LocalDate.of(1995, 1, 1)))
+                                PropertyType.schema,
+                                LocalDate.of(1995, 1, 1),
+                            ),
+                        )
                         .put(
                             "place",
                             DynamicTypes.toConnectValue(
-                                PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()))),
+                                PropertyType.schema,
+                                Values.point(7203, 1.0, 2.5).asPoint(),
+                            ),
+                        ),
+                ),
     )
 
     eventually(30.seconds) {
@@ -318,7 +347,8 @@ abstract class Neo4jCudIT {
                     "foo" to "foo-value",
                     "foo_new" to "foo-new-value-merged",
                     "dob" to LocalDate.of(1995, 1, 1),
-                    "place" to Values.point(7203, 1.0, 2.5).asPoint())
+                    "place" to Values.point(7203, 1.0, 2.5).asPoint(),
+                )
           }
     }
   }
@@ -328,7 +358,7 @@ abstract class Neo4jCudIT {
   fun `should delete node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -336,7 +366,8 @@ abstract class Neo4jCudIT {
     session
         .run(
             "CREATE (n:Foo:Bar) SET n = ${'$'}props",
-            mapOf("props" to mapOf("id" to 0L, "foo" to "foo-value")))
+            mapOf("props" to mapOf("id" to 0L, "foo" to "foo-value")),
+        )
         .consume()
 
     val idsSchema = SchemaBuilder.struct().field("id", Schema.INT64_SCHEMA).build()
@@ -355,7 +386,8 @@ abstract class Neo4jCudIT {
                 .put("type", "node")
                 .put("op", "delete")
                 .put("labels", listOf("Foo", "Bar"))
-                .put("ids", Struct(idsSchema).put("id", 0L)))
+                .put("ids", Struct(idsSchema).put("id", 0L)),
+    )
 
     eventually(30.seconds) {
       session
@@ -371,7 +403,7 @@ abstract class Neo4jCudIT {
   fun `should detach delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.run(
@@ -384,7 +416,9 @@ abstract class Neo4jCudIT {
         mapOf(
             "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
             "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-            "r" to mapOf("by" to "incident")))
+            "r" to mapOf("by" to "incident"),
+        ),
+    )
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -397,7 +431,8 @@ abstract class Neo4jCudIT {
                     "id": 1
                   },
                   "detach": true
-                }""")
+                }""",
+    )
 
     eventually(30.seconds) {
       session
@@ -419,7 +454,7 @@ abstract class Neo4jCudIT {
   fun `should create and update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
 
@@ -435,7 +470,8 @@ abstract class Neo4jCudIT {
                     "id": 0,
                     "foo": "foo-value"
                   }
-                }"""),
+                }""",
+        ),
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
             value =
@@ -450,7 +486,9 @@ abstract class Neo4jCudIT {
                     "id": 1,
                     "foo": "foo-value-updated"
                   }
-                }"""))
+                }""",
+        ),
+    )
 
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
@@ -466,7 +504,7 @@ abstract class Neo4jCudIT {
   fun `should not create node with update operation`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
 
@@ -485,7 +523,8 @@ abstract class Neo4jCudIT {
                     "id": 1,
                     "foo": "foo-value-updated"
                   }
-                }"""),
+                }""",
+        ),
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
             value =
@@ -497,7 +536,9 @@ abstract class Neo4jCudIT {
                     "id": 2,
                     "foo": "foo-value"
                   }
-                }"""))
+                }""",
+        ),
+    )
 
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n").single().get("n").asNode() should
@@ -514,7 +555,7 @@ abstract class Neo4jCudIT {
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
 
@@ -529,7 +570,8 @@ abstract class Neo4jCudIT {
                     "id": 1,
                     "foo": "foo-value"
                   }
-                }""")
+                }""",
+    )
 
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
@@ -549,7 +591,8 @@ abstract class Neo4jCudIT {
                   "ids": {
                     "id": 1
                   }
-                }""")
+                }""",
+    )
 
     eventually(30.seconds) {
       session
@@ -565,7 +608,7 @@ abstract class Neo4jCudIT {
   fun `should create, delete and recreate node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -582,7 +625,8 @@ abstract class Neo4jCudIT {
                     "id": 0,
                     "foo": "foo-value"
                   }
-                }"""),
+                }""",
+        ),
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
             value =
@@ -594,7 +638,8 @@ abstract class Neo4jCudIT {
                     "id": 0
                   },
                   "detach": true
-                }"""),
+                }""",
+        ),
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
             value =
@@ -606,7 +651,9 @@ abstract class Neo4jCudIT {
                     "id": 1,
                     "foo": "foo-value-new"
                   }
-                }"""))
+                }""",
+        ),
+    )
 
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).single().get("n").asNode() should
@@ -622,7 +669,7 @@ abstract class Neo4jCudIT {
   fun `should create 1000 nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
 
@@ -640,9 +687,11 @@ abstract class Neo4jCudIT {
                     "id": ${it},
                     "foo": "foo-value-${it}"
                   }
-                }""")
+                }""",
+              )
             }
-            .toTypedArray())
+            .toTypedArray()
+    )
 
     eventually(30.seconds) {
       session
@@ -658,7 +707,7 @@ abstract class Neo4jCudIT {
   fun `should create node from struct with connect types`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -693,7 +742,9 @@ abstract class Neo4jCudIT {
                         .put("height", BigDecimal.valueOf(185, 2))
                         .put("dob", DateSupport.date(1978, 1, 15))
                         .put("tob", DateSupport.time(7, 45, 12, 999))
-                        .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999))))
+                        .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999)),
+                ),
+    )
 
     eventually(30.seconds) { session.run("MATCH (n) RETURN n", emptyMap()).single() }
         .get("n")
@@ -706,7 +757,8 @@ abstract class Neo4jCudIT {
                   "height" to "1.85",
                   "dob" to LocalDate.of(1978, 1, 15),
                   "tob" to LocalTime.of(7, 45, 12, 999000000),
-                  "tsob" to LocalDateTime.of(1978, 1, 15, 7, 45, 12, 999000000))
+                  "tsob" to LocalDateTime.of(1978, 1, 15, 7, 45, 12, 999000000),
+              )
         }
   }
 
@@ -715,7 +767,7 @@ abstract class Neo4jCudIT {
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -729,7 +781,9 @@ abstract class Neo4jCudIT {
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
-                "bar" to mapOf("id" to 1L, "bar" to "bar-value")))
+                "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -756,13 +810,15 @@ abstract class Neo4jCudIT {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r]->(:Bar {id: ${'$'}barId}) RETURN r",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("r")
           .asRelationship() should
@@ -778,7 +834,7 @@ abstract class Neo4jCudIT {
   fun `should create relationship by merging nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -809,14 +865,16 @@ abstract class Neo4jCudIT {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (f:Foo {id: ${'$'}fooId})-[r:RELATED_TO]->(b:Bar {id: ${'$'}barId}) RETURN f,b,r",
-                  mapOf("fooId" to 1L, "barId" to 1L))
+                  mapOf("fooId" to 1L, "barId" to 1L),
+              )
               .single()
 
       result.get("f").asNode() should
@@ -844,7 +902,7 @@ abstract class Neo4jCudIT {
   fun `should create relationship by merging one of the nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -877,14 +935,16 @@ abstract class Neo4jCudIT {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (f:Foo {id: ${'$'}fooId})-[r:RELATED_TO]->(b:Bar {id: ${'$'}barId}) RETURN f,b,r",
-                  mapOf("fooId" to 1L, "barId" to 1L))
+                  mapOf("fooId" to 1L, "barId" to 1L),
+              )
               .single()
 
       result.get("f").asNode() should
@@ -912,7 +972,7 @@ abstract class Neo4jCudIT {
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -928,7 +988,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("by" to "incident")))
+                "r" to mapOf("by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -955,13 +1017,15 @@ abstract class Neo4jCudIT {
                     "by": "incident-updated"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r]->(:Bar {id: ${'$'}barId}) RETURN r",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("r")
           .asRelationship() should
@@ -977,7 +1041,7 @@ abstract class Neo4jCudIT {
   fun `should update relationship with ids`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -994,7 +1058,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("id" to 2L, "by" to "incident")))
+                "r" to mapOf("id" to 2L, "by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -1024,13 +1090,15 @@ abstract class Neo4jCudIT {
                     "by": "incident-updated"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r]->(:Bar {id: ${'$'}barId}) RETURN r",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("r")
           .asRelationship() should
@@ -1046,7 +1114,7 @@ abstract class Neo4jCudIT {
   fun `should merge relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1062,7 +1130,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("by" to "incident")))
+                "r" to mapOf("by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -1090,13 +1160,15 @@ abstract class Neo4jCudIT {
                     "by-new": "incident-merged"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r]->(:Bar {id: ${'$'}barId}) RETURN r",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("r")
           .asRelationship() should
@@ -1112,7 +1184,7 @@ abstract class Neo4jCudIT {
   fun `should merge relationship with merging nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1143,14 +1215,16 @@ abstract class Neo4jCudIT {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (f:Foo {id: ${'$'}fooId})-[r]->(b:Bar {id: ${'$'}barId}) RETURN f,b,r",
-                  mapOf("fooId" to 1L, "barId" to 1L))
+                  mapOf("fooId" to 1L, "barId" to 1L),
+              )
               .single()
 
       result.get("f").asNode() should
@@ -1178,7 +1252,7 @@ abstract class Neo4jCudIT {
   fun `should merge relationship with merging one of the nodes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1211,14 +1285,16 @@ abstract class Neo4jCudIT {
                     "by": "incident"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (f:Foo {id: ${'$'}fooId})-[r]->(b:Bar {id: ${'$'}barId}) RETURN f,b,r",
-                  mapOf("fooId" to 1L, "barId" to 1L))
+                  mapOf("fooId" to 1L, "barId" to 1L),
+              )
               .single()
 
       result.get("f").asNode() should
@@ -1246,7 +1322,7 @@ abstract class Neo4jCudIT {
   fun `should merge relationship with ids`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1263,7 +1339,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("id" to 2L, "by" to "incident")))
+                "r" to mapOf("id" to 2L, "by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -1294,13 +1372,15 @@ abstract class Neo4jCudIT {
                     "by-new": "incident-merged"
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r]->(:Bar {id: ${'$'}barId}) RETURN r",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("r")
           .asRelationship() should
@@ -1317,7 +1397,7 @@ abstract class Neo4jCudIT {
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1333,7 +1413,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("by" to "incident")))
+                "r" to mapOf("by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -1357,13 +1439,15 @@ abstract class Neo4jCudIT {
                     }
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r:RELATED_TO]->(:Bar {id: ${'$'}barId}) RETURN count(r) as count",
-              mapOf("fooId" to 1L, "barId" to 1L))
+              mapOf("fooId" to 1L, "barId" to 1L),
+          )
           .single()
           .get("count")
           .asLong() shouldBe 0
@@ -1375,7 +1459,7 @@ abstract class Neo4jCudIT {
   fun `should delete relationship with ids`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1392,7 +1476,9 @@ abstract class Neo4jCudIT {
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
                 "bar" to mapOf("id" to 1L, "bar" to "bar-value"),
-                "r" to mapOf("id" to 2L, "by" to "incident")))
+                "r" to mapOf("id" to 2L, "by" to "incident"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -1419,13 +1505,15 @@ abstract class Neo4jCudIT {
                     "id": 2
                   }
                 }
-                """)
+                """,
+    )
 
     eventually(30.seconds) {
       session
           .run(
               "MATCH (:Foo {id: ${'$'}fooId})-[r:RELATED_TO {id: ${'$'}rId}]->(:Bar {id: ${'$'}barId}) RETURN count(r) as count",
-              mapOf("fooId" to 1L, "barId" to 1L, "rId" to 2L))
+              mapOf("fooId" to 1L, "barId" to 1L, "rId" to 2L),
+          )
           .single()
           .get("count")
           .asLong() shouldBe 0
@@ -1439,7 +1527,7 @@ abstract class Neo4jCudIT {
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_3) producer3: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1457,7 +1545,8 @@ abstract class Neo4jCudIT {
                   "properties": {
                     "foo": "foo-value"
                   }
-                }""")
+                }""",
+    )
 
     producer2.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -1472,7 +1561,8 @@ abstract class Neo4jCudIT {
                     "properties": {
                       "bar": "bar-value"
                     }
-                  }""")
+                  }""",
+    )
 
     producer3.publish(
         valueSchema = Schema.STRING_SCHEMA,
@@ -1500,7 +1590,8 @@ abstract class Neo4jCudIT {
                         "by": "incident"
                       }
                     }
-                    """)
+                    """,
+    )
 
     eventually(60.seconds) {
       val result =
@@ -1531,7 +1622,7 @@ abstract class Neo4jCudIT {
   fun `should handle mixed events`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.createNodeKeyConstraint(neo4j, "bar_id", "Bar", "id")
@@ -1547,7 +1638,11 @@ abstract class Neo4jCudIT {
                           "type" to "node",
                           "op" to "create",
                           "labels" to listOf("Foo"),
-                          "properties" to mapOf("id" to i, "foo" to "${i}-foo-value")))))
+                          "properties" to mapOf("id" to i, "foo" to "${i}-foo-value"),
+                      )
+                  ),
+          )
+      )
 
       kafkaMessages.add(
           KafkaMessage(
@@ -1558,7 +1653,11 @@ abstract class Neo4jCudIT {
                           "type" to "node",
                           "op" to "create",
                           "labels" to listOf("Bar"),
-                          "properties" to mapOf("id" to i, "bar" to "${i}-bar-value")))))
+                          "properties" to mapOf("id" to i, "bar" to "${i}-bar-value"),
+                      )
+                  ),
+          )
+      )
 
       kafkaMessages.add(
           KafkaMessage(
@@ -1571,7 +1670,11 @@ abstract class Neo4jCudIT {
                           "rel_type" to "RELATED_TO",
                           "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to i)),
                           "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to i)),
-                          "properties" to mapOf("id" to i, "by" to "${i}-incident")))))
+                          "properties" to mapOf("id" to i, "by" to "${i}-incident"),
+                      )
+                  ),
+          )
+      )
     }
 
     val modulo = 4
@@ -1585,7 +1688,8 @@ abstract class Neo4jCudIT {
                         "op" to "update",
                         "labels" to listOf("Foo"),
                         "ids" to mapOf("id" to it),
-                        "properties" to mapOf("id" to it, "foo" to "$it-foo-value-updated"))
+                        "properties" to mapOf("id" to it, "foo" to "$it-foo-value-updated"),
+                    )
                 1 ->
                     mapOf(
                         "type" to "node",
@@ -1596,7 +1700,9 @@ abstract class Neo4jCudIT {
                             mapOf(
                                 "id" to it,
                                 "bar" to "$it-bar-value-updated",
-                                "bar-new" to "$it-new-bar-value-merged"))
+                                "bar-new" to "$it-new-bar-value-merged",
+                            ),
+                    )
                 2 ->
                     mapOf(
                         "type" to "relationship",
@@ -1604,7 +1710,8 @@ abstract class Neo4jCudIT {
                         "rel_type" to "RELATED_TO",
                         "from" to mapOf("labels" to listOf("Foo"), "ids" to mapOf("id" to it)),
                         "to" to mapOf("labels" to listOf("Bar"), "ids" to mapOf("id" to it)),
-                        "properties" to mapOf("id" to it, "by" to "$it-incident-updated"))
+                        "properties" to mapOf("id" to it, "by" to "$it-incident-updated"),
+                    )
                 3 ->
                     mapOf(
                         "type" to "relationship",
@@ -1616,15 +1723,19 @@ abstract class Neo4jCudIT {
                             mapOf(
                                 "id" to it,
                                 "by" to "$it-incident-updated",
-                                "by-new" to "$it-new-incident-merged"))
+                                "by-new" to "$it-new-incident-merged",
+                            ),
+                    )
                 else -> throw IllegalArgumentException("unexpected")
               }
             }
             .map { eventMap ->
               KafkaMessage(
                   valueSchema = Schema.STRING_SCHEMA,
-                  value = JSONUtils.writeValueAsString(eventMap))
-            })
+                  value = JSONUtils.writeValueAsString(eventMap),
+              )
+            }
+    )
 
     producer.publish(*kafkaMessages.toTypedArray())
 
@@ -1664,7 +1775,8 @@ abstract class Neo4jCudIT {
                           mapOf(
                               "id" to index,
                               "bar" to "$index-bar-value-updated",
-                              "bar-new" to "$index-new-bar-value-merged")
+                              "bar-new" to "$index-new-bar-value-merged",
+                          )
                     }
                 record.get("r").asRelationship() should
                     {
@@ -1707,7 +1819,8 @@ abstract class Neo4jCudIT {
                           mapOf(
                               "id" to index,
                               "by" to "$index-incident-updated",
-                              "by-new" to "$index-new-incident-merged")
+                              "by-new" to "$index-new-incident-merged",
+                          )
                     }
               }
             }

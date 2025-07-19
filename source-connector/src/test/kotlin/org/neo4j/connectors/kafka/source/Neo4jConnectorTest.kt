@@ -106,7 +106,9 @@ class Neo4jConnectorTest {
             mutableMapOf(
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
-                SourceConfiguration.STRATEGY to "CDC"))
+                SourceConfiguration.STRATEGY to "CDC",
+            )
+        )
 
     config
         .configValues()
@@ -124,7 +126,9 @@ class Neo4jConnectorTest {
             mutableMapOf(
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 SourceConfiguration.QUERY_TOPIC to "topic",
-                SourceConfiguration.STRATEGY to "QUERY"))
+                SourceConfiguration.STRATEGY to "QUERY",
+            )
+        )
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.QUERY }
@@ -137,7 +141,9 @@ class Neo4jConnectorTest {
             mutableMapOf(
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 SourceConfiguration.QUERY to "MATCH (n) RETURN n",
-                SourceConfiguration.STRATEGY to "QUERY"))
+                SourceConfiguration.STRATEGY to "QUERY",
+            )
+        )
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.QUERY_TOPIC }
@@ -156,7 +162,9 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
-                "neo4j.cdc.topic.topic-1.patterns" to ""))
+                "neo4j.cdc.topic.topic-1.patterns" to "",
+            )
+        )
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.STRATEGY }
@@ -170,14 +178,17 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.URI to "neo4j://localhost",
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
-                "neo4j.cdc.topic.topic-1.patterns" to "(;ABC]"))
+                "neo4j.cdc.topic.topic-1.patterns" to "(;ABC]",
+            )
+        )
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.STRATEGY }
               .errorMessages() shouldHaveSingleElement
               {
                 it.startsWith(
-                    "Invalid value (;ABC] for configuration neo4j.cdc.topic.topic-1.patterns:")
+                    "Invalid value (;ABC] for configuration neo4j.cdc.topic.topic-1.patterns:"
+                )
               }
         }
 
@@ -188,7 +199,9 @@ class Neo4jConnectorTest {
                 Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "CDC",
                 "neo4j.cdc.topic.topic-1.patterns" to "(:Person),()-[:KNOWS]-()",
-                "neo4j.cdc.topic.topic-2.patterns" to "(:Person),()-[:KNOWS]-(;Company)"))
+                "neo4j.cdc.topic.topic-2.patterns" to "(:Person),()-[:KNOWS]-(;Company)",
+            )
+        )
         .apply {
           this.configValues()
               .first { it.name() == SourceConfiguration.STRATEGY }
@@ -209,7 +222,9 @@ class Neo4jConnectorTest {
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.QUERY_TOPIC to "my-topic",
             SourceConfiguration.STRATEGY to "QUERY",
-            SourceConfiguration.QUERY to "MATCH (n) RETURN n.timestamp, n"))
+            SourceConfiguration.QUERY to "MATCH (n) RETURN n.timestamp, n",
+        )
+    )
 
     connector.taskClass() shouldBe Neo4jQueryTask::class.java
   }
@@ -223,7 +238,9 @@ class Neo4jConnectorTest {
             Neo4jConfiguration.URI to "neo4j://localhost",
             Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to "CDC",
-            "neo4j.cdc.topic.topic-1.patterns" to "(:Person)"))
+            "neo4j.cdc.topic.topic-1.patterns" to "(:Person)",
+        )
+    )
 
     connector.taskClass() shouldBe Neo4jCdcTask::class.java
   }

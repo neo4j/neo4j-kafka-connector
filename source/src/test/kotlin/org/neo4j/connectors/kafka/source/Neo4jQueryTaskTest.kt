@@ -126,7 +126,10 @@ class Neo4jQueryTaskTest {
     // create data with timestamp set as NOW + 5m
     expected.addAll(
         insertRecords(
-            100, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault())))
+            100,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+        )
+    )
 
     // start task with EARLIEST, previous changes should be visible
     task.start(
@@ -136,7 +139,9 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
-            SourceConfiguration.QUERY to sourceQuery))
+            SourceConfiguration.QUERY to sourceQuery,
+        )
+    )
 
     // expect to see all data
     pollAndAssertReceived(expected)
@@ -146,12 +151,16 @@ class Neo4jQueryTaskTest {
   fun `should source data correctly when startFrom=now`() = runTest {
     // create data with timestamp set as NOW - 5m
     insertRecords(
-        100, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        100,
+        Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     // create data with timestamp set as NOW + 5m
     val expected =
         insertRecords(
-            75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+            75,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+        )
 
     // start task with NOW, previous changes should NOT be visible
     task.start(
@@ -161,7 +170,9 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
-            SourceConfiguration.QUERY to sourceQuery))
+            SourceConfiguration.QUERY to sourceQuery,
+        )
+    )
 
     // expect to see only the data created after task is started
     pollAndAssertReceived(expected)
@@ -171,16 +182,22 @@ class Neo4jQueryTaskTest {
   fun `should source data correctly when startFrom=user provided`() = runTest {
     // create data with timestamp set as NOW - 5m
     insertRecords(
-        10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        10,
+        Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     // create data with timestamp set as NOW + 5m
     insertRecords(
-        25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        25,
+        Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     // create data with timestamp set as NOW + 10m
     val expected =
         insertRecords(
-            75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+            75,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()),
+        )
 
     // start task with NOW + 7m, previous changes should NOT be visible
     task.start(
@@ -192,7 +209,9 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.START_FROM_VALUE to
                 Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
-            SourceConfiguration.QUERY to sourceQuery))
+            SourceConfiguration.QUERY to sourceQuery,
+        )
+    )
 
     // expect to see only the data created after the provided timestamp
     pollAndAssertReceived(expected)
@@ -203,19 +222,28 @@ class Neo4jQueryTaskTest {
   fun `should use stored offset regardless of provided startFrom`(startFrom: StartFrom) = runTest {
     // create data with timestamp set as NOW - 5m
     insertRecords(
-        25, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        25,
+        Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     val expected =
         // create data with timestamp set as NOW - 2m and NOW + 2m
         insertRecords(
-            25, Clock.fixed(Instant.now().minus(Duration.ofMinutes(2)), ZoneId.systemDefault())) +
+            25,
+            Clock.fixed(Instant.now().minus(Duration.ofMinutes(2)), ZoneId.systemDefault()),
+        ) +
             insertRecords(
-                25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(2)), ZoneId.systemDefault()))
+                25,
+                Clock.fixed(Instant.now().plus(Duration.ofMinutes(2)), ZoneId.systemDefault()),
+            )
 
     // set an offset of NOW - 3m
     task.initialize(
         newTaskContextWithOffset(
-            "timestamp", Instant.now().minus(Duration.ofMinutes(3)).toEpochMilli()))
+            "timestamp",
+            Instant.now().minus(Duration.ofMinutes(3)).toEpochMilli(),
+        )
+    )
 
     // start task with provided START_FROM, with the mocked task context
     task.start(
@@ -231,7 +259,8 @@ class Neo4jQueryTaskTest {
           if (startFrom == StartFrom.USER_PROVIDED) {
             put(SourceConfiguration.START_FROM_VALUE, "-1")
           }
-        })
+        }
+    )
 
     // expect to see only the data created after the stored offset
     pollAndAssertReceived(expected)
@@ -245,7 +274,9 @@ class Neo4jQueryTaskTest {
 
         // create data with timestamp set as NOW + 5m
         insertRecords(
-            100, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+            100,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+        )
 
         task.initialize(newTaskContextWithOffset("", Instant.now().toEpochMilli()))
 
@@ -258,7 +289,9 @@ class Neo4jQueryTaskTest {
                 SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
                 SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
                 SourceConfiguration.QUERY to sourceQuery,
-                SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+                SourceConfiguration.IGNORE_STORED_OFFSET to "true",
+            )
+        )
 
         // expect to see all data
         pollAndAssertReceivedSize(150)
@@ -268,11 +301,15 @@ class Neo4jQueryTaskTest {
   fun `should ignore stored offset when startFrom=now and ignore-stored-offset=true`() = runTest {
     // create data with timestamp set as NOW - 5m
     insertRecords(
-        100, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        100,
+        Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     // create data with timestamp set as NOW + 5m
     insertRecords(
-        75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+        75,
+        Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+    )
 
     task.initialize(newTaskContextWithOffset("", Instant.EPOCH.toEpochMilli()))
 
@@ -285,7 +322,9 @@ class Neo4jQueryTaskTest {
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
             SourceConfiguration.QUERY to sourceQuery,
-            SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+            SourceConfiguration.IGNORE_STORED_OFFSET to "true",
+        )
+    )
 
     // expect to see only the data created after task is started
     pollAndAssertReceivedSize(75)
@@ -296,15 +335,21 @@ class Neo4jQueryTaskTest {
       runTest {
         // create data with timestamp set as NOW - 5m
         insertRecords(
-            10, Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+            10,
+            Clock.fixed(Instant.now().minus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+        )
 
         // create data with timestamp set as NOW + 5m
         insertRecords(
-            25, Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()))
+            25,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(5)), ZoneId.systemDefault()),
+        )
 
         // create data with timestamp set as NOW + 10m
         insertRecords(
-            75, Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()))
+            75,
+            Clock.fixed(Instant.now().plus(Duration.ofMinutes(10)), ZoneId.systemDefault()),
+        )
 
         task.initialize(newTaskContextWithOffset("", Instant.EPOCH.toEpochMilli()))
 
@@ -319,7 +364,9 @@ class Neo4jQueryTaskTest {
                     Instant.now().plus(Duration.ofMinutes(7)).toEpochMilli().toString(),
                 SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
                 SourceConfiguration.QUERY to sourceQuery,
-                SourceConfiguration.IGNORE_STORED_OFFSET to "true"))
+                SourceConfiguration.IGNORE_STORED_OFFSET to "true",
+            )
+        )
 
         // expect to see only the data created after the provided timestamp
         pollAndAssertReceivedSize(75)
@@ -360,8 +407,10 @@ class Neo4jQueryTaskTest {
                     "prop4" to null,
                     "prop5" to mapOf("prop" to null),
                     "prop6" to listOf(1L),
-                    "prop7" to listOf<Any?>(null)),
-            "timestamp" to 1717773205L)
+                    "prop7" to listOf<Any?>(null),
+                ),
+            "timestamp" to 1717773205L,
+        )
 
     eventually(30.seconds) {
       val first =
@@ -408,7 +457,10 @@ class Neo4jQueryTaskTest {
                     "root" to
                         listOf(
                             mapOf("children" to emptyList<Map<String, Any>>()),
-                            mapOf("children" to listOf(mapOf("name" to "child"))))))
+                            mapOf("children" to listOf(mapOf("name" to "child"))),
+                        ),
+                ),
+        )
 
     val list = mutableListOf<SourceRecord>()
 
@@ -469,7 +521,8 @@ class Neo4jQueryTaskTest {
                                 |   n AS node
                             """
                           .trimMargin(),
-                      mapOf("timestamp" to ts + it))
+                      mapOf("timestamp" to ts + it),
+                  )
               result.next().asMap().mapValues { (_, v) ->
                 when (v) {
                   is Node ->

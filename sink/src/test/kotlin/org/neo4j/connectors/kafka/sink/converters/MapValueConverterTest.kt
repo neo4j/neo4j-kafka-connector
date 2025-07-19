@@ -98,19 +98,24 @@ class MapValueConverterTest {
                       Struct(LI_SCHEMA).put("value", "First UL - First Element"),
                       Struct(LI_SCHEMA)
                           .put("value", "First UL - Second Element")
-                          .put("class", listOf("ClassA", "ClassB"))))
+                          .put("class", listOf("ClassA", "ClassB")),
+                  ),
+              )
       val secondUL =
           Struct(UL_SCHEMA)
               .put(
                   "value",
                   listOf(
                       Struct(LI_SCHEMA).put("value", "Second UL - First Element"),
-                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element")))
+                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element"),
+                  ),
+              )
       val ulList = listOf(firstUL, secondUL)
       val pList =
           listOf(
               Struct(P_SCHEMA).put("value", "First Paragraph"),
-              Struct(P_SCHEMA).put("value", "Second Paragraph"))
+              Struct(P_SCHEMA).put("value", "Second Paragraph"),
+          )
       return Struct(BODY_SCHEMA).put("ul", ulList).put("p", pList)
     }
 
@@ -122,13 +127,18 @@ class MapValueConverterTest {
                       mapOf("value" to "First UL - First Element", "class" to null),
                       mapOf(
                           "value" to "First UL - Second Element",
-                          "class" to listOf("ClassA", "ClassB"))))
+                          "class" to listOf("ClassA", "ClassB"),
+                      ),
+                  )
+          )
       val secondULMap =
           mapOf(
               "value" to
                   listOf(
                       mapOf("value" to "Second UL - First Element", "class" to null),
-                      mapOf("value" to "Second UL - Second Element", "class" to null)))
+                      mapOf("value" to "Second UL - Second Element", "class" to null),
+                  )
+          )
       val ulListMap = listOf(firstULMap, secondULMap)
       val pListMap =
           listOf(mapOf("value" to "First Paragraph"), mapOf("value" to "Second Paragraph"))

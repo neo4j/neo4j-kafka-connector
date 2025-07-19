@@ -39,7 +39,7 @@ data class KafkaMessage(
     val valueSchema: Schema? = null,
     val value: Any? = null,
     val timestamp: Instant? = null,
-    val headers: Map<String, Any> = emptyMap()
+    val headers: Map<String, Any> = emptyMap(),
 )
 
 data class ConvertingKafkaProducer(
@@ -49,7 +49,7 @@ data class ConvertingKafkaProducer(
     val valueCompatibilityMode: SchemaCompatibilityMode,
     val valueConverter: KafkaConverter,
     val kafkaProducer: KafkaProducer<Any, Any>,
-    val topic: String
+    val topic: String,
 ) {
 
   init {
@@ -69,7 +69,8 @@ data class ConvertingKafkaProducer(
                   keyConverter.testShimSerializer.serialize(
                       it.key,
                       it.keySchema ?: throw IllegalArgumentException("null key schema"),
-                      true)
+                      true,
+                  )
             }
         val serializedValue =
             when (it.value) {
@@ -78,7 +79,8 @@ data class ConvertingKafkaProducer(
                   valueConverter.testShimSerializer.serialize(
                       it.value,
                       it.valueSchema ?: throw IllegalArgumentException("null value schema"),
-                      false)
+                      false,
+                  )
             }
         val converter = SimpleHeaderConverter()
         val recordHeaders =
@@ -88,7 +90,11 @@ data class ConvertingKafkaProducer(
 
                 override fun value(): ByteArray {
                   return converter.fromConnectHeader(
-                      "", e.key, Values.inferSchema(e.value), e.value)
+                      "",
+                      e.key,
+                      Values.inferSchema(e.value),
+                      e.value,
+                  )
                 }
               }
             }
@@ -100,7 +106,8 @@ data class ConvertingKafkaProducer(
                 it.timestamp?.toEpochMilli(),
                 serializedKey,
                 serializedValue,
-                recordHeaders)
+                recordHeaders,
+            )
         kafkaProducer.send(record).get()
       }
       kafkaProducer.commitTransaction()
@@ -116,7 +123,7 @@ data class ConvertingKafkaProducer(
       valueSchema: Schema? = null,
       value: Any? = null,
       timestamp: Instant? = null,
-      headers: Map<String, Any> = emptyMap()
+      headers: Map<String, Any> = emptyMap(),
   ) {
     publish(KafkaMessage(keySchema, key, valueSchema, value, timestamp, headers))
   }
@@ -130,7 +137,8 @@ data class ConvertingKafkaProducer(
         valueSchema = connectValue.schema(),
         value = connectValue.value(),
         timestamp = event.metadata.txCommitTime.toInstant(),
-        headers = Headers.from(event).associate { it.key() to it.value() })
+        headers = Headers.from(event).associate { it.key() to it.value() },
+    )
   }
 
   fun publish(vararg events: ChangeEvent) {
@@ -145,7 +153,9 @@ data class ConvertingKafkaProducer(
               valueSchema = connectValue.schema(),
               value = connectValue.value(),
               timestamp = it.metadata.txCommitTime.toInstant(),
-              headers = Headers.from(it).associate { header -> header.key() to header.value() }))
+              headers = Headers.from(it).associate { header -> header.key() to header.value() },
+          )
+      )
     }
 
     publish(*kafkaMessages.toTypedArray())
@@ -157,8 +167,14 @@ data class ConvertingKafkaProducer(
 
   private fun ensureSchemaCompatibility(topic: String) {
     SchemaRegistrySupport.setCompatibilityMode(
-        schemaRegistryURI, "$topic-key", keyCompatibilityMode)
+        schemaRegistryURI,
+        "$topic-key",
+        keyCompatibilityMode,
+    )
     SchemaRegistrySupport.setCompatibilityMode(
-        schemaRegistryURI, "$topic-value", valueCompatibilityMode)
+        schemaRegistryURI,
+        "$topic-value",
+        valueCompatibilityMode,
+    )
   }
 }

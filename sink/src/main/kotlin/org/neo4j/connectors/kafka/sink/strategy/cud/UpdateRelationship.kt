@@ -28,7 +28,7 @@ data class UpdateRelationship(
     val start: NodeReference,
     val end: NodeReference,
     val ids: Map<String, Any?> = emptyMap(),
-    val properties: Map<String, Any?>
+    val properties: Map<String, Any?>,
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (type.isEmpty()) {
@@ -37,7 +37,8 @@ data class UpdateRelationship(
 
     if (start.ids.isEmpty() || end.ids.isEmpty()) {
       throw InvalidDataException(
-          "'${Keys.FROM}' and '${Keys.TO}' must contain at least one ID property.")
+          "'${Keys.FROM}' and '${Keys.TO}' must contain at least one ID property."
+      )
     }
 
     val startParam = Cypher.parameter("start")
@@ -60,7 +61,9 @@ data class UpdateRelationship(
             "start" to mapOf("keys" to start.ids),
             "end" to mapOf("keys" to end.ids),
             "keys" to ids,
-            "properties" to properties))
+            "properties" to properties,
+        ),
+    )
   }
 
   companion object {
@@ -70,13 +73,16 @@ data class UpdateRelationship(
               ?: throw InvalidDataException("No ${Keys.RELATION_TYPE} found"),
           NodeReference.from(
               values.getMap<String, Any?>(Keys.FROM)
-                  ?: throw InvalidDataException("No ${Keys.FROM} found")),
+                  ?: throw InvalidDataException("No ${Keys.FROM} found")
+          ),
           NodeReference.from(
               values.getMap<String, Any?>(Keys.TO)
-                  ?: throw InvalidDataException("No ${Keys.TO} found")),
+                  ?: throw InvalidDataException("No ${Keys.TO} found")
+          ),
           values.getMap<String, Any?>(Keys.IDS) ?: emptyMap(),
           values.getMap<String, Any?>(Keys.PROPERTIES)
-              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"),
+      )
     }
   }
 }

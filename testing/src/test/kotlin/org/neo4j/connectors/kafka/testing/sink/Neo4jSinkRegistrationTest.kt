@@ -44,7 +44,8 @@ class Neo4jSinkRegistrationTest {
             "neo4j.authentication.type" to "BASIC",
             "neo4j.authentication.basic.username" to "user",
             "neo4j.authentication.basic.password" to "password",
-            "neo4j.cypher.topic.my-topic" to "MERGE ()")
+            "neo4j.cypher.topic.my-topic" to "MERGE ()",
+        )
     val registration =
         Neo4jSinkRegistration(
             neo4jUri = "neo4j://example.com",
@@ -55,7 +56,8 @@ class Neo4jSinkRegistrationTest {
             keyConverter = KafkaConverter.AVRO,
             valueConverter = KafkaConverter.AVRO,
             topics = listOf("my-topic"),
-            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"))
+            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"),
+        )
 
     val payload = registration.getPayload()
 
@@ -86,7 +88,8 @@ class Neo4jSinkRegistrationTest {
             "neo4j.authentication.type" to "BASIC",
             "neo4j.authentication.basic.username" to "user",
             "neo4j.authentication.basic.password" to "password",
-            "neo4j.cypher.topic.my-topic" to "MERGE ()")
+            "neo4j.cypher.topic.my-topic" to "MERGE ()",
+        )
     val registration =
         Neo4jSinkRegistration(
             neo4jUri = "neo4j://example.com",
@@ -98,7 +101,8 @@ class Neo4jSinkRegistrationTest {
             valueConverter = KafkaConverter.AVRO,
             errorDlqTopic = "dlq-topic",
             topics = listOf("my-topic"),
-            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"))
+            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"),
+        )
 
     val payload = registration.getPayload()
 
@@ -119,7 +123,8 @@ class Neo4jSinkRegistrationTest {
             valueConverter = KafkaConverter.AVRO,
             topics = listOf("topic1", "topic2"),
             strategies =
-                mapOf("neo4j.cypher.topic.topic1" to "MERGE ()", "neo4j.cud.topics" to "topic2"))
+                mapOf("neo4j.cypher.topic.topic1" to "MERGE ()", "neo4j.cud.topics" to "topic2"),
+        )
 
     val payload = registration.getPayload()
 

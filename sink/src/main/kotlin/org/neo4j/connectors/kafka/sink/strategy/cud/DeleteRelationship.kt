@@ -27,7 +27,7 @@ data class DeleteRelationship(
     val type: String,
     val start: NodeReference,
     val end: NodeReference,
-    val ids: Map<String, Any?> = emptyMap()
+    val ids: Map<String, Any?> = emptyMap(),
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (type.isEmpty()) {
@@ -36,12 +36,14 @@ data class DeleteRelationship(
 
     if (start.op != LookupMode.MATCH || end.op != LookupMode.MATCH) {
       throw InvalidDataException(
-          "'${Keys.FROM}' and '${Keys.TO}' must have '${Keys.OPERATION}' as 'MATCH' for relationship deletion operations.")
+          "'${Keys.FROM}' and '${Keys.TO}' must have '${Keys.OPERATION}' as 'MATCH' for relationship deletion operations."
+      )
     }
 
     if (start.ids.isEmpty() || end.ids.isEmpty()) {
       throw InvalidDataException(
-          "'${Keys.FROM}' and '${Keys.TO}' must contain at least one ID property.")
+          "'${Keys.FROM}' and '${Keys.TO}' must contain at least one ID property."
+      )
     }
 
     val startParam = Cypher.parameter("start")
@@ -61,7 +63,9 @@ data class DeleteRelationship(
         mapOf(
             "start" to mapOf("keys" to start.ids),
             "end" to mapOf("keys" to end.ids),
-            "keys" to ids))
+            "keys" to ids,
+        ),
+    )
   }
 
   companion object {
@@ -71,11 +75,14 @@ data class DeleteRelationship(
               ?: throw InvalidDataException("No ${Keys.RELATION_TYPE} found"),
           NodeReference.from(
               values.getMap<String, Any?>(Keys.FROM)
-                  ?: throw InvalidDataException("No ${Keys.FROM} found")),
+                  ?: throw InvalidDataException("No ${Keys.FROM} found")
+          ),
           NodeReference.from(
               values.getMap<String, Any?>(Keys.TO)
-                  ?: throw InvalidDataException("No ${Keys.TO} found")),
-          values.getMap<String, Any?>(Keys.IDS) ?: emptyMap())
+                  ?: throw InvalidDataException("No ${Keys.TO} found")
+          ),
+          values.getMap<String, Any?>(Keys.IDS) ?: emptyMap(),
+      )
     }
   }
 }

@@ -136,8 +136,8 @@ object DynamicTypes {
                   schema.fields().forEach {
                     put(
                         it.name(),
-                        toConnectValue(
-                            it.schema(), value.elementAt(it.name().substring(1).toInt())))
+                        toConnectValue(it.schema(), value.elementAt(it.name().substring(1).toInt())),
+                    )
                   }
                 }
             else ->
@@ -183,7 +183,7 @@ object DynamicTypes {
       PROTOBUF_TIME_TYPE -> fromProtobufTime(value)
       Timestamp.LOGICAL_NAME -> fromConnectTimestamp(value, schema)
       PROTOBUF_TIMESTAMP_TYPE -> fromProtobufTimestamp(value)
-      Decimal.LOGICAL_NAME, -> fromConnectDecimal(value)
+      Decimal.LOGICAL_NAME -> fromConnectDecimal(value)
       PROTOBUF_DECIMAL_TYPE -> fromProtobufDecimal(value)
       else ->
           when (schema.type()) {
@@ -201,7 +201,8 @@ object DynamicTypes {
             Schema.Type.MAP -> fromMap(value, schema, skipNullValuesInMaps)
             else ->
                 throw IllegalArgumentException(
-                    "unsupported schema ($schema) and value type (${value.javaClass.name})")
+                    "unsupported schema ($schema) and value type (${value.javaClass.name})"
+                )
           }
     }
   }
@@ -209,7 +210,7 @@ object DynamicTypes {
   private fun fromMap(
       value: Any,
       schema: Schema,
-      skipNullValuesInMaps: Boolean
+      skipNullValuesInMaps: Boolean,
   ): MutableMap<String, Any?> {
     val result = mutableMapOf<String, Any?>()
     val map = value as Map<*, *>
@@ -217,7 +218,7 @@ object DynamicTypes {
     for (entry in map.entries) {
       if (entry.key !is String) {
         throw IllegalArgumentException(
-            "invalid key type (${entry.key?.javaClass?.name} in map value",
+            "invalid key type (${entry.key?.javaClass?.name} in map value"
         )
       }
 
@@ -239,14 +240,12 @@ object DynamicTypes {
                     schema.valueSchema(),
                     java.lang.reflect.Array.get(value, i),
                     skipNullValuesInMaps,
-                ),
+                )
             )
           }
       value is Iterable<*> ->
           for (element in value) {
-            result.add(
-                fromConnectValue(schema.valueSchema(), element, skipNullValuesInMaps),
-            )
+            result.add(fromConnectValue(schema.valueSchema(), element, skipNullValuesInMaps))
           }
       else -> throw IllegalArgumentException("unsupported array type ${value.javaClass.name}")
     }
@@ -261,12 +260,7 @@ object DynamicTypes {
             (value as Struct?)
                 ?.let {
                   when (val dimension = it.getInt8(DIMENSION)) {
-                    TWO_D ->
-                        Values.point(
-                            it.getInt32(SR_ID),
-                            it.getFloat64(X),
-                            it.getFloat64(Y),
-                        )
+                    TWO_D -> Values.point(it.getInt32(SR_ID), it.getFloat64(X), it.getFloat64(Y))
                     THREE_D ->
                         Values.point(
                             it.getInt32(SR_ID),
@@ -274,10 +268,7 @@ object DynamicTypes {
                             it.getFloat64(Y),
                             it.getFloat64(Z),
                         )
-                    else ->
-                        throw IllegalArgumentException(
-                            "unsupported dimension value $dimension",
-                        )
+                    else -> throw IllegalArgumentException("unsupported dimension value $dimension")
                   }
                 }
                 ?.asPoint()
@@ -305,8 +296,10 @@ object DynamicTypes {
             }
           }
 
-          if (result.isNotEmpty() &&
-              result.keys.all { it.startsWith("e") && it.substring(1).toIntOrNull() != null }) {
+          if (
+              result.isNotEmpty() &&
+                  result.keys.all { it.startsWith("e") && it.substring(1).toIntOrNull() != null }
+          ) {
             result
                 .mapKeys { it.key.substring(1).toInt() }
                 .entries
@@ -363,9 +356,7 @@ object DynamicTypes {
       is ZonedDateTime -> parsedValue
       is OffsetTime -> parsedValue
       else ->
-          throw IllegalArgumentException(
-              "Unsupported string schema type: ${value.javaClass.name}",
-          )
+          throw IllegalArgumentException("Unsupported string schema type: ${value.javaClass.name}")
     }
   }
 
@@ -373,10 +364,7 @@ object DynamicTypes {
       when (value) {
         is ByteArray -> value
         is ByteBuffer -> value.array()
-        else ->
-            throw IllegalArgumentException(
-                "unsupported bytes type ${value.javaClass.name}",
-            )
+        else -> throw IllegalArgumentException("unsupported bytes type ${value.javaClass.name}")
       }
 
   private fun fromProtobufDecimal(value: Any): String =
@@ -385,7 +373,7 @@ object DynamicTypes {
             BigDecimal(BigInteger(value.getBytes("value")), value.getInt32("scale")).toString()
         else ->
             throw IllegalArgumentException(
-                "unsupported protobuf decimal type ${value.javaClass.name}",
+                "unsupported protobuf decimal type ${value.javaClass.name}"
             )
       }
 
@@ -397,7 +385,7 @@ object DynamicTypes {
         is BigDecimal -> value.toString()
         else ->
             throw IllegalArgumentException(
-                "unsupported Kafka Connect decimal type ${value.javaClass.name}",
+                "unsupported Kafka Connect decimal type ${value.javaClass.name}"
             )
       }
 
@@ -411,7 +399,7 @@ object DynamicTypes {
             )
         else ->
             throw IllegalArgumentException(
-                "unsupported protobuf timestamp type ${value.javaClass.name}",
+                "unsupported protobuf timestamp type ${value.javaClass.name}"
             )
       }
 
@@ -424,7 +412,7 @@ object DynamicTypes {
             )
         else ->
             throw IllegalArgumentException(
-                "unsupported Kafka Connect time type ${value.javaClass.name}",
+                "unsupported Kafka Connect time type ${value.javaClass.name}"
             )
       }
 
@@ -438,9 +426,7 @@ object DynamicTypes {
                 value.getInt32("nanos"),
             )
         else ->
-            throw IllegalArgumentException(
-                "unsupported protobuf time type ${value.javaClass.name}",
-            )
+            throw IllegalArgumentException("unsupported protobuf time type ${value.javaClass.name}")
       }
 
   private fun fromConnectTime(value: Any): LocalTime? =
@@ -448,7 +434,7 @@ object DynamicTypes {
         is java.util.Date -> LocalTime.ofInstant(value.toInstant(), ZoneOffset.UTC)
         else ->
             throw IllegalArgumentException(
-                "unsupported Kafka Connect time type ${value.javaClass.name}",
+                "unsupported Kafka Connect time type ${value.javaClass.name}"
             )
       }
 
@@ -457,9 +443,7 @@ object DynamicTypes {
         is Struct ->
             LocalDate.of(value.getInt32("year"), value.getInt32("month"), value.getInt32("day"))
         else ->
-            throw IllegalArgumentException(
-                "unsupported protobuf date type ${value.javaClass.name}",
-            )
+            throw IllegalArgumentException("unsupported protobuf date type ${value.javaClass.name}")
       }
 
   private fun fromConnectDate(value: Any, schema: Schema): LocalDate? =
@@ -467,7 +451,7 @@ object DynamicTypes {
         is java.util.Date -> LocalDate.ofEpochDay(Date.fromLogical(schema, value).toLong())
         else ->
             throw IllegalArgumentException(
-                "unsupported Kafka Connect date type ${value.javaClass.name}",
+                "unsupported Kafka Connect date type ${value.javaClass.name}"
             )
       }
 
@@ -475,7 +459,7 @@ object DynamicTypes {
       payloadMode: PayloadMode,
       value: Any?,
       optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false
+      forceMapsAsStruct: Boolean = false,
   ): Schema {
     if (payloadMode == PayloadMode.COMPACT) {
       return toConnectSchemaCompact(value, optional, forceMapsAsStruct)
@@ -586,7 +570,8 @@ object DynamicTypes {
                     is String -> key
                     else ->
                         throw IllegalArgumentException(
-                            "unsupported map key type ${key?.javaClass?.name}")
+                            "unsupported map key type ${key?.javaClass?.name}"
+                        )
                   }
                 }
                 .filter { e -> e.value.notNullOrEmpty() }
@@ -600,7 +585,8 @@ object DynamicTypes {
                     value.forEach {
                       this.field(
                           it.key as String,
-                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct))
+                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct),
+                      )
                     }
                   }
                   .apply { if (optional) optional() }
@@ -615,7 +601,8 @@ object DynamicTypes {
                     value.forEach {
                       this.field(
                           it.key as String,
-                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct))
+                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct),
+                      )
                     }
                   }
                   .apply { if (optional) optional() }
@@ -629,7 +616,7 @@ object DynamicTypes {
   private fun toConnectSchemaCompact(
       value: Any?,
       optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false
+      forceMapsAsStruct: Boolean = false,
   ): Schema =
       when (value) {
         null -> SimpleTypes.NULL.schema(true)
@@ -673,7 +660,11 @@ object DynamicTypes {
                     field(
                         it,
                         toConnectSchemaCompact(
-                            value.get(it).asObject(), optional, forceMapsAsStruct))
+                            value.get(it).asObject(),
+                            optional,
+                            forceMapsAsStruct,
+                        ),
+                    )
                   }
                   if (optional) optional()
                 }
@@ -689,7 +680,11 @@ object DynamicTypes {
                     field(
                         it,
                         toConnectSchemaCompact(
-                            value.get(it).asObject(), optional, forceMapsAsStruct))
+                            value.get(it).asObject(),
+                            optional,
+                            forceMapsAsStruct,
+                        ),
+                    )
                   }
                   if (optional) optional()
                 }
@@ -727,7 +722,8 @@ object DynamicTypes {
                       is String -> key
                       else ->
                           throw IllegalArgumentException(
-                              "unsupported map key type ${key?.javaClass?.name}")
+                              "unsupported map key type ${key?.javaClass?.name}"
+                          )
                     }
                   }
                   .filter { e -> e.value.notNullOrEmpty() }
@@ -740,7 +736,8 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct))
+                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct),
+                        )
                       }
                     }
                     .apply { if (optional) optional() }
@@ -755,7 +752,8 @@ object DynamicTypes {
                       value.forEach {
                         this.field(
                             it.key as String,
-                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct))
+                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct),
+                        )
                       }
                     }
                     .apply { if (optional) optional() }
