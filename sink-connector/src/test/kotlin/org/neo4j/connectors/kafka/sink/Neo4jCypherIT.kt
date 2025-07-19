@@ -50,7 +50,6 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.connectors.kafka.configuration.PayloadMode
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
@@ -452,7 +451,7 @@ abstract class Neo4jCypherIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) = runTest {
-    producer.publish(valueSchema = schema, value = DynamicTypes.toConnectValue(schema, value))
+    producer.publish(valueSchema = schema, value = PayloadMode.EXTENDED.value(schema, value))
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n.value", emptyMap()).single() }
         .get(0)
@@ -631,12 +630,12 @@ abstract class Neo4jCypherIT {
             "dob" to LocalDate.of(1999, 1, 1),
             "siblings" to 3,
         )
-    DynamicTypes.toConnectSchema(PayloadMode.EXTENDED, value).let { mapSchema ->
+    PayloadMode.EXTENDED.schema(value).let { mapSchema ->
       // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
       SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
         producer.publish(
             valueSchema = wrapper,
-            value = Struct(wrapper).put("map", DynamicTypes.toConnectValue(mapSchema, value)),
+            value = Struct(wrapper).put("map", PayloadMode.EXTENDED.value(mapSchema, value)),
         )
       }
     }

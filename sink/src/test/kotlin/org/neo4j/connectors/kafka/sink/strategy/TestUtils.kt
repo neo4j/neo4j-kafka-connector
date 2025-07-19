@@ -32,6 +32,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -61,7 +62,7 @@ object TestUtils {
             ),
             event,
         )
-    val changeConnect = ChangeEventConverter().toConnectValue(change)
+    val changeConnect = ChangeEventConverter(PayloadMode.EXTENDED).toConnectValue(change)
 
     return SinkMessage(
         SinkRecord(

@@ -121,8 +121,8 @@ class TypesTest {
   ) {
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
-      val schema = DynamicTypes.toConnectSchema(payloadMode, returned)
-      val converted = DynamicTypes.toConnectValue(schema, returned)
+      val schema = payloadMode.schema(returned)
+      val converted = payloadMode.value(schema, returned)
       val reverted = DynamicTypes.fromConnectValue(schema, converted)
 
       schema shouldBe expectedSchema
@@ -181,7 +181,7 @@ class TypesTest {
               PropertyType.getPropertyStruct(FLOAT, 1.0),
           ),
           Arguments.of(
-              Named.of("float-extended", 1.0),
+              Named.of("float-compact", 1.0),
               PayloadMode.COMPACT,
               SimpleTypes.FLOAT.schema,
               1.0,
@@ -772,7 +772,7 @@ class TypesTest {
 
       val changes = cdc.query(changeId).collectList().block()
 
-      val changeEventConverter = ChangeEventConverter(payloadMode = payloadMode)
+      val changeEventConverter = ChangeEventConverter(payloadMode)
       changes!!.take(2).forEach { change ->
         val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
@@ -849,7 +849,7 @@ class TypesTest {
 
       val changes = cdc.query(changeId).collectList().block()
 
-      val changeEventConverter = ChangeEventConverter(payloadMode = payloadMode)
+      val changeEventConverter = ChangeEventConverter(payloadMode)
       changes!!.take(2).forEach { change ->
         val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
@@ -967,10 +967,10 @@ class TypesTest {
             )
             .optional()
             .build()
-    val schema = DynamicTypes.toConnectSchema(payloadMode, returned, optional = true)
+    val schema = payloadMode.schema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = DynamicTypes.toConnectValue(schema, returned)
+    val converted = payloadMode.value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", PropertyType.toConnectValue("ROOT_ID"))
@@ -1104,10 +1104,10 @@ class TypesTest {
             )
             .optional()
             .build()
-    val schema = DynamicTypes.toConnectSchema(payloadMode, returned, optional = true)
+    val schema = payloadMode.schema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = DynamicTypes.toConnectValue(schema, returned)
+    val converted = payloadMode.value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", "ROOT_ID")
@@ -1137,8 +1137,8 @@ class TypesTest {
   }
 
   private fun schemaAndValue(payloadMode: PayloadMode, value: Any): Triple<Schema, Any?, Any?> {
-    val schema = DynamicTypes.toConnectSchema(payloadMode, value)
-    val converted = DynamicTypes.toConnectValue(schema, value)
+    val schema = payloadMode.schema(value)
+    val converted = payloadMode.value(schema, value)
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     return Triple(schema, converted, reverted)
   }
