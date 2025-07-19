@@ -25,6 +25,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.Values
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
@@ -56,7 +57,7 @@ data class ConvertingKafkaProducer(
     ensureSchemaCompatibility(topic)
   }
 
-  private val changeEventConverter = ChangeEventConverter()
+  private val changeEventConverter = ChangeEventConverter(PayloadMode.EXTENDED)
 
   fun publish(vararg kafkaMessages: KafkaMessage) {
     kafkaProducer.beginTransaction()

@@ -29,146 +29,24 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalQueries
-import kotlin.reflect.KClass
 import org.apache.kafka.connect.data.Date
 import org.apache.kafka.connect.data.Decimal
 import org.apache.kafka.connect.data.Schema
-import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
-import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.driver.Values
-import org.neo4j.driver.types.IsoDuration
-import org.neo4j.driver.types.Node
-import org.neo4j.driver.types.Point
-import org.neo4j.driver.types.Relationship
 
 object DynamicTypes {
-  val MILLIS_PER_DAY = 24 * 60 * 60 * 1000
+  const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000
 
-  private val PROTOBUF_DECIMAL_TYPE = "confluent.type.Decimal"
+  private const val PROTOBUF_DECIMAL_TYPE = "confluent.type.Decimal"
 
-  private val PROTOBUF_DATE_TYPE = "google.type.Date"
+  private const val PROTOBUF_DATE_TYPE = "google.type.Date"
 
-  private val PROTOBUF_TIME_TYPE = "google.type.TimeOfDay"
+  private const val PROTOBUF_TIME_TYPE = "google.type.TimeOfDay"
 
-  private val PROTOBUF_TIMESTAMP_TYPE = "google.protobuf.Timestamp"
-
-  fun toConnectValue(schema: Schema, value: Any?): Any? {
-    if (value == null) {
-      return null
-    }
-
-    if (schema == PropertyType.schema) {
-      return PropertyType.toConnectValue(value)
-    }
-
-    return when (schema.type()) {
-      Schema.Type.BYTES ->
-          when (value) {
-            is ByteArray -> value
-            is ByteBuffer -> value.array()
-            else -> throw IllegalArgumentException("unsupported bytes type ${value.javaClass.name}")
-          }
-      Schema.Type.ARRAY ->
-          when (value) {
-            is Collection<*> -> value.map { toConnectValue(schema.valueSchema(), it) }
-            is Array<*> -> value.map { toConnectValue(schema.valueSchema(), it) }.toList()
-            is ShortArray -> value.map { s -> s.toLong() }.toList()
-            is IntArray -> value.map { i -> i.toLong() }.toList()
-            is FloatArray -> value.map { f -> f.toDouble() }.toList()
-            is BooleanArray -> value.toList()
-            is LongArray -> value.toList()
-            is DoubleArray -> value.toList()
-            else -> throw IllegalArgumentException("unsupported array type ${value.javaClass.name}")
-          }
-      Schema.Type.MAP ->
-          when (value) {
-            is Map<*, *> -> value.mapValues { toConnectValue(schema.valueSchema(), it.value) }
-            else -> throw IllegalArgumentException("unsupported map type ${value.javaClass.name}")
-          }
-      Schema.Type.STRUCT ->
-          when (value) {
-            is IsoDuration ->
-                Struct(schema)
-                    .put(MONTHS, value.months())
-                    .put(DAYS, value.days())
-                    .put(SECONDS, value.seconds())
-                    .put(NANOS, value.nanoseconds())
-            is Point ->
-                Struct(schema).put(SR_ID, value.srid()).put(X, value.x()).put(Y, value.y()).also {
-                  it.put(DIMENSION, if (value.z().isNaN()) TWO_D else THREE_D)
-                  if (!value.z().isNaN()) {
-                    it.put(Z, value.z())
-                  }
-                }
-            is Node ->
-                Struct(schema).apply {
-                  put("<id>", value.id())
-                  put("<labels>", value.labels())
-                  value
-                      .asMap { it.asObject() }
-                      .forEach { e ->
-                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
-                      }
-                }
-            is Relationship ->
-                Struct(schema).apply {
-                  put("<id>", value.id())
-                  put("<type>", value.type())
-                  put("<start.id>", value.startNodeId())
-                  put("<end.id>", value.endNodeId())
-                  value
-                      .asMap { it.asObject() }
-                      .forEach { e ->
-                        put(e.key, toConnectValue(schema.field(e.key).schema(), e.value))
-                      }
-                }
-            is Map<*, *> ->
-                Struct(schema).apply {
-                  schema.fields().forEach {
-                    put(it.name(), toConnectValue(it.schema(), value[it.name()]))
-                  }
-                }
-            is Collection<*> ->
-                Struct(schema).apply {
-                  schema.fields().forEach {
-                    put(
-                        it.name(),
-                        toConnectValue(it.schema(), value.elementAt(it.name().substring(1).toInt())),
-                    )
-                  }
-                }
-            else ->
-                throw IllegalArgumentException("unsupported struct type ${value.javaClass.name}")
-          }
-      Schema.Type.STRING ->
-          when (value) {
-            is LocalDate -> DateTimeFormatter.ISO_DATE.format(value)
-            is LocalDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
-            is LocalTime -> DateTimeFormatter.ISO_TIME.format(value)
-            is OffsetDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
-            is ZonedDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
-            is OffsetTime -> DateTimeFormatter.ISO_TIME.format(value)
-            is String -> value
-            is Char -> value.toString()
-            is CharArray -> String(value)
-            else ->
-                throw IllegalArgumentException("unsupported string type ${value.javaClass.name}")
-          }
-      Schema.Type.INT64,
-      Schema.Type.FLOAT64 ->
-          when (value) {
-            is Float -> value.toDouble()
-            is Double -> value
-            is Number -> value.toLong()
-            else ->
-                throw IllegalArgumentException("unsupported numeric type ${value.javaClass.name}")
-          }
-      else -> value
-    }
-  }
+  private const val PROTOBUF_TIMESTAMP_TYPE = "google.protobuf.Timestamp"
 
   fun fromConnectValue(schema: Schema, value: Any?, skipNullValuesInMaps: Boolean = false): Any? {
     if (value == null) {
@@ -243,10 +121,12 @@ object DynamicTypes {
                 )
             )
           }
+
       value is Iterable<*> ->
           for (element in value) {
             result.add(fromConnectValue(schema.valueSchema(), element, skipNullValuesInMaps))
           }
+
       else -> throw IllegalArgumentException("unsupported array type ${value.javaClass.name}")
     }
 
@@ -261,6 +141,7 @@ object DynamicTypes {
                 ?.let {
                   when (val dimension = it.getInt8(DIMENSION)) {
                     TWO_D -> Values.point(it.getInt32(SR_ID), it.getFloat64(X), it.getFloat64(Y))
+
                     THREE_D ->
                         Values.point(
                             it.getInt32(SR_ID),
@@ -268,10 +149,12 @@ object DynamicTypes {
                             it.getFloat64(Y),
                             it.getFloat64(Z),
                         )
+
                     else -> throw IllegalArgumentException("unsupported dimension value $dimension")
                   }
                 }
                 ?.asPoint()
+
         SimpleTypes.DURATION.matches(schema) ->
             (value as Struct?)
                 ?.let {
@@ -283,6 +166,7 @@ object DynamicTypes {
                   )
                 }
                 ?.asIsoDuration()
+
         else -> {
           val result = mutableMapOf<String, Any?>()
           val struct = value as Struct
@@ -319,14 +203,17 @@ object DynamicTypes {
               (value as String?)?.let {
                 DateTimeFormatter.ISO_DATE.parse(it) { parsed -> LocalDate.from(parsed) }
               }
+
           SimpleTypes.LOCALTIME.matches(schema) ->
               (value as String?)?.let {
                 DateTimeFormatter.ISO_TIME.parse(it) { parsed -> LocalTime.from(parsed) }
               }
+
           SimpleTypes.LOCALDATETIME.matches(schema) ->
               (value as String?)?.let {
                 DateTimeFormatter.ISO_DATE_TIME.parse(it) { parsed -> LocalDateTime.from(parsed) }
               }
+
           SimpleTypes.ZONEDDATETIME.matches(schema) ->
               (value as String?)?.let {
                 DateTimeFormatter.ISO_DATE_TIME.parse(it) { parsed ->
@@ -338,10 +225,12 @@ object DynamicTypes {
                   }
                 }
               }
+
           SimpleTypes.OFFSETTIME.matches(schema) ->
               (value as String?)?.let {
                 DateTimeFormatter.ISO_TIME.parse(it) { parsed -> OffsetTime.from(parsed) }
               }
+
           else -> value
         }
     return when (parsedValue) {
@@ -371,6 +260,7 @@ object DynamicTypes {
       when (value) {
         is Struct ->
             BigDecimal(BigInteger(value.getBytes("value")), value.getInt32("scale")).toString()
+
         else ->
             throw IllegalArgumentException(
                 "unsupported protobuf decimal type ${value.javaClass.name}"
@@ -397,6 +287,7 @@ object DynamicTypes {
                 value.getInt32("nanos"),
                 ZoneOffset.UTC,
             )
+
         else ->
             throw IllegalArgumentException(
                 "unsupported protobuf timestamp type ${value.javaClass.name}"
@@ -410,6 +301,7 @@ object DynamicTypes {
                 Instant.ofEpochMilli(Timestamp.fromLogical(schema, value).toLong()),
                 ZoneOffset.UTC,
             )
+
         else ->
             throw IllegalArgumentException(
                 "unsupported Kafka Connect time type ${value.javaClass.name}"
@@ -425,6 +317,7 @@ object DynamicTypes {
                 value.getInt32("seconds"),
                 value.getInt32("nanos"),
             )
+
         else ->
             throw IllegalArgumentException("unsupported protobuf time type ${value.javaClass.name}")
       }
@@ -442,6 +335,7 @@ object DynamicTypes {
       when (value) {
         is Struct ->
             LocalDate.of(value.getInt32("year"), value.getInt32("month"), value.getInt32("day"))
+
         else ->
             throw IllegalArgumentException("unsupported protobuf date type ${value.javaClass.name}")
       }
@@ -455,341 +349,7 @@ object DynamicTypes {
             )
       }
 
-  fun toConnectSchema(
-      payloadMode: PayloadMode,
-      value: Any?,
-      optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false,
-  ): Schema {
-    if (payloadMode == PayloadMode.COMPACT) {
-      return toConnectSchemaCompact(value, optional, forceMapsAsStruct)
-    }
-    return toConnectSchemaExtended(value, optional, forceMapsAsStruct)
-  }
-
-  private fun toConnectSchemaExtended(
-      value: Any?,
-      optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false,
-  ): Schema {
-    return when (value) {
-      null -> PropertyType.schema
-      is Boolean,
-      is Float,
-      is Double,
-      is Number,
-      is Char,
-      is LocalDate,
-      is LocalDateTime,
-      is LocalTime,
-      is OffsetDateTime,
-      is ZonedDateTime,
-      is OffsetTime,
-      is IsoDuration,
-      is Point,
-      is CharArray,
-      is CharSequence,
-      is ByteBuffer,
-      is ByteArray,
-      is ShortArray,
-      is IntArray,
-      is LongArray,
-      is FloatArray,
-      is DoubleArray,
-      is BooleanArray -> PropertyType.schema
-      is Array<*> ->
-          if (isSimplePropertyType(value::class.java.componentType.kotlin)) {
-            PropertyType.schema
-          } else {
-            val first = value.firstOrNull { it.notNullOrEmpty() }
-            val schema = toConnectSchemaExtended(first, optional, forceMapsAsStruct)
-            SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
-          }
-      is Node ->
-          SchemaBuilder.struct()
-              .apply {
-                field("<id>", Schema.INT64_SCHEMA)
-                field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-
-                value.keys().forEach { field(it, PropertyType.schema) }
-
-                if (optional) optional()
-              }
-              .build()
-      is Relationship ->
-          SchemaBuilder.struct()
-              .apply {
-                field("<id>", Schema.INT64_SCHEMA)
-                field("<type>", Schema.STRING_SCHEMA)
-                field("<start.id>", Schema.INT64_SCHEMA)
-                field("<end.id>", Schema.INT64_SCHEMA)
-
-                value.keys().forEach { field(it, PropertyType.schema) }
-
-                if (optional) optional()
-              }
-              .build()
-      is Collection<*> -> {
-        val elementTypes = value.map { it?.javaClass?.kotlin }.toSet()
-        if (elementTypes.isEmpty()) {
-          return PropertyType.schema
-        }
-
-        val elementType = elementTypes.singleOrNull()
-        if (elementType != null && isSimplePropertyType(elementType)) {
-          return PropertyType.schema
-        }
-
-        val nonEmptyElementTypes =
-            value
-                .filter { it.notNullOrEmpty() }
-                .map { toConnectSchemaExtended(it, optional, forceMapsAsStruct) }
-
-        when (nonEmptyElementTypes.toSet().size) {
-          0 -> SchemaBuilder.array(PropertyType.schema).apply { if (optional) optional() }.build()
-          1 ->
-              SchemaBuilder.array(nonEmptyElementTypes.first())
-                  .apply { if (optional) optional() }
-                  .build()
-          else ->
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEachIndexed { i, v ->
-                      this.field("e${i}", toConnectSchemaExtended(v, optional, forceMapsAsStruct))
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-        }
-      }
-      is Map<*, *> -> {
-        val elementTypes =
-            value
-                .mapKeys {
-                  when (val key = it.key) {
-                    is String -> key
-                    else ->
-                        throw IllegalArgumentException(
-                            "unsupported map key type ${key?.javaClass?.name}"
-                        )
-                  }
-                }
-                .filter { e -> e.value.notNullOrEmpty() }
-                .mapValues { e -> toConnectSchemaExtended(e.value, optional, forceMapsAsStruct) }
-
-        val elementValueTypesSet = elementTypes.values.toSet()
-        when {
-          elementValueTypesSet.isEmpty() ->
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEach {
-                      this.field(
-                          it.key as String,
-                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct),
-                      )
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-          elementValueTypesSet.singleOrNull() != null && !forceMapsAsStruct ->
-              SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
-                  .apply { if (optional) optional() }
-                  .build()
-          else ->
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEach {
-                      this.field(
-                          it.key as String,
-                          toConnectSchemaExtended(it.value, optional, forceMapsAsStruct),
-                      )
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-        }
-      }
-      else -> throw IllegalArgumentException("unsupported type ${value.javaClass.name}")
-    }
-  }
-
-  private fun toConnectSchemaCompact(
-      value: Any?,
-      optional: Boolean = false,
-      forceMapsAsStruct: Boolean = false,
-  ): Schema =
-      when (value) {
-        null -> SimpleTypes.NULL.schema(true)
-        is Boolean -> SimpleTypes.BOOLEAN.schema(optional)
-        is Float,
-        is Double -> SimpleTypes.FLOAT.schema(optional)
-        is Number -> SimpleTypes.LONG.schema(optional)
-        is Char,
-        is CharArray,
-        is CharSequence -> SimpleTypes.STRING.schema(optional)
-        is ByteBuffer,
-        is ByteArray -> SimpleTypes.BYTES.schema(optional)
-        is ShortArray,
-        is IntArray,
-        is LongArray ->
-            SchemaBuilder.array(Schema.INT64_SCHEMA).apply { if (optional) optional() }.build()
-        is FloatArray,
-        is DoubleArray ->
-            SchemaBuilder.array(Schema.FLOAT64_SCHEMA).apply { if (optional) optional() }.build()
-        is BooleanArray ->
-            SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).apply { if (optional) optional() }.build()
-        is Array<*> -> {
-          val first = value.firstOrNull { it.notNullOrEmpty() }
-          val schema = toConnectSchemaCompact(first, optional, forceMapsAsStruct)
-          SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
-        }
-        is LocalDate -> SimpleTypes.LOCALDATE.schema(optional)
-        is LocalDateTime -> SimpleTypes.LOCALDATETIME.schema(optional)
-        is LocalTime -> SimpleTypes.LOCALTIME.schema(optional)
-        is OffsetDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
-        is ZonedDateTime -> SimpleTypes.ZONEDDATETIME.schema(optional)
-        is OffsetTime -> SimpleTypes.OFFSETTIME.schema(optional)
-        is IsoDuration -> SimpleTypes.DURATION.schema(optional)
-        is Point -> SimpleTypes.POINT.schema(optional)
-        is Node ->
-            SchemaBuilder.struct()
-                .apply {
-                  field("<id>", SimpleTypes.LONG.schema())
-                  field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-                  value.keys().forEach {
-                    field(
-                        it,
-                        toConnectSchemaCompact(
-                            value.get(it).asObject(),
-                            optional,
-                            forceMapsAsStruct,
-                        ),
-                    )
-                  }
-                  if (optional) optional()
-                }
-                .build()
-        is Relationship ->
-            SchemaBuilder.struct()
-                .apply {
-                  field("<id>", SimpleTypes.LONG.schema())
-                  field("<type>", SimpleTypes.STRING.schema())
-                  field("<start.id>", SimpleTypes.LONG.schema())
-                  field("<end.id>", SimpleTypes.LONG.schema())
-                  value.keys().forEach {
-                    field(
-                        it,
-                        toConnectSchemaCompact(
-                            value.get(it).asObject(),
-                            optional,
-                            forceMapsAsStruct,
-                        ),
-                    )
-                  }
-                  if (optional) optional()
-                }
-                .build()
-        is Collection<*> -> {
-          val nonEmptyElementTypes =
-              value
-                  .filter { it.notNullOrEmpty() }
-                  .map { toConnectSchemaCompact(it, optional, forceMapsAsStruct) }
-          when (nonEmptyElementTypes.toSet().size) {
-            0 ->
-                SchemaBuilder.array(SimpleTypes.NULL.schema(true))
-                    .apply { if (optional) optional() }
-                    .build()
-            1 ->
-                SchemaBuilder.array(nonEmptyElementTypes.first())
-                    .apply { if (optional) optional() }
-                    .build()
-            else ->
-                SchemaBuilder.struct()
-                    .apply {
-                      value.forEachIndexed { i, v ->
-                        this.field("e${i}", toConnectSchemaCompact(v, optional, forceMapsAsStruct))
-                      }
-                    }
-                    .apply { if (optional) optional() }
-                    .build()
-          }
-        }
-        is Map<*, *> -> {
-          val elementTypes =
-              value
-                  .mapKeys {
-                    when (val key = it.key) {
-                      is String -> key
-                      else ->
-                          throw IllegalArgumentException(
-                              "unsupported map key type ${key?.javaClass?.name}"
-                          )
-                    }
-                  }
-                  .filter { e -> e.value.notNullOrEmpty() }
-                  .mapValues { e -> toConnectSchemaCompact(e.value, optional, forceMapsAsStruct) }
-          val valueSet = elementTypes.values.toSet()
-          when {
-            valueSet.isEmpty() ->
-                SchemaBuilder.struct()
-                    .apply {
-                      value.forEach {
-                        this.field(
-                            it.key as String,
-                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct),
-                        )
-                      }
-                    }
-                    .apply { if (optional) optional() }
-                    .build()
-            valueSet.singleOrNull() != null && !forceMapsAsStruct ->
-                SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
-                    .apply { if (optional) optional() }
-                    .build()
-            else ->
-                SchemaBuilder.struct()
-                    .apply {
-                      value.forEach {
-                        this.field(
-                            it.key as String,
-                            toConnectSchemaCompact(it.value, optional, forceMapsAsStruct),
-                        )
-                      }
-                    }
-                    .apply { if (optional) optional() }
-                    .build()
-          }
-        }
-        else -> throw IllegalArgumentException("unsupported type ${value.javaClass.name}")
-      }
-
-  private fun isSimplePropertyType(cls: KClass<*>): Boolean =
-      when (cls) {
-        Boolean::class,
-        Byte::class,
-        Short::class,
-        Int::class,
-        Long::class,
-        Float::class,
-        Double::class,
-        String::class,
-        LocalDate::class,
-        LocalDateTime::class,
-        LocalTime::class,
-        OffsetDateTime::class,
-        ZonedDateTime::class,
-        OffsetTime::class -> true
-        else ->
-            if (IsoDuration::class.java.isAssignableFrom(cls.java)) {
-              true
-            } else if (Point::class.java.isAssignableFrom(cls.java)) {
-              true
-            } else {
-              false
-            }
-      }
-
-  private fun Any?.notNullOrEmpty(): Boolean =
+  internal fun Any?.notNullOrEmpty(): Boolean =
       when (val value = this) {
         null -> false
         is Collection<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }

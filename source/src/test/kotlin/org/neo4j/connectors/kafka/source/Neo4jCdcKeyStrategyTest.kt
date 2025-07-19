@@ -39,6 +39,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.source.Neo4jCdcKeyStrategy.ELEMENT_ID
@@ -171,7 +172,7 @@ object TestData {
           )
 
   val nodeChange =
-      ChangeEventConverter()
+      ChangeEventConverter(PayloadMode.EXTENDED)
           .toConnectValue(
               ChangeEvent(
                   ChangeIdentifier("a-node-change-id"),
@@ -190,7 +191,7 @@ object TestData {
           )
 
   val relChange =
-      ChangeEventConverter()
+      ChangeEventConverter(PayloadMode.EXTENDED)
           .toConnectValue(
               ChangeEvent(
                   ChangeIdentifier("a-rel-change-id"),

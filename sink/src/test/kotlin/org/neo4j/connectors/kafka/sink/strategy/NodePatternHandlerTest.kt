@@ -29,9 +29,9 @@ import org.junit.jupiter.api.assertThrows
 import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.data.ConstraintEntityType
 import org.neo4j.connectors.kafka.data.ConstraintType
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
+import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -329,7 +329,7 @@ class NodePatternHandlerTest : HandlerTest() {
                 .put("surname", "doe")
                 .put(
                     "dob",
-                    DynamicTypes.toConnectValue(PropertyType.schema, LocalDate.of(2000, 1, 1)),
+                    ExtendedValueConverter().value(PropertyType.schema, LocalDate.of(2000, 1, 1)),
                 ),
         expected =
             listOf(

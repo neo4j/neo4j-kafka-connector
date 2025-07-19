@@ -26,7 +26,6 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
 import org.slf4j.Logger
@@ -98,13 +97,12 @@ class Neo4jQueryTask : SourceTask() {
   private fun build(record: Record): SourceRecord {
     val recordAsMap = record.asMap()
     val schema =
-        DynamicTypes.toConnectSchema(
-            config.payloadMode,
+        config.payloadMode.schema(
             recordAsMap,
             optional = true,
             forceMapsAsStruct = config.forceMapsAsStruct,
         )
-    val value = DynamicTypes.toConnectValue(schema, recordAsMap)
+    val value = config.payloadMode.value(schema, recordAsMap)
 
     return SourceRecord(
         config.partition,
@@ -113,7 +111,11 @@ class Neo4jQueryTask : SourceTask() {
             "value" to
                 (record.get(config.queryStreamingProperty).asObject() as? Long
                     ?: throw InvalidDataException(
-                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${record.get(config.queryStreamingProperty)}', expected a long value)."
+                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${
+                        record.get(
+                            config.queryStreamingProperty
+                        )
+                      }', expected a long value)."
                     )),
         ),
         config.topic,

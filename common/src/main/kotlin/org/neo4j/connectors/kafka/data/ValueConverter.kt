@@ -14,19 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.configuration
+package org.neo4j.connectors.kafka.data
 
 import org.apache.kafka.connect.data.Schema
-import org.neo4j.connectors.kafka.data.ValueConverter
-import org.neo4j.connectors.kafka.data.converter.CompactValueConverter
-import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
 
-enum class PayloadMode(private val converter: ValueConverter) : ValueConverter {
-  EXTENDED(ExtendedValueConverter()),
-  COMPACT(CompactValueConverter());
+interface ValueConverter {
 
-  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema =
-      converter.schema(value, optional, forceMapsAsStruct)
+  fun schema(value: Any?, optional: Boolean = false, forceMapsAsStruct: Boolean = false): Schema
 
-  override fun value(schema: Schema, value: Any?): Any? = converter.value(schema, value)
+  fun value(schema: Schema, value: Any?): Any?
 }

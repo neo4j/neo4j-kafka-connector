@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.data
+package org.neo4j.connectors.kafka.data.converter
 
 import java.util.function.Function
+import kotlin.collections.get
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Relationship
