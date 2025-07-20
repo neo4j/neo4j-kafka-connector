@@ -33,11 +33,12 @@ fun Session.createNodeKeyConstraint(
     neo4j: Neo4j,
     name: String,
     label: String,
-    vararg properties: String
+    vararg properties: String,
 ) {
   if (canIUse(Schema.nodeKeyConstraints()).withNeo4j(neo4j)) {
     this.run(
-            "CREATE CONSTRAINT $name FOR (n:$label) REQUIRE ${properties.joinToString(", ", "(", ")") { "n.$it"}} IS NODE KEY")
+            "CREATE CONSTRAINT $name FOR (n:$label) REQUIRE ${properties.joinToString(", ", "(", ")") { "n.$it"}} IS NODE KEY"
+        )
         .consume()
   } else {
     if (canIUse(Schema.nodePropertyUniquenessConstraints()).withNeo4j(neo4j)) {
@@ -46,9 +47,10 @@ fun Session.createNodeKeyConstraint(
             properties.joinToString(
                 ", ",
                 "(",
-                ")"
+                ")",
             ) { "n.$it" }
-          } IS UNIQUE")
+          } IS UNIQUE"
+          )
           .consume()
     }
 
@@ -65,11 +67,12 @@ fun Session.createRelationshipKeyConstraint(
     neo4j: Neo4j,
     name: String,
     type: String,
-    vararg properties: String
+    vararg properties: String,
 ) {
   if (canIUse(Schema.relationshipKeyConstraints()).withNeo4j(neo4j)) {
     this.run(
-            "CREATE CONSTRAINT $name FOR ()-[r:$type]->() REQUIRE ${properties.joinToString(", ", "(", ")") { "r.$it" } } IS RELATIONSHIP KEY")
+            "CREATE CONSTRAINT $name FOR ()-[r:$type]->() REQUIRE ${properties.joinToString(", ", "(", ")") { "r.$it" } } IS RELATIONSHIP KEY"
+        )
         .consume()
   } else {
     if (canIUse(Schema.relationshipPropertyUniquenessConstraints()).withNeo4j(neo4j)) {
@@ -78,9 +81,10 @@ fun Session.createRelationshipKeyConstraint(
             properties.joinToString(
                 ", ",
                 "(",
-                ")"
+                ")",
             ) { "r.$it"} 
-          } IS UNIQUE")
+          } IS UNIQUE"
+          )
           .consume()
     }
 

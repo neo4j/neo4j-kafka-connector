@@ -135,10 +135,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
     return Query(renderer.render(stmt), stmt.parameters)
   }
 
-  private fun buildNode(
-      keys: Map<String, List<Map<String, Any>>>,
-      named: String,
-  ): Node {
+  private fun buildNode(keys: Map<String, List<Map<String, Any>>>, named: String): Node {
     val validKeys =
         keys
             .mapValues { kvp -> kvp.value.filter { it.isNotEmpty() } }
@@ -146,7 +143,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
 
     if (validKeys.isEmpty()) {
       throw InvalidDataException(
-          "schema strategy requires at least one node key with valid properties on node aliased '$named'.",
+          "schema strategy requires at least one node key with valid properties on node aliased '$named'."
       )
     }
 
@@ -165,7 +162,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
                               e.value,
                           ),
                       )
-                    },
+                    }
             )
             .named(named)
 
@@ -176,14 +173,14 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
       val start: Node,
       val end: Node,
       val relationship: Relationship,
-      val matchNodes: Boolean
+      val matchNodes: Boolean,
   )
 
   @Suppress("SameParameterValue")
   private fun buildRelationship(
       event: RelationshipEvent,
       named: String,
-      forCreate: Boolean
+      forCreate: Boolean,
   ): RelationshipOutput {
     val relationshipHasKeys = event.keys.filter { it.isNotEmpty() }.any()
 
@@ -191,18 +188,10 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
     // else we check whether relationship has its own keys or not
     val start =
         if (!forCreate && relationshipHasKeys) Cypher.anyNode("start")
-        else
-            buildNode(
-                event.start.keys,
-                "start",
-            )
+        else buildNode(event.start.keys, "start")
     val end =
         if (!forCreate && relationshipHasKeys) Cypher.anyNode("end")
-        else
-            buildNode(
-                event.end.keys,
-                "end",
-            )
+        else buildNode(event.end.keys, "end")
     val rel =
         start
             .relationshipTo(end, event.type)
@@ -218,7 +207,7 @@ class CdcSchemaHandler(val topic: String, private val renderer: Renderer) : CdcH
                               e.value,
                           ),
                       )
-                    },
+                    }
             )
             .named(named)
 

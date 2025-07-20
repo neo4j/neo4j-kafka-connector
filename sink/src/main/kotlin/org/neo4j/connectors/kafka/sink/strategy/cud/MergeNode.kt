@@ -26,7 +26,7 @@ import org.neo4j.driver.Query
 data class MergeNode(
     val labels: Set<String>,
     val ids: Map<String, Any?>,
-    val properties: Map<String, Any?>
+    val properties: Map<String, Any?>,
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (ids.isEmpty()) {
@@ -45,7 +45,8 @@ data class MergeNode(
                   .build()
             } else {
               Cypher.merge(node).mutate(node, propertiesParam).build()
-            })
+            }
+        )
 
     return Query(stmt, mapOf("keys" to ids, "properties" to properties))
   }
@@ -57,7 +58,8 @@ data class MergeNode(
           values.getMap<String, Any?>(Keys.IDS)
               ?: throw InvalidDataException("No ${Keys.IDS} found"),
           values.getMap<String, Any?>(Keys.PROPERTIES)
-              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"),
+      )
     }
   }
 }

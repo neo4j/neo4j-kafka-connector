@@ -56,7 +56,7 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         StreamsTransactionEvent(
@@ -68,15 +68,20 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john"),
-                            labels = listOf("Person"))),
-            schema = Schema()))
+                            labels = listOf("Person"),
+                        ),
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .single()
 
       result.get("n").asNode() should
@@ -91,12 +96,13 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
             "CREATE (n:SourceEvent:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -113,19 +119,26 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                                     "id" to 5L,
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay()),
-                            labels = listOf("Person", "Employee"))),
+                                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                                ),
+                            labels = listOf("Person", "Employee"),
+                        ),
+                ),
             schema =
                 Schema(
                     constraints =
-                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE)))))
+                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE))
+                ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .single()
 
       result.get("n").asNode() should
@@ -138,7 +151,8 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     "id" to 5L,
                     "name" to "john",
                     "surname" to "doe",
-                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay())
+                    "dob" to LocalDate.of(2000, 1, 1).toEpochDay(),
+                )
           }
     }
   }
@@ -147,12 +161,13 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
             "CREATE (n:SourceEvent) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -162,15 +177,19 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                 NodePayload(
                     id = "person1",
                     before = NodeChange(mapOf("id" to 1L, "name" to "john"), emptyList()),
-                    after = null),
-            schema = Schema()))
+                    after = null,
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .list()
 
       result shouldHaveSize 0
@@ -181,7 +200,7 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -191,7 +210,9 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
             """,
             mapOf(
                 "person1" to mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")))
+                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -205,16 +226,19 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     end = RelationshipNodeChange("person2", listOf("Person"), emptyMap()),
                     before = null,
                     after =
-                        RelationshipChange(
-                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                        RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay())),
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -239,7 +263,7 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -255,7 +279,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     mapOf(
                         "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                        "type" to "friend")))
+                        "type" to "friend",
+                    ),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -271,18 +298,23 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                         RelationshipChange(
                             mapOf(
                                 "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                                "type" to "friend")),
+                                "type" to "friend",
+                            )
+                        ),
                     after =
-                        RelationshipChange(
-                            mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                        RelationshipChange(mapOf("since" to LocalDate.of(1999, 1, 1).toEpochDay())),
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -307,7 +339,7 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Test
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -321,7 +353,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     mapOf(
                         "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                        "type" to "friend")))
+                        "type" to "friend",
+                    ),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -337,16 +372,22 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                         RelationshipChange(
                             mapOf(
                                 "since" to LocalDate.of(2000, 1, 1).toEpochDay(),
-                                "type" to "friend")),
-                    after = null),
-            schema = Schema()))
+                                "type" to "friend",
+                            )
+                        ),
+                    after = null,
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH ()-[r:KNOWS {sourceId: ${'$'}sourceId}]->() RETURN count(r)",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get(0).asInt() shouldBe 0
@@ -356,17 +397,22 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   @Neo4jSink(
       schemaControlKeyCompatibility = SchemaCompatibilityMode.NONE,
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
-      cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")])
+      cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")],
+  )
   @Test
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 1, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 1,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 NodePayload(
                     id = "person1",
@@ -374,16 +420,25 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                            labels = listOf("Person"))),
+                            labels = listOf("Person"),
+                        ),
+                ),
             schema =
                 Schema(
                     constraints =
-                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE)))))
+                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE))
+                ),
+        )
+    )
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 2, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 2,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 NodePayload(
                     id = "person2",
@@ -391,17 +446,26 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     after =
                         NodeChange(
                             properties = mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                            labels = listOf("Person"))),
+                            labels = listOf("Person"),
+                        ),
+                ),
             schema =
                 Schema(
                     constraints =
-                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE)))))
+                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE))
+                ),
+        )
+    )
 
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 3, txEventId = 0, txEventsCount = 1, operation = OperationType.created),
+                    txId = 3,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.created,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -409,8 +473,11 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     start = RelationshipNodeChange("person1", listOf("Person"), mapOf("id" to 1L)),
                     end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
                     before = null,
-                    after = RelationshipChange(emptyMap())),
-            schema = Schema()))
+                    after = RelationshipChange(emptyMap()),
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
@@ -422,7 +489,8 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
             MATCH (start)-[r:KNOWS {sourceId: ${'$'}rId}]->(end)
             RETURN start, r, end
           """,
-                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"))
+                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"),
+              )
               .single()
 
       result.get("r").asRelationship() should { it.asMap() shouldBe mapOf("sourceId" to "knows1") }
@@ -444,7 +512,11 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 4, txEventId = 0, txEventsCount = 1, operation = OperationType.updated),
+                    txId = 4,
+                    txEventId = 0,
+                    txEventsCount = 1,
+                    operation = OperationType.updated,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -453,9 +525,11 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
                     before = RelationshipChange(emptyMap()),
                     after =
-                        RelationshipChange(
-                            mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay()))),
-            schema = Schema()))
+                        RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay())),
+                ),
+            schema = Schema(),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
@@ -467,7 +541,8 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
             MATCH (start)-[r:KNOWS {sourceId: ${'$'}rId}]->(end)
             RETURN r
           """,
-                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"))
+                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -481,7 +556,11 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 0, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 0,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 RelationshipPayload(
                     id = "knows1",
@@ -490,42 +569,63 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
                     end = RelationshipNodeChange("person2", listOf("Person"), mapOf("id" to 2L)),
                     before =
                         RelationshipChange(mapOf("since" to LocalDate.of(2000, 1, 1).toEpochDay())),
-                    after = null),
-            schema = Schema()))
+                    after = null,
+                ),
+            schema = Schema(),
+        )
+    )
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 1, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 1,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 NodePayload(
                     id = "person1",
                     before =
                         NodeChange(
                             properties = mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
-                            labels = listOf("Person")),
-                    after = null),
+                            labels = listOf("Person"),
+                        ),
+                    after = null,
+                ),
             schema =
                 Schema(
                     constraints =
-                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE)))))
+                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE))
+                ),
+        )
+    )
     producer.publish(
         StreamsTransactionEvent(
             meta =
                 newMetadata(
-                    txId = 5, txEventId = 2, txEventsCount = 3, operation = OperationType.deleted),
+                    txId = 5,
+                    txEventId = 2,
+                    txEventsCount = 3,
+                    operation = OperationType.deleted,
+                ),
             payload =
                 NodePayload(
                     id = "person2",
                     before =
                         NodeChange(
                             properties = mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
-                            labels = listOf("Person")),
-                    after = null),
+                            labels = listOf("Person"),
+                        ),
+                    after = null,
+                ),
             schema =
                 Schema(
                     constraints =
-                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE)))))
+                        listOf(Constraint("Person", setOf("id"), StreamsConstraintType.UNIQUE))
+                ),
+        )
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n) RETURN count(n)").single()
@@ -538,7 +638,7 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
       txId: Long = 1,
       txEventId: Int = 0,
       txEventsCount: Int = 1,
-      operation: OperationType
+      operation: OperationType,
   ) =
       Meta(
           timestamp = System.currentTimeMillis(),
@@ -546,5 +646,6 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
           txId = txId,
           txEventId = txEventId,
           txEventsCount = txEventsCount,
-          operation = operation)
+          operation = operation,
+      )
 }

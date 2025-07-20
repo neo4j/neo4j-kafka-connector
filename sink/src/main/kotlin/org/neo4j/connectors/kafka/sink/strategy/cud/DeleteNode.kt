@@ -27,7 +27,7 @@ import org.neo4j.driver.Query
 data class DeleteNode(
     val labels: Set<String>,
     val ids: Map<String, Any?>,
-    val detach: Boolean = false
+    val detach: Boolean = false,
 ) : Operation {
   override fun toQuery(renderer: Renderer): Query {
     if (ids.isEmpty()) {
@@ -47,7 +47,8 @@ data class DeleteNode(
                     it.delete(node)
                   }
                 }
-                .build())
+                .build()
+        )
 
     return Query(stmt, mapOf("keys" to ids))
   }
@@ -57,7 +58,8 @@ data class DeleteNode(
       return DeleteNode(
           values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
           values.getMap<String, Any?>(Keys.IDS) ?: throw InvalidDataException("No IDS found"),
-          values.getTyped<Boolean>(Keys.DETACH) ?: false)
+          values.getTyped<Boolean>(Keys.DETACH) ?: false,
+      )
     }
   }
 }

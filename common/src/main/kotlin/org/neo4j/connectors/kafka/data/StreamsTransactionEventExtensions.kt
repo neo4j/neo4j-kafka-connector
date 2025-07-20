@@ -58,7 +58,8 @@ object StreamsTransactionEventExtensions {
             ZonedDateTime.ofInstant(Instant.ofEpochMilli(this.meta.timestamp), ZoneOffset.UTC),
             ZonedDateTime.ofInstant(Instant.ofEpochMilli(this.meta.timestamp), ZoneOffset.UTC),
             emptyMap(),
-            emptyMap())
+            emptyMap(),
+        )
     val cdcEvent =
         when (val payload = this.payload) {
           is NodePayload -> {
@@ -97,7 +98,8 @@ object StreamsTransactionEventExtensions {
                       if (label != null) {
                         this[label] = listOf(payload.start.ids)
                       }
-                    }),
+                    },
+                ),
                 Node(
                     payload.end.id,
                     payload.end.labels ?: emptyList(),
@@ -106,11 +108,13 @@ object StreamsTransactionEventExtensions {
                       if (label != null) {
                         this[label] = listOf(payload.end.ids)
                       }
-                    }),
+                    },
+                ),
                 emptyList(),
                 cdcOperation,
                 before,
-                after)
+                after,
+            )
           }
           else ->
               throw IllegalArgumentException("unexpected payload type ${payload.javaClass.name}")
@@ -121,7 +125,8 @@ object StreamsTransactionEventExtensions {
         this.meta.txId,
         this.meta.txEventId,
         cdcMetadata,
-        cdcEvent)
+        cdcEvent,
+    )
   }
 
   private fun <T : State> extractState(event: StreamsTransactionEvent, before: T?, after: T?): T {

@@ -38,7 +38,7 @@ class CypherHandler(
     bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
     bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
     bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
-    bindValueAsEvent: Boolean = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_AS_EVENT
+    bindValueAsEvent: Boolean = SinkConfiguration.DEFAULT_CYPHER_BIND_VALUE_AS_EVENT,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val rewrittenQuery: String
@@ -70,12 +70,15 @@ class CypherHandler(
 
                       if (isEmpty()) {
                         throw IllegalArgumentException(
-                            "no effective accessors specified for binding the message into cypher template for topic '$topic'")
+                            "no effective accessors specified for binding the message into cypher template for topic '$topic'"
+                        )
                       }
-                    })
+                    }
+                )
                 .callRawCypher("WITH * $query")
                 .returning(Cypher.literalNull())
-                .build())
+                .build()
+        )
 
     logger.debug("using cypher query '{}' for topic '{}'", rewrittenQuery, topic)
   }
@@ -95,7 +98,8 @@ class CypherHandler(
                       Instant.ofEpochMilli(it.record.timestamp()).atOffset(ZoneOffset.UTC),
                   "header" to it.headerFromConnectValue(),
                   "key" to it.keyFromConnectValue(),
-                  "value" to it.valueFromConnectValue())
+                  "value" to it.valueFromConnectValue(),
+              )
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
 
@@ -108,7 +112,9 @@ class CypherHandler(
                   null,
                   null,
                   it.map { data -> data.message },
-                  Query(rewrittenQuery, mapOf("events" to it.map { data -> data.eventMap }))))
+                  Query(rewrittenQuery, mapOf("events" to it.map { data -> data.eventMap })),
+              )
+          )
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()

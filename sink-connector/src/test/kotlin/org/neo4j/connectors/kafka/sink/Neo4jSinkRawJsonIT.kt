@@ -43,8 +43,8 @@ class Neo4jSinkRawJsonIT {
               CypherStrategy(
                   TOPIC,
                   "WITH __value AS person MERGE (p:Person {name: person.name, surname: person.surname})",
-              ),
-          ],
+              )
+          ]
   )
   @Test
   fun `should support json map`(
@@ -73,8 +73,8 @@ class Neo4jSinkRawJsonIT {
               CypherStrategy(
                   TOPIC,
                   "WITH __value AS persons UNWIND persons AS person MERGE (p:Person {name: person.name, surname: person.surname})",
-              ),
-          ],
+              )
+          ]
   )
   @Test
   fun `should support json list`(
@@ -89,11 +89,7 @@ class Neo4jSinkRawJsonIT {
             ),
         valueSchema =
             SchemaBuilder.array(
-                    SchemaBuilder.map(
-                            Schema.STRING_SCHEMA,
-                            Schema.STRING_SCHEMA,
-                        )
-                        .build(),
+                    SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build()
                 )
                 .build(),
     )
@@ -109,24 +105,13 @@ class Neo4jSinkRawJsonIT {
     }
   }
 
-  @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "WITH __value AS name MERGE (p:Person {name: name})",
-              ),
-          ],
-  )
+  @Neo4jSink(cypher = [CypherStrategy(TOPIC, "WITH __value AS name MERGE (p:Person {name: name})")])
   @Test
   fun `should support raw string value`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) {
-    producer.publish(
-        value = "John",
-        valueSchema = Schema.STRING_SCHEMA,
-    )
+    producer.publish(value = "John", valueSchema = Schema.STRING_SCHEMA)
 
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
@@ -139,54 +124,31 @@ class Neo4jSinkRawJsonIT {
     }
   }
 
-  @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "WITH __value AS age MERGE (p:Person {age: age})",
-              ),
-          ],
-  )
+  @Neo4jSink(cypher = [CypherStrategy(TOPIC, "WITH __value AS age MERGE (p:Person {age: age})")])
   @Test
   fun `should support raw numeric value`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) {
-    producer.publish(
-        value = 25L,
-        valueSchema = Schema.INT64_SCHEMA,
-    )
+    producer.publish(value = 25L, valueSchema = Schema.INT64_SCHEMA)
 
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session
-          .run(
-              "MATCH (p:Person {age: ${'$'}age}) RETURN count(p) as result",
-              mapOf("age" to 25L),
-          )
+          .run("MATCH (p:Person {age: ${'$'}age}) RETURN count(p) as result", mapOf("age" to 25L))
           .single()["result"]
           .asLong() shouldBe 1L
     }
   }
 
   @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "WITH __value AS status MERGE (p:Person {single: status})",
-              ),
-          ],
+      cypher = [CypherStrategy(TOPIC, "WITH __value AS status MERGE (p:Person {single: status})")]
   )
   @Test
   fun `should support raw boolean value`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) {
-    producer.publish(
-        value = true,
-        valueSchema = Schema.BOOLEAN_SCHEMA,
-    )
+    producer.publish(value = true, valueSchema = Schema.BOOLEAN_SCHEMA)
 
     await().atMost(30.seconds.toJavaDuration()).untilAsserted {
       session

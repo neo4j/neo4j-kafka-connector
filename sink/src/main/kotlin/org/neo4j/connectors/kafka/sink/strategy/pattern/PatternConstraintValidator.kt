@@ -26,7 +26,7 @@ object PatternConstraintValidator {
   fun checkNodeWarning(
       constraints: List<ConstraintData>,
       pattern: NodePattern,
-      patternString: String
+      patternString: String,
   ): String? {
     val typeConstraintMap =
         constraints
@@ -44,8 +44,10 @@ object PatternConstraintValidator {
         return null
       }
 
-      if (checkNodeUniqueness(label, keys, typeConstraintMap) &&
-          checkNodePropertyExistence(label, keys, typeConstraintMap)) {
+      if (
+          checkNodeUniqueness(label, keys, typeConstraintMap) &&
+              checkNodePropertyExistence(label, keys, typeConstraintMap)
+      ) {
         return null
       }
     }
@@ -56,7 +58,7 @@ object PatternConstraintValidator {
   fun checkRelationshipWarning(
       constraints: List<ConstraintData>,
       pattern: RelationshipPattern,
-      patternString: String
+      patternString: String,
   ): String? {
     val typeConstraintMap =
         constraints
@@ -74,8 +76,10 @@ object PatternConstraintValidator {
       return null
     }
 
-    if (checkRelationshipUniqueness(type, keys, typeConstraintMap) &&
-        checkRelationshipPropertyExistence(type, keys, typeConstraintMap)) {
+    if (
+        checkRelationshipUniqueness(type, keys, typeConstraintMap) &&
+            checkRelationshipPropertyExistence(type, keys, typeConstraintMap)
+    ) {
       return null
     }
 
@@ -85,7 +89,7 @@ object PatternConstraintValidator {
   private fun checkNodeKey(
       label: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val nodeKeyConstraints =
         typeConstraintMap["${ConstraintType.NODE_KEY.value}-${label}"] ?: return false
@@ -100,7 +104,7 @@ object PatternConstraintValidator {
   private fun checkNodeUniqueness(
       label: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val uniquenessConstraints =
         typeConstraintMap["${ConstraintType.NODE_UNIQUENESS.value}-${label}"] ?: return false
@@ -115,7 +119,7 @@ object PatternConstraintValidator {
   private fun checkNodePropertyExistence(
       label: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val existenceConstraints =
         typeConstraintMap["${ConstraintType.NODE_EXISTENCE.value}-${label}"] ?: return false
@@ -126,7 +130,7 @@ object PatternConstraintValidator {
   private fun checkRelationshipKey(
       type: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val relationshipKeyConstraints =
         typeConstraintMap["${ConstraintType.RELATIONSHIP_KEY.value}-${type}"] ?: return false
@@ -141,7 +145,7 @@ object PatternConstraintValidator {
   private fun checkRelationshipUniqueness(
       type: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val uniquenessConstraints =
         typeConstraintMap["${ConstraintType.RELATIONSHIP_UNIQUENESS.value}-${type}"] ?: return false
@@ -156,7 +160,7 @@ object PatternConstraintValidator {
   private fun checkRelationshipPropertyExistence(
       type: String,
       keys: List<String>,
-      typeConstraintMap: Map<String, List<ConstraintData>>
+      typeConstraintMap: Map<String, List<ConstraintData>>,
   ): Boolean {
     val existenceConstraints =
         typeConstraintMap["${ConstraintType.RELATIONSHIP_EXISTENCE.value}-${type}"] ?: return false
@@ -168,17 +172,17 @@ object PatternConstraintValidator {
       pattern: NodePattern,
       patternString: String,
       typeConstraintMap: Map<String, List<ConstraintData>>,
-      keys: List<String>
+      keys: List<String>,
   ): String {
     val stringBuilder = StringBuilder()
     if (pattern.labels.size > 1) {
       stringBuilder.append(
-          "None of the labels ${pattern.labels.joinToString(", ") { "'$it'" }} match the key(s) defined by the pattern $patternString.",
+          "None of the labels ${pattern.labels.joinToString(", ") { "'$it'" }} match the key(s) defined by the pattern $patternString."
       )
       stringBuilder.append("\nPlease fix at least one of the following label constraints:")
     } else {
       stringBuilder.append(
-          "Label '${pattern.labels.first()}' does not match the key(s) defined by the pattern $patternString.",
+          "Label '${pattern.labels.first()}' does not match the key(s) defined by the pattern $patternString."
       )
       stringBuilder.append("\nPlease fix the label constraint:")
     }
@@ -188,10 +192,12 @@ object PatternConstraintValidator {
     stringBuilder.append("\n\t- ${getConstraintWarningText(ConstraintType.NODE_KEY.value, keys)}")
     stringBuilder.append("\nor:")
     stringBuilder.append(
-        "\n\t- ${getConstraintWarningText(ConstraintType.NODE_UNIQUENESS.value, keys)}")
+        "\n\t- ${getConstraintWarningText(ConstraintType.NODE_UNIQUENESS.value, keys)}"
+    )
     for (key in keys) {
       stringBuilder.append(
-          "\n\t- ${getConstraintWarningText(ConstraintType.NODE_EXISTENCE.value, listOf(key))}")
+          "\n\t- ${getConstraintWarningText(ConstraintType.NODE_EXISTENCE.value, listOf(key))}"
+      )
     }
     return stringBuilder.toString()
   }
@@ -200,14 +206,14 @@ object PatternConstraintValidator {
       pattern: RelationshipPattern,
       patternString: String,
       typeConstraintMap: Map<String, List<ConstraintData>>,
-      keys: List<String>
+      keys: List<String>,
   ): String {
     val stringBuilder = StringBuilder()
 
     val type = pattern.type!!
 
     stringBuilder.append(
-        "Relationship '$type' does not match the key(s) defined by the pattern $patternString.",
+        "Relationship '$type' does not match the key(s) defined by the pattern $patternString."
     )
     stringBuilder.append("\nPlease fix the relationship constraints:")
 
@@ -217,13 +223,16 @@ object PatternConstraintValidator {
 
     stringBuilder.append("\nExpected constraints:")
     stringBuilder.append(
-        "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_KEY.value, keys)}")
+        "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_KEY.value, keys)}"
+    )
     stringBuilder.append("\nor:")
     stringBuilder.append(
-        "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_UNIQUENESS.value, keys)}")
+        "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_UNIQUENESS.value, keys)}"
+    )
     for (key in keys) {
       stringBuilder.append(
-          "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_EXISTENCE.value, listOf(key))}")
+          "\n\t- ${getConstraintWarningText(ConstraintType.RELATIONSHIP_EXISTENCE.value, listOf(key))}"
+      )
     }
     return stringBuilder.toString()
   }
@@ -231,7 +240,7 @@ object PatternConstraintValidator {
   private fun addLabelConstraintsText(
       pattern: NodePattern,
       typeConstraintMap: Map<String, List<ConstraintData>>,
-      stringBuilder: StringBuilder
+      stringBuilder: StringBuilder,
   ) {
     for (label in pattern.labels) {
       val labelConstraints = getLabelConstraints(typeConstraintMap, label)
@@ -242,7 +251,7 @@ object PatternConstraintValidator {
   private fun addExistingConstraints(
       constraints: MutableList<ConstraintData>,
       labelOrType: String,
-      stringBuilder: StringBuilder
+      stringBuilder: StringBuilder,
   ) {
     if (constraints.isNotEmpty()) {
       stringBuilder.append("\n\t'$labelOrType' has:")
@@ -253,7 +262,7 @@ object PatternConstraintValidator {
                   constraint.constraintType,
                   constraint.properties,
               )
-            }",
+            }"
         )
       }
     } else {
@@ -266,34 +275,34 @@ object PatternConstraintValidator {
 
   private fun getLabelConstraints(
       typeConstraintMap: Map<String, List<ConstraintData>>,
-      label: String
+      label: String,
   ): MutableList<ConstraintData> {
     val labelConstraints = mutableListOf<ConstraintData>()
     labelConstraints.addAll(
-        typeConstraintMap["${ConstraintType.NODE_KEY.value}-${label}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.NODE_KEY.value}-${label}"] ?: emptyList()
     )
     labelConstraints.addAll(
-        typeConstraintMap["${ConstraintType.NODE_UNIQUENESS.value}-${label}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.NODE_UNIQUENESS.value}-${label}"] ?: emptyList()
     )
     labelConstraints.addAll(
-        typeConstraintMap["${ConstraintType.NODE_EXISTENCE.value}-${label}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.NODE_EXISTENCE.value}-${label}"] ?: emptyList()
     )
     return labelConstraints
   }
 
   private fun getRelationshipConstraints(
       typeConstraintMap: Map<String, List<ConstraintData>>,
-      type: String
+      type: String,
   ): MutableList<ConstraintData> {
     val relationshipConstraints = mutableListOf<ConstraintData>()
     relationshipConstraints.addAll(
-        typeConstraintMap["${ConstraintType.RELATIONSHIP_KEY.value}-${type}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.RELATIONSHIP_KEY.value}-${type}"] ?: emptyList()
     )
     relationshipConstraints.addAll(
-        typeConstraintMap["${ConstraintType.RELATIONSHIP_UNIQUENESS.value}-${type}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.RELATIONSHIP_UNIQUENESS.value}-${type}"] ?: emptyList()
     )
     relationshipConstraints.addAll(
-        typeConstraintMap["${ConstraintType.RELATIONSHIP_EXISTENCE.value}-${type}"] ?: emptyList(),
+        typeConstraintMap["${ConstraintType.RELATIONSHIP_EXISTENCE.value}-${type}"] ?: emptyList()
     )
     return relationshipConstraints
   }

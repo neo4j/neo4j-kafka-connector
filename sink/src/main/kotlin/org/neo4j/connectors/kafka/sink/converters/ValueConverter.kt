@@ -62,14 +62,14 @@ abstract class ValueConverter<T> {
       result: T?,
       fieldName: String,
       schema: Schema?,
-      array: MutableList<Any?>?
+      array: MutableList<Any?>?,
   )
 
   protected abstract fun setMap(
       result: T?,
       fieldName: String,
       schema: Schema?,
-      map: MutableMap<Any?, Any?>?
+      map: MutableMap<Any?, Any?>?,
   )
 
   protected abstract fun setNullField(result: T?, fieldName: String)
@@ -90,7 +90,7 @@ abstract class ValueConverter<T> {
                 Struct::class.java.getName(),
                 MutableMap::class.java.getName(),
                 value.javaClass.getName(),
-            ),
+            )
         )
       }
     }
@@ -152,10 +152,7 @@ abstract class ValueConverter<T> {
           setMap(result, fieldName, null, fieldValue as MutableMap<Any?, Any?>?)
         } else {
           throw DataException(
-              String.format(
-                  "%s is not a supported data type.",
-                  fieldValue.javaClass.getName(),
-              ),
+              String.format("%s is not a supported data type.", fieldValue.javaClass.getName())
           )
         }
       } catch (ex: Exception) {

@@ -43,17 +43,17 @@ annotation class Neo4jSource(
     val forceMapsAsStruct: Boolean = true,
 
     // CDC strategy
-    val cdc: CdcSource = CdcSource()
+    val cdc: CdcSource = CdcSource(),
 )
 
 enum class SourceStrategy {
   QUERY,
-  CDC
+  CDC,
 }
 
 annotation class CdcSource(
     val patternsIndexed: Boolean = false,
-    val topics: Array<CdcSourceTopic> = []
+    val topics: Array<CdcSourceTopic> = [],
 )
 
 annotation class CdcSourceTopic(
@@ -63,7 +63,7 @@ annotation class CdcSourceTopic(
     val changesTo: Array<CdcSourceParam> = [],
     val metadata: Array<CdcMetadata> = [],
     val keySerializationStrategy: String = "WHOLE_VALUE",
-    val valueSerializationStrategy: String = "CHANGE_EVENT"
+    val valueSerializationStrategy: String = "CHANGE_EVENT",
 )
 
 annotation class CdcSourceParam(val value: String, val index: Int = 0)

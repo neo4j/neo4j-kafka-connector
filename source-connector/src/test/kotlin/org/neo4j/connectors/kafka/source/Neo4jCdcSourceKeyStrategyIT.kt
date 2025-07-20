@@ -56,15 +56,16 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-none",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerializationStrategy = "SKIP"),
-                  ),
+                          keySerializationStrategy = "SKIP",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports skipping serialization of keys`(
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-none", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -83,15 +84,16 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-whole",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerializationStrategy = "WHOLE_VALUE"),
-                  ),
+                          keySerializationStrategy = "WHOLE_VALUE",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of keys as whole values`(
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-whole", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -118,15 +120,16 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-element-ids",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerializationStrategy = "ELEMENT_ID"),
-                  ),
+                          keySerializationStrategy = "ELEMENT_ID",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of keys as element IDs`(
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-element-ids", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -145,16 +148,19 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerializationStrategy = "ENTITY_KEYS"),
-                  ),
+                          keySerializationStrategy = "ENTITY_KEYS",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of keys as (missing) node keys`(
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys", offset = "earliest")
+          topic = "neo4j-cdc-topic-key-serialization-missing-node-keys",
+          offset = "earliest",
+      )
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:TestSource {name: 'Jane'})").consume()
 
@@ -173,8 +179,9 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-node-keys",
                           patterns = arrayOf(CdcSourceParam("(:TestSource{name,+execId})")),
-                          keySerializationStrategy = "ENTITY_KEYS"),
-                  ),
+                          keySerializationStrategy = "ENTITY_KEYS",
+                      )
+                  )
           ),
   )
   @Test
@@ -182,7 +189,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-node-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) {
     session.createNodeKeyConstraint(neo4j, "test_id", "TestSource", "name")
     session.run("CALL db.awaitIndexes()").consume()
@@ -207,16 +214,19 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
                           patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
-                          keySerializationStrategy = "ENTITY_KEYS"),
-                  ),
+                          keySerializationStrategy = "ENTITY_KEYS",
+                      )
+                  )
           ),
   )
   @Test
   fun `supports serialization of keys as (missing) rel keys`(
       @TopicConsumer(
-          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys", offset = "earliest")
+          topic = "neo4j-cdc-topic-key-serialization-missing-rel-keys",
+          offset = "earliest",
+      )
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:Source)-[:TO {name: 'somewhere'}]->(:Destination)").consume()
 
@@ -235,8 +245,9 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-topic-key-serialization-rel-keys",
                           patterns = arrayOf(CdcSourceParam("()-[:TO {name,+execId}]-()")),
-                          keySerializationStrategy = "ENTITY_KEYS"),
-                  ),
+                          keySerializationStrategy = "ENTITY_KEYS",
+                      )
+                  )
           ),
   )
   @Test
@@ -244,7 +255,7 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
       @TopicConsumer(topic = "neo4j-cdc-topic-key-serialization-rel-keys", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) {
     session.createRelationshipKeyConstraint(neo4j, "to_id", "TO", "name")
     session.run("CALL db.awaitIndexes()").consume()

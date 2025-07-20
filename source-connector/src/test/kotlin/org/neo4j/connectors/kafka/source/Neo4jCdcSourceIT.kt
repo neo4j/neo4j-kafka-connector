@@ -53,17 +53,22 @@ abstract class Neo4jCdcSourceIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-nodes-topic",
-                          patterns = arrayOf(CdcSourceParam("(:Person)"))),
+                          patterns = arrayOf(CdcSourceParam("(:Person)")),
+                      ),
                       CdcSourceTopic(
                           topic = "neo4j-cdc-rels-topic",
-                          patterns = arrayOf(CdcSourceParam("()-[:KNOWS]-()"))))))
+                          patterns = arrayOf(CdcSourceParam("()-[:KNOWS]-()")),
+                      ),
+                  )
+          ),
+  )
   @Test
   fun `should place cdc related information into headers`(
       @TopicConsumer(topic = "neo4j-cdc-nodes-topic", offset = "earliest")
       nodesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "neo4j-cdc-rels-topic", offset = "earliest")
       relsConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
@@ -79,13 +84,17 @@ abstract class Neo4jCdcSourceIT {
                         "id" to 1L,
                         "name" to "Jane",
                         "surname" to "Doe",
-                        "dob" to LocalDate.of(2000, 1, 1)),
+                        "dob" to LocalDate.of(2000, 1, 1),
+                    ),
                 "person2" to
                     mapOf(
                         "id" to 2L,
                         "name" to "John",
                         "surname" to "Doe",
-                        "dob" to LocalDate.of(1999, 1, 1))))
+                        "dob" to LocalDate.of(1999, 1, 1),
+                    ),
+            ),
+        )
         .consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(nodesConsumer)
@@ -94,7 +103,9 @@ abstract class Neo4jCdcSourceIT {
               .headers()
               .map {
                 ConnectHeader(
-                    it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
+                    it.key(),
+                    SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()),
+                )
               }
               .asIterable()
               .shouldHaveSize(3)
@@ -107,7 +118,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
               .shouldHaveSingleElement {
@@ -116,7 +128,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
         }
@@ -125,7 +138,9 @@ abstract class Neo4jCdcSourceIT {
               .headers()
               .map {
                 ConnectHeader(
-                    it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
+                    it.key(),
+                    SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()),
+                )
               }
               .asIterable()
               .shouldHaveSize(3)
@@ -138,7 +153,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
               .shouldHaveSingleElement {
@@ -147,7 +163,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
         }
@@ -159,7 +176,9 @@ abstract class Neo4jCdcSourceIT {
               .headers()
               .map {
                 ConnectHeader(
-                    it.key(), SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()))
+                    it.key(),
+                    SimpleHeaderConverter().toConnectHeader("", it.key(), it.value()),
+                )
               }
               .asIterable()
               .shouldHaveSize(3)
@@ -172,7 +191,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
               .shouldHaveSingleElement {
@@ -181,7 +201,8 @@ abstract class Neo4jCdcSourceIT {
                             Schema.INT8_SCHEMA,
                             Schema.INT16_SCHEMA,
                             Schema.INT32_SCHEMA,
-                            Schema.INT64_SCHEMA)
+                            Schema.INT64_SCHEMA,
+                        )
                         .contains(it.schema())
               }
         }

@@ -32,7 +32,8 @@ class DeleteRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
-            emptyMap())
+            emptyMap(),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -45,12 +46,15 @@ class DeleteRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end)
                       DELETE r
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to emptyMap()))
+                "keys" to emptyMap(),
+            ),
+        )
   }
 
   @Test
@@ -60,7 +64,8 @@ class DeleteRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
-            mapOf("id" to 3))
+            mapOf("id" to 3),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -73,12 +78,15 @@ class DeleteRelationshipTest {
                       MATCH (start)-[r:`RELATED` {id: ${'$'}keys.id}]->(end)
                       DELETE r
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to mapOf("id" to 3)))
+                "keys" to mapOf("id" to 3),
+            ),
+        )
   }
 
   @Test
@@ -88,7 +96,8 @@ class DeleteRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("_id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_id" to 2), LookupMode.MATCH),
-            emptyMap())
+            emptyMap(),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -101,12 +110,15 @@ class DeleteRelationshipTest {
                       MATCH (start)-[r:`RELATED` {}]->(end) 
                       DELETE r
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("_id" to 1)),
                 "end" to mapOf("keys" to mapOf("_id" to 2)),
-                "keys" to emptyMap()))
+                "keys" to emptyMap(),
+            ),
+        )
   }
 
   @Test
@@ -116,7 +128,8 @@ class DeleteRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("_elementId" to "db:1"), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_elementId" to "db:2"), LookupMode.MATCH),
-            emptyMap())
+            emptyMap(),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -133,7 +146,9 @@ class DeleteRelationshipTest {
             mapOf(
                 "start" to mapOf("keys" to mapOf("_elementId" to "db:1")),
                 "end" to mapOf("keys" to mapOf("_elementId" to "db:2")),
-                "keys" to emptyMap()))
+                "keys" to emptyMap(),
+            ),
+        )
   }
 
   @Test
@@ -143,7 +158,8 @@ class DeleteRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MATCH),
-            emptyMap())
+            emptyMap(),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -155,12 +171,15 @@ class DeleteRelationshipTest {
                       WITH start, end 
                       MATCH (start)-[r:`RELATED` {}]->(end) DELETE r
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to emptyMap()))
+                "keys" to emptyMap(),
+            ),
+        )
   }
 
   @Test
@@ -186,7 +205,8 @@ class DeleteRelationshipTest {
             "",
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MERGE),
-            emptyMap())
+            emptyMap(),
+        )
 
     org.junit.jupiter.api.assertThrows<InvalidDataException> {
       operation.toQuery()

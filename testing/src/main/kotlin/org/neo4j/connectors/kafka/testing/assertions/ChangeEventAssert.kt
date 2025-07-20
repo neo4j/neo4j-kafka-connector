@@ -32,7 +32,8 @@ class ChangeEventAssert(actual: ChangeEvent?) :
     isNotNull
     if (event().eventType != eventType) {
       failWithMessage(
-          "Expected event type to be <${eventType.name}> but was <${event().eventType}>")
+          "Expected event type to be <${eventType.name}> but was <${event().eventType}>"
+      )
     }
     return this
   }
@@ -73,27 +74,29 @@ class ChangeEventAssert(actual: ChangeEvent?) :
 
   fun hasBeforeStateProperties(
       properties: Map<String, Any>,
-      vararg excludingKeys: String
+      vararg excludingKeys: String,
   ): ChangeEventAssert {
     isNotNull
     val actualProperties = event().before?.properties?.excludingKeys(*excludingKeys) ?: emptyMap()
     if (actualProperties != properties) {
       failWithMessage(
-          "Expected before state's properties to be <$properties> but was <$actualProperties>")
+          "Expected before state's properties to be <$properties> but was <$actualProperties>"
+      )
     }
     return this
   }
 
   fun hasAfterStateProperties(
       properties: Map<String, Any>,
-      vararg excludingKeys: String
+      vararg excludingKeys: String,
   ): ChangeEventAssert {
 
     isNotNull
     val actualProperties = event().after?.properties?.excludingKeys(*excludingKeys) ?: emptyMap()
     if (actualProperties != properties) {
       failWithMessage(
-          "Expected after state's properties to be <$properties> but was <$actualProperties>")
+          "Expected after state's properties to be <$properties> but was <$actualProperties>"
+      )
     }
     return this
   }
@@ -102,7 +105,7 @@ class ChangeEventAssert(actual: ChangeEvent?) :
     isNotNull
     if (actual.metadata.txMetadata != txMetadata) {
       failWithMessage(
-          "Expect txMetadata to be <$txMetadata> but was <${actual.metadata.txMetadata}>",
+          "Expect txMetadata to be <$txMetadata> but was <${actual.metadata.txMetadata}>"
       )
     }
     return this
@@ -124,7 +127,8 @@ class ChangeEventAssert(actual: ChangeEvent?) :
     isNotNull
     if (relationshipEvent().start.labels.toSet() != labels) {
       failWithMessage(
-          "Expected start labels to be <${labels}> but was <${relationshipEvent().start.labels}>")
+          "Expected start labels to be <${labels}> but was <${relationshipEvent().start.labels}>"
+      )
     }
     return this
   }
@@ -137,7 +141,8 @@ class ChangeEventAssert(actual: ChangeEvent?) :
     isNotNull
     if (relationshipEvent().end.labels.toSet() != labels) {
       failWithMessage(
-          "Expected end labels to be <${labels}> but was <${relationshipEvent().end.labels}>")
+          "Expected end labels to be <${labels}> but was <${relationshipEvent().end.labels}>"
+      )
     }
     return this
   }
@@ -154,7 +159,8 @@ class ChangeEventAssert(actual: ChangeEvent?) :
     isNotNull
     if (relationshipEvent().keys != keys) {
       failWithMessage(
-          "Expected relationship keys to be <$keys> but was <${relationshipEvent().keys}>")
+          "Expected relationship keys to be <$keys> but was <${relationshipEvent().keys}>"
+      )
     }
     return this
   }
