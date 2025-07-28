@@ -30,32 +30,30 @@ internal class ConsumerResolver(
     private val topicRegistry: TopicRegistry,
     private val brokerExternalHostProvider: () -> String,
     private val schemaControlRegistryExternalUriProvider: () -> String,
-    private val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray>
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray>,
 ) {
 
   fun resolveGenericConsumer(
       parameterContext: ParameterContext?,
-      context: ExtensionContext?
+      context: ExtensionContext?,
   ): ConvertingKafkaConsumer {
     val kafkaConsumer = resolveConsumer(parameterContext, context)
     return ConvertingKafkaConsumer(
         keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
         valueConverter = keyValueConverterResolver.resolveValueConverter(context),
         schemaRegistryUrlProvider = schemaControlRegistryExternalUriProvider,
-        kafkaConsumer = kafkaConsumer)
+        kafkaConsumer = kafkaConsumer,
+    )
   }
 
   private fun resolveConsumer(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): KafkaConsumer<ByteArray, ByteArray> {
     val consumerAnnotation = parameterContext?.parameter?.getAnnotation(TopicConsumer::class.java)!!
     val topic = topicRegistry.resolveTopic(consumerAnnotation.topic)
     val properties = Properties()
-    properties.setProperty(
-        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHostProvider(),
-    )
+    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerExternalHostProvider())
 
     properties.setProperty(
         ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -79,7 +77,7 @@ internal class ConsumerResolver(
   companion object {
     internal fun getSubscribedConsumer(
         properties: Properties,
-        topic: String
+        topic: String,
     ): KafkaConsumer<ByteArray, ByteArray> {
       val consumer = KafkaConsumer<ByteArray, ByteArray>(properties)
       consumer.subscribe(listOf(topic))

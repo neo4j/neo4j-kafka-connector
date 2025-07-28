@@ -49,7 +49,8 @@ class NodePatternHandler(
         bindTimestampAs = bindTimestampAs,
         bindHeaderAs = bindHeaderAs,
         bindKeyAs = bindKeyAs,
-        bindValueAs = bindValueAs) {
+        bindValueAs = bindValueAs,
+    ) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   internal val query: String
 
@@ -62,7 +63,7 @@ class NodePatternHandler(
       bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
       bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
       bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
-      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS
+      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
   ) : this(
       topic = topic,
       pattern =
@@ -70,7 +71,8 @@ class NodePatternHandler(
             is NodePattern -> parsed
             else ->
                 throw IllegalArgumentException(
-                    "Invalid pattern provided for NodePatternHandler: ${parsed.javaClass.name}")
+                    "Invalid pattern provided for NodePatternHandler: ${parsed.javaClass.name}"
+                )
           },
       mergeProperties = mergeProperties,
       renderer = renderer,
@@ -78,7 +80,8 @@ class NodePatternHandler(
       bindTimestampAs = bindTimestampAs,
       bindHeaderAs = bindHeaderAs,
       bindKeyAs = bindKeyAs,
-      bindValueAs = bindValueAs)
+      bindValueAs = bindValueAs,
+  )
 
   init {
     query = buildStatement()
@@ -107,7 +110,8 @@ class NodePatternHandler(
               } else {
                 listOf(
                     CREATE,
-                    mapOf(KEYS to keys, PROPERTIES to computeProperties(pattern, flattened, used)))
+                    mapOf(KEYS to keys, PROPERTIES to computeProperties(pattern, flattened, used)),
+                )
               }
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
@@ -121,7 +125,9 @@ class NodePatternHandler(
                   null,
                   null,
                   it.map { data -> data.message },
-                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList }))))
+                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList })),
+              )
+          )
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
@@ -148,7 +154,7 @@ class NodePatternHandler(
             .withProperties(
                 pattern.keyProperties.associate {
                   it.to to NAME_EVENT.property(KEYS).property(it.to)
-                },
+                }
             )
             .named("n")
 
@@ -160,11 +166,13 @@ class NodePatternHandler(
                     .call(buildDeleteStatement(NAME_EVENT, deleteOperation, node))
                     .returning(NAME_CREATED, NAME_DELETED)
                     .build(),
-                NAME_EVENT)
+                NAME_EVENT,
+            )
             .returning(
                 Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
-                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))
-            .build(),
+                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED),
+            )
+            .build()
     )
   }
 
@@ -194,15 +202,9 @@ class NodePatternHandler(
           .merge(node)
           .let {
             if (mergeProperties) {
-              it.mutate(
-                  node.asExpression(),
-                  Cypher.property(NAME_EVENT, PROPERTIES),
-              )
+              it.mutate(node.asExpression(), Cypher.property(NAME_EVENT, PROPERTIES))
             } else {
-              it.set(
-                      node.asExpression(),
-                      Cypher.property(NAME_EVENT, PROPERTIES),
-                  )
+              it.set(node.asExpression(), Cypher.property(NAME_EVENT, PROPERTIES))
                   .mutate(node.asExpression(), Cypher.property(NAME_EVENT, KEYS))
             }
           }

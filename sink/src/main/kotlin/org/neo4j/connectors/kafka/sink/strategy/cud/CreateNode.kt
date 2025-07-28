@@ -37,7 +37,8 @@ data class CreateNode(val labels: Set<String>, val properties: Map<String, Any?>
       return CreateNode(
           values.getIterable<String>(Keys.LABELS)?.toSet() ?: emptySet(),
           values.getMap<String, Any?>(Keys.PROPERTIES)
-              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"))
+              ?: throw InvalidDataException("No ${Keys.PROPERTIES} found"),
+      )
     }
   }
 }

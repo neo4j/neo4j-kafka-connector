@@ -23,7 +23,7 @@ object MapSupport {
   @Suppress("UNCHECKED_CAST")
   internal fun <K, Any> MutableMap<K, Any>.nestUnder(
       key: K,
-      values: Map<K, Any>
+      values: Map<K, Any>,
   ): MutableMap<K, Any> {
     val map = this[key]
     if (map !is Map<*, *>) {
@@ -43,7 +43,8 @@ object MapSupport {
     val missing = keys.filter { !this.keys.contains(it) }
     if (missing.isNotEmpty()) {
       throw IllegalArgumentException(
-          "Cannot exclude keys ${missing.joinToString()}: they are missing from map $this")
+          "Cannot exclude keys ${missing.joinToString()}: they are missing from map $this"
+      )
     }
     val exclusions = setOf(*keys)
     return this.filterKeys { !exclusions.contains(it) }
@@ -52,7 +53,7 @@ object MapSupport {
   fun <T : Any> MutableMap<String, Any>.putConditionally(
       key: String,
       value: T,
-      condition: (T) -> Boolean
+      condition: (T) -> Boolean,
   ): MutableMap<String, Any> {
     if (!condition(value)) {
       return this

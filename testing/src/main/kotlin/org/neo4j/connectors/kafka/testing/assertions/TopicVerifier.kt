@@ -58,7 +58,7 @@ class TopicVerifier<K, V>(
   @Suppress("UNCHECKED_CAST")
   fun assertMessage(
       schemaTopic: String? = null,
-      assertion: (GenericRecord<K, V>) -> Unit
+      assertion: (GenericRecord<K, V>) -> Unit,
   ): TopicVerifier<K, V> {
     messagePredicates.add { record ->
       try {
@@ -147,7 +147,7 @@ class TopicVerifier<K, V>(
       }
     } catch (e: ConditionTimeoutException) {
       throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages",
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages"
       )
     }
   }
@@ -182,7 +182,7 @@ class TopicVerifier<K, V>(
 
   companion object {
     inline fun <reified K, reified V> create(
-        consumer: ConvertingKafkaConsumer,
+        consumer: ConvertingKafkaConsumer
     ): TopicVerifier<K, V> {
       val keyConverter = consumer.keyConverter.converterProvider()
       when (consumer.keyConverter) {
@@ -193,7 +193,7 @@ class TopicVerifier<K, V>(
             keyConverter.configure(
                 mapOf(
                     AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                        consumer.schemaRegistryUrlProvider(),
+                        consumer.schemaRegistryUrlProvider()
                 ),
                 true,
             )
@@ -208,7 +208,7 @@ class TopicVerifier<K, V>(
             valueConverter.configure(
                 mapOf(
                     AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                        consumer.schemaRegistryUrlProvider(),
+                        consumer.schemaRegistryUrlProvider()
                 ),
                 false,
             )

@@ -55,7 +55,7 @@ enum class AuthenticationType {
   BASIC,
   KERBEROS,
   BEARER,
-  CUSTOM
+  CUSTOM,
 }
 
 open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val type: ConnectorType) :
@@ -112,7 +112,8 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
               AuthTokens.basic(
                   getString(AUTHENTICATION_BASIC_USERNAME),
                   getPassword(AUTHENTICATION_BASIC_PASSWORD).value(),
-                  getString(AUTHENTICATION_BASIC_REALM))
+                  getString(AUTHENTICATION_BASIC_REALM),
+              )
           AuthenticationType.KERBEROS ->
               AuthTokens.kerberos(getPassword(AUTHENTICATION_KERBEROS_TICKET).value())
           AuthenticationType.BEARER ->
@@ -122,16 +123,14 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
                   getString(AUTHENTICATION_CUSTOM_PRINCIPAL),
                   getPassword(AUTHENTICATION_CUSTOM_CREDENTIALS).value(),
                   getString(AUTHENTICATION_CUSTOM_REALM),
-                  getString(AUTHENTICATION_CUSTOM_SCHEME))
+                  getString(AUTHENTICATION_CUSTOM_SCHEME),
+              )
         }
 
   internal val trustStrategy
     get(): TrustStrategy {
       val strategy: TrustStrategy =
-          when (ConfigUtils.getEnum<Strategy>(
-              this,
-              SECURITY_TRUST_STRATEGY,
-          )) {
+          when (ConfigUtils.getEnum<Strategy>(this, SECURITY_TRUST_STRATEGY)) {
             null -> TrustStrategy.trustSystemCertificates()
             Strategy.TRUST_ALL_CERTIFICATES -> TrustStrategy.trustAllCertificates()
             Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES -> TrustStrategy.trustSystemCertificates()
@@ -159,13 +158,19 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
     config.withUserAgent(userAgent(type.description, userAgentComment()))
     config.withConnectionAcquisitionTimeout(
-        connectionAcquisitionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+        connectionAcquisitionTimeout.inWholeMilliseconds,
+        TimeUnit.MILLISECONDS,
+    )
     config.withConnectionTimeout(connectionTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
     config.withMaxConnectionPoolSize(maxConnectionPoolSize)
     config.withConnectionLivenessCheckTimeout(
-        idleTimeBeforeTest.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+        idleTimeBeforeTest.inWholeMilliseconds,
+        TimeUnit.MILLISECONDS,
+    )
     config.withMaxConnectionLifetime(
-        maxConnectionLifetime.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+        maxConnectionLifetime.inWholeMilliseconds,
+        TimeUnit.MILLISECONDS,
+    )
     config.withMaxTransactionRetryTime(maxRetryTime.inWholeMilliseconds, TimeUnit.MILLISECONDS)
 
     if (uri.none { it.scheme.endsWith("+s", true) || it.scheme.endsWith("+ssc", true) }) {
@@ -195,7 +200,8 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         when (type) {
           ConnectorType.SOURCE -> AccessMode.READ
           ConnectorType.SINK -> AccessMode.WRITE
-        })
+        }
+    )
 
     return config.build()
   }
@@ -210,7 +216,8 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
                 if (metadata.isNotEmpty()) {
                   this["metadata"] = metadata
                 }
-              })
+              }
+          )
           .build()
 
   open fun telemetryData(): Map<String, Any> = emptyMap()

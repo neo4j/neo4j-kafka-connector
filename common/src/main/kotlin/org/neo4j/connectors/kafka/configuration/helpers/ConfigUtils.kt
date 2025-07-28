@@ -73,7 +73,7 @@ class ConfigKeyBuilder private constructor(val name: String, val type: ConfigDef
     fun of(
         name: String,
         type: ConfigDef.Type,
-        init: ConfigKeyBuilder.() -> Unit
+        init: ConfigKeyBuilder.() -> Unit,
     ): ConfigDef.ConfigKey {
       val builder = ConfigKeyBuilder(name, type)
       init(builder)

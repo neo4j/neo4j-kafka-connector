@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.data
+package org.neo4j.connectors.kafka.data.converter
 
 import java.util.function.Function
+import kotlin.collections.get
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Relationship
@@ -56,7 +57,7 @@ class TestRelationship(
     val startId: Long,
     val endId: Long,
     val type: String,
-    props: Map<String, Value>
+    props: Map<String, Value>,
 ) : Entity(props), Relationship {
   override fun id(): Long = id
 

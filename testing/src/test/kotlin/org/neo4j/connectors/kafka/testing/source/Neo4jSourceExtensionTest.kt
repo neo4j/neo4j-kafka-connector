@@ -81,16 +81,15 @@ class Neo4jSourceExtensionTest {
         registrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
             kafkaConnectServer.internalServerError(
-                exchange, "expected handler flag to be initially false")
+                exchange,
+                "expected handler flag to be initially false",
+            )
             return@start true
           }
           return@start false
-        },
+        }
     )
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val session = mock<Session>()
     val driver =
         mock<Driver> {
@@ -113,16 +112,15 @@ class Neo4jSourceExtensionTest {
         unregistrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
             kafkaConnectServer.internalServerError(
-                exchange, "expected handler flag to be initially false")
+                exchange,
+                "expected handler flag to be initially false",
+            )
             return@start true
           }
           return@start false
-        },
+        }
     )
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val (driver, _) = setupDetectableDriver()
     val extension = Neo4jSourceExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
@@ -183,7 +181,9 @@ class Neo4jSourceExtensionTest {
     val (driver, _) = setupDetectableDriver()
     val extension =
         Neo4jSourceExtension(
-            consumerFactory = { _, _ -> consumer }, driverFactory = { _, _ -> driver })
+            consumerFactory = { _, _ -> consumer },
+            driverFactory = { _, _ -> driver },
+        )
     val extensionContext = extensionContextFor(method)
     extension.evaluateExecutionCondition(extensionContext)
     val consumerAnnotation = TopicConsumer(topic = "topic", offset = "earliest")
@@ -191,7 +191,8 @@ class Neo4jSourceExtensionTest {
     val convertingKafkaConsumer =
         extension.resolveParameter(
             annotatedParameterContextForType(ConvertingKafkaConsumer::class, consumerAnnotation),
-            extensionContext)
+            extensionContext,
+        )
 
     assertIs<ConvertingKafkaConsumer>(convertingKafkaConsumer)
     assertSame(consumer, convertingKafkaConsumer.kafkaConsumer)
@@ -211,7 +212,8 @@ class Neo4jSourceExtensionTest {
     assertIs<Neo4j>(neo4j)
     assertEquals(
         Neo4j(Neo4jVersion(5, 26, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED),
-        neo4j)
+        neo4j,
+    )
   }
 
   private fun setupDetectableDriver(): Pair<Driver, Session> {
@@ -237,10 +239,7 @@ class Neo4jSourceExtensionTest {
   fun `closes Driver and Session after each test`() {
     kafkaConnectServer.start()
     val session = mock<Session>()
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val driver =
         mock<Driver> {
           on { session() } doReturn session
@@ -248,10 +247,7 @@ class Neo4jSourceExtensionTest {
         }
 
     val extension =
-        Neo4jSourceExtension(
-            envAccessor = environment::get,
-            driverFactory = { _, _ -> driver },
-        )
+        Neo4jSourceExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
@@ -396,7 +392,8 @@ class Neo4jSourceExtensionTest {
       topic = "topic",
       streamingProperty = "prop",
       startFrom = "ALL",
-      query = "MERGE (:Example)")
+      query = "MERGE (:Example)",
+  )
   @Suppress("UNUSED")
   fun validMethod() {}
 
@@ -420,7 +417,12 @@ class Neo4jSourceExtensionTest {
                           patterns =
                               arrayOf(
                                   CdcSourceParam("(:Person {+name})"),
-                                  CdcSourceParam("(:Person)-[:WORKS_FOR]→(:Company)"))))))
+                                  CdcSourceParam("(:Person)-[:WORKS_FOR]→(:Company)"),
+                              ),
+                      )
+                  )
+          ),
+  )
   @Suppress("UNUSED")
   fun validCdcMethod() {}
 
@@ -435,12 +437,17 @@ class Neo4jSourceExtensionTest {
       topic = "topic",
       streamingProperty = "prop",
       startFrom = "ALL",
-      query = "MERGE (:Example)")
+      query = "MERGE (:Example)",
+  )
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
   @Neo4jSource(
-      topic = "topic", streamingProperty = "prop", startFrom = "ALL", query = "MERGE (:Example)")
+      topic = "topic",
+      streamingProperty = "prop",
+      startFrom = "ALL",
+      query = "MERGE (:Example)",
+  )
   @Suppress("UNUSED")
   fun envBackedMethod() {}
 
@@ -451,6 +458,7 @@ class Neo4jSourceExtensionTest {
     fun validMethods(): Array<Array<Any>> =
         arrayOf(
             arrayOf("valid query settings", Neo4jSourceExtensionTest::validMethod),
-            arrayOf("valid cdc settings", Neo4jSourceExtensionTest::validCdcMethod))
+            arrayOf("valid cdc settings", Neo4jSourceExtensionTest::validCdcMethod),
+        )
   }
 }

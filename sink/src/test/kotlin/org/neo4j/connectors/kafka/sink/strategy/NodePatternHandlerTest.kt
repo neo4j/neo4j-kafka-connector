@@ -29,9 +29,9 @@ import org.junit.jupiter.api.assertThrows
 import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.data.ConstraintEntityType
 import org.neo4j.connectors.kafka.data.ConstraintType
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
+import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -48,7 +48,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -73,7 +74,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -85,7 +87,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id: aProperty})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -110,7 +113,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -122,7 +126,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!idA: aProperty, !idB: bProperty})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -147,7 +152,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -159,7 +165,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id: aProperty})",
             mergeProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -185,7 +192,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -197,7 +205,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel:BLabel{!id: aProperty})",
             mergeProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -223,7 +232,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -235,7 +245,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:`ALabel With Space`:BLabel{ !id: aProperty, !`another id`: bProperty, name: `another property`, `last name`: last_name})",
             mergeProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -261,7 +272,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 }
                 RETURN sum(created) AS created, sum(deleted) AS deleted                 
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -278,7 +290,14 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>(
-                                "name" to "john", "surname" to "doe", "dob" to "2000-01-01")))))
+                                "name" to "john",
+                                "surname" to "doe",
+                                "dob" to "2000-01-01",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -286,7 +305,8 @@ class NodePatternHandlerTest : HandlerTest() {
     assertQueryAndParameters(
         "(:ALabel{!id: __value.old_id})",
         key = """{"old_id": 1}""",
-        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))))
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))),
+    )
   }
 
   @Test
@@ -309,7 +329,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 .put("surname", "doe")
                 .put(
                     "dob",
-                    DynamicTypes.toConnectValue(PropertyType.schema, LocalDate.of(2000, 1, 1))),
+                    ExtendedValueConverter().value(PropertyType.schema, LocalDate.of(2000, 1, 1)),
+                ),
         expected =
             listOf(
                 listOf(
@@ -320,7 +341,12 @@ class NodePatternHandlerTest : HandlerTest() {
                             mapOf<String, Any?>(
                                 "name" to "john",
                                 "surname" to "doe",
-                                "dob" to LocalDate.of(2000, 1, 1))))))
+                                "dob" to LocalDate.of(2000, 1, 1),
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -341,8 +367,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "surname" to "doe",
                                 "dob" to "2000-01-01",
                                 "address.city" to "london",
-                                "address.country" to "uk"),
-                    ))))
+                                "address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -359,7 +389,10 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>("surname" to "doe", "address.country" to "uk"),
-                    ))))
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -376,8 +409,13 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>(
-                                "address.city" to "london", "address.country" to "uk"),
-                    ))))
+                                "address.city" to "london",
+                                "address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -396,8 +434,12 @@ class NodePatternHandlerTest : HandlerTest() {
                             mapOf<String, Any?>(
                                 "dob" to "2000-01-01",
                                 "address.country" to "uk",
-                                "address.city" to "london"),
-                    ))))
+                                "address.city" to "london",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -417,8 +459,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "name" to "john",
                                 "surname" to "doe",
                                 "dob" to "2000-01-01",
-                                "address.country" to "uk"),
-                    ))))
+                                "address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -435,8 +481,14 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>(
-                                "name" to "john", "surname" to "doe", "dob" to "2000-01-01"),
-                    ))))
+                                "name" to "john",
+                                "surname" to "doe",
+                                "dob" to "2000-01-01",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -453,7 +505,10 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>("first_name" to "john", "last_name" to "doe"),
-                    ))))
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -472,8 +527,12 @@ class NodePatternHandlerTest : HandlerTest() {
                             mapOf<String, Any?>(
                                 "first_name" to "john",
                                 "last_name" to "doe",
-                                "lives_in" to "london"),
-                    ))))
+                                "lives_in" to "london",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -493,8 +552,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "first_name" to "john",
                                 "last_name" to "doe",
                                 "home_address.city" to "london",
-                                "home_address.country" to "uk"),
-                    ))))
+                                "home_address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -509,8 +572,11 @@ class NodePatternHandlerTest : HandlerTest() {
                     "C",
                     mapOf(
                         "keys" to mapOf("id" to 1),
-                        "properties" to
-                            mapOf<String, Any?>("name" to "john", "surname" to "doe")))))
+                        "properties" to mapOf<String, Any?>("name" to "john", "surname" to "doe"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -527,7 +593,14 @@ class NodePatternHandlerTest : HandlerTest() {
                         "keys" to mapOf("id" to 1),
                         "properties" to
                             mapOf<String, Any?>(
-                                "name" to "john", "surname" to "doe", "city" to "london")))))
+                                "name" to "john",
+                                "surname" to "doe",
+                                "city" to "london",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -547,8 +620,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "name" to "john",
                                 "surname" to "doe",
                                 "home_address.city" to "london",
-                                "home_address.country" to "uk"),
-                    ))))
+                                "home_address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -568,8 +645,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "name" to "john",
                                 "last_name" to "doe",
                                 "home_address.city" to "london",
-                                "home_address.country" to "uk"),
-                    ))))
+                                "home_address.country" to "uk",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -590,8 +671,12 @@ class NodePatternHandlerTest : HandlerTest() {
                                 "name" to "john",
                                 "surname" to "doe",
                                 "created_at" to
-                                    Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC)),
-                    ))))
+                                    Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -599,13 +684,8 @@ class NodePatternHandlerTest : HandlerTest() {
     assertQueryAndParameters(
         "(:ALabel {!id: __key.id, name: __value.name, surname: __value.surname, created_at: __timestamp})",
         key = """{"id": 1}""",
-        expected =
-            listOf(
-                listOf(
-                    "D",
-                    mapOf(
-                        "keys" to mapOf("id" to 1),
-                    ))))
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))),
+    )
   }
 
   @Test
@@ -616,13 +696,8 @@ class NodePatternHandlerTest : HandlerTest() {
         "(:ALabel {!id: __key.id, name: __value.name, surname: __value.surname, created_at: __timestamp})",
         keySchema = schema,
         key = Struct(schema).put("id", 1),
-        expected =
-            listOf(
-                listOf(
-                    "D",
-                    mapOf(
-                        "keys" to mapOf("id" to 1),
-                    ))))
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))),
+    )
   }
 
   @Test
@@ -630,13 +705,8 @@ class NodePatternHandlerTest : HandlerTest() {
     assertQueryAndParameters(
         "(:ALabel {!id, name: __value.name, surname: __value.surname, created_at: __timestamp})",
         key = """{"id": 1}""",
-        expected =
-            listOf(
-                listOf(
-                    "D",
-                    mapOf(
-                        "keys" to mapOf("id" to 1),
-                    ))))
+        expected = listOf(listOf("D", mapOf("keys" to mapOf("id" to 1)))),
+    )
   }
 
   @Test
@@ -645,7 +715,8 @@ class NodePatternHandlerTest : HandlerTest() {
         pattern = "(:Person{!id, !secondary_id, name, surname})",
         key = """{}""",
         value = """{"name": "John", "surname": "Doe"}""",
-        message = "Key 'id' could not be located in the message.")
+        message = "Key 'id' could not be located in the message.",
+    )
   }
 
   @Test
@@ -654,7 +725,8 @@ class NodePatternHandlerTest : HandlerTest() {
         pattern = "(:Person{!id: __key.old_id, name, surname})",
         key = """{}""",
         value = """{"name": "John", "surname": "Doe"}""",
-        message = "Key 'old_id' could not be located in the keys.")
+        message = "Key 'old_id' could not be located in the keys.",
+    )
   }
 
   @Test
@@ -663,7 +735,8 @@ class NodePatternHandlerTest : HandlerTest() {
         pattern = "(:Person{!id: __value.old_id, name, surname})",
         key = """{}""",
         value = """{"name": "John", "surname": "Doe"}""",
-        message = "Key 'old_id' could not be located in the values.")
+        message = "Key 'old_id' could not be located in the values.",
+    )
   }
 
   @Test
@@ -672,7 +745,8 @@ class NodePatternHandlerTest : HandlerTest() {
         pattern = "(:Person{!id, !second_id, name, surname})",
         key = """{"id": 1}""",
         value = """{"name": "John", "surname": "Doe"}""",
-        message = "Key 'second_id' could not be located in the message.")
+        message = "Key 'second_id' could not be located in the message.",
+    )
   }
 
   @Test
@@ -683,7 +757,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -691,7 +766,9 @@ class NodePatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "ALabel",
-                properties = listOf("id", "second_id")))
+                properties = listOf("id", "second_id"),
+            )
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -706,7 +783,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -714,17 +792,21 @@ class NodePatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_UNIQUENESS.value,
                 labelOrType = "ALabel",
-                properties = listOf("id", "second_id")),
+                properties = listOf("id", "second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_EXISTENCE.value,
                 labelOrType = "ALabel",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_EXISTENCE.value,
                 labelOrType = "ALabel",
-                properties = listOf("second_id")))
+                properties = listOf("second_id"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -739,7 +821,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints = emptyList<ConstraintData>()
 
@@ -755,7 +838,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 "\nor:" +
                 "\n\t- UNIQUENESS (id, second_id)" +
                 "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
-                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)"
+        )
   }
 
   @Test
@@ -766,7 +850,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel:BLabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints = emptyList<ConstraintData>()
 
@@ -783,7 +868,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 "\nor:" +
                 "\n\t- UNIQUENESS (id, second_id)" +
                 "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
-                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)"
+        )
   }
 
   @Test
@@ -794,7 +880,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel:BLabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -802,12 +889,15 @@ class NodePatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "ALabel",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "BLabel",
-                properties = listOf("id")))
+                properties = listOf("id"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -824,7 +914,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 "\nor:" +
                 "\n\t- UNIQUENESS (id, second_id)" +
                 "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
-                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)"
+        )
   }
 
   @Test
@@ -835,7 +926,8 @@ class NodePatternHandlerTest : HandlerTest() {
             "(:ALabel:BLabel{!id, !second_id, name})",
             mergeProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -843,27 +935,33 @@ class NodePatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_UNIQUENESS.value,
                 labelOrType = "ALabel",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_EXISTENCE.value,
                 labelOrType = "ALabel",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_EXISTENCE.value,
                 labelOrType = "ALabel",
-                properties = listOf("second_id")),
+                properties = listOf("second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_UNIQUENESS.value,
                 labelOrType = "BLabel",
-                properties = listOf("id", "second_id")),
+                properties = listOf("id", "second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_EXISTENCE.value,
                 labelOrType = "BLabel",
-                properties = listOf("id")))
+                properties = listOf("id"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -883,7 +981,8 @@ class NodePatternHandlerTest : HandlerTest() {
                 "\nor:" +
                 "\n\t- UNIQUENESS (id, second_id)" +
                 "\n\t- NODE_PROPERTY_EXISTENCE (id)" +
-                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)")
+                "\n\t- NODE_PROPERTY_EXISTENCE (second_id)"
+        )
   }
 
   private fun assertQueryAndParameters(
@@ -892,15 +991,11 @@ class NodePatternHandlerTest : HandlerTest() {
       key: Any? = null,
       valueSchema: Schema = Schema.STRING_SCHEMA,
       value: Any? = null,
-      expected: List<List<Any>> = emptyList()
+      expected: List<List<Any>> = emptyList(),
   ) {
     val handler = NodePatternHandler("my-topic", pattern, false, Renderer.getDefaultRenderer(), 1)
     val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
-    handler.handle(
-        listOf(
-            sinkMessage,
-        ),
-    ) shouldBe
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
@@ -931,13 +1026,13 @@ class NodePatternHandlerTest : HandlerTest() {
                             }
                             RETURN sum(created) AS created, sum(deleted) AS deleted
                           """
-                                    .trimIndent(),
+                                    .trimIndent()
                             )
                             .cypher,
                         mapOf("events" to expected),
                     ),
-                ),
-            ),
+                )
+            )
         )
   }
 
@@ -947,7 +1042,7 @@ class NodePatternHandlerTest : HandlerTest() {
       key: Any? = null,
       valueSchema: Schema = Schema.STRING_SCHEMA,
       value: Any? = null,
-      message: String? = null
+      message: String? = null,
   ) {
     val handler = NodePatternHandler("my-topic", pattern, false, Renderer.getDefaultRenderer(), 1)
     val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)

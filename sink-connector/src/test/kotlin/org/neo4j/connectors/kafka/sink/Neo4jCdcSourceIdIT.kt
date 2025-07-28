@@ -55,7 +55,7 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         newEvent(
@@ -67,14 +67,18 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 emptyMap(),
                 null,
-                NodeState(emptyList(), mapOf("id" to 5L)))))
+                NodeState(emptyList(), mapOf("id" to 5L)),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .single()
 
       result.get("n").asNode() should
@@ -89,12 +93,13 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
             "CREATE (n:SourceEvent:Person) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -113,14 +118,20 @@ abstract class Neo4jCdcSourceIdIT {
                         "id" to 5L,
                         "name" to "john",
                         "surname" to "doe",
-                        "dob" to LocalDate.of(2000, 1, 1))))))
+                        "dob" to LocalDate.of(2000, 1, 1),
+                    ),
+                ),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .single()
 
       result.get("n").asNode() should
@@ -133,7 +144,8 @@ abstract class Neo4jCdcSourceIdIT {
                     "id" to 5L,
                     "name" to "john",
                     "surname" to "doe",
-                    "dob" to LocalDate.of(2000, 1, 1))
+                    "dob" to LocalDate.of(2000, 1, 1),
+                )
           }
     }
   }
@@ -142,12 +154,13 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
             "CREATE (n:SourceEvent) SET n = ${'$'}props",
-            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")))
+            mapOf("props" to mapOf("sourceId" to "person1", "id" to 1L, "name" to "john")),
+        )
         .consume()
 
     producer.publish(
@@ -160,14 +173,18 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 emptyMap(),
                 NodeState(emptyList(), mapOf("id" to 1L, "name" to "john")),
-                null)))
+                null,
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (n:SourceEvent {sourceId: ${'$'}sourceId}) RETURN n",
-                  mapOf("sourceId" to "person1"))
+                  mapOf("sourceId" to "person1"),
+              )
               .list()
 
       result shouldHaveSize 0
@@ -178,7 +195,7 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -188,7 +205,9 @@ abstract class Neo4jCdcSourceIdIT {
             """,
             mapOf(
                 "person1" to mapOf("sourceId" to "person1", "name" to "john", "surname" to "doe"),
-                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe")))
+                "person2" to mapOf("sourceId" to "person2", "name" to "mary", "surname" to "doe"),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -203,14 +222,18 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -234,7 +257,7 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -250,7 +273,10 @@ abstract class Neo4jCdcSourceIdIT {
                     mapOf(
                         "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend")))
+                        "type" to "friend",
+                    ),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -265,14 +291,18 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
-                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH (start)-[r:KNOWS {sourceId: ${'$'}sourceId}]->(end) RETURN start, r, end",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -296,7 +326,7 @@ abstract class Neo4jCdcSourceIdIT {
   @Test
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session
         .run(
@@ -310,7 +340,10 @@ abstract class Neo4jCdcSourceIdIT {
                     mapOf(
                         "sourceId" to "knows1",
                         "since" to LocalDate.of(2000, 1, 1),
-                        "type" to "friend")))
+                        "type" to "friend",
+                    ),
+            ),
+        )
         .consume()
 
     producer.publish(
@@ -325,14 +358,18 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
-                null)))
+                null,
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
               .run(
                   "MATCH ()-[r:KNOWS {sourceId: ${'$'}sourceId}]->() RETURN count(r)",
-                  mapOf("sourceId" to "knows1"))
+                  mapOf("sourceId" to "knows1"),
+              )
               .single()
 
       result.get(0).asInt() shouldBe 0
@@ -342,11 +379,12 @@ abstract class Neo4jCdcSourceIdIT {
   @Neo4jSink(
       schemaControlKeyCompatibility = SchemaCompatibilityMode.NONE,
       schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
-      cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")])
+      cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")],
+  )
   @Test
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         newEvent(
@@ -358,8 +396,10 @@ abstract class Neo4jCdcSourceIdIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")))))
+                NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")),
+            ),
+        )
+    )
 
     producer.publish(
         newEvent(
@@ -371,8 +411,10 @@ abstract class Neo4jCdcSourceIdIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")))))
+                NodeState(listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")),
+            ),
+        )
+    )
 
     producer.publish(
         newEvent(
@@ -386,7 +428,10 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(emptyMap()))))
+                RelationshipState(emptyMap()),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
@@ -398,7 +443,8 @@ abstract class Neo4jCdcSourceIdIT {
             MATCH (start)-[r:KNOWS {sourceId: ${'$'}rId}]->(end)
             RETURN start, r, end
           """,
-                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"))
+                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"),
+              )
               .single()
 
       result.get("r").asRelationship() should { it.asMap() shouldBe mapOf("sourceId" to "knows1") }
@@ -428,7 +474,10 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(emptyMap()),
-                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))))))
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result =
@@ -440,7 +489,8 @@ abstract class Neo4jCdcSourceIdIT {
             MATCH (start)-[r:KNOWS {sourceId: ${'$'}rId}]->(end)
             RETURN r
           """,
-                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"))
+                  mapOf("startId" to "person1", "rId" to "knows1", "endId" to "person2"),
+              )
               .single()
 
       result.get("r").asRelationship() should
@@ -461,7 +511,10 @@ abstract class Neo4jCdcSourceIdIT {
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
-                null)))
+                null,
+            ),
+        )
+    )
     producer.publish(
         newEvent(
             4,
@@ -472,8 +525,13 @@ abstract class Neo4jCdcSourceIdIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 NodeState(
-                    listOf("Person"), mapOf("id" to 1L, "name" to "john", "surname" to "doe")),
-                null)))
+                    listOf("Person"),
+                    mapOf("id" to 1L, "name" to "john", "surname" to "doe"),
+                ),
+                null,
+            ),
+        )
+    )
     producer.publish(
         newEvent(
             4,
@@ -484,8 +542,13 @@ abstract class Neo4jCdcSourceIdIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 NodeState(
-                    listOf("Person"), mapOf("id" to 2L, "name" to "mary", "surname" to "doe")),
-                null)))
+                    listOf("Person"),
+                    mapOf("id" to 2L, "name" to "mary", "surname" to "doe"),
+                ),
+                null,
+            ),
+        )
+    )
 
     eventually(30.seconds) {
       val result = session.run("MATCH (n) RETURN count(n)").single()
@@ -511,8 +574,10 @@ abstract class Neo4jCdcSourceIdIT {
               ZonedDateTime.now().minusSeconds(5),
               ZonedDateTime.now(),
               emptyMap(),
-              emptyMap()),
-          event)
+              emptyMap(),
+          ),
+          event,
+      )
 }
 
 @KeyValueConverter(key = KafkaConverter.AVRO, value = KafkaConverter.AVRO)

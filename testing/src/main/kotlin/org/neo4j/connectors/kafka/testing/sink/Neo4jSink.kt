@@ -54,7 +54,7 @@ enum class SchemaCompatibilityMode {
   FORWARD_TRANSITIVE,
   FULL,
   FULL_TRANSITIVE,
-  NONE
+  NONE,
 }
 
 annotation class CypherStrategy(
@@ -64,30 +64,28 @@ annotation class CypherStrategy(
     val bindHeaderAs: String = "__header",
     val bindKeyAs: String = "__key",
     val bindValueAs: String = "__value",
-    val bindValueAsEvent: Boolean = true
+    val bindValueAsEvent: Boolean = true,
 )
 
 annotation class CdcSourceIdStrategy(
     val topic: String,
     val labelName: String = "",
-    val propertyName: String = ""
+    val propertyName: String = "",
 )
 
-annotation class CdcSchemaStrategy(
-    val topic: String,
-)
+annotation class CdcSchemaStrategy(val topic: String)
 
 annotation class NodePatternStrategy(
     val topic: String,
     val pattern: String,
-    val mergeNodeProperties: Boolean
+    val mergeNodeProperties: Boolean,
 )
 
 annotation class RelationshipPatternStrategy(
     val topic: String,
     val pattern: String,
     val mergeNodeProperties: Boolean,
-    val mergeRelationshipProperties: Boolean
+    val mergeRelationshipProperties: Boolean,
 )
 
 annotation class CudStrategy(val topic: String)

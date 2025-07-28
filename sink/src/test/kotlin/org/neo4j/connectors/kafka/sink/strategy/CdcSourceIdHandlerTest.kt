@@ -50,9 +50,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 emptyMap(),
                 null,
-                NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe"))),
+                NodeState(emptyList(), mapOf("name" to "john", "surname" to "doe")),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -65,7 +67,13 @@ class CdcSourceIdHandlerTest {
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
                             "nElementId" to "node-element-id",
-                            "nProps" to mapOf("name" to "john", "surname" to "doe")))))))
+                            "nProps" to mapOf("name" to "john", "surname" to "doe"),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -77,10 +85,12 @@ class CdcSourceIdHandlerTest {
                 null,
                 NodeState(
                     listOf("Person"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
+                ),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -97,7 +107,14 @@ class CdcSourceIdHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1))))))))
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                ),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
 
     val sinkMessage2 =
         newChangeEventMessage(
@@ -109,10 +126,12 @@ class CdcSourceIdHandlerTest {
                 null,
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
+                ),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage2),
         listOf(
@@ -129,7 +148,14 @@ class CdcSourceIdHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1))))))))
+                                    "dob" to LocalDate.of(1990, 1, 1),
+                                ),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -142,9 +168,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 emptyMap(),
                 NodeState(emptyList(), mapOf("name" to "john")),
-                NodeState(emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)))),
+                NodeState(emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -157,8 +185,13 @@ class CdcSourceIdHandlerTest {
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
                             "nElementId" to "node-element-id",
-                            "nProps" to
-                                mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))))))))
+                            "nProps" to mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -170,10 +203,12 @@ class CdcSourceIdHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
+                ),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -186,8 +221,13 @@ class CdcSourceIdHandlerTest {
                         "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
                         mapOf(
                             "nElementId" to "node-element-id",
-                            "nProps" to
-                                mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1))))))))
+                            "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
 
     val sinkMessage2 =
         newChangeEventMessage(
@@ -198,13 +238,16 @@ class CdcSourceIdHandlerTest {
                 mapOf("Person" to listOf(mapOf("name" to "john", "surname" to "doe"))),
                 NodeState(
                     listOf("Person", "Employee"),
-                    mapOf("name" to "joe", "surname" to "doe", "married" to true)),
+                    mapOf("name" to "joe", "surname" to "doe", "married" to true),
+                ),
                 NodeState(
                     listOf("Person", "Manager"),
-                    mapOf(
-                        "name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)))),
+                    mapOf("name" to "john", "surname" to "doe", "dob" to LocalDate.of(1990, 1, 1)),
+                ),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage2),
         listOf(
@@ -221,7 +264,14 @@ class CdcSourceIdHandlerTest {
                                 mapOf(
                                     "name" to "john",
                                     "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null)))))))
+                                    "married" to null,
+                                ),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -234,9 +284,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 emptyMap(),
                 NodeState(emptyList(), mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1))),
-                null),
+                null,
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -247,7 +299,12 @@ class CdcSourceIdHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) DETACH DELETE n",
-                        mapOf("nElementId" to "node-element-id"))))))
+                        mapOf("nElementId" to "node-element-id"),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -262,9 +319,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -282,7 +341,13 @@ class CdcSourceIdHandlerTest {
                             "startElementId" to "start-element-id",
                             "endElementId" to "end-element-id",
                             "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "john", "surname" to "doe")))))))
+                            "rProps" to mapOf("name" to "john", "surname" to "doe"),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -297,9 +362,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(emptyMap()),
-                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -317,7 +384,13 @@ class CdcSourceIdHandlerTest {
                             "startElementId" to "start-element-id",
                             "endElementId" to "end-element-id",
                             "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "john", "surname" to "doe")))))))
+                            "rProps" to mapOf("name" to "john", "surname" to "doe"),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
 
     val sinkMessage1 =
         newChangeEventMessage(
@@ -329,9 +402,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                RelationshipState(mapOf("name" to "joe", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "joe", "surname" to "doe")),
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage1),
         listOf(
@@ -349,7 +424,13 @@ class CdcSourceIdHandlerTest {
                             "startElementId" to "start-element-id",
                             "endElementId" to "end-element-id",
                             "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "joe")))))))
+                            "rProps" to mapOf("name" to "joe"),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -364,9 +445,11 @@ class CdcSourceIdHandlerTest {
                 emptyList(),
                 EntityOperation.DELETE,
                 RelationshipState(emptyMap()),
-                null),
+                null,
+            ),
             0,
-            1)
+            1,
+        )
     verify(
         listOf(sinkMessage),
         listOf(
@@ -377,7 +460,12 @@ class CdcSourceIdHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH ()-[r:`REL` {sourceElementId: ${'$'}rElementId}]->() DELETE r",
-                        mapOf("rElementId" to "rel-element-id"))))))
+                        mapOf("rElementId" to "rel-element-id"),
+                    ),
+                )
+            )
+        ),
+    )
   }
 
   @Test
@@ -387,7 +475,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val result =
         handler.handle(
@@ -397,7 +486,9 @@ class CdcSourceIdHandlerTest {
                 newChangeEventMessage(randomChangeEvent(), 0, 2),
                 newChangeEventMessage(randomChangeEvent(), 1, 0),
                 newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0)))
+                newChangeEventMessage(randomChangeEvent(), 2, 0),
+            )
+        )
 
     result
         .shouldHaveSize(3)
@@ -417,7 +508,8 @@ class CdcSourceIdHandlerTest {
                       { q3 ->
                         q3.txId shouldBe 0
                         q3.seq shouldBe 2
-                      })
+                      },
+                  )
             },
             { second ->
               second
@@ -430,7 +522,8 @@ class CdcSourceIdHandlerTest {
                       { q2 ->
                         q2.txId shouldBe 1
                         q2.seq shouldBe 1
-                      })
+                      },
+                  )
             },
             { third ->
               third
@@ -439,7 +532,8 @@ class CdcSourceIdHandlerTest {
                     q1.txId shouldBe 2
                     q1.seq shouldBe 0
                   })
-            })
+            },
+        )
   }
 
   @Test
@@ -449,7 +543,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -459,9 +554,11 @@ class CdcSourceIdHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -475,7 +572,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -485,17 +583,21 @@ class CdcSourceIdHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.CREATE,
                 null,
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -509,7 +611,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -519,10 +622,11 @@ class CdcSourceIdHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                NodeState(
-                    listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe"))),
+                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -536,7 +640,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -546,17 +651,21 @@ class CdcSourceIdHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 null,
-                RelationshipState(mapOf("name" to "john", "surname" to "doe"))),
+                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -570,7 +679,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -580,9 +690,11 @@ class CdcSourceIdHandlerTest {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(nodeChangeEventMessage))
@@ -596,7 +708,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -606,17 +719,21 @@ class CdcSourceIdHandlerTest {
                 Node(
                     "start-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
                 Node(
                     "end-element-id",
                     listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
                 emptyList(),
                 EntityOperation.UPDATE,
                 RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                null),
+                null,
+            ),
             1,
-            0)
+            0,
+        )
 
     assertThrows<InvalidDataException> {
       handler.handle(listOf(relationshipChangeEventMessage))
@@ -629,7 +746,8 @@ class CdcSourceIdHandlerTest {
             "my-topic",
             Renderer.getRenderer(Configuration.defaultConfig()),
             "SourceEvent",
-            "sourceElementId")
+            "sourceElementId",
+        )
 
     val result = handler.handle(messages)
 

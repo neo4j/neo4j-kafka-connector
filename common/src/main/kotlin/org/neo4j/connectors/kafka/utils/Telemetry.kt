@@ -38,12 +38,16 @@ object Telemetry {
   fun userAgent(
       type: String,
       comment: String = "",
-      provider: EnvironmentProvider = SystemEnvironmentProvider
+      provider: EnvironmentProvider = SystemEnvironmentProvider,
   ): String {
     return String.format(
         "%s %s (%s) %s %s",
         connectorInformation(
-            type, VersionUtil.version(Neo4jConfiguration::class.java), comment, provider),
+            type,
+            VersionUtil.version(Neo4jConfiguration::class.java),
+            comment,
+            provider,
+        ),
         kafkaConnectInformation(),
         platform(),
         neo4jDriverVersion(),
@@ -65,14 +69,15 @@ object Telemetry {
       type: String,
       version: String = "",
       comment: String = "",
-      provider: EnvironmentProvider = SystemEnvironmentProvider
+      provider: EnvironmentProvider = SystemEnvironmentProvider,
   ): String {
     return String.format(
         "%s-%s%s%s",
         if (runningInConfluentCloud(provider)) "confluent-cloud" else "kafka",
         type,
         if (version.isEmpty()) "" else "/$version",
-        if (comment.isEmpty()) "" else " ($comment)")
+        if (comment.isEmpty()) "" else " ($comment)",
+    )
   }
 
   internal fun kafkaConnectInformation(): String {
