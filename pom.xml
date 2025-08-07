@@ -637,7 +637,7 @@
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
                         <ktfmt>
-                            <version>0.56</version>
+                            <version>0.54</version>
                             <style>META</style>
                             <blockIndent>2</blockIndent>
                             <continuationIndent>4</continuationIndent>
