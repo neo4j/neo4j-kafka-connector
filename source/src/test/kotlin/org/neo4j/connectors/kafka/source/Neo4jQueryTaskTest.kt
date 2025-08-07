@@ -481,7 +481,7 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY_FORCE_MAPS_AS_STRUCT] = "false"
-    props[SourceConfiguration.PAYLOAD_MODE] = PayloadMode.JSON.toString()
+    props[SourceConfiguration.PAYLOAD_MODE] = PayloadMode.COMPATIBILITY.toString()
     props[SourceConfiguration.QUERY] =
         """
           |WITH {

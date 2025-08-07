@@ -20,6 +20,7 @@ import io.kotest.matchers.shouldBe
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
@@ -217,6 +218,53 @@ abstract class Neo4jSourceQueryIT {
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
+
+  @Neo4jSource(
+      topic = TOPIC,
+      strategy = SourceStrategy.QUERY,
+      streamingProperty = "timestamp",
+      startFrom = "USER_PROVIDED",
+      startFromValue = "1704067200000", // 2024-01-01T00:00:00
+      query =
+          "WITH { id: 'ROOT_ID', list: [ { property1: 'property1', subList: [{subListProperty1: 'subListProperty1'}]}, { property2: 'property2', subList: [{subListProperty2: 'subListProperty2'}]} ]} AS data RETURN data, data.id AS guid, 1704067200001 AS timestamp",
+  )
+  @Test
+  fun `serializes list of heterogeneous objects not representable with connect schema`(
+      @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
+      payloadMode: PayloadMode,
+  ) = runTest {
+    assumeTrue(
+        payloadMode == PayloadMode.COMPATIBILITY,
+        "This test is only applicable for JSON mode.",
+    )
+
+    TopicVerifier.createForMap(consumer)
+        .assertMessageValue { value ->
+          value shouldBe
+              mapOf(
+                  "data" to
+                      mapOf(
+                          "id" to "ROOT_ID",
+                          "list" to
+                              listOf(
+                                  mapOf(
+                                      "property1" to "property1",
+                                      "subList" to
+                                          listOf(mapOf("subListProperty1" to "subListProperty1")),
+                                  ),
+                                  mapOf(
+                                      "property2" to "property2",
+                                      "subList" to
+                                          listOf(mapOf("subListProperty2" to "subListProperty2")),
+                                  ),
+                              ),
+                      ),
+                  "guid" to "ROOT_ID",
+                  "timestamp" to 1704067200001L,
+              )
+        }
+        .verifyWithin(Duration.ofSeconds(30))
+  }
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.EXTENDED)
@@ -225,17 +273,30 @@ class Neo4jSourceAvroExtendedIT : Neo4jSourceQueryIT()
 @KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceAvroCompactIT : Neo4jSourceQueryIT()
 
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPATIBILITY)
+class Neo4jSourceAvroJsonIT : Neo4jSourceQueryIT()
+
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
 class Neo4jSourceJsonSchemaExtendedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceJsonSchemaCompactIT : Neo4jSourceQueryIT()
 
+@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPATIBILITY)
+class Neo4jSourceJsonSchemaJsonIT : Neo4jSourceQueryIT()
+
 @KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
 class Neo4jSourceJsonEmbeddedExtendedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceJsonEmbeddedCompactIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(
+    key = JSON_EMBEDDED,
+    value = JSON_EMBEDDED,
+    payloadMode = PayloadMode.COMPATIBILITY,
+)
+class Neo4jSourceJsonEmbeddedJsonIT : Neo4jSourceQueryIT()
 
 // it doesn't make sense to add EXTENDED mode for JSON_RAW since it's not a schema supporting
 // converter
@@ -292,3 +353,6 @@ class Neo4jSourceProtobufExtendedIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceProtobufCompactIT : Neo4jSourceQueryIT()
+
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.COMPATIBILITY)
+class Neo4jSourceProtobufJsonIT : Neo4jSourceQueryIT()

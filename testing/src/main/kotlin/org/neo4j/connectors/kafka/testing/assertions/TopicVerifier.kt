@@ -31,6 +31,7 @@ import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -174,6 +175,14 @@ class TopicVerifier<K, V>(
           sourceValue
         } else {
           DynamicTypes.fromConnectValue(schema, sourceValue, true)
+        }
+      }
+      is String -> {
+        // if the value is a string, we assume it is a JSON string and deserialize it
+        if (assertionClass == Map::class.java) {
+          JSONUtils.readValue(sourceValue, true)
+        } else {
+          sourceValue
         }
       }
       else -> sourceValue
