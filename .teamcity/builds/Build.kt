@@ -125,27 +125,25 @@ class Build(
             buildType(it)
           }
 
-          if (!forPullRequests) {
-            complete.features {
-              notifications {
-                branchFilter =
-                    """
+          complete.features {
+            notifications {
+              branchFilter =
+                  """
                   +:$DEFAULT_BRANCH
                   ${if (forPullRequests) "+:pull/*" else ""}
                   """
-                        .trimIndent()
+                      .trimIndent()
 
-                queuedBuildRequiresApproval = forPullRequests
-                buildFailedToStart = !forPullRequests
-                buildFailed = !forPullRequests
-                buildFinishedSuccessfully = !forPullRequests
-                buildProbablyHanging = !forPullRequests
+              queuedBuildRequiresApproval = forPullRequests
+              buildFailedToStart = !forPullRequests
+              buildFailed = !forPullRequests
+              buildFinishedSuccessfully = !forPullRequests
+              buildProbablyHanging = !forPullRequests
 
-                notifierSettings = slackNotifier {
-                  connection = SLACK_CONNECTION_ID
-                  sendTo = SLACK_CHANNEL
-                  messageFormat = simpleMessageFormat()
-                }
+              notifierSettings = slackNotifier {
+                connection = SLACK_CONNECTION_ID
+                sendTo = SLACK_CHANNEL
+                messageFormat = simpleMessageFormat()
               }
             }
           }
