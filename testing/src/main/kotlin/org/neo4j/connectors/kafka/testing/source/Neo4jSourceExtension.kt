@@ -37,6 +37,7 @@ import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -78,6 +79,7 @@ internal class Neo4jSourceExtension(
               Session::class.java to ::resolveSession,
               ConvertingKafkaConsumer::class.java to ::resolveTopicConsumer,
               Neo4j::class.java to ::resolveNeo4j,
+              PayloadMode::class.java to ::resolvePayloadMode,
           )
       )
 
@@ -298,6 +300,13 @@ internal class Neo4jSourceExtension(
       driver = createDriver()
     }
     return Neo4jDetector.detect(driver)
+  }
+
+  private fun resolvePayloadMode(
+      parameterContext: ParameterContext?,
+      context: ExtensionContext?,
+  ): PayloadMode {
+    return keyValueConverterResolver.resolvePayloadMode(context)
   }
 
   private fun CdcSource.paramAsMap(

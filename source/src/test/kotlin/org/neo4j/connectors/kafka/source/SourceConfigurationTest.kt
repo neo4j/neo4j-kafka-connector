@@ -34,6 +34,7 @@ import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.driver.TransactionConfig
 
 class SourceConfigurationTest {
@@ -686,12 +687,36 @@ class SourceConfigurationTest {
                   SourceConfiguration.QUERY_TOPIC to "my-topic",
                   SourceConfiguration.START_FROM to "EARLIEST",
                   SourceConfiguration.PAYLOAD_MODE to "invalid",
+                  "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
               )
           )
         }
         .also {
           it shouldHaveMessage
-              "Invalid value invalid for configuration neo4j.payload-mode: Must be one of: 'EXTENDED', 'COMPACT'."
+              "Invalid value invalid for configuration neo4j.payload-mode: Must be one of: 'EXTENDED', 'COMPACT', 'COMPATIBILITY'."
+        }
+  }
+
+  @Test
+  fun `fail if COMPATIBILITY payload mode is set for CDC strategy`() {
+
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      SourceConfiguration.STRATEGY to "CDC",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.BATCH_SIZE to "10000",
+                      SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                      SourceConfiguration.PAYLOAD_MODE to PayloadMode.COMPATIBILITY.name,
+                  )
+              )
+              .validate()
+        }
+        .also {
+          it shouldHaveMessage
+              "CDC strategy does not support 'COMPATIBILITY' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
         }
   }
 

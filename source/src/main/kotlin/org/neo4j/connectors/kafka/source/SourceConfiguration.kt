@@ -528,6 +528,13 @@ class SourceConfiguration(originals: Map<*, *>) :
       val configList = config.configValues().toList()
       val strategy = configList.find { it.name() == STRATEGY }
       if (strategy?.value() == SourceType.CDC.name) {
+        val payloadMode = configList.find { it.name() == PAYLOAD_MODE }
+        if (payloadMode?.value() == PayloadMode.COMPATIBILITY.name) {
+          strategy.addErrorMessage(
+              "CDC strategy does not support '${PayloadMode.COMPATIBILITY.name}' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
+          )
+        }
+
         val cdcTopics =
             originals.entries.filter { CDC_PATTERNS_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) } +
