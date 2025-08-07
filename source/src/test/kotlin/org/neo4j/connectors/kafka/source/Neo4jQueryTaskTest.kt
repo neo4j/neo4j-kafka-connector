@@ -488,7 +488,7 @@ class Neo4jQueryTaskTest {
           |id: 'ROOT_ID', 
           |list: [
           |      {property1: 'property1', subList: [{subListProperty1: 'subListProperty1'}]}, 
-          |      {property1: 'property2', subList: [{subListProperty1: 'subListProperty2'}]}
+          |      {property2: 'property2', subList: [{subListProperty1: 'subListProperty2'}]}
           |]} AS data 
           |RETURN data, data.id AS guid, 123456789 AS timestamp
             """
@@ -499,7 +499,7 @@ class Neo4jQueryTaskTest {
 
     val expected =
         mapOf(
-            "timestamp" to 123456789L,
+            "timestamp" to 123456789,
             "guid" to "ROOT_ID",
             "data" to
                 mapOf(
