@@ -710,6 +710,7 @@ class SourceConfigurationTest {
                       SourceConfiguration.BATCH_SIZE to "10000",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
                       SourceConfiguration.PAYLOAD_MODE to PayloadMode.COMPATIBILITY.name,
+                      "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
                   )
               )
               .validate()
