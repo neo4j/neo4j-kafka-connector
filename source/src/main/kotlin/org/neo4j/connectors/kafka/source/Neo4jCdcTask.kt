@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.source
 
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,11 +40,17 @@ import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
+import org.neo4j.driver.exceptions.ClientException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import reactor.util.retry.RetrySpec
 
 class Neo4jCdcTask : SourceTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jCdcTask::class.java)
+  private val retrySpec =
+      RetrySpec.backoff(5, 100.milliseconds.toJavaDuration()).jitter(Random.nextDouble()).filter {
+        it.cause is ClientException
+      }
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
@@ -99,6 +107,14 @@ class Neo4jCdcTask : SourceTask() {
       while (limit.hasNotPassedNow()) {
         cdc.query(ChangeIdentifier(offset.get()))
             .take(config.batchSize.toLong(), true)
+            .retryWhen(
+                retrySpec.doBeforeRetry {
+                  log.warn(
+                      "retrying due to an error for {} time. current offset: {}",
+                      it.totalRetries(),
+                      offset.get(),
+                      it.failure())
+                })
             .asFlow()
             .flatMapConcat { build(it) }
             .toList(list)
