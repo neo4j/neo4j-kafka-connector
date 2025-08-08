@@ -32,6 +32,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
+import org.neo4j.driver.exceptions.ClientException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
@@ -40,7 +41,9 @@ import reactor.util.retry.RetrySpec
 class Neo4jQueryTask : SourceTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jQueryTask::class.java)
   private val retrySpec =
-      RetrySpec.backoff(5, 100.milliseconds.toJavaDuration()).jitter(Random.nextDouble())
+      RetrySpec.backoff(5, 100.milliseconds.toJavaDuration()).jitter(Random.nextDouble()).filter {
+        it.cause is ClientException
+      }
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
