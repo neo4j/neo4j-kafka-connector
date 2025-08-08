@@ -157,7 +157,7 @@ internal class Neo4jSourceExtension(
 
     if (metadata.strategy == SourceStrategy.CDC) {
       createDriver().use {
-        var version = Neo4jDetector.detect(it)
+        val version = Neo4jDetector.detect(it)
         if (!canIUse(Dbms.changeDataCapture()).withNeo4j(version)) {
           return ConditionEvaluationResult.disabled(
               "CDC is not available with this version of Neo4j: $version",
