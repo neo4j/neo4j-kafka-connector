@@ -50,7 +50,6 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.connectors.kafka.configuration.PayloadMode
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.testing.DateSupport
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
@@ -76,11 +75,14 @@ abstract class Neo4jCypherIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName")])
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName",
+              )
+          ]
+  )
   @Test
   fun `should create node from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     SchemaBuilder.struct()
         .field("firstName", Schema.STRING_SCHEMA)
@@ -89,7 +91,8 @@ abstract class Neo4jCypherIT {
         .let { schema ->
           producer.publish(
               valueSchema = schema,
-              value = Struct(schema).put("firstName", "john").put("lastName", "doe"))
+              value = Struct(schema).put("firstName", "john").put("lastName", "doe"),
+          )
         }
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
@@ -106,39 +109,19 @@ abstract class Neo4jCypherIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName RETURN p")])
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName RETURN p",
+              )
+          ]
+  )
   @Test
   fun `should create node with a statement that returns a value`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
-  ) = runTest {
-    producer.publish(
-        valueSchema = Schema.STRING_SCHEMA, value = """{"firstName": "john", "lastName": "doe"}""")
-
-    eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
-        .get("n")
-        .asNode() should
-        {
-          it.labels() shouldBe listOf("Person")
-          it.asMap() shouldBe mapOf("name" to "john", "surname" to "doe")
-        }
-  }
-
-  @Neo4jSink(
-      cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName")])
-  @Test
-  fun `should create node from json string`(
-      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
-        value =
-            ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")))
+        value = """{"firstName": "john", "lastName": "doe"}""",
+    )
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -154,15 +137,47 @@ abstract class Neo4jCypherIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName")])
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName",
+              )
+          ]
+  )
+  @Test
+  fun `should create node from json string`(
+      @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
+      session: Session,
+  ) = runTest {
+    producer.publish(
+        valueSchema = Schema.STRING_SCHEMA,
+        value = ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")),
+    )
+
+    eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
+        .get("n")
+        .asNode() should
+        {
+          it.labels() shouldBe listOf("Person")
+          it.asMap() shouldBe mapOf("name" to "john", "surname" to "doe")
+        }
+  }
+
+  @Neo4jSink(
+      cypher =
+          [
+              CypherStrategy(
+                  TOPIC,
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName",
+              )
+          ]
+  )
   @Test
   fun `should create node from json byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
-        value = ObjectMapper().writeValueAsBytes(mapOf("firstName" to "john", "lastName" to "doe")))
+        value = ObjectMapper().writeValueAsBytes(mapOf("firstName" to "john", "lastName" to "doe")),
+    )
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -178,14 +193,19 @@ abstract class Neo4jCypherIT {
           [
               CypherStrategy(
                   TOPIC_1,
-                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName"),
+                  "CREATE (p:Person) SET p.name = event.firstName, p.surname = event.lastName",
+              ),
               CypherStrategy(
-                  TOPIC_2, "CREATE (p:Place) SET p.code = event.code, p.name = event.name")])
+                  TOPIC_2,
+                  "CREATE (p:Place) SET p.code = event.code, p.name = event.name",
+              ),
+          ]
+  )
   @Test
   fun `should create nodes from multiple topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     SchemaBuilder.struct()
         .field("firstName", Schema.STRING_SCHEMA)
@@ -194,13 +214,16 @@ abstract class Neo4jCypherIT {
         .let { schema ->
           producer1.publish(
               valueSchema = schema,
-              value = Struct(schema).put("firstName", "john").put("lastName", "doe"))
+              value = Struct(schema).put("firstName", "john").put("lastName", "doe"),
+          )
           producer1.publish(
               valueSchema = schema,
-              value = Struct(schema).put("firstName", "mary").put("lastName", "doe"))
+              value = Struct(schema).put("firstName", "mary").put("lastName", "doe"),
+          )
           producer1.publish(
               valueSchema = schema,
-              value = Struct(schema).put("firstName", "joe").put("lastName", "brown"))
+              value = Struct(schema).put("firstName", "joe").put("lastName", "brown"),
+          )
         }
 
     SchemaBuilder.struct()
@@ -209,9 +232,13 @@ abstract class Neo4jCypherIT {
         .build()
         .let { schema ->
           producer2.publish(
-              valueSchema = schema, value = Struct(schema).put("code", 34).put("name", "istanbul"))
+              valueSchema = schema,
+              value = Struct(schema).put("code", 34).put("name", "istanbul"),
+          )
           producer2.publish(
-              valueSchema = schema, value = Struct(schema).put("code", 48).put("name", "mugla"))
+              valueSchema = schema,
+              value = Struct(schema).put("code", 48).put("name", "mugla"),
+          )
         }
 
     eventually(30.seconds) {
@@ -221,13 +248,16 @@ abstract class Neo4jCypherIT {
           listOf(
               mapOf(
                   "labels" to listOf("Person"),
-                  "properties" to mapOf("name" to "john", "surname" to "doe")),
+                  "properties" to mapOf("name" to "john", "surname" to "doe"),
+              ),
               mapOf(
                   "labels" to listOf("Person"),
-                  "properties" to mapOf("name" to "mary", "surname" to "doe")),
+                  "properties" to mapOf("name" to "mary", "surname" to "doe"),
+              ),
               mapOf(
                   "labels" to listOf("Person"),
-                  "properties" to mapOf("name" to "joe", "surname" to "brown")),
+                  "properties" to mapOf("name" to "joe", "surname" to "brown"),
+              ),
           )
 
       session.run("MATCH (n:Place) RETURN n", emptyMap()).list { r ->
@@ -236,17 +266,20 @@ abstract class Neo4jCypherIT {
           listOf(
               mapOf(
                   "labels" to listOf("Place"),
-                  "properties" to mapOf("code" to 34L, "name" to "istanbul")),
+                  "properties" to mapOf("code" to 34L, "name" to "istanbul"),
+              ),
               mapOf(
                   "labels" to listOf("Place"),
-                  "properties" to mapOf("code" to 48L, "name" to "mugla")),
+                  "properties" to mapOf("code" to 48L, "name" to "mugla"),
+              ),
           )
     }
   }
 
   @Neo4jSink(
       cypher = [CypherStrategy(TOPIC, "CREATE (p:Data) SET p.value = event")],
-      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE)
+      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
+  )
   @ParameterizedTest
   @ArgumentsSource(SimpleTypes::class)
   fun `should support connect simple types`(
@@ -254,7 +287,7 @@ abstract class Neo4jCypherIT {
       value: Any?,
       expected: Any?,
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(valueSchema = schema, value = value)
 
@@ -270,7 +303,7 @@ abstract class Neo4jCypherIT {
   object SimpleTypes : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Schema.INT8_SCHEMA, Byte.MAX_VALUE, Byte.MAX_VALUE),
@@ -282,7 +315,10 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.BOOLEAN_SCHEMA, true, true),
           Arguments.of(Schema.STRING_SCHEMA, "a string", "a string"),
           Arguments.of(
-              Schema.BYTES_SCHEMA, "a string".encodeToByteArray(), "a string".encodeToByteArray()),
+              Schema.BYTES_SCHEMA,
+              "a string".encodeToByteArray(),
+              "a string".encodeToByteArray(),
+          ),
           Arguments.of(Schema.OPTIONAL_INT8_SCHEMA, Byte.MAX_VALUE, Byte.MAX_VALUE),
           Arguments.of(Schema.OPTIONAL_INT16_SCHEMA, Short.MAX_VALUE, Short.MAX_VALUE),
           Arguments.of(Schema.OPTIONAL_INT32_SCHEMA, Int.MAX_VALUE, Int.MAX_VALUE),
@@ -294,14 +330,16 @@ abstract class Neo4jCypherIT {
           Arguments.of(
               Schema.OPTIONAL_BYTES_SCHEMA,
               "a string".encodeToByteArray(),
-              "a string".encodeToByteArray()),
+              "a string".encodeToByteArray(),
+          ),
       )
     }
   }
 
   @Neo4jSink(
       cypher = [CypherStrategy(TOPIC, "CREATE (p:Data) SET p.value = event")],
-      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE)
+      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
+  )
   @ParameterizedTest
   @ArgumentsSource(ConnectTypes::class)
   fun `should support connect types`(
@@ -309,7 +347,7 @@ abstract class Neo4jCypherIT {
       value: Any?,
       expected: Any?,
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(valueSchema = schema, value = value)
 
@@ -325,31 +363,40 @@ abstract class Neo4jCypherIT {
   object ConnectTypes : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Date.SCHEMA, DateSupport.date(2000, 1, 1), LocalDate.of(2000, 1, 1)),
           Arguments.of(
-              Time.SCHEMA, DateSupport.time(23, 59, 59, 999), LocalTime.of(23, 59, 59, 999000000)),
+              Time.SCHEMA,
+              DateSupport.time(23, 59, 59, 999),
+              LocalTime.of(23, 59, 59, 999000000),
+          ),
           Arguments.of(
               Timestamp.SCHEMA,
               DateSupport.timestamp(2000, 1, 1, 23, 59, 59, 999),
-              LocalDateTime.of(2000, 1, 1, 23, 59, 59, 999000000)),
+              LocalDateTime.of(2000, 1, 1, 23, 59, 59, 999000000),
+          ),
           Arguments.of(Decimal.schema(4), BigDecimal(BigInteger("1234567890"), 4), "123456.7890"),
           Arguments.of(
-              Decimal.schema(6), BigDecimal(BigInteger("1234567890000"), 6), "1234567.890000"))
+              Decimal.schema(6),
+              BigDecimal(BigInteger("1234567890000"), 6),
+              "1234567.890000",
+          ),
+      )
     }
   }
 
   @Neo4jSink(
       cypher = [CypherStrategy(TOPIC, "MATCH (n:Data) SET n.value = event")],
-      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE)
+      schemaControlValueCompatibility = SchemaCompatibilityMode.NONE,
+  )
   @ParameterizedTest
   @ArgumentsSource(OptionalSchemas::class)
   fun `should support null values`(
       schema: Schema,
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     session.run("MERGE (n:Data) SET n.value = 1").consume()
 
@@ -367,7 +414,7 @@ abstract class Neo4jCypherIT {
   object OptionalSchemas : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
@@ -380,7 +427,8 @@ abstract class Neo4jCypherIT {
           Arguments.of(Schema.OPTIONAL_BOOLEAN_SCHEMA),
           Arguments.of(Schema.OPTIONAL_STRING_SCHEMA),
           Arguments.of(Schema.OPTIONAL_BYTES_SCHEMA),
-          Arguments.of(PropertyType.schema))
+          Arguments.of(PropertyType.schema),
+      )
     }
   }
 
@@ -391,7 +439,10 @@ abstract class Neo4jCypherIT {
                   TOPIC,
                   """
                   CREATE (n:Data) SET n.value = __value
-                  """)])
+                  """,
+              )
+          ]
+  )
   @ParameterizedTest
   @ArgumentsSource(KnownTypes::class)
   fun `should support cypher types`(
@@ -400,7 +451,7 @@ abstract class Neo4jCypherIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) = runTest {
-    producer.publish(valueSchema = schema, value = DynamicTypes.toConnectValue(schema, value))
+    producer.publish(valueSchema = schema, value = PayloadMode.EXTENDED.value(schema, value))
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n.value", emptyMap()).single() }
         .get(0)
@@ -410,7 +461,7 @@ abstract class Neo4jCypherIT {
   object KnownTypes : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(PropertyType.schema, true),
@@ -431,15 +482,20 @@ abstract class Neo4jCypherIT {
           Arguments.of(PropertyType.schema, LocalTime.of(23, 59, 59, 999999999)),
           Arguments.of(
               PropertyType.schema,
-              ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
+              ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul")),
+          ),
           Arguments.of(
               PropertyType.schema,
-              ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul"))),
-          Arguments.of(
-              PropertyType.schema, OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2))),
+              ZonedDateTime.of(2019, 5, 1, 23, 59, 59, 999999999, ZoneId.of("Europe/Istanbul")),
+          ),
           Arguments.of(
               PropertyType.schema,
-              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30))),
+              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHours(2)),
+          ),
+          Arguments.of(
+              PropertyType.schema,
+              OffsetTime.of(23, 59, 59, 999999999, ZoneOffset.ofHoursMinutes(2, 30)),
+          ),
           Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
           Arguments.of(PropertyType.schema, Values.isoDuration(5, 4, 3, 2).asIsoDuration()),
           Arguments.of(PropertyType.schema, Values.point(7203, 2.3, 4.5).asPoint()),
@@ -458,7 +514,10 @@ abstract class Neo4jCypherIT {
                   """
                   UNWIND __value.array AS id
                   CREATE (n:Data) SET n.id = id
-                  """)])
+                  """,
+              )
+          ]
+  )
   @ParameterizedTest
   @ArgumentsSource(ArrayElementTypes::class)
   fun `should support arrays`(
@@ -485,26 +544,34 @@ abstract class Neo4jCypherIT {
   object ArrayElementTypes : ArgumentsProvider {
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(
-              Schema.INT8_SCHEMA, listOf(1.toByte(), 2.toByte(), 3.toByte()), listOf(1L, 2L, 3L)),
+              Schema.INT8_SCHEMA,
+              listOf(1.toByte(), 2.toByte(), 3.toByte()),
+              listOf(1L, 2L, 3L),
+          ),
           Arguments.of(
               Schema.INT16_SCHEMA,
               listOf(1.toShort(), 2.toShort(), 3.toShort()),
-              listOf(1L, 2L, 3L)),
+              listOf(1L, 2L, 3L),
+          ),
           Arguments.of(Schema.INT32_SCHEMA, (1..10).toList(), (1L..10L).toList()),
           Arguments.of(Schema.INT64_SCHEMA, (1L..10L).toList(), (1L..10L).toList()),
           Arguments.of(
               Schema.FLOAT32_SCHEMA,
               listOf(1.0f, 1.1f, 1.2f),
-              listOf(1.0f.toDouble(), 1.1f.toDouble(), 1.2f.toDouble())),
+              listOf(1.0f.toDouble(), 1.1f.toDouble(), 1.2f.toDouble()),
+          ),
           Arguments.of(
-              Schema.FLOAT64_SCHEMA, listOf(1.0, 1.1, 1.2, 1.3), listOf(1.0, 1.1, 1.2, 1.3)),
+              Schema.FLOAT64_SCHEMA,
+              listOf(1.0, 1.1, 1.2, 1.3),
+              listOf(1.0, 1.1, 1.2, 1.3),
+          ),
           Arguments.of(Schema.BOOLEAN_SCHEMA, listOf(true, false, true), listOf(true, false, true)),
-          Arguments.of(
-              Schema.STRING_SCHEMA, listOf("a", "b", "c", "d"), listOf("a", "b", "c", "d")))
+          Arguments.of(Schema.STRING_SCHEMA, listOf("a", "b", "c", "d"), listOf("a", "b", "c", "d")),
+      )
     }
   }
 
@@ -515,7 +582,10 @@ abstract class Neo4jCypherIT {
                   TOPIC,
                   """
                   CREATE (n:Data) SET n = __value.map
-                  """)])
+                  """,
+              )
+          ]
+  )
   @Test
   fun `should support simple maps`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -526,7 +596,8 @@ abstract class Neo4jCypherIT {
       SchemaBuilder.struct().field("map", map).build().let { wrapper ->
         producer.publish(
             valueSchema = wrapper,
-            value = Struct(wrapper).put("map", mapOf("firstName" to "john", "lastName" to "doe")))
+            value = Struct(wrapper).put("map", mapOf("firstName" to "john", "lastName" to "doe")),
+        )
       }
     }
 
@@ -543,7 +614,10 @@ abstract class Neo4jCypherIT {
                   TOPIC,
                   """
                   CREATE (n:Data) SET n = __value.map
-                  """)])
+                  """,
+              )
+          ]
+  )
   @Test
   fun `should support complex maps`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -554,13 +628,15 @@ abstract class Neo4jCypherIT {
             "firstName" to "john",
             "lastName" to "doe",
             "dob" to LocalDate.of(1999, 1, 1),
-            "siblings" to 3)
-    DynamicTypes.toConnectSchema(PayloadMode.EXTENDED, value).let { mapSchema ->
+            "siblings" to 3,
+        )
+    PayloadMode.EXTENDED.schema(value).let { mapSchema ->
       // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
       SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
         producer.publish(
             valueSchema = wrapper,
-            value = Struct(wrapper).put("map", DynamicTypes.toConnectValue(mapSchema, value)))
+            value = Struct(wrapper).put("map", PayloadMode.EXTENDED.value(mapSchema, value)),
+        )
       }
     }
 
@@ -587,7 +663,10 @@ abstract class Neo4jCypherIT {
                     WITH ulElem, ul
                     UNWIND ulElem.value AS liElem
                     CREATE (ul)-[:HAS_LI]->(li:ListItem{value: liElem.value, class: liElem.class})
-                  """)])
+                  """,
+              )
+          ]
+  )
   @Test
   fun `should support complex tree struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
@@ -635,20 +714,25 @@ abstract class Neo4jCypherIT {
                       Struct(LI_SCHEMA).put("value", "First UL - First Element"),
                       Struct(LI_SCHEMA)
                           .put("value", "First UL - Second Element")
-                          .put("class", listOf("ClassA", "ClassB"))))
+                          .put("class", listOf("ClassA", "ClassB")),
+                  ),
+              )
       val secondUL =
           Struct(UL_SCHEMA)
               .put(
                   "value",
                   listOf(
                       Struct(LI_SCHEMA).put("value", "Second UL - First Element"),
-                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element")))
+                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element"),
+                  ),
+              )
       val ulList = listOf(firstUL, secondUL)
 
       val pList =
           listOf(
               Struct(P_SCHEMA).put("value", "First Paragraph"),
-              Struct(P_SCHEMA).put("value", "Second Paragraph"))
+              Struct(P_SCHEMA).put("value", "Second Paragraph"),
+          )
 
       return Struct(BODY_SCHEMA).put("ul", ulList).put("p", pList)
     }
@@ -691,11 +775,14 @@ abstract class Neo4jCypherIT {
                     p.name = __value.firstName, p.surname = __value.lastName,
                     p.createdBy = __header.createdBy,
                     p.createdAt = __timestamp
-                  """)])
+                  """,
+              )
+          ]
+  )
   @Test
   fun `should get message value from default timestamp, header, key and value binding`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
@@ -706,7 +793,8 @@ abstract class Neo4jCypherIT {
         valueSchema = Schema.STRING_SCHEMA,
         value =
             ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")),
-        timestamp = timestamp)
+        timestamp = timestamp,
+    )
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -719,7 +807,8 @@ abstract class Neo4jCypherIT {
                   "name" to "john",
                   "surname" to "doe",
                   "createdBy" to "john-doe",
-                  "createdAt" to timestamp.atZone(ZoneOffset.UTC))
+                  "createdAt" to timestamp.atZone(ZoneOffset.UTC),
+              )
         }
   }
 
@@ -738,11 +827,14 @@ abstract class Neo4jCypherIT {
                   bindTimestampAs = "custom_timestamp",
                   bindHeaderAs = "custom_header",
                   bindKeyAs = "custom_key",
-                  bindValueAs = "custom_value")])
+                  bindValueAs = "custom_value",
+              )
+          ]
+  )
   @Test
   fun `should get message value from custom timestamp, header, key and value binding`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     val timestamp = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 
@@ -753,7 +845,8 @@ abstract class Neo4jCypherIT {
         valueSchema = Schema.STRING_SCHEMA,
         value =
             ObjectMapper().writeValueAsString(mapOf("firstName" to "john", "lastName" to "doe")),
-        timestamp = timestamp)
+        timestamp = timestamp,
+    )
 
     eventually(30.seconds) { session.run("MATCH (n:Person) RETURN n", emptyMap()).single() }
         .get("n")
@@ -766,7 +859,8 @@ abstract class Neo4jCypherIT {
                   "name" to "john",
                   "surname" to "doe",
                   "createdBy" to "john-doe",
-                  "createdAt" to timestamp.atZone(ZoneOffset.UTC))
+                  "createdAt" to timestamp.atZone(ZoneOffset.UTC),
+              )
         }
   }
 
@@ -774,7 +868,7 @@ abstract class Neo4jCypherIT {
   @Test
   fun `should not create any data when invalid cypher is provided`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      session: Session
+      session: Session,
   ) = runTest {
     producer.publish(valueSchema = Schema.STRING_SCHEMA, value = "a value")
 

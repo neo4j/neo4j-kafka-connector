@@ -16,7 +16,19 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-enum class PayloadMode {
-  EXTENDED,
-  COMPACT,
+import org.apache.kafka.connect.data.Schema
+import org.neo4j.connectors.kafka.data.ValueConverter
+import org.neo4j.connectors.kafka.data.converter.CompactValueConverter
+import org.neo4j.connectors.kafka.data.converter.CompatibilityValueConverter
+import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
+
+enum class PayloadMode(private val converter: ValueConverter) : ValueConverter {
+  EXTENDED(ExtendedValueConverter()),
+  COMPACT(CompactValueConverter()),
+  COMPATIBILITY(CompatibilityValueConverter());
+
+  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema =
+      converter.schema(value, optional, forceMapsAsStruct)
+
+  override fun value(schema: Schema, value: Any?): Any? = converter.value(schema, value)
 }

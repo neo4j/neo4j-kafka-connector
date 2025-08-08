@@ -50,7 +50,8 @@ class RelationshipPatternHandler(
         bindTimestampAs = bindTimestampAs,
         bindHeaderAs = bindHeaderAs,
         bindKeyAs = bindKeyAs,
-        bindValueAs = bindValueAs) {
+        bindValueAs = bindValueAs,
+    ) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   internal val query: String
 
@@ -64,7 +65,7 @@ class RelationshipPatternHandler(
       bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
       bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
       bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
-      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS
+      bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
   ) : this(
       topic = topic,
       pattern =
@@ -72,7 +73,8 @@ class RelationshipPatternHandler(
             is RelationshipPattern -> parsed
             else ->
                 throw IllegalArgumentException(
-                    "Invalid pattern provided for RelationshipPatternHandler: ${parsed.javaClass.name}")
+                    "Invalid pattern provided for RelationshipPatternHandler: ${parsed.javaClass.name}"
+                )
           },
       mergeNodeProperties = mergeNodeProperties,
       mergeRelationshipProperties = mergeRelationshipProperties,
@@ -81,7 +83,8 @@ class RelationshipPatternHandler(
       bindTimestampAs = bindTimestampAs,
       bindHeaderAs = bindHeaderAs,
       bindKeyAs = bindKeyAs,
-      bindValueAs = bindValueAs)
+      bindValueAs = bindValueAs,
+  )
 
   init {
     query = buildStatement()
@@ -104,7 +107,13 @@ class RelationshipPatternHandler(
           val used = mutableSetOf<String>()
           val startKeys =
               extractKeys(
-                  pattern.start, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
+                  pattern.start,
+                  flattened,
+                  isTombstoneMessage,
+                  used,
+                  bindValueAs,
+                  bindKeyAs,
+              )
           val endKeys =
               extractKeys(pattern.end, flattened, isTombstoneMessage, used, bindValueAs, bindKeyAs)
           val keys =
@@ -116,7 +125,9 @@ class RelationshipPatternHandler(
                     mapOf(
                         START to mapOf(KEYS to startKeys),
                         END to mapOf(KEYS to endKeys),
-                        KEYS to keys))
+                        KEYS to keys,
+                    ),
+                )
               } else {
                 val startProperties = computeProperties(pattern.start, flattened, used)
                 val endProperties = computeProperties(pattern.end, flattened, used)
@@ -126,7 +137,9 @@ class RelationshipPatternHandler(
                         START to mapOf(KEYS to startKeys, PROPERTIES to startProperties),
                         END to mapOf(KEYS to endKeys, PROPERTIES to endProperties),
                         KEYS to keys,
-                        PROPERTIES to computeProperties(pattern, flattened, used)))
+                        PROPERTIES to computeProperties(pattern, flattened, used),
+                    ),
+                )
               }
 
           logger.trace("message '{}' mapped to: '{}'", it, mapped)
@@ -140,7 +153,9 @@ class RelationshipPatternHandler(
                   null,
                   null,
                   it.map { data -> data.message },
-                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList }))))
+                  Query(query, mapOf(EVENTS to it.map { data -> data.eventList })),
+              )
+          )
         }
         .onEach { logger.trace("mapped messages: '{}'", it) }
         .toList()
@@ -182,7 +197,7 @@ class RelationshipPatternHandler(
             .withProperties(
                 pattern.start.keyProperties.associate {
                   it.to to NAME_EVENT.property(START, KEYS).property(it.to)
-                },
+                }
             )
             .named(START)
     val endNode =
@@ -190,7 +205,7 @@ class RelationshipPatternHandler(
             .withProperties(
                 pattern.end.keyProperties.associate {
                   it.to to NAME_EVENT.property(END, KEYS).property(it.to)
-                },
+                }
             )
             .named(END)
     val relationship =
@@ -199,7 +214,8 @@ class RelationshipPatternHandler(
             .withProperties(
                 pattern.keyProperties.associate {
                   it.to to NAME_EVENT.property(KEYS).property(it.to)
-                })
+                }
+            )
             .named("relationship")
 
     return renderer.render(
@@ -210,18 +226,17 @@ class RelationshipPatternHandler(
                     .call(buildDeleteStatement(relationship, deleteOperation))
                     .returning(NAME_CREATED, NAME_DELETED)
                     .build(),
-                NAME_EVENT)
+                NAME_EVENT,
+            )
             .returning(
                 Cypher.raw("sum(${'$'}E)", NAME_CREATED).`as`(NAME_CREATED),
-                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED))
-            .build(),
+                Cypher.raw("sum(${'$'}E)", NAME_DELETED).`as`(NAME_DELETED),
+            )
+            .build()
     )
   }
 
-  private fun buildDeleteStatement(
-      relationship: Relationship,
-      deleteOperation: Literal<String>,
-  ) =
+  private fun buildDeleteStatement(relationship: Relationship, deleteOperation: Literal<String>) =
       Cypher.with(NAME_EVENT)
           .with(NAME_EVENT)
           .where(Cypher.valueAt(NAME_EVENT, 0).eq(deleteOperation))
@@ -229,7 +244,7 @@ class RelationshipPatternHandler(
           .match(relationship)
           .delete(relationship)
           .returning(
-              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_DELETED),
+              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_DELETED)
           )
           .build()
 
@@ -246,56 +261,32 @@ class RelationshipPatternHandler(
           .merge(startNode)
           .let {
             if (mergeNodeProperties) {
-              it.mutate(
-                  startNode.asExpression(),
-                  Cypher.property(NAME_EVENT, START, PROPERTIES),
-              )
+              it.mutate(startNode.asExpression(), Cypher.property(NAME_EVENT, START, PROPERTIES))
             } else {
-              it.set(
-                      startNode.asExpression(),
-                      Cypher.property(NAME_EVENT, START, PROPERTIES),
-                  )
-                  .mutate(
-                      startNode.asExpression(),
-                      Cypher.property(NAME_EVENT, START, KEYS),
-                  )
+              it.set(startNode.asExpression(), Cypher.property(NAME_EVENT, START, PROPERTIES))
+                  .mutate(startNode.asExpression(), Cypher.property(NAME_EVENT, START, KEYS))
             }
           }
           .merge(endNode)
           .let {
             if (mergeNodeProperties) {
-              it.mutate(
-                  endNode.asExpression(),
-                  Cypher.property(NAME_EVENT, END, PROPERTIES),
-              )
+              it.mutate(endNode.asExpression(), Cypher.property(NAME_EVENT, END, PROPERTIES))
             } else {
-              it.set(
-                      endNode.asExpression(),
-                      Cypher.property(NAME_EVENT, END, PROPERTIES),
-                  )
-                  .mutate(
-                      endNode.asExpression(),
-                      Cypher.property(NAME_EVENT, END, KEYS),
-                  )
+              it.set(endNode.asExpression(), Cypher.property(NAME_EVENT, END, PROPERTIES))
+                  .mutate(endNode.asExpression(), Cypher.property(NAME_EVENT, END, KEYS))
             }
           }
           .merge(relationship)
           .let {
             if (mergeRelationshipProperties) {
-              it.mutate(
-                  relationship.asExpression(),
-                  Cypher.property(NAME_EVENT, PROPERTIES),
-              )
+              it.mutate(relationship.asExpression(), Cypher.property(NAME_EVENT, PROPERTIES))
             } else {
-              it.set(
-                      relationship.asExpression(),
-                      Cypher.property(NAME_EVENT, PROPERTIES),
-                  )
+              it.set(relationship.asExpression(), Cypher.property(NAME_EVENT, PROPERTIES))
                   .mutate(relationship.asExpression(), Cypher.property(NAME_EVENT, KEYS))
             }
           }
           .returning(
-              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_CREATED),
+              Cypher.raw("count(${'$'}E)", relationship.requiredSymbolicName).`as`(NAME_CREATED)
           )
           .build()
 }

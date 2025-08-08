@@ -26,7 +26,6 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
-import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
 import org.slf4j.Logger
@@ -72,7 +71,9 @@ class Neo4jQueryTask : SourceTask() {
                     .rxSession(config.sessionConfig())
                     .readTransaction(
                         { it.run(config.query, mapOf("lastCheck" to offset.get())).records() },
-                        config.txConfig()))
+                        config.txConfig(),
+                    )
+            )
             .take(config.batchSize.toLong())
             .asFlow()
             .map { build(it) }
@@ -96,12 +97,12 @@ class Neo4jQueryTask : SourceTask() {
   private fun build(record: Record): SourceRecord {
     val recordAsMap = record.asMap()
     val schema =
-        DynamicTypes.toConnectSchema(
-            config.payloadMode,
+        config.payloadMode.schema(
             recordAsMap,
             optional = true,
-            forceMapsAsStruct = config.forceMapsAsStruct)
-    val value = DynamicTypes.toConnectValue(schema, recordAsMap)
+            forceMapsAsStruct = config.forceMapsAsStruct,
+        )
+    val value = config.payloadMode.value(schema, recordAsMap)
 
     return SourceRecord(
         config.partition,
@@ -110,20 +111,29 @@ class Neo4jQueryTask : SourceTask() {
             "value" to
                 (record.get(config.queryStreamingProperty).asObject() as? Long
                     ?: throw InvalidDataException(
-                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${record.get(config.queryStreamingProperty)}', expected a long value)."))),
+                        "Returned record does not contain a valid field ${config.queryStreamingProperty} (record.get returned '${
+                        record.get(
+                            config.queryStreamingProperty
+                        )
+                      }', expected a long value)."
+                    )),
+        ),
         config.topic,
         null,
         schema,
         value,
         schema,
-        value)
+        value,
+    )
   }
 
   private fun resumeFrom(config: SourceConfiguration): Long {
     val offset = context.offsetStorageReader().offset(config.partition) ?: emptyMap()
-    if (!config.ignoreStoredOffset &&
-        offset["value"] is Long &&
-        offset["property"] == config.queryStreamingProperty) {
+    if (
+        !config.ignoreStoredOffset &&
+            offset["value"] is Long &&
+            offset["property"] == config.queryStreamingProperty
+    ) {
       log.debug("previously stored offset is {}", offset["value"])
       return offset["value"] as Long
     }
@@ -140,7 +150,8 @@ class Neo4jQueryTask : SourceTask() {
         config.startFrom,
         SourceConfiguration.IGNORE_STORED_OFFSET,
         config.ignoreStoredOffset,
-        value)
+        value,
+    )
     return value
   }
 }

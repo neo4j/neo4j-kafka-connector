@@ -60,14 +60,14 @@ data class StreamsPointCartesian(
     override val crs: String,
     val x: Double,
     val y: Double,
-    val z: Double? = null
+    val z: Double? = null,
 ) : StreamsPoint()
 
 data class StreamsPointWgs(
     override val crs: String,
     val latitude: Double,
     val longitude: Double,
-    val height: Double? = null
+    val height: Double? = null,
 ) : StreamsPoint()
 
 fun PointValue.toStreamsPoint(): StreamsPoint {
@@ -112,7 +112,7 @@ class TemporalAccessorSerializer : JsonSerializer<TemporalAccessor>() {
   override fun serialize(
       value: TemporalAccessor?,
       jgen: JsonGenerator,
-      provider: SerializerProvider
+      provider: SerializerProvider,
   ) {
     value?.let { jgen.writeString(it.toString()) }
   }
@@ -150,11 +150,13 @@ class DriverRelationshipSerializer : JsonSerializer<Relationship>() {
 
 class StreamsTransactionRelationshipEventDeserializer :
     StreamsTransactionEventDeserializer<
-        StreamsTransactionRelationshipEvent, RelationshipPayload>() {
+        StreamsTransactionRelationshipEvent,
+        RelationshipPayload,
+    >() {
   override fun createEvent(
       meta: Meta,
       payload: RelationshipPayload,
-      schema: Schema
+      schema: Schema,
   ): StreamsTransactionRelationshipEvent {
     return StreamsTransactionRelationshipEvent(meta, payload, schema)
   }
@@ -166,16 +168,17 @@ class StreamsTransactionRelationshipEventDeserializer :
   override fun fillPayload(
       payload: RelationshipPayload,
       beforeProps: Map<String, Any>?,
-      afterProps: Map<String, Any>?
+      afterProps: Map<String, Any>?,
   ): RelationshipPayload {
     return payload.copy(
         before = payload.before?.copy(properties = beforeProps),
-        after = payload.after?.copy(properties = afterProps))
+        after = payload.after?.copy(properties = afterProps),
+    )
   }
 
   override fun deserialize(
       parser: JsonParser,
-      context: DeserializationContext
+      context: DeserializationContext,
   ): StreamsTransactionRelationshipEvent {
     val deserialized = super.deserialize(parser, context)
     if (deserialized.payload.type == EntityType.node) {
@@ -190,7 +193,7 @@ class StreamsTransactionNodeEventDeserializer :
   override fun createEvent(
       meta: Meta,
       payload: NodePayload,
-      schema: Schema
+      schema: Schema,
   ): StreamsTransactionNodeEvent {
     return StreamsTransactionNodeEvent(meta, payload, schema)
   }
@@ -202,16 +205,17 @@ class StreamsTransactionNodeEventDeserializer :
   override fun fillPayload(
       payload: NodePayload,
       beforeProps: Map<String, Any>?,
-      afterProps: Map<String, Any>?
+      afterProps: Map<String, Any>?,
   ): NodePayload {
     return payload.copy(
         before = payload.before?.copy(properties = beforeProps),
-        after = payload.after?.copy(properties = afterProps))
+        after = payload.after?.copy(properties = afterProps),
+    )
   }
 
   override fun deserialize(
       parser: JsonParser,
-      context: DeserializationContext
+      context: DeserializationContext,
   ): StreamsTransactionNodeEvent {
     val deserialized = super.deserialize(parser, context)
     if (deserialized.payload.type == EntityType.relationship) {
@@ -231,7 +235,7 @@ abstract class StreamsTransactionEventDeserializer<EVENT, PAYLOAD : Payload> :
   abstract fun fillPayload(
       payload: PAYLOAD,
       beforeProps: Map<String, Any>?,
-      afterProps: Map<String, Any>?
+      afterProps: Map<String, Any>?,
   ): PAYLOAD
 
   @Throws(IOException::class, JsonProcessingException::class)
@@ -256,24 +260,30 @@ abstract class StreamsTransactionEventDeserializer<EVENT, PAYLOAD : Payload> :
           when (pointMap["crs"]) {
             "cartesian" ->
                 Values.point(
-                    7203, pointMap["x"].toString().toDouble(), pointMap["y"].toString().toDouble())
+                    7203,
+                    pointMap["x"].toString().toDouble(),
+                    pointMap["y"].toString().toDouble(),
+                )
             "cartesian-3d" ->
                 Values.point(
                     9157,
                     pointMap["x"].toString().toDouble(),
                     pointMap["y"].toString().toDouble(),
-                    pointMap["z"].toString().toDouble())
+                    pointMap["z"].toString().toDouble(),
+                )
             "wgs-84" ->
                 Values.point(
                     4326,
                     pointMap["longitude"].toString().toDouble(),
-                    pointMap["latitude"].toString().toDouble())
+                    pointMap["latitude"].toString().toDouble(),
+                )
             "wgs-84-3d" ->
                 Values.point(
                     4979,
                     pointMap["longitude"].toString().toDouble(),
                     pointMap["latitude"].toString().toDouble(),
-                    pointMap["height"].toString().toDouble())
+                    pointMap["height"].toString().toDouble(),
+                )
             else -> throw IllegalArgumentException("CRS value: ${pointMap["crs"]} not found")
           }
         } else {
@@ -296,9 +306,12 @@ object JSONUtils {
     module.addSerializer(Relationship::class.java, DriverRelationshipSerializer())
     module.addDeserializer(
         StreamsTransactionRelationshipEvent::class.java,
-        StreamsTransactionRelationshipEventDeserializer())
+        StreamsTransactionRelationshipEventDeserializer(),
+    )
     module.addDeserializer(
-        StreamsTransactionNodeEvent::class.java, StreamsTransactionNodeEventDeserializer())
+        StreamsTransactionNodeEvent::class.java,
+        StreamsTransactionNodeEventDeserializer(),
+    )
     module.addSerializer(TemporalAccessor::class.java, TemporalAccessorSerializer())
     OBJECT_MAPPER.registerModule(module)
     OBJECT_MAPPER.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
@@ -319,7 +332,7 @@ object JSONUtils {
   inline fun <reified T> readValue(
       value: Any,
       stringWhenFailure: Boolean = false,
-      objectMapper: ObjectMapper = getObjectMapper()
+      objectMapper: ObjectMapper = getObjectMapper(),
   ): T {
     return try {
       when (value) {
@@ -341,7 +354,7 @@ object JSONUtils {
 
   inline fun <reified T> convertValue(
       value: Any,
-      objectMapper: ObjectMapper = getObjectMapper()
+      objectMapper: ObjectMapper = getObjectMapper(),
   ): T {
     return objectMapper.convertValue(value)
   }
@@ -353,10 +366,14 @@ object JSONUtils {
             is String,
             is ByteArray ->
                 readValue<StreamsTransactionNodeEvent>(
-                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+                    value = obj,
+                    objectMapper = STRICT_OBJECT_MAPPER,
+                )
             else ->
                 convertValue<StreamsTransactionNodeEvent>(
-                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+                    value = obj,
+                    objectMapper = STRICT_OBJECT_MAPPER,
+                )
           }
       evt.toStreamsTransactionEvent()
     } catch (e: Exception) {
@@ -365,10 +382,14 @@ object JSONUtils {
             is String,
             is ByteArray ->
                 readValue<StreamsTransactionRelationshipEvent>(
-                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+                    value = obj,
+                    objectMapper = STRICT_OBJECT_MAPPER,
+                )
             else ->
                 convertValue<StreamsTransactionRelationshipEvent>(
-                    value = obj, objectMapper = STRICT_OBJECT_MAPPER)
+                    value = obj,
+                    objectMapper = STRICT_OBJECT_MAPPER,
+                )
           }
       evt.toStreamsTransactionEvent()
     }

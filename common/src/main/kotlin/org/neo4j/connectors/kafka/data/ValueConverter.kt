@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.testing.kafka
+package org.neo4j.connectors.kafka.data
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.neo4j.connectors.kafka.testing.format.KafkaConverter
+import org.apache.kafka.connect.data.Schema
 
-data class ConvertingKafkaConsumer(
-    val keyConverter: KafkaConverter,
-    val valueConverter: KafkaConverter,
-    val schemaRegistryUrlProvider: () -> String,
-    val kafkaConsumer: KafkaConsumer<ByteArray, ByteArray>,
-)
+interface ValueConverter {
 
-data class GenericRecord<K, V>(val key: K?, val value: V, val raw: ConsumerRecord<*, *>)
+  fun schema(value: Any?, optional: Boolean = false, forceMapsAsStruct: Boolean = false): Schema
+
+  fun value(schema: Schema, value: Any?): Any?
+}

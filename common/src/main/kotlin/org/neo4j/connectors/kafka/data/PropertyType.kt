@@ -75,7 +75,8 @@ object PropertyType {
           ZONED_DATE_TIME,
           OFFSET_TIME,
           DURATION,
-          POINT)
+          POINT,
+      )
   private val LIST_TYPE_FIELDS =
       listOf(
           BOOLEAN_LIST,
@@ -88,7 +89,8 @@ object PropertyType {
           ZONED_DATE_TIME_LIST,
           OFFSET_TIME_LIST,
           DURATION_LIST,
-          POINT_LIST)
+          POINT_LIST,
+      )
 
   internal val durationSchema: Schema =
       SchemaBuilder(Schema.Type.STRUCT)
@@ -198,7 +200,8 @@ object PropertyType {
           return asList(value, elementType)
         }
         throw IllegalArgumentException(
-            "collections with multiple element types are not supported: ${elementTypes.joinToString { it?.java?.name ?: "null" }}")
+            "collections with multiple element types are not supported: ${elementTypes.joinToString { it?.java?.name ?: "null" }}"
+        )
       }
       else -> throw IllegalArgumentException("unsupported property type: ${value.javaClass.name}")
     }
@@ -217,27 +220,33 @@ object PropertyType {
       LocalDate::class ->
           getPropertyStruct(
               LOCAL_DATE_LIST,
-              (value as List<LocalDate>).map { DateTimeFormatter.ISO_DATE.format(it) })
+              (value as List<LocalDate>).map { DateTimeFormatter.ISO_DATE.format(it) },
+          )
       LocalDateTime::class ->
           getPropertyStruct(
               LOCAL_DATE_TIME_LIST,
-              (value as List<LocalDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+              (value as List<LocalDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) },
+          )
       LocalTime::class ->
           getPropertyStruct(
               LOCAL_TIME_LIST,
-              (value as List<LocalTime>).map { DateTimeFormatter.ISO_TIME.format(it) })
+              (value as List<LocalTime>).map { DateTimeFormatter.ISO_TIME.format(it) },
+          )
       OffsetDateTime::class ->
           getPropertyStruct(
               ZONED_DATE_TIME_LIST,
-              (value as List<OffsetDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+              (value as List<OffsetDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) },
+          )
       ZonedDateTime::class ->
           getPropertyStruct(
               ZONED_DATE_TIME_LIST,
-              (value as List<ZonedDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) })
+              (value as List<ZonedDateTime>).map { DateTimeFormatter.ISO_DATE_TIME.format(it) },
+          )
       OffsetTime::class ->
           getPropertyStruct(
               OFFSET_TIME_LIST,
-              (value as List<OffsetTime>).map { DateTimeFormatter.ISO_TIME.format(it) })
+              (value as List<OffsetTime>).map { DateTimeFormatter.ISO_TIME.format(it) },
+          )
       else -> {
         if (IsoDuration::class.java.isAssignableFrom(componentType.java)) {
           getPropertyStruct(
@@ -250,7 +259,8 @@ object PropertyType {
                         .put(DAYS, it.days())
                         .put(SECONDS, it.seconds())
                         .put(NANOS, it.nanoseconds())
-                  })
+                  },
+          )
         } else if (Point::class.java.isAssignableFrom(componentType.java)) {
           getPropertyStruct(
               POINT_LIST,
@@ -267,10 +277,12 @@ object PropertyType {
                             it.put(Z, point.z())
                           }
                         }
-                  })
+                  },
+          )
         } else {
           throw IllegalArgumentException(
-              "unsupported array type: array of ${componentType.java.name}")
+              "unsupported array type: array of ${componentType.java.name}"
+          )
         }
       }
     }
@@ -291,7 +303,8 @@ object PropertyType {
               is ByteBuffer -> bytes.array()
               else ->
                   throw IllegalArgumentException(
-                      "unsupported BYTES value: ${bytes?.javaClass?.name}")
+                      "unsupported BYTES value: ${bytes?.javaClass?.name}"
+                  )
             }
           }
           LOCAL_DATE -> parseLocalDate(it.getWithoutDefault(LOCAL_DATE) as String)
@@ -303,7 +316,8 @@ object PropertyType {
           POINT -> toPoint(it.getWithoutDefault(POINT) as Struct)
           else ->
               throw IllegalArgumentException(
-                  "unsupported simple type: $fieldType: ${it.getWithoutDefault(fieldType)?.javaClass?.name}")
+                  "unsupported simple type: $fieldType: ${it.getWithoutDefault(fieldType)?.javaClass?.name}"
+              )
         }
       }
 
@@ -324,7 +338,8 @@ object PropertyType {
             POINT_LIST -> (fieldValue as List<Struct>).map { s -> toPoint(s) }
             else ->
                 throw IllegalArgumentException(
-                    "unsupported list type: ${fieldType}: ${fieldValue.javaClass.name}")
+                    "unsupported list type: ${fieldType}: ${fieldValue.javaClass.name}"
+                )
           }
         }
       }
@@ -376,12 +391,7 @@ object PropertyType {
       when (val dimension = s.getInt8(DIMENSION)) {
         TWO_D -> Values.point(s.getInt32(SR_ID), s.getFloat64(X), s.getFloat64(Y))
         THREE_D ->
-            Values.point(
-                s.getInt32(SR_ID),
-                s.getFloat64(X),
-                s.getFloat64(Y),
-                s.getFloat64(Z),
-            )
+            Values.point(s.getInt32(SR_ID), s.getFloat64(X), s.getFloat64(Y), s.getFloat64(Z))
         else -> throw IllegalArgumentException("unsupported dimension value ${dimension}")
       }.asPoint()
 }

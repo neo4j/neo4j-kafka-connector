@@ -43,7 +43,8 @@ class CypherHandlerTest : HandlerTest() {
             "",
             "",
             "",
-            true)
+            true,
+        )
 
     val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}")
     handler.handle(listOf(sinkMessage)) shouldBe
@@ -64,7 +65,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -79,7 +87,8 @@ class CypherHandlerTest : HandlerTest() {
             "",
             "",
             "__value",
-            true)
+            true,
+        )
 
     val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}")
     handler.handle(listOf(sinkMessage)) shouldBe
@@ -100,7 +109,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -115,7 +131,8 @@ class CypherHandlerTest : HandlerTest() {
             "",
             "__key",
             "__value",
-            true)
+            true,
+        )
 
     val sinkMessage = newMessage(Schema.STRING_SCHEMA, "{}", Schema.INT64_SCHEMA, 32L)
     handler.handle(listOf(sinkMessage)) shouldBe
@@ -136,7 +153,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to emptyMap<String, Any>(),
                                         "key" to 32L,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -151,7 +175,8 @@ class CypherHandlerTest : HandlerTest() {
             "__header",
             "__key",
             "__value",
-            true)
+            true,
+        )
 
     val sinkMessage =
         newMessage(
@@ -159,7 +184,8 @@ class CypherHandlerTest : HandlerTest() {
             "{}",
             Schema.INT64_SCHEMA,
             32L,
-            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))),
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -178,7 +204,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("age" to 24),
                                         "key" to 32L,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -193,7 +226,8 @@ class CypherHandlerTest : HandlerTest() {
             "__header",
             "__key",
             "__value",
-            false)
+            false,
+        )
 
     val sinkMessage =
         newMessage(
@@ -201,7 +235,8 @@ class CypherHandlerTest : HandlerTest() {
             "{}",
             Schema.INT64_SCHEMA,
             32L,
-            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))),
+        )
 
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
@@ -221,7 +256,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("age" to 24),
                                         "key" to 32L,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -236,7 +278,8 @@ class CypherHandlerTest : HandlerTest() {
             "__header",
             "__key",
             "__value",
-            false)
+            false,
+        )
 
     val sinkMessage =
         newMessage(
@@ -244,7 +287,8 @@ class CypherHandlerTest : HandlerTest() {
             "{}",
             Schema.INT64_SCHEMA,
             32L,
-            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))))
+            listOf(ConnectHeader("age", SchemaAndValue(Schema.INT32_SCHEMA, 24))),
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -263,7 +307,14 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("age" to 24),
                                         "key" to 32L,
-                                        "value" to emptyMap<String, Any>())))))))
+                                        "value" to emptyMap<String, Any>(),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -278,7 +329,8 @@ class CypherHandlerTest : HandlerTest() {
           "",
           "",
           "",
-          false)
+          false,
+      )
     } shouldHaveMessage
         "no effective accessors specified for binding the message into cypher template for topic 'my-topic'"
   }
@@ -295,7 +347,8 @@ class CypherHandlerTest : HandlerTest() {
             "__header",
             "__key",
             "__value",
-            false)
+            false,
+        )
 
     val messages = (1..13).map { newMessage(Schema.INT64_SCHEMA, it.toLong()) }
     val result = handler.handle(messages)
@@ -317,8 +370,13 @@ class CypherHandlerTest : HandlerTest() {
                                           Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
-                                      "value" to seq)
-                                })))),
+                                      "value" to seq,
+                                  )
+                                }
+                        ),
+                    ),
+                )
+            ),
             listOf(
                 ChangeQuery(
                     null,
@@ -334,8 +392,13 @@ class CypherHandlerTest : HandlerTest() {
                                           Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
-                                      "value" to seq)
-                                })))),
+                                      "value" to seq,
+                                  )
+                                }
+                        ),
+                    ),
+                )
+            ),
             listOf(
                 ChangeQuery(
                     null,
@@ -351,8 +414,14 @@ class CypherHandlerTest : HandlerTest() {
                                           Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                                       "header" to emptyMap<String, Any>(),
                                       "key" to null,
-                                      "value" to seq)
-                                })))))
+                                      "value" to seq,
+                                  )
+                                }
+                        ),
+                    ),
+                )
+            ),
+        )
   }
 
   @Test
@@ -380,10 +449,14 @@ class CypherHandlerTest : HandlerTest() {
                                         "header" to emptyMap<String, Any>(),
                                         "key" to null,
                                         "value" to
-                                            mapOf(
-                                                "x" to 123,
-                                                "y" to listOf(1, 2, 3),
-                                                "z" to true))))))))
+                                            mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -412,7 +485,14 @@ class CypherHandlerTest : HandlerTest() {
                                         "header" to emptyMap<String, Any>(),
                                         "key" to
                                             mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true),
-                                        "value" to null)))))))
+                                        "value" to null,
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -431,7 +511,12 @@ class CypherHandlerTest : HandlerTest() {
                 ConnectHeader(
                     "test",
                     SchemaAndValue(
-                        Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}"))))
+                        Schema.STRING_SCHEMA,
+                        "{\"x\": 123, \"y\": [1,2,3], \"z\": true}",
+                    ),
+                ),
+            ),
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -455,9 +540,18 @@ class CypherHandlerTest : HandlerTest() {
                                                     mapOf(
                                                         "x" to 123,
                                                         "y" to listOf(1, 2, 3),
-                                                        "z" to true)),
+                                                        "z" to true,
+                                                    ),
+                                            ),
                                         "key" to 32L,
-                                        "value" to null)))))))
+                                        "value" to null,
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 
   @Test
@@ -471,7 +565,8 @@ class CypherHandlerTest : HandlerTest() {
             "{]",
             Schema.BYTES_SCHEMA,
             "{a: b}".toByteArray(),
-            listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b"))))
+            listOf(ConnectHeader("test", SchemaAndValue(Schema.STRING_SCHEMA, "b"))),
+        )
     handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
@@ -490,6 +585,13 @@ class CypherHandlerTest : HandlerTest() {
                                                 .atOffset(ZoneOffset.UTC),
                                         "header" to mapOf<String, Any>("test" to "b"),
                                         "key" to "{a: b}".toByteArray(),
-                                        "value" to "{]")))))))
+                                        "value" to "{]",
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        )
   }
 }

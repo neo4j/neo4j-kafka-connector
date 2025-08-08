@@ -37,6 +37,7 @@ import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.AnnotationSupport
 import org.neo4j.connectors.kafka.testing.AnnotationValueResolver
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -78,7 +79,8 @@ internal class Neo4jSourceExtension(
               Session::class.java to ::resolveSession,
               ConvertingKafkaConsumer::class.java to ::resolveTopicConsumer,
               Neo4j::class.java to ::resolveNeo4j,
-          ),
+              PayloadMode::class.java to ::resolvePayloadMode,
+          )
       )
 
   private lateinit var sourceAnnotation: Neo4jSource
@@ -114,13 +116,7 @@ internal class Neo4jSourceExtension(
   private val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
 
   private val mandatorySettings =
-      listOf(
-          brokerExternalHost,
-          schemaRegistryUri,
-          neo4jUri,
-          neo4jUser,
-          neo4jPassword,
-      )
+      listOf(brokerExternalHost, schemaRegistryUri, neo4jUri, neo4jUser, neo4jPassword)
 
   private val topicRegistry = TopicRegistry()
 
@@ -134,7 +130,8 @@ internal class Neo4jSourceExtension(
           schemaControlRegistryExternalUriProvider = {
             schemaControlRegistryExternalUri.resolve(sourceAnnotation)
           },
-          consumerFactory)
+          consumerFactory,
+      )
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
@@ -149,7 +146,7 @@ internal class Neo4jSourceExtension(
     }
     if (errors.isNotEmpty()) {
       throw ExtensionConfigurationException(
-          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}",
+          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}"
       )
     }
 
@@ -160,7 +157,7 @@ internal class Neo4jSourceExtension(
         var version = Neo4jDetector.detect(it)
         if (!canIUse(Dbms.changeDataCapture()).withNeo4j(version)) {
           return ConditionEvaluationResult.disabled(
-              "CDC is not available with this version of Neo4j: $version",
+              "CDC is not available with this version of Neo4j: $version"
           )
         }
       }
@@ -195,7 +192,8 @@ internal class Neo4jSourceExtension(
             cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
             cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
             cdcValueSerializations = sourceAnnotation.cdc.valueSerializationsAsMap(),
-            payloadMode = keyValueConverterResolver.resolvePayloadMode(context))
+            payloadMode = keyValueConverterResolver.resolvePayloadMode(context),
+        )
 
     source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
     log.info("registered source connector with name {}", source.name)
@@ -230,7 +228,7 @@ internal class Neo4jSourceExtension(
 
   private fun resolveSession(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     ensureDatabase(extensionContext)
     driver = createDriver()
@@ -259,7 +257,9 @@ internal class Neo4jSourceExtension(
     createDriver().use { driver ->
       driver.session(SessionConfig.forDatabase("system")).use { session ->
         session.createDatabase(
-            neo4jDatabase, withCdc = sourceAnnotation.strategy == SourceStrategy.CDC)
+            neo4jDatabase,
+            withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
+        )
       }
 
       // want to make sure that CDC is functional before running the test
@@ -290,7 +290,7 @@ internal class Neo4jSourceExtension(
 
   private fun resolveTopicConsumer(
       parameterContext: ParameterContext?,
-      context: ExtensionContext?
+      context: ExtensionContext?,
   ): ConvertingKafkaConsumer {
     return consumerResolver.resolveGenericConsumer(parameterContext, context)
   }
@@ -300,6 +300,13 @@ internal class Neo4jSourceExtension(
       driver = createDriver()
     }
     return Neo4jDetector.detect(driver)
+  }
+
+  private fun resolvePayloadMode(
+      parameterContext: ParameterContext?,
+      context: ExtensionContext?,
+  ): PayloadMode {
+    return keyValueConverterResolver.resolvePayloadMode(context)
   }
 
   private fun CdcSource.paramAsMap(
@@ -347,14 +354,14 @@ internal class Neo4jSourceExtension(
 
   override fun supportsParameter(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Boolean {
     return paramResolvers.supportsParameter(parameterContext, extensionContext)
   }
 
   override fun resolveParameter(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     return paramResolvers.resolveParameter(parameterContext, extensionContext)
   }

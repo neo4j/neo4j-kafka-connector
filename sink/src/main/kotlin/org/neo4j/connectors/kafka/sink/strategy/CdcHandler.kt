@@ -68,8 +68,10 @@ abstract class CdcHandler : SinkStrategyHandler {
                         }
                     else ->
                         throw IllegalArgumentException("unsupported event type ${event.eventType}")
-                  })
-            })
+                  },
+              )
+            },
+        )
         .onEach { logger.trace("mapped messages: {} to {}", it.key, it.value) }
         .values
   }
@@ -98,7 +100,8 @@ internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
       is Struct -> value.toChangeEvent()
       else ->
           throw IllegalArgumentException(
-              "unexpected message value type ${value?.javaClass?.name} in $message")
+              "unexpected message value type ${value?.javaClass?.name} in $message"
+          )
     }
 
 internal fun parseStreamsChangeEvent(message: SinkMessage): ChangeEvent {

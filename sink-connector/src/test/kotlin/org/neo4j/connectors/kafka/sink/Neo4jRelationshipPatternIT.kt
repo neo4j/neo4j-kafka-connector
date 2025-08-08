@@ -37,7 +37,7 @@ import org.apache.kafka.connect.data.Time
 import org.apache.kafka.connect.data.Timestamp
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.connectors.kafka.data.PropertyType.schema
 import org.neo4j.connectors.kafka.testing.DateSupport
@@ -68,12 +68,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!userId})-[:BOUGHT]->(:Product{!productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship from struct`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
@@ -93,12 +96,16 @@ abstract class Neo4jRelationshipPatternIT {
                       .put("productId", 2L)
                       .put(
                           "at",
-                          DynamicTypes.toConnectValue(
-                              PropertyType.schema, LocalDate.of(1995, 1, 1)))
+                          PayloadMode.EXTENDED.value(PropertyType.schema, LocalDate.of(1995, 1, 1)),
+                      )
                       .put(
                           "place",
-                          DynamicTypes.toConnectValue(
-                              PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint())))
+                          PayloadMode.EXTENDED.value(
+                              PropertyType.schema,
+                              Values.point(7203, 1.0, 2.5).asPoint(),
+                          ),
+                      ),
+          )
         }
 
     eventually(30.seconds) {
@@ -117,7 +124,8 @@ abstract class Neo4jRelationshipPatternIT {
             it.asMap() shouldBe
                 mapOf(
                     "at" to LocalDate.of(1995, 1, 1),
-                    "place" to Values.point(7203, 1.0, 2.5).asPoint())
+                    "place" to Values.point(7203, 1.0, 2.5).asPoint(),
+                )
           }
 
       result.get("p").asNode() should
@@ -135,12 +143,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:Person{!id: p1Id})-[:GAVE_BIRTH]->(:Person{!id: p2Id,height,dob,tob})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship from struct containing connect types`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -162,7 +173,8 @@ abstract class Neo4jRelationshipPatternIT {
                       .put("height", BigDecimal.valueOf(185, 2))
                       .put("dob", DateSupport.date(1978, 1, 15))
                       .put("tob", DateSupport.time(7, 45, 12, 999))
-                      .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999)))
+                      .put("tsob", DateSupport.timestamp(1978, 1, 15, 7, 45, 12, 999)),
+          )
         }
 
     eventually(30.seconds) {
@@ -204,18 +216,23 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!userId})-[:BOUGHT]->(:Product{!productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship from json string`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
-        valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"userId": 1, "productId": 2}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -244,19 +261,23 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!userId})-[:BOUGHT]->(:Product{!productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship from byte array`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
-        value = ObjectMapper().writeValueAsBytes(mapOf("userId" to 1L, "productId" to 2L)))
+        value = ObjectMapper().writeValueAsBytes(mapOf("userId" to 1L, "productId" to 2L)),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -285,12 +306,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!userId})-[:BOUGHT{-currency}]->(:Product{!productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with excluded properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
@@ -300,12 +324,9 @@ abstract class Neo4jRelationshipPatternIT {
         value =
             ObjectMapper()
                 .writeValueAsBytes(
-                    mapOf(
-                        "userId" to 1L,
-                        "productId" to 2L,
-                        "amount" to 5,
-                        "currency" to "EUR",
-                    )))
+                    mapOf("userId" to 1L, "productId" to 2L, "amount" to 5, "currency" to "EUR")
+                ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -314,10 +335,7 @@ abstract class Neo4jRelationshipPatternIT {
       result.get("u").asNode() should
           {
             it.labels() shouldBe listOf("User")
-            it.asMap() shouldBe
-                mapOf(
-                    "userId" to 1L,
-                )
+            it.asMap() shouldBe mapOf("userId" to 1L)
           }
 
       result.get("r").asRelationship() should
@@ -329,10 +347,7 @@ abstract class Neo4jRelationshipPatternIT {
       result.get("p").asNode() should
           {
             it.labels() shouldBe listOf("Product")
-            it.asMap() shouldBe
-                mapOf(
-                    "productId" to 2L,
-                )
+            it.asMap() shouldBe mapOf("productId" to 2L)
           }
     }
   }
@@ -344,19 +359,23 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "User{!userId} BOUGHT Product{!productId}",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with simpler pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "userId")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "productId")
 
     producer.publish(
         valueSchema = Schema.BYTES_SCHEMA,
-        value = ObjectMapper().writeValueAsBytes(mapOf("userId" to 1L, "productId" to 2L)))
+        value = ObjectMapper().writeValueAsBytes(mapOf("userId" to 1L, "productId" to 2L)),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -385,19 +404,23 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT {!id: transactionId}]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with aliased properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
-        value = """{"userId": 1, "productId": 2, "transactionId": 3}""")
+        value = """{"userId": 1, "productId": 2, "transactionId": 3}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -426,12 +449,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT{!id: transactionId, price, currency}]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with relationship key and properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -440,7 +466,8 @@ abstract class Neo4jRelationshipPatternIT {
         keySchema = Schema.STRING_SCHEMA,
         key = """{"userId": 1, "productId": 2, "transactionId": 3}""}""",
         valueSchema = Schema.STRING_SCHEMA,
-        value = """{"price": 10.5, "currency": "EUR"}""")
+        value = """{"price": 10.5, "currency": "EUR"}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -473,12 +500,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   """(:User{!id: __key.user_id, name: __value.first_name})-[:BOUGHT{!id: __key.transaction_id, price: __value.paid_price, currency}]->(:Product{!id: __key.product_id, name: __value.product_name})""",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with explicit properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -488,7 +518,8 @@ abstract class Neo4jRelationshipPatternIT {
         key = """{"user_id": 1, "product_id": 2, "transaction_id": 3}""}""",
         valueSchema = Schema.STRING_SCHEMA,
         value =
-            """{"first_name": "John", "paid_price": 10.5, "currency": "EUR", "product_name": "computer"}""")
+            """{"first_name": "John", "paid_price": 10.5, "currency": "EUR", "product_name": "computer"}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -503,12 +534,7 @@ abstract class Neo4jRelationshipPatternIT {
       result.get("r").asRelationship() should
           {
             it.type() shouldBe "BOUGHT"
-            it.asMap() shouldBe
-                mapOf(
-                    "id" to 3L,
-                    "price" to 10.5,
-                    "currency" to "EUR",
-                )
+            it.asMap() shouldBe mapOf("id" to 3L, "price" to 10.5, "currency" to "EUR")
           }
 
       result.get("p").asNode() should
@@ -526,12 +552,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User:Person{!id: userId})-[:BOUGHT]->(:Product:Item{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create nodes and relationship with multiple labels pattern`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
@@ -539,7 +568,9 @@ abstract class Neo4jRelationshipPatternIT {
     session.createNodeKeyConstraint(neo4j, "item_id", "Item", "id")
 
     producer.publish(
-        valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"userId": 1, "productId": 2}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -568,19 +599,23 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should add non id values to relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
-        value = """{"userId": 1, "productId": 2, "price": 10, "currency": "EUR"}""")
+        value = """{"userId": 1, "productId": 2, "price": 10, "currency": "EUR"}""",
+    )
 
     eventually(30.seconds) {
       val result =
@@ -613,12 +648,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -627,7 +665,8 @@ abstract class Neo4jRelationshipPatternIT {
         .run(
             """CREATE (u:User) SET u.id = 1 
            CREATE (p:Product) SET p.id = 2 
-           MERGE (u)-[:BOUGHT]->(p)""")
+           MERGE (u)-[:BOUGHT]->(p)"""
+        )
         .consume()
 
     producer.publish(keySchema = Schema.STRING_SCHEMA, key = """{"userId": 1, "productId": 2}""")
@@ -636,7 +675,8 @@ abstract class Neo4jRelationshipPatternIT {
       session
           .run(
               "MATCH (:User {id: 1})-[r:BOUGHT]->(:Product {id: 2}) RETURN count(r) as count",
-              emptyMap())
+              emptyMap(),
+          )
           .single()
           .get("count")
           .asLong() shouldBe 0
@@ -650,12 +690,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT{price, currency}]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should add only relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -663,12 +706,14 @@ abstract class Neo4jRelationshipPatternIT {
     session
         .run(
             """CREATE (u:User) SET u.id = 1 
-           CREATE (p:Product) SET p.id = 2""")
+           CREATE (p:Product) SET p.id = 2"""
+        )
         .consume()
 
     producer.publish(
         valueSchema = Schema.STRING_SCHEMA,
-        value = """{"userId": 1, "productId": 2, "price": 10.5, "currency": "EUR"}""")
+        value = """{"userId": 1, "productId": 2, "price": 10.5, "currency": "EUR"}""",
+    )
 
     eventually(30.seconds) {
           session
@@ -690,12 +735,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: user_id, name: user_name})-[:BOUGHT {amount}]->(:Product{!id: product_id, name: product_name})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create, delete and recreate relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -705,13 +753,16 @@ abstract class Neo4jRelationshipPatternIT {
             keySchema = Schema.STRING_SCHEMA,
             key = """{"user_id": 1, "product_id": 2}""",
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"user_name": "John", "amount": 1, "product_name": "computer"}"""),
+            value = """{"user_name": "John", "amount": 1, "product_name": "computer"}""",
+        ),
         KafkaMessage(keySchema = Schema.STRING_SCHEMA, key = """{"user_id": 1, "product_id": 2}"""),
         KafkaMessage(
             keySchema = Schema.STRING_SCHEMA,
             key = """{"user_id": 1, "product_id": 2}""",
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"user_name": "John-new", "amount": 5, "product_name": "computer-new"}"""))
+            value = """{"user_name": "John-new", "amount": 5, "product_name": "computer-new"}""",
+        ),
+    )
 
     eventually(30.seconds) {
       val result =
@@ -749,34 +800,39 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC_1,
                   "(:User{!id: userId})-[:BOUGHT]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false),
+                  mergeRelationshipProperties = false,
+              ),
               RelationshipPatternStrategy(
                   TOPIC_2,
                   "(:User{!id: userId})-[:SOLD]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              ),
+          ]
+  )
   @Test
   fun `should create multiple relationships from different topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     producer1.publish(
-        valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"userId": 1, "productId": 2}""",
+    )
 
     producer2.publish(
-        valueSchema = Schema.STRING_SCHEMA, value = """{"userId": 1, "productId": 2}""")
+        valueSchema = Schema.STRING_SCHEMA,
+        value = """{"userId": 1, "productId": 2}""",
+    )
 
     eventually(30.seconds) {
       session
-          .run(
-              "MATCH (u:User {id: 1})-[r]->(p:Product {id: 2}) RETURN r",
-              emptyMap(),
-          )
+          .run("MATCH (u:User {id: 1})-[r]->(p:Product {id: 2}) RETURN r", emptyMap())
           .list()
           .map { it.get("r").asRelationship().type() } shouldContainAll listOf("BOUGHT", "SOLD")
     }
@@ -789,12 +845,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT {!id: transactionId}]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should create 1000 relationships`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -804,17 +863,16 @@ abstract class Neo4jRelationshipPatternIT {
       kafkaMessages.add(
           KafkaMessage(
               valueSchema = Schema.STRING_SCHEMA,
-              value = """{"userId": 1, "productId": 2, "transactionId": $i}"""))
+              value = """{"userId": 1, "productId": 2, "transactionId": $i}""",
+          )
+      )
     }
 
     producer.publish(*kafkaMessages.toTypedArray())
 
     eventually(30.seconds) {
       session
-          .run(
-              "MATCH (u:User {id: 1})-[r]->(p:Product {id: 2}) RETURN r",
-              emptyMap(),
-          )
+          .run("MATCH (u:User {id: 1})-[r]->(p:Product {id: 2}) RETURN r", emptyMap())
           .list() shouldHaveSize 1000
     }
   }
@@ -826,33 +884,36 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId, born})-[:BOUGHT]->(:Product{!id: productId, price})",
                   mergeNodeProperties = true,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
-            """CREATE (:User {id: 1, name: "Joe", surname: "Doe"})-[:BOUGHT]->(:Product {id: 2, name: "computer"})""")
+            """CREATE (:User {id: 1, name: "Joe", surname: "Doe"})-[:BOUGHT]->(:Product {id: 2, name: "computer"})"""
+        )
         .consume()
 
     producer.publish(
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"userId": 1, "productId": 2, "born": 1970, "price": 10.5}"""))
+            value = """{"userId": 1, "productId": 2, "born": 1970, "price": 10.5}""",
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
-              .run(
-                  "MATCH (u:User {id: 1})-[:BOUGHT]->(p:Product {id: 2}) RETURN u, p",
-                  emptyMap(),
-              )
+              .run("MATCH (u:User {id: 1})-[:BOUGHT]->(p:Product {id: 2}) RETURN u, p", emptyMap())
               .single()
 
       result.get("u").asNode() should
@@ -877,33 +938,36 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId, born})-[:BOUGHT]->(:Product{!id: productId, price})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should not merge node properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
 
     session
         .run(
-            """CREATE (:User {id: 1, name: "Joe", surname: "Doe"})-[:BOUGHT]->(:Product {id: 2, name: "computer"})""")
+            """CREATE (:User {id: 1, name: "Joe", surname: "Doe"})-[:BOUGHT]->(:Product {id: 2, name: "computer"})"""
+        )
         .consume()
 
     producer.publish(
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"userId": 1, "productId": 2, "born": 1970, "price": 10.5}"""))
+            value = """{"userId": 1, "productId": 2, "born": 1970, "price": 10.5}""",
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
-              .run(
-                  "MATCH (u:User {id: 1})-[:BOUGHT]->(p:Product {id: 2}) RETURN u, p",
-                  emptyMap(),
-              )
+              .run("MATCH (u:User {id: 1})-[:BOUGHT]->(p:Product {id: 2}) RETURN u, p", emptyMap())
               .single()
 
       result.get("u").asNode() should
@@ -927,12 +991,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = true)])
+                  mergeRelationshipProperties = true,
+              )
+          ]
+  )
   @Test
   fun `should merge relationship properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -942,15 +1009,14 @@ abstract class Neo4jRelationshipPatternIT {
     producer.publish(
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"userId": 1, "productId": 2, "date": "2024-05-27"}"""))
+            value = """{"userId": 1, "productId": 2, "date": "2024-05-27"}""",
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
-              .run(
-                  "MATCH (:User {id: 1})-[r:BOUGHT]->(:Product {id: 2}) RETURN r",
-                  emptyMap(),
-              )
+              .run("MATCH (:User {id: 1})-[r:BOUGHT]->(:Product {id: 2}) RETURN r", emptyMap())
               .single()
 
       result.get("r").asRelationship() should
@@ -968,12 +1034,15 @@ abstract class Neo4jRelationshipPatternIT {
                   TOPIC,
                   "(:User{!id: userId})-[:BOUGHT]->(:Product{!id: productId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)])
+                  mergeRelationshipProperties = false,
+              )
+          ]
+  )
   @Test
   fun `should not merge relationship properties`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "user_id", "User", "id")
     session.createNodeKeyConstraint(neo4j, "product_id", "Product", "id")
@@ -983,15 +1052,14 @@ abstract class Neo4jRelationshipPatternIT {
     producer.publish(
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"userId": 1, "productId": 2, "date": "2024-05-27"}"""))
+            value = """{"userId": 1, "productId": 2, "date": "2024-05-27"}""",
+        )
+    )
 
     eventually(30.seconds) {
       val result =
           session
-              .run(
-                  "MATCH (:User {id: 1})-[r:BOUGHT]->(:Product {id: 2}) RETURN r",
-                  emptyMap(),
-              )
+              .run("MATCH (:User {id: 1})-[r:BOUGHT]->(:Product {id: 2}) RETURN r", emptyMap())
               .single()
 
       result.get("r").asRelationship() should

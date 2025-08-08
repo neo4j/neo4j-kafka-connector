@@ -59,12 +59,18 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           patterns =
                               arrayOf(
                                   CdcSourceParam(
-                                      "(:TestSource)-[:RELIES_TO {weight,-rate}]->(:TestSource)"))))))
+                                      "(:TestSource)-[:RELIES_TO {weight,-rate}]->(:TestSource)"
+                                  )
+                              ),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish changes caught by patterns`(
       @TopicConsumer(topic = "neo4j-cdc-rels", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
@@ -72,7 +78,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             |CREATE (t:TestSource {name: 'Alice'})
             |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)
     """
-                .trimMargin())
+                .trimMargin()
+        )
         .consume()
     session.run("MATCH (:TestSource)-[r:RELIES_TO]-(:TestSource) SET r.weight = 2").consume()
     session.run("MATCH (:TestSource)-[r:RELIES_TO]-(:TestSource) DELETE r").consume()
@@ -120,12 +127,16 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-rels-prop-remove-add",
-                          patterns = arrayOf(CdcSourceParam("()-[:RELIES_TO {}]->()"))))))
+                          patterns = arrayOf(CdcSourceParam("()-[:RELIES_TO {}]->()")),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish property removal and additions`(
       @TopicConsumer(topic = "neo4j-cdc-rels-prop-remove-add", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
@@ -133,7 +144,8 @@ abstract class Neo4jCdcSourceRelationshipsIT {
             |CREATE (t:TestSource {name: 'Alice'})
             |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)
     """
-                .trimMargin())
+                .trimMargin()
+        )
         .consume()
     session
         .run("MATCH (:TestSource)-[r:RELIES_TO]-(:TestSource) SET r.weight = 2, r.rate = NULL")
@@ -197,12 +209,16 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                           topic = "neo4j-cdc-update-rel",
                           patterns = arrayOf(CdcSourceParam(value = "(:A)-[:R {a,b,c,-d}]->(:B)")),
                           operations = arrayOf(CdcSourceParam(value = "UPDATE")),
-                          changesTo = arrayOf(CdcSourceParam(value = "a,c"))))))
+                          changesTo = arrayOf(CdcSourceParam(value = "a,c")),
+                      )
+                  ),
+          ),
+  )
   @Test
   fun `should publish only specified field changes on update`(
       @TopicConsumer(topic = "neo4j-cdc-update-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:A)-[:R {a: 'foo', b: 'bar', c: 'abra', d: 'cadabra'}]->(:B)").consume()
     session.run("MATCH (:A)-[r:R {a: 'foo'}]->(:B) SET r.a = 'mini', r.b = 'midi'").consume()
@@ -244,15 +260,21 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                       CdcSourceTopic(
                           topic = "cdc-creates-rel",
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
-                          operations = arrayOf(CdcSourceParam("CREATE"))),
+                          operations = arrayOf(CdcSourceParam("CREATE")),
+                      ),
                       CdcSourceTopic(
                           topic = "cdc-updates-rel",
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
-                          operations = arrayOf(CdcSourceParam("UPDATE"))),
+                          operations = arrayOf(CdcSourceParam("UPDATE")),
+                      ),
                       CdcSourceTopic(
                           topic = "cdc-deletes-rel",
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
-                          operations = arrayOf(CdcSourceParam("DELETE"))))))
+                          operations = arrayOf(CdcSourceParam("DELETE")),
+                      ),
+                  ),
+          ),
+  )
   @Test
   fun `should publish each operation to a separate topic`(
       @TopicConsumer(topic = "cdc-creates-rel", offset = "earliest")
@@ -261,7 +283,7 @@ abstract class Neo4jCdcSourceRelationshipsIT {
       updatesConsumer: ConvertingKafkaConsumer,
       @TopicConsumer(topic = "cdc-deletes-rel", offset = "earliest")
       deletesConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:Person)-[:EMPLOYED {role: 'SWE'}]->(:Company)").consume()
     session.run("MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r.role = 'EM'").consume()
@@ -315,12 +337,15 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "cdc",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
+                      )
+                  ),
+          ),
+  )
   @Test
   fun `should publish each operation to a single topic`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session.run("CREATE (:Person)-[:EMPLOYED {role: 'SWE'}]->(:Company)").consume()
     session.run("MATCH (:Person)-[r:EMPLOYED]->(:Company) SET r.role = 'EM'").consume()
@@ -371,23 +396,28 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                       CdcSourceTopic(
                           topic = "neo4j-cdc-metadata-rel",
                           patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
-                          metadata =
-                              arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B"))))))
+                          metadata = arrayOf(CdcMetadata(key = "txMetadata.testLabel", value = "B")),
+                      )
+                  ),
+          ),
+  )
   @Test
   fun `should publish changes marked with specific transaction metadata attribute`(
       @TopicConsumer(topic = "neo4j-cdc-metadata-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     val transaction1 =
         session.beginTransaction(
-            TransactionConfig.builder().withMetadata(mapOf("testLabel" to "A")).build())
+            TransactionConfig.builder().withMetadata(mapOf("testLabel" to "A")).build()
+        )
     transaction1.run("CREATE (:Person)-[:EMPLOYED {role: 'SWE'}]->(:Company)").consume()
     transaction1.commit()
 
     val transaction2 =
         session.beginTransaction(
-            TransactionConfig.builder().withMetadata(mapOf("testLabel" to "B")).build())
+            TransactionConfig.builder().withMetadata(mapOf("testLabel" to "B")).build()
+        )
     transaction2.run("CREATE (:Person)-[:EMPLOYED {role: 'EM'}]->(:Company)").consume()
     transaction2.commit()
 
@@ -415,14 +445,17 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-keys-rel",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish changes containing relationship keys`(
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) {
     session.createRelationshipKeyConstraint(neo4j, "employedId", "EMPLOYED", "id")
     session.createRelationshipKeyConstraint(neo4j, "employedRole", "EMPLOYED", "role")
@@ -454,12 +487,15 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "cdc",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish changes with arrays`(
       @TopicConsumer(topic = "cdc", offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) {
     session
         .run(
@@ -471,7 +507,10 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                         "prop2" to arrayOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
                         "prop3" to listOf("a", "b", "c"),
                         "prop4" to arrayOf<Boolean>(),
-                        "prop5" to listOf<Double>())))
+                        "prop5" to listOf<Double>(),
+                    )
+            ),
+        )
         .consume()
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(consumer)
@@ -487,7 +526,9 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                       "prop2" to listOf(LocalDate.of(1999, 1, 1), LocalDate.of(2000, 1, 1)),
                       "prop3" to listOf("a", "b", "c"),
                       "prop4" to emptyList<Boolean>(),
-                      "prop5" to emptyList<Double>()))
+                      "prop5" to emptyList<Double>(),
+                  )
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -501,14 +542,17 @@ abstract class Neo4jCdcSourceRelationshipsIT {
                   arrayOf(
                       CdcSourceTopic(
                           topic = "neo4j-cdc-keys-rel",
-                          patterns =
-                              arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)"))))))
+                          patterns = arrayOf(CdcSourceParam("(:Person)-[:EMPLOYED]->(:Company)")),
+                      )
+                  )
+          ),
+  )
   @Test
   fun `should publish with multiple keys on the same property`(
       @TopicConsumer(topic = "neo4j-cdc-keys-rel", offset = "earliest")
       consumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) {
     session.createRelationshipKeyConstraint(neo4j, "employedId", "EMPLOYED", "id", "role")
     session.createRelationshipKeyConstraint(neo4j, "employedRole", "EMPLOYED", "id")

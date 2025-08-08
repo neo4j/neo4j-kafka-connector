@@ -34,7 +34,9 @@ internal object SchemaRegistrySupport {
             .header("Accept", "application/json")
             .PUT(
                 HttpRequest.BodyPublishers.ofString(
-                    convertToJson(mapOf("compatibility" to mode.name))))
+                    convertToJson(mapOf("compatibility" to mode.name))
+                )
+            )
             .build()
     val response = HttpClient.newHttpClient().send(update, HttpResponse.BodyHandlers.ofString())
     if (response.statusCode() != 200) {

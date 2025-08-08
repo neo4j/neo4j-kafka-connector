@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory
 internal class Neo4jSinkExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
-    private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver
+    private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkExtension::class.java)
@@ -64,7 +64,8 @@ internal class Neo4jSinkExtension(
               ConvertingKafkaConsumer::class.java to ::resolveGenericConsumer,
               Neo4jSinkRegistration::class.java to ::resolveSinkRegistration,
               Neo4j::class.java to ::resolveNeo4j,
-          ))
+          )
+      )
 
   private lateinit var sinkAnnotation: Neo4jSink
 
@@ -101,13 +102,7 @@ internal class Neo4jSinkExtension(
   private val errorDlqTopic = AnnotationValueResolver(Neo4jSink::errorDlqTopic, envAccessor)
 
   private val mandatorySettings =
-      listOf(
-          kafkaConnectExternalUri,
-          schemaControlRegistryUri,
-          neo4jUri,
-          neo4jUser,
-          neo4jPassword,
-      )
+      listOf(kafkaConnectExternalUri, schemaControlRegistryUri, neo4jUri, neo4jUser, neo4jPassword)
 
   private val topicRegistry = TopicRegistry()
 
@@ -124,7 +119,8 @@ internal class Neo4jSinkExtension(
           schemaControlKeyCompatibilityProvider = { sinkAnnotation.schemaControlKeyCompatibility },
           schemaControlValueCompatibilityProvider = {
             sinkAnnotation.schemaControlValueCompatibility
-          })
+          },
+      )
 
   private val consumerResolver =
       ConsumerResolver(
@@ -134,7 +130,8 @@ internal class Neo4jSinkExtension(
           schemaControlRegistryExternalUriProvider = {
             schemaControlRegistryExternalUri.resolve(sinkAnnotation)
           },
-          consumerFactory = ConsumerResolver::getSubscribedConsumer)
+          consumerFactory = ConsumerResolver::getSubscribedConsumer,
+      )
 
   override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
     val metadata =
@@ -166,7 +163,7 @@ internal class Neo4jSinkExtension(
 
     if (errors.isNotEmpty()) {
       throw ExtensionConfigurationException(
-          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}",
+          "\nMissing settings, see details below:\n\t${errors.joinToString("\n\t")}"
       )
     }
     this.sinkAnnotation = metadata
@@ -253,7 +250,8 @@ internal class Neo4jSinkExtension(
             excludeErrorHandling = sinkAnnotation.excludeErrorHandling,
             errorTolerance = errorTolerance.resolve(sinkAnnotation),
             errorDlqTopic = topicRegistry.resolveTopic(errorDlqTopic.resolve(sinkAnnotation)),
-            enableErrorHeaders = sinkAnnotation.enableErrorHeaders)
+            enableErrorHeaders = sinkAnnotation.enableErrorHeaders,
+        )
     sink.register(kafkaConnectExternalUri.resolve(sinkAnnotation))
     topicRegistry.log()
   }
@@ -280,21 +278,21 @@ internal class Neo4jSinkExtension(
 
   override fun supportsParameter(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Boolean {
     return paramResolvers.supportsParameter(parameterContext, extensionContext)
   }
 
   override fun resolveParameter(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     return paramResolvers.resolveParameter(parameterContext, extensionContext)
   }
 
   private fun resolveSession(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     ensureDatabase(extensionContext)
     driver = driver ?: createDriver()
@@ -335,21 +333,21 @@ internal class Neo4jSinkExtension(
 
   private fun resolveGenericProducer(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     return producerResolver.resolveGenericProducer(parameterContext, extensionContext)
   }
 
   private fun resolveGenericConsumer(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     return consumerResolver.resolveGenericConsumer(parameterContext, extensionContext)
   }
 
   private fun resolveSinkRegistration(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     return sink
   }

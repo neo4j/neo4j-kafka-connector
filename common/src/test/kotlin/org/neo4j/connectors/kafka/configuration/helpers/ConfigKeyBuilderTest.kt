@@ -41,7 +41,8 @@ class ConfigKeyBuilderTest {
               Recommenders.and(
                   Recommenders.visibleIf("neo4j.other") { true },
                   Recommenders.visibleIf("neo4j.another") { true },
-                  Recommenders.enum(AuthenticationType::class.java))
+                  Recommenders.enum(AuthenticationType::class.java),
+              )
         }
         .dependents shouldContainExactly listOf("neo4j.other", "neo4j.another")
   }
