@@ -17,7 +17,10 @@
 package org.neo4j.connectors.kafka.source
 
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
+import kotlin.time.toJavaDuration
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
@@ -32,9 +35,12 @@ import org.neo4j.driver.Record
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
+import reactor.util.retry.RetrySpec
 
 class Neo4jQueryTask : SourceTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jQueryTask::class.java)
+  private val retrySpec =
+      RetrySpec.backoff(5, 100.milliseconds.toJavaDuration()).jitter(Random.nextDouble())
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
@@ -74,6 +80,14 @@ class Neo4jQueryTask : SourceTask() {
                         { it.run(config.query, mapOf("lastCheck" to offset.get())).records() },
                         config.txConfig()))
             .take(config.batchSize.toLong())
+            .retryWhen(
+                retrySpec.doBeforeRetry {
+                  log.warn(
+                      "retrying due to an error for {} time. current offset: {}",
+                      it.totalRetries(),
+                      offset.get(),
+                      it.failure())
+                })
             .asFlow()
             .map { build(it) }
             .toList(list)
