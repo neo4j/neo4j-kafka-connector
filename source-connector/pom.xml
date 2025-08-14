@@ -13,7 +13,6 @@
     <description>Neo4j Connector for Kafka - Source</description>
     <properties>
         <failsafe.rerunFailingTestsCount>3</failsafe.rerunFailingTestsCount>
-        <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
     </properties>
     <dependencies>
         <dependency>
