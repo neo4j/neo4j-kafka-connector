@@ -65,7 +65,7 @@
         <kafka.version>3.8.1</kafka.version>
         <kotest-assertions-core-jvm.version>5.9.1</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.10.2</kotlin.coroutines.version>
-        <kotlin.version>2.2.0</kotlin.version>
+        <kotlin.version>2.2.10</kotlin.version>
         <license-maven-plugin.version>5.0.0</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.11</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
