@@ -693,12 +693,12 @@ class SourceConfigurationTest {
         }
         .also {
           it shouldHaveMessage
-              "Invalid value invalid for configuration neo4j.payload-mode: Must be one of: 'EXTENDED', 'COMPACT', 'COMPATIBILITY'."
+              "Invalid value invalid for configuration neo4j.payload-mode: Must be one of: 'EXTENDED', 'COMPACT', 'RAW_JSON_STRING'."
         }
   }
 
   @Test
-  fun `fail if COMPATIBILITY payload mode is set for CDC strategy`() {
+  fun `fail if RAW_JSON_STRING payload mode is set for CDC strategy`() {
 
     assertFailsWith(ConfigException::class) {
           SourceConfiguration(
@@ -709,7 +709,7 @@ class SourceConfigurationTest {
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
                       SourceConfiguration.CDC_POLL_INTERVAL to "5s",
-                      SourceConfiguration.PAYLOAD_MODE to PayloadMode.COMPATIBILITY.name,
+                      SourceConfiguration.PAYLOAD_MODE to PayloadMode.RAW_JSON_STRING.name,
                       "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
                   )
               )
@@ -717,7 +717,7 @@ class SourceConfigurationTest {
         }
         .also {
           it shouldHaveMessage
-              "CDC strategy does not support 'COMPATIBILITY' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
+              "CDC strategy does not support 'RAW_JSON_STRING' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
         }
   }
 

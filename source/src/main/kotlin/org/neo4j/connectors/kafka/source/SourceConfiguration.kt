@@ -529,9 +529,9 @@ class SourceConfiguration(originals: Map<*, *>) :
       val strategy = configList.find { it.name() == STRATEGY }
       if (strategy?.value() == SourceType.CDC.name) {
         val payloadMode = configList.find { it.name() == PAYLOAD_MODE }
-        if (payloadMode?.value() == PayloadMode.COMPATIBILITY.name) {
+        if (payloadMode?.value() == PayloadMode.RAW_JSON_STRING.name) {
           strategy.addErrorMessage(
-              "CDC strategy does not support '${PayloadMode.COMPATIBILITY.name}' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
+              "CDC strategy does not support '${PayloadMode.RAW_JSON_STRING.name}' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
           )
         }
 

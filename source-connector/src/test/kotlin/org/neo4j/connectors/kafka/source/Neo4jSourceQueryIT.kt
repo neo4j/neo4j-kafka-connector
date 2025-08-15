@@ -234,7 +234,7 @@ abstract class Neo4jSourceQueryIT {
       payloadMode: PayloadMode,
   ) = runTest {
     assumeTrue(
-        payloadMode == PayloadMode.COMPATIBILITY,
+        payloadMode == PayloadMode.RAW_JSON_STRING,
         "This test is only applicable for JSON mode.",
     )
 
@@ -273,7 +273,7 @@ class Neo4jSourceAvroExtendedIT : Neo4jSourceQueryIT()
 @KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceAvroCompactIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.COMPATIBILITY)
+@KeyValueConverter(key = AVRO, value = AVRO, payloadMode = PayloadMode.RAW_JSON_STRING)
 class Neo4jSourceAvroJsonIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.EXTENDED)
@@ -282,7 +282,11 @@ class Neo4jSourceJsonSchemaExtendedIT : Neo4jSourceQueryIT()
 @KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceJsonSchemaCompactIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = JSON_SCHEMA, value = JSON_SCHEMA, payloadMode = PayloadMode.COMPATIBILITY)
+@KeyValueConverter(
+    key = JSON_SCHEMA,
+    value = JSON_SCHEMA,
+    payloadMode = PayloadMode.RAW_JSON_STRING,
+)
 class Neo4jSourceJsonSchemaJsonIT : Neo4jSourceQueryIT()
 
 @KeyValueConverter(key = JSON_EMBEDDED, value = JSON_EMBEDDED, payloadMode = PayloadMode.EXTENDED)
@@ -294,7 +298,7 @@ class Neo4jSourceJsonEmbeddedCompactIT : Neo4jSourceQueryIT()
 @KeyValueConverter(
     key = JSON_EMBEDDED,
     value = JSON_EMBEDDED,
-    payloadMode = PayloadMode.COMPATIBILITY,
+    payloadMode = PayloadMode.RAW_JSON_STRING,
 )
 class Neo4jSourceJsonEmbeddedJsonIT : Neo4jSourceQueryIT()
 
@@ -354,5 +358,5 @@ class Neo4jSourceProtobufExtendedIT : Neo4jSourceQueryIT()
 @KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.COMPACT)
 class Neo4jSourceProtobufCompactIT : Neo4jSourceQueryIT()
 
-@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.COMPATIBILITY)
+@KeyValueConverter(key = PROTOBUF, value = PROTOBUF, payloadMode = PayloadMode.RAW_JSON_STRING)
 class Neo4jSourceProtobufJsonIT : Neo4jSourceQueryIT()

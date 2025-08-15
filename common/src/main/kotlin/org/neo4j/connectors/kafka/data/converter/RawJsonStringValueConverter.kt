@@ -20,7 +20,7 @@ import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.utils.JSONUtils
 
-class CompatibilityValueConverter : ValueConverter {
+class RawJsonStringValueConverter : ValueConverter {
 
   override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema {
     return Schema.STRING_SCHEMA
