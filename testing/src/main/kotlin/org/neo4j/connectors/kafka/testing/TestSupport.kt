@@ -39,7 +39,7 @@ object TestSupport {
    */
   fun runTest(
       context: CoroutineContext = EmptyCoroutineContext,
-      block: suspend CoroutineScope.() -> Any
+      block: suspend CoroutineScope.() -> Any,
   ): Unit {
     runBlocking(context, block)
     Unit

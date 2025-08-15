@@ -50,7 +50,7 @@ object Recommenders {
     return object : ConfigDef.Recommender {
       override fun validValues(
           name: String?,
-          parsedConfig: MutableMap<String, Any>?
+          parsedConfig: MutableMap<String, Any>?,
       ): MutableList<Any> {
         return values.toMutableList()
       }
@@ -67,7 +67,7 @@ object Recommenders {
     return object : ConfigDef.Recommender {
       override fun validValues(
           name: String?,
-          parsedConfig: MutableMap<String, Any>?
+          parsedConfig: MutableMap<String, Any>?,
       ): MutableList<Any> {
         return values.toMutableList()
       }
@@ -82,7 +82,7 @@ object Recommenders {
     return object : ConfigDef.Recommender, DependentRecommender {
       override fun validValues(
           name: String?,
-          parsedConfig: MutableMap<String, Any>?
+          parsedConfig: MutableMap<String, Any>?,
       ): MutableList<Any> = mutableListOf()
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
@@ -99,7 +99,7 @@ object Recommenders {
     return object : ConfigDef.Recommender {
       override fun validValues(
           name: String?,
-          parsedConfig: MutableMap<String, Any>?
+          parsedConfig: MutableMap<String, Any>?,
       ): MutableList<Any> = mutableListOf()
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {

@@ -46,12 +46,7 @@ abstract class Neo4jSinkIT {
 
   @Neo4jSink(
       cypher =
-          [
-              CypherStrategy(
-                  TOPIC,
-                  "MERGE (p:Person {name: event.name, surname: event.surname})",
-              ),
-          ],
+          [CypherStrategy(TOPIC, "MERGE (p:Person {name: event.name, surname: event.surname})")]
   )
   @Test
   fun `writes messages to Neo4j via sink connector`(
@@ -86,16 +81,19 @@ abstract class Neo4jSinkIT {
               CypherStrategy(
                   TOPIC,
                   "MERGE (p:Person {name: event.name, surname: event.surname}) INVALID CYPHER",
-              ),
+              )
           ],
-      excludeErrorHandling = true)
+      excludeErrorHandling = true,
+  )
   @Test
   fun `should fail connector on errors when errant reporter is not set`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      sink: Neo4jSinkRegistration
+      sink: Neo4jSinkRegistration,
   ) = runTest {
     producer.publish(
-        value = "{ \"name\": \"Jane\", \"surname\": \"Doe\" }", valueSchema = Schema.STRING_SCHEMA)
+        value = "{ \"name\": \"Jane\", \"surname\": \"Doe\" }",
+        valueSchema = Schema.STRING_SCHEMA,
+    )
 
     // after the failure
     eventually(30.seconds) {

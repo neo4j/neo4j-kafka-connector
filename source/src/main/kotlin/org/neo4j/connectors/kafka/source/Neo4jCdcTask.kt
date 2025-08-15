@@ -36,6 +36,7 @@ import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.slf4j.Logger
@@ -50,6 +51,7 @@ class Neo4jCdcTask : SourceTask() {
   private lateinit var transactionConfig: TransactionConfig
   private lateinit var cdc: CDCService
   private lateinit var offset: AtomicReference<String>
+  private lateinit var converter: ValueConverter
   private lateinit var changeEventConverter: ChangeEventConverter
 
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
@@ -72,7 +74,8 @@ class Neo4jCdcTask : SourceTask() {
             { sessionConfig },
             { transactionConfig },
             config.cdcPollingInterval.toJavaDuration(),
-            *config.cdcSelectors.toTypedArray())
+            *config.cdcSelectors.toTypedArray(),
+        )
     log.debug("constructed cdc client")
 
     offset = AtomicReference(resumeFrom(config, cdc))
@@ -131,7 +134,9 @@ class Neo4jCdcTask : SourceTask() {
                   config.cdcTopicsToKeyStrategy.getOrDefault(topic, Neo4jCdcKeyStrategy.WHOLE_VALUE)
               val valueStrategy =
                   config.cdcTopicsToValueStrategy.getOrDefault(
-                      topic, Neo4jCdcValueStrategy.CHANGE_EVENT)
+                      topic,
+                      Neo4jCdcValueStrategy.CHANGE_EVENT,
+                  )
               SourceRecord(
                   config.partition,
                   mapOf("value" to changeEvent.id.id),
@@ -142,8 +147,10 @@ class Neo4jCdcTask : SourceTask() {
                   valueStrategy.schema(transformedValue),
                   valueStrategy.value(transformedValue),
                   changeEvent.metadata.txCommitTime.toInstant().toEpochMilli(),
-                  Headers.from(changeEvent))
-            })
+                  Headers.from(changeEvent),
+              )
+            }
+        )
       }
     }
 
@@ -169,7 +176,8 @@ class Neo4jCdcTask : SourceTask() {
         config.startFrom,
         SourceConfiguration.IGNORE_STORED_OFFSET,
         config.ignoreStoredOffset,
-        value)
+        value,
+    )
     return value
   }
 }

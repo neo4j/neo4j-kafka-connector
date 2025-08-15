@@ -46,13 +46,13 @@ import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
   QUERY("query"),
-  CDC("cdc")
+  CDC("cdc"),
 }
 
 enum class StartFrom {
   EARLIEST,
   NOW,
-  USER_PROVIDED
+  USER_PROVIDED,
 }
 
 class SourceConfiguration(originals: Map<*, *>) :
@@ -102,7 +102,11 @@ class SourceConfiguration(originals: Map<*, *>) :
       return when (strategy) {
         SourceType.QUERY ->
             mapOf(
-                "database" to this.database, "type" to "query", "query" to query, "partition" to 1)
+                "database" to this.database,
+                "type" to "query",
+                "query" to query,
+                "partition" to 1,
+            )
         SourceType.CDC -> mapOf("database" to this.database, "type" to "cdc", "partition" to 1)
       }
     }
@@ -196,18 +200,18 @@ class SourceConfiguration(originals: Map<*, *>) :
   private fun mapPositionalPattern(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
-      configMap: MutableMap<String, MutableList<Pattern>>
+      configMap: MutableMap<String, MutableList<Pattern>>,
   ) {
     val topicName = configEntry.topic
     if (nonPositionalConfigMode.getOrDefault(topicName, false)) {
       throw ConfigException(
-          "It's not allowed to mix positional and non-positional configuration for the same topic.",
+          "It's not allowed to mix positional and non-positional configuration for the same topic."
       )
     }
     val patterns = Pattern.parse(configEntry.value as String?)
     if (patterns.size > 1) {
       throw ConfigException(
-          "Too many patterns. Only one pattern allowed for positional pattern configuration.",
+          "Too many patterns. Only one pattern allowed for positional pattern configuration."
       )
     }
 
@@ -220,7 +224,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     val list = configMap.getValue(topicName)
     if (index > list.size) {
       throw ConfigException(
-          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
+          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index."
       )
     }
     list.add(pattern)
@@ -229,7 +233,7 @@ class SourceConfiguration(originals: Map<*, *>) :
   private fun mapOperation(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
-      configMap: MutableMap<String, MutableList<Pattern>>
+      configMap: MutableMap<String, MutableList<Pattern>>,
   ) {
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val operation =
@@ -239,7 +243,8 @@ class SourceConfiguration(originals: Map<*, *>) :
           "delete" -> EntityOperation.DELETE
           else -> {
             throw ConfigException(
-                "Cannot parse $value as an operation. Allowed operations are create, delete or update.")
+                "Cannot parse $value as an operation. Allowed operations are create, delete or update."
+            )
           }
         }
     val pattern = patterns[index]
@@ -249,7 +254,7 @@ class SourceConfiguration(originals: Map<*, *>) :
   private fun mapChangesTo(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
-      configMap: MutableMap<String, MutableList<Pattern>>
+      configMap: MutableMap<String, MutableList<Pattern>>,
   ) {
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val value = configEntry.value as String
@@ -262,7 +267,7 @@ class SourceConfiguration(originals: Map<*, *>) :
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
       configMap: MutableMap<String, MutableList<Pattern>>,
-      patternTxMetadataMap: MutableMap<Pattern, MutableMap<String, Any>>
+      patternTxMetadataMap: MutableMap<Pattern, MutableMap<String, Any>>,
   ) {
     val (index, patterns) = retrieveIndexAndPattern(configEntry, nonPositionalConfigMode, configMap)
     val metadataKey = configEntry.metadata!!
@@ -285,20 +290,19 @@ class SourceConfiguration(originals: Map<*, *>) :
       throw ConfigException(
           "Unexpected metadata key: '$metadataKey' found in configuration property '${configEntry.key}'. " +
               "Valid keys are '$METADATA_KEY_AUTHENTICATED_USER', '$METADATA_KEY_EXECUTING_USER', " +
-              "or keys starting with '$METADATA_KEY_TX_METADATA.*'.")
+              "or keys starting with '$METADATA_KEY_TX_METADATA.*'."
+      )
     }
   }
 
-  private fun mapKeyStrategy(
-      configEntry: CdcPatternConfigItem,
-  ): Pair<String, Neo4jCdcKeyStrategy> {
+  private fun mapKeyStrategy(configEntry: CdcPatternConfigItem): Pair<String, Neo4jCdcKeyStrategy> {
     val topicName = configEntry.topic
     val value = configEntry.value
     return topicName to Neo4jCdcKeyStrategy.valueOf(value as String)
   }
 
   private fun mapValueStrategy(
-      configEntry: CdcPatternConfigItem,
+      configEntry: CdcPatternConfigItem
   ): Pair<String, Neo4jCdcValueStrategy> {
     val topicName = configEntry.topic
     val value = configEntry.value
@@ -308,24 +312,24 @@ class SourceConfiguration(originals: Map<*, *>) :
   private fun retrieveIndexAndPattern(
       configEntry: CdcPatternConfigItem,
       nonPositionalConfigMode: MutableMap<String, Boolean>,
-      configMap: MutableMap<String, MutableList<Pattern>>
+      configMap: MutableMap<String, MutableList<Pattern>>,
   ): Pair<Int, MutableList<Pattern>> {
     val topicName = configEntry.topic
     if (nonPositionalConfigMode.getOrDefault(topicName, false)) {
       throw ConfigException(
-          "It's not allowed to mix positional and non-positional configuration for the same topic.",
+          "It's not allowed to mix positional and non-positional configuration for the same topic."
       )
     }
     val index = configEntry.index!!
     if (!configMap.containsKey(topicName)) {
       throw ConfigException(
-          "Cannot assign config value because pattern is not defined for index $index.",
+          "Cannot assign config value because pattern is not defined for index $index."
       )
     }
     val patterns = configMap.getValue(topicName)
     if (index > patterns.size - 1) {
       throw ConfigException(
-          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index.",
+          "Index $index out of bounds. Please ensure that you started the definition with a 0-based index."
       )
     }
     return Pair(index, patterns)
@@ -469,25 +473,25 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val CDC_PATTERNS_REGEX =
         Regex("^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)$")
     private val CDC_KEY_STRATEGY_REGEX =
-        Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.key-strategy)$",
-        )
+        Regex("^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.key-strategy)$")
     private val CDC_VALUE_STRATEGY_REGEX =
-        Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.value-strategy)$",
-        )
+        Regex("^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.value-strategy)$")
     private val CDC_PATTERN_ARRAY_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.pattern)$")
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.pattern)$"
+        )
     private val CDC_PATTERN_ARRAY_OPERATION_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.operation)$")
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.operation)$"
+        )
     private val CDC_PATTERN_ARRAY_CHANGES_TO_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.changesTo)$")
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.changesTo)$"
+        )
     private val CDC_PATTERN_ARRAY_METADATA_REGEX =
         Regex(
-            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$")
+            "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$"
+        )
 
     private val DEFAULT_QUERY_POLL_INTERVAL = 1.seconds
     private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
@@ -524,6 +528,13 @@ class SourceConfiguration(originals: Map<*, *>) :
       val configList = config.configValues().toList()
       val strategy = configList.find { it.name() == STRATEGY }
       if (strategy?.value() == SourceType.CDC.name) {
+        val payloadMode = configList.find { it.name() == PAYLOAD_MODE }
+        if (payloadMode?.value() == PayloadMode.RAW_JSON_STRING.name) {
+          strategy.addErrorMessage(
+              "CDC strategy does not support '${PayloadMode.RAW_JSON_STRING.name}' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
+          )
+        }
+
         val cdcTopics =
             originals.entries.filter { CDC_PATTERNS_REGEX.matches(it.key) } +
                 originals.entries.filter { CDC_PATTERN_ARRAY_REGEX.matches(it.key) } +
@@ -534,7 +545,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                 originals.entries.filter { CDC_VALUE_STRATEGY_REGEX.matches(it.key) }
         if (cdcTopics.isEmpty()) {
           strategy.addErrorMessage(
-              "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information.")
+              "At least one topic needs to be configured with pattern(s) describing the entities to query changes for. Please refer to documentation for more information."
+          )
         } else {
           cdcTopics.forEach {
             // parse & validate CDC patterns
@@ -571,7 +583,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR.title
                   validator = Validators.enum(SourceType::class.java)
                   recommender = Recommenders.enum(SourceType::class.java)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(START_FROM, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -579,7 +592,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR.title
                   validator = Validators.enum(StartFrom::class.java)
                   recommender = Recommenders.enum(StartFrom::class.java)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(START_FROM_VALUE, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -587,8 +601,11 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(
-                          START_FROM, Predicate.isEqual(StartFrom.USER_PROVIDED.name))
-                })
+                          START_FROM,
+                          Predicate.isEqual(StartFrom.USER_PROVIDED.name),
+                      )
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(IGNORE_STORED_OFFSET, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -596,7 +613,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
                   recommender = Recommenders.bool()
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -604,7 +622,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_STREAMING_PROPERTY, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -613,7 +632,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.notBlankOrEmpty()
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_TOPIC, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.HIGH
@@ -621,7 +641,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_TIMEOUT, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -630,7 +651,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_POLL_INTERVAL, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -639,7 +661,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_POLL_DURATION, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -648,7 +671,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(QUERY_FORCE_MAPS_AS_STRUCT, ConfigDef.Type.BOOLEAN) {
                   importance = ConfigDef.Importance.LOW
@@ -656,7 +680,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -665,7 +690,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Range.atLeast(1)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_INTERVAL, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -674,7 +700,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CDC_POLL_DURATION, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -683,7 +710,8 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PAYLOAD_MODE, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
@@ -691,6 +719,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.enum(PayloadMode::class.java)
                   recommender = Recommenders.enum(PayloadMode::class.java)
-                })
+                }
+            )
   }
 }

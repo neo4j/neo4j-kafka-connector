@@ -91,7 +91,7 @@ enum class KafkaConverter(
       converterProvider = { StringConverter() },
       serializerClass = org.apache.kafka.common.serialization.StringSerializer::class.java,
       testShimSerializer = StringSerializer,
-  )
+  ),
 }
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
@@ -99,7 +99,7 @@ enum class KafkaConverter(
 annotation class KeyValueConverter(
     val key: KafkaConverter,
     val value: KafkaConverter,
-    val payloadMode: PayloadMode = PayloadMode.EXTENDED
+    val payloadMode: PayloadMode = PayloadMode.EXTENDED,
 )
 
 class KeyValueConverterResolver {

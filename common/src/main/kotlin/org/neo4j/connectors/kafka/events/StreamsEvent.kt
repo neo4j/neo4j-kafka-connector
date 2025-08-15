@@ -19,7 +19,7 @@ package org.neo4j.connectors.kafka.events
 enum class OperationType {
   created,
   updated,
-  deleted
+  deleted,
 }
 
 data class Meta(
@@ -29,18 +29,18 @@ data class Meta(
     val txEventId: Int,
     val txEventsCount: Int,
     val operation: OperationType,
-    val source: Map<String, Any> = emptyMap()
+    val source: Map<String, Any> = emptyMap(),
 )
 
 enum class EntityType {
   node,
-  relationship
+  relationship,
 }
 
 data class RelationshipNodeChange(
     val id: String,
     val labels: List<String>?,
-    val ids: Map<String, Any>
+    val ids: Map<String, Any>,
 )
 
 abstract class RecordChange {
@@ -63,7 +63,7 @@ data class NodePayload(
     override val id: String,
     override val before: NodeChange?,
     override val after: NodeChange?,
-    override val type: EntityType = EntityType.node
+    override val type: EntityType = EntityType.node,
 ) : Payload()
 
 data class RelationshipPayload(
@@ -73,29 +73,29 @@ data class RelationshipPayload(
     override val before: RelationshipChange?,
     override val after: RelationshipChange?,
     val label: String,
-    override val type: EntityType = EntityType.relationship
+    override val type: EntityType = EntityType.relationship,
 ) : Payload()
 
 enum class StreamsConstraintType {
   UNIQUE,
   NODE_PROPERTY_EXISTS,
-  RELATIONSHIP_PROPERTY_EXISTS
+  RELATIONSHIP_PROPERTY_EXISTS,
 }
 
 enum class RelKeyStrategy {
   DEFAULT,
-  ALL
+  ALL,
 }
 
 data class Constraint(
     val label: String?,
     val properties: Set<String>,
-    val type: StreamsConstraintType
+    val type: StreamsConstraintType,
 )
 
 data class Schema(
     val properties: Map<String, String> = emptyMap(),
-    val constraints: List<Constraint> = emptyList()
+    val constraints: List<Constraint> = emptyList(),
 )
 
 open class StreamsEvent(open val payload: Any)
@@ -103,13 +103,13 @@ open class StreamsEvent(open val payload: Any)
 data class StreamsTransactionEvent(
     val meta: Meta,
     override val payload: Payload,
-    val schema: Schema
+    val schema: Schema,
 ) : StreamsEvent(payload)
 
 data class StreamsTransactionNodeEvent(
     val meta: Meta,
     val payload: NodePayload,
-    val schema: Schema
+    val schema: Schema,
 ) {
   fun toStreamsTransactionEvent() = StreamsTransactionEvent(this.meta, this.payload, this.schema)
 }
@@ -117,7 +117,7 @@ data class StreamsTransactionNodeEvent(
 data class StreamsTransactionRelationshipEvent(
     val meta: Meta,
     val payload: RelationshipPayload,
-    val schema: Schema
+    val schema: Schema,
 ) {
   fun toStreamsTransactionEvent() = StreamsTransactionEvent(this.meta, this.payload, this.schema)
 }

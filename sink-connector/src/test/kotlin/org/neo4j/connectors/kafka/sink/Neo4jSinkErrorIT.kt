@@ -115,15 +115,18 @@ abstract class Neo4jSinkErrorIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report an error with all error headers when headers are enabled`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -165,17 +168,20 @@ abstract class Neo4jSinkErrorIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "none",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should be in failed state when error tolerance is none`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
       sink: Neo4jSinkRegistration,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val schemaWithMissingSurname =
@@ -215,17 +221,20 @@ abstract class Neo4jSinkErrorIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should still be in running state when error tolerance is all`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
       sink: Neo4jSinkRegistration,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val schemaWithMissingSurname =
@@ -265,16 +274,19 @@ abstract class Neo4jSinkErrorIT {
           [
               CypherStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -309,7 +321,8 @@ abstract class Neo4jSinkErrorIT {
         KafkaMessage(valueSchema = schema, value = struct2ToFail),
         KafkaMessage(valueSchema = schema, value = struct3),
         KafkaMessage(valueSchema = schema, value = struct4ToFail),
-        KafkaMessage(valueSchema = schema, value = struct5))
+        KafkaMessage(valueSchema = schema, value = struct5),
+    )
 
     eventually(30.seconds) {
       session.run("MATCH (n) RETURN n", emptyMap()).list().map {
@@ -318,7 +331,8 @@ abstract class Neo4jSinkErrorIT {
           listOf(
               (listOf("Person") to mapOf("id" to 1L, "name" to "John", "surname" to "Doe")),
               (listOf("Person") to mapOf("id" to 3L, "name" to "Mary", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
+              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
+          )
     }
 
     TopicVerifier.createForMap(errorConsumer)
@@ -349,37 +363,48 @@ abstract class Neo4jSinkErrorIT {
       nodePattern =
           [
               NodePatternStrategy(
-                  TOPIC, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
+                  TOPIC,
+                  "(:Person{!id, name, surname})",
+                  mergeNodeProperties = false,
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with node pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     val message1 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 1, "name": "John", "surname": "Doe"}""")
+            value = """{"id": 1, "name": "John", "surname": "Doe"}""",
+        )
     val message2ToFail =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 2, name: "Jane", "surname": "Doe"}""")
+            value = """{"id": 2, name: "Jane", "surname": "Doe"}""",
+        )
     val message3 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 3, "name": "Mary", "surname": "Doe"}""")
+            value = """{"id": 3, "name": "Mary", "surname": "Doe"}""",
+        )
     val message4ToFail =
         KafkaMessage(
-            valueSchema = Schema.STRING_SCHEMA, value = """{"name": "Martin", "surname": "Doe"}""")
+            valueSchema = Schema.STRING_SCHEMA,
+            value = """{"name": "Martin", "surname": "Doe"}""",
+        )
     val message5 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 5, "name": "Sue", "surname": "Doe"}""")
+            value = """{"id": 5, "name": "Sue", "surname": "Doe"}""",
+        )
 
     producer.publish(message1, message2ToFail, message3, message4ToFail, message5)
 
@@ -390,7 +415,8 @@ abstract class Neo4jSinkErrorIT {
           listOf(
               (listOf("Person") to mapOf("id" to 1L, "name" to "John", "surname" to "Doe")),
               (listOf("Person") to mapOf("id" to 3L, "name" to "Mary", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
+              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
+          )
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
@@ -424,16 +450,19 @@ abstract class Neo4jSinkErrorIT {
                   TOPIC,
                   "(:Person{!id: personId})-[:OWNS]->(:Item{!id: itemId})",
                   mergeNodeProperties = false,
-                  mergeRelationshipProperties = false)],
+                  mergeRelationshipProperties = false,
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with relationship pattern strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
     session.createNodeKeyConstraint(neo4j, "item_id", "Item", "id")
@@ -456,7 +485,8 @@ abstract class Neo4jSinkErrorIT {
           session
               .run(
                   "MATCH (p:Person {id: ${'$'}productId})-[r:OWNS]->(i:Item {id: ${'$'}itemId}) RETURN p,r,i",
-                  mapOf("productId" to 1L, "itemId" to 1L))
+                  mapOf("productId" to 1L, "itemId" to 1L),
+              )
               .single()
 
       result1.get("p").asNode() should
@@ -477,7 +507,8 @@ abstract class Neo4jSinkErrorIT {
           session
               .run(
                   "MATCH (p:Person {id: ${'$'}productId})-[r:OWNS]->(i:Item {id: ${'$'}itemId}) RETURN p,r,i",
-                  mapOf("productId" to 2L, "itemId" to 2L))
+                  mapOf("productId" to 2L, "itemId" to 2L),
+              )
               .single()
 
       result2.get("p").asNode() should
@@ -498,7 +529,8 @@ abstract class Neo4jSinkErrorIT {
           session
               .run(
                   "MATCH (p:Person {id: ${'$'}productId})-[r:OWNS]->(i:Item {id: ${'$'}itemId}) RETURN p,r,i",
-                  mapOf("productId" to 4L, "itemId" to 4L))
+                  mapOf("productId" to 4L, "itemId" to 4L),
+              )
               .single()
 
       result3.get("p").asNode() should
@@ -544,13 +576,14 @@ abstract class Neo4jSinkErrorIT {
       cud = [CudStrategy(TOPIC)],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with cud strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -566,7 +599,8 @@ abstract class Neo4jSinkErrorIT {
                     "name": "John",
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
     val message2 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
@@ -580,7 +614,8 @@ abstract class Neo4jSinkErrorIT {
                     "name": "Jane",
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
     val message3ToFail =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
@@ -594,7 +629,8 @@ abstract class Neo4jSinkErrorIT {
                     "name": "Mary"
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
     val message4 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
@@ -608,7 +644,8 @@ abstract class Neo4jSinkErrorIT {
                     "name": "Martin",
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
     val message5 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
@@ -622,7 +659,8 @@ abstract class Neo4jSinkErrorIT {
                     "name": "Sue",
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
 
     producer.publish(message1ToFail, message2, message3ToFail, message4, message5)
 
@@ -633,7 +671,8 @@ abstract class Neo4jSinkErrorIT {
           listOf(
               (listOf("Person") to mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe")),
               (listOf("Person") to mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
+              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
+          )
     }
 
     TopicVerifier.create<String, String>(errorConsumer)
@@ -664,13 +703,14 @@ abstract class Neo4jSinkErrorIT {
       cdcSchema = [CdcSchemaStrategy(TOPIC)],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with cdc schema strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -684,8 +724,9 @@ abstract class Neo4jSinkErrorIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 1L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 1L, "name" to "John", "surname" to "Doe"))))
+                NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "John", "surname" to "Doe")),
+            ),
+        )
 
     val event2 =
         newEvent(
@@ -697,8 +738,9 @@ abstract class Neo4jSinkErrorIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 2L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe"))))
+                NodeState(listOf("Person"), mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe")),
+            ),
+        )
 
     val event3ToFail =
         newEvent(
@@ -710,8 +752,9 @@ abstract class Neo4jSinkErrorIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 3L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 3L, "name" to "Mary", "surname" to "Doe"))))
+                NodeState(listOf("Person"), mapOf("id" to 3L, "name" to "Mary", "surname" to "Doe")),
+            ),
+        )
 
     val event4 =
         newEvent(
@@ -724,7 +767,11 @@ abstract class Neo4jSinkErrorIT {
                 mapOf("Person" to listOf(mapOf("id" to 4L))),
                 null,
                 NodeState(
-                    listOf("Person"), mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe"))))
+                    listOf("Person"),
+                    mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe"),
+                ),
+            ),
+        )
 
     val event5 =
         newEvent(
@@ -736,8 +783,9 @@ abstract class Neo4jSinkErrorIT {
                 listOf("Person"),
                 mapOf("Person" to listOf(mapOf("id" to 5L))),
                 null,
-                NodeState(
-                    listOf("Person"), mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe"))))
+                NodeState(listOf("Person"), mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
+            ),
+        )
 
     producer.publish(event1ToFail, event2, event3ToFail, event4, event5)
 
@@ -748,7 +796,8 @@ abstract class Neo4jSinkErrorIT {
           listOf(
               (listOf("Person") to mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe")),
               (listOf("Person") to mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")))
+              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
+          )
     }
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
@@ -779,13 +828,14 @@ abstract class Neo4jSinkErrorIT {
       cdcSourceId = [CdcSourceIdStrategy(TOPIC, "SourceEvent", "sourceId")],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events with cdc source id strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
-      neo4j: Neo4j
+      neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
@@ -801,7 +851,10 @@ abstract class Neo4jSinkErrorIT {
                 null,
                 NodeState(
                     listOf("SourceEvent"),
-                    mapOf("id" to 1L, "name" to "John", "surname" to "Doe"))))
+                    mapOf("id" to 1L, "name" to "John", "surname" to "Doe"),
+                ),
+            ),
+        )
 
     val event2ToFail =
         newEvent(
@@ -815,7 +868,10 @@ abstract class Neo4jSinkErrorIT {
                 null,
                 NodeState(
                     listOf("SourceEvent"),
-                    mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe"))))
+                    mapOf("id" to 2L, "name" to "Jane", "surname" to "Doe"),
+                ),
+            ),
+        )
 
     val event3 =
         newEvent(
@@ -828,7 +884,11 @@ abstract class Neo4jSinkErrorIT {
                 emptyMap(),
                 null,
                 NodeState(
-                    listOf("SourceEvent"), mapOf("id" to 3, "name" to "Mary", "surname" to "Doe"))))
+                    listOf("SourceEvent"),
+                    mapOf("id" to 3, "name" to "Mary", "surname" to "Doe"),
+                ),
+            ),
+        )
 
     val event4 =
         newEvent(
@@ -842,7 +902,10 @@ abstract class Neo4jSinkErrorIT {
                 null,
                 NodeState(
                     listOf("SourceEvent"),
-                    mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe"))))
+                    mapOf("id" to 4L, "name" to "Martin", "surname" to "Doe"),
+                ),
+            ),
+        )
 
     val event5ToFail =
         newEvent(
@@ -855,7 +918,11 @@ abstract class Neo4jSinkErrorIT {
                 emptyMap(),
                 null,
                 NodeState(
-                    listOf("SourceEvent"), mapOf("id" to 5L, "name" to "Sue", "surname" to "*"))))
+                    listOf("SourceEvent"),
+                    mapOf("id" to 5L, "name" to "Sue", "surname" to "*"),
+                ),
+            ),
+        )
 
     producer.publish(event1, event2ToFail, event3, event4, event5ToFail)
 
@@ -870,7 +937,12 @@ abstract class Neo4jSinkErrorIT {
                   mapOf("sourceId" to "person3", "id" to 3L, "name" to "Mary", "surname" to "Doe")),
               (listOf("SourceEvent") to
                   mapOf(
-                      "sourceId" to "person4", "id" to 4L, "name" to "Martin", "surname" to "Doe")))
+                      "sourceId" to "person4",
+                      "id" to 4L,
+                      "name" to "Martin",
+                      "surname" to "Doe",
+                  )),
+          )
     }
 
     TopicVerifier.create<ChangeEvent, ChangeEvent>(errorConsumer)
@@ -901,25 +973,29 @@ abstract class Neo4jSinkErrorIT {
       nodePattern =
           [NodePatternStrategy(TOPIC, "(:User{!id, name, surname})", mergeNodeProperties = false)],
       errorTolerance = "none",
-      errorDlqTopic = DLQ_TOPIC)
+      errorDlqTopic = DLQ_TOPIC,
+  )
   @Test
   fun `should stop the process and only report first failed event when error tolerance is none`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     val message1 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 1, "name": "John", "surname": "Doe"}""")
+            value = """{"id": 1, "name": "John", "surname": "Doe"}""",
+        )
     val message2ToFail =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 2, name: "Jane", "surname": "Doe"}""")
+            value = """{"id": 2, name: "Jane", "surname": "Doe"}""",
+        )
     val message3 =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 3, name: "Mary", "surname": "Doe"}""")
+            value = """{"id": 3, name: "Mary", "surname": "Doe"}""",
+        )
 
     producer.publish(message1, message2ToFail, message3)
 
@@ -942,21 +1018,28 @@ abstract class Neo4jSinkErrorIT {
           [
               CypherStrategy(
                   TOPIC_2,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})")],
+                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+              )
+          ],
       nodePattern =
           [
               NodePatternStrategy(
-                  TOPIC_3, "(:Person{!id, name, surname})", mergeNodeProperties = false)],
+                  TOPIC_3,
+                  "(:Person{!id, name, surname})",
+                  mergeNodeProperties = false,
+              )
+          ],
       errorDlqTopic = DLQ_TOPIC,
       errorTolerance = "all",
-      enableErrorHeaders = true)
+      enableErrorHeaders = true,
+  )
   @Test
   fun `should report failed events from different topics`(
       @TopicProducer(TOPIC_1) producer1: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_2) producer2: ConvertingKafkaProducer,
       @TopicProducer(TOPIC_3) producer3: ConvertingKafkaProducer,
       @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer,
-      session: Session
+      session: Session,
   ) = runTest {
     val cudMessageToFail =
         KafkaMessage(
@@ -970,12 +1053,14 @@ abstract class Neo4jSinkErrorIT {
                     "name": "John",
                     "surname": "Doe"
                   }
-                }""")
+                }""",
+        )
 
     val cypherMessage =
         KafkaMessage(
             valueSchema = Schema.STRING_SCHEMA,
-            value = """{"id": 1, "name": "John", "surname": "Doe"}""")
+            value = """{"id": 1, "name": "John", "surname": "Doe"}""",
+        )
 
     val nodePatternMessageToFail =
         KafkaMessage(valueSchema = Schema.STRING_SCHEMA, value = """{}""")
@@ -1034,8 +1119,10 @@ abstract class Neo4jSinkErrorIT {
               ZonedDateTime.now().minusSeconds(5),
               ZonedDateTime.now(),
               emptyMap(),
-              emptyMap()),
-          event)
+              emptyMap(),
+          ),
+          event,
+      )
 }
 
 @KeyValueConverter(key = AVRO, value = AVRO) class Neo4jSinkErrorAvroIT : Neo4jSinkErrorIT()

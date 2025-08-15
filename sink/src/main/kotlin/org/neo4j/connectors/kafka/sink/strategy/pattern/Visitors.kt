@@ -39,11 +39,12 @@ internal object Visitors {
               line: Int,
               charPositionInLine: Int,
               msg: String,
-              e: RecognitionException?
+              e: RecognitionException?,
           ) {
             errors.add(String.format("line %d:%d, %s", line, charPositionInLine, msg))
           }
-        })
+        }
+    )
 
     val pattern = parser.pattern()
 
@@ -82,18 +83,23 @@ internal object Visitors {
               relPattern.properties().propertySelector().propSelector(),
               keyProperties,
               includeProperties,
-              excludeProperties)
+              excludeProperties,
+          )
         }
 
         val startNode =
             enforceKeyProperties(
                 visitCypherNodePattern(
-                    ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 0 else 1)))
+                    ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 0 else 1)
+                )
+            )
 
         val endNode =
             enforceKeyProperties(
                 visitCypherNodePattern(
-                    ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 1 else 0)))
+                    ctx.cypherNodePattern(if ((relPattern.rightArrow() != null)) 1 else 0)
+                )
+            )
 
         return ensureImplicitWildcard(
             RelationshipPattern(
@@ -103,11 +109,14 @@ internal object Visitors {
                 includeProperties.contains(PropertyMapping.WILDCARD),
                 keyProperties,
                 includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
-                excludeProperties))
+                excludeProperties,
+            )
+        )
       }
 
       return ensureImplicitWildcard(
-          enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0))))
+          enforceKeyProperties(visitCypherNodePattern(ctx.cypherNodePattern(0)))
+      )
     }
 
     override fun visitSimplePattern(ctx: PatternParser.SimplePatternContext): Pattern {
@@ -122,7 +131,8 @@ internal object Visitors {
               relPattern.properties().propertySelector().propSelector(),
               keyProperties,
               includeProperties,
-              excludeProperties)
+              excludeProperties,
+          )
         }
 
         val startNode = enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
@@ -136,11 +146,14 @@ internal object Visitors {
                 includeProperties.contains(PropertyMapping.WILDCARD),
                 keyProperties,
                 includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
-                excludeProperties))
+                excludeProperties,
+            )
+        )
       }
 
       return ensureImplicitWildcard(
-          enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0))))
+          enforceKeyProperties(visitSimpleNodePattern(ctx.simpleNodePattern(0)))
+      )
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -149,7 +162,12 @@ internal object Visitors {
         is NodePattern -> {
           if (pattern.includeProperties.isEmpty()) {
             return NodePattern(
-                pattern.labels, true, pattern.keyProperties, emptySet(), pattern.excludeProperties)
+                pattern.labels,
+                true,
+                pattern.keyProperties,
+                emptySet(),
+                pattern.excludeProperties,
+            )
                 as T
           }
         }
@@ -162,7 +180,8 @@ internal object Visitors {
                 true,
                 pattern.keyProperties,
                 emptySet(),
-                pattern.excludeProperties)
+                pattern.excludeProperties,
+            )
                 as T
           }
         }
@@ -184,12 +203,14 @@ internal object Visitors {
     private fun enforceExplicitInclusionOnly(pattern: NodePattern): NodePattern {
       if (pattern.excludeProperties.isNotEmpty()) {
         throw PatternException(
-            "Property exclusions are not allowed on start and end node patterns.")
+            "Property exclusions are not allowed on start and end node patterns."
+        )
       }
 
       if (pattern.includeAllValueProperties) {
         throw PatternException(
-            "Wildcard property inclusion is not allowed on start and end node patterns.")
+            "Wildcard property inclusion is not allowed on start and end node patterns."
+        )
       }
 
       return pattern
@@ -229,7 +250,8 @@ internal object Visitors {
           includeProperties.contains(PropertyMapping.WILDCARD),
           keyProperties,
           includeProperties.filter { it != PropertyMapping.WILDCARD }.toSet(),
-          excludeProperties)
+          excludeProperties,
+      )
     }
 
     private fun extractPropertySelectors(
@@ -243,7 +265,8 @@ internal object Visitors {
           includeProperties.add(PropertyMapping.WILDCARD)
         } else if (child.MINUS() != null) {
           excludeProperties.add(
-              PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName()))
+              PropertyKeyNameVisitor.visitPropertyKeyName(child.propertyKeyName())
+          )
         } else if (child.EXCLAMATION() != null) {
           keyProperties += extractPropertyNameOrAlias(child.propertyKeyNameOrAlias())
         } else {
@@ -266,9 +289,12 @@ internal object Visitors {
     } else {
       PropertyMapping(
           PropertyKeyNameVisitor.visitPropertyKeyName(
-              ctx.aliasedPropertyKeyName().propertyKeyName(1)),
+              ctx.aliasedPropertyKeyName().propertyKeyName(1)
+          ),
           PropertyKeyNameVisitor.visitPropertyKeyName(
-              ctx.aliasedPropertyKeyName().propertyKeyName(0)))
+              ctx.aliasedPropertyKeyName().propertyKeyName(0)
+          ),
+      )
     }
   }
 

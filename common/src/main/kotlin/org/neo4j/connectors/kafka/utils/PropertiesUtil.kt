@@ -29,13 +29,17 @@ class PropertiesUtil {
 
     init {
       properties.load(
-          PropertiesUtil::class.java.getResourceAsStream("/neo4j-configuration.properties"))
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-configuration.properties")
+      )
       properties.load(
-          PropertiesUtil::class.java.getResourceAsStream("/neo4j-source-configuration.properties"))
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-source-configuration.properties")
+      )
       properties.load(
-          PropertiesUtil::class.java.getResourceAsStream("/neo4j-sink-configuration.properties"))
+          PropertiesUtil::class.java.getResourceAsStream("/neo4j-sink-configuration.properties")
+      )
       properties.load(
-          PropertiesUtil::class.java.getResourceAsStream("/kafka-connect-version.properties"))
+          PropertiesUtil::class.java.getResourceAsStream("/kafka-connect-version.properties")
+      )
       VERSION =
           try {
             properties.getProperty("version", DEFAULT_VERSION).trim()

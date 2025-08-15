@@ -45,7 +45,7 @@ class Neo4jSinkRegistration(
     keyConverter: KafkaConverter,
     valueConverter: KafkaConverter,
     topics: List<String>,
-    strategies: Map<String, Any>
+    strategies: Map<String, Any>,
 ) {
 
   private val name: String = randomizedName("Neo4jSinkConnector")
@@ -73,7 +73,8 @@ class Neo4jSinkRegistration(
                           put("errors.deadletterqueue.topic.name", errorDlqTopic)
                           put(
                               "errors.deadletterqueue.topic.replication.factor",
-                              DLQ_TOPIC_REPLICATION_FACTOR)
+                              DLQ_TOPIC_REPLICATION_FACTOR,
+                          )
                         }
                         put("errors.deadletterqueue.context.headers.enable", enableErrorHeaders)
                         put("errors.log.enable", enableErrorLog)
@@ -89,7 +90,8 @@ class Neo4jSinkRegistration(
                         put("key.converter.schema.registry.url", schemaControlRegistryUri)
                       }
                       putAll(
-                          keyConverter.additionalProperties.mapKeys { "key.converter.${it.key}" })
+                          keyConverter.additionalProperties.mapKeys { "key.converter.${it.key}" }
+                      )
 
                       if (valueConverter.supportsSchemaRegistry) {
                         put("value.converter.schema.registry.url", schemaControlRegistryUri)
@@ -97,10 +99,12 @@ class Neo4jSinkRegistration(
                       putAll(
                           valueConverter.additionalProperties.mapKeys {
                             "value.converter.${it.key}"
-                          })
+                          }
+                      )
 
                       putAll(strategies)
-                    })
+                    },
+            )
             .toMap()
   }
 
@@ -126,7 +130,8 @@ class Neo4jSinkRegistration(
     val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
     if (response.statusCode() != 200) {
       throw RuntimeException(
-          "Could not get connector status, response code: ${response.statusCode()}")
+          "Could not get connector status, response code: ${response.statusCode()}"
+      )
     }
 
     val connectorTasks = ObjectMapper().readTree(response.body()).get("tasks")

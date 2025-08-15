@@ -31,6 +31,7 @@ import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.testing.format.KafkaConverter
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.GenericRecord
+import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -58,7 +59,7 @@ class TopicVerifier<K, V>(
   @Suppress("UNCHECKED_CAST")
   fun assertMessage(
       schemaTopic: String? = null,
-      assertion: (GenericRecord<K, V>) -> Unit
+      assertion: (GenericRecord<K, V>) -> Unit,
   ): TopicVerifier<K, V> {
     messagePredicates.add { record ->
       try {
@@ -147,7 +148,7 @@ class TopicVerifier<K, V>(
       }
     } catch (e: ConditionTimeoutException) {
       throw AssertionError(
-          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages",
+          "Timeout of ${timeout.toMillis()}s reached: could not verify all ${predicates.size} predicate(s) on received messages"
       )
     }
   }
@@ -176,13 +177,21 @@ class TopicVerifier<K, V>(
           DynamicTypes.fromConnectValue(schema, sourceValue, true)
         }
       }
+      is String -> {
+        // if the value is a string, we assume it is a JSON string and deserialize it
+        if (assertionClass == Map::class.java) {
+          JSONUtils.readValue(sourceValue, true)
+        } else {
+          sourceValue
+        }
+      }
       else -> sourceValue
     }
   }
 
   companion object {
     inline fun <reified K, reified V> create(
-        consumer: ConvertingKafkaConsumer,
+        consumer: ConvertingKafkaConsumer
     ): TopicVerifier<K, V> {
       val keyConverter = consumer.keyConverter.converterProvider()
       when (consumer.keyConverter) {
@@ -193,7 +202,7 @@ class TopicVerifier<K, V>(
             keyConverter.configure(
                 mapOf(
                     AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                        consumer.schemaRegistryUrlProvider(),
+                        consumer.schemaRegistryUrlProvider()
                 ),
                 true,
             )
@@ -208,7 +217,7 @@ class TopicVerifier<K, V>(
             valueConverter.configure(
                 mapOf(
                     AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to
-                        consumer.schemaRegistryUrlProvider(),
+                        consumer.schemaRegistryUrlProvider()
                 ),
                 false,
             )

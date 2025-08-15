@@ -35,7 +35,7 @@ internal object JUnitSupport {
 
   inline fun <reified T : Annotation> annotatedParameterContextForType(
       parameterType: KClass<*>,
-      paramAnnotation: T
+      paramAnnotation: T,
   ): ParameterContext {
     val param =
         mock<Parameter> {

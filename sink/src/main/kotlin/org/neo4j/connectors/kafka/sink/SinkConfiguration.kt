@@ -43,7 +43,7 @@ class SinkConfiguration : Neo4jConfiguration {
   @TestOnly
   constructor(
       originals: Map<String, *>,
-      renderer: Renderer?
+      renderer: Renderer?,
   ) : super(config(), originals, ConnectorType.SINK) {
     fixedRenderer = renderer
 
@@ -102,7 +102,8 @@ class SinkConfiguration : Neo4jConfiguration {
 
     if (sourceTopics != configuredTopics) {
       throw ConfigException(
-          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($sourceTopics) and configured strategies ($configuredTopics)")
+          "There is a mismatch between topics defined into the property `${SinkTask.TOPICS_CONFIG}` ($sourceTopics) and configured strategies ($configuredTopics)"
+      )
     }
   }
 
@@ -151,11 +152,13 @@ class SinkConfiguration : Neo4jConfiguration {
       val cypherAliasForValue = config.value<String>(CYPHER_BIND_VALUE_AS).isNullOrEmpty()
       val cypherUseEventForValue =
           config.value<String>(CYPHER_BIND_VALUE_AS_EVENT)?.toBoolean() ?: true
-      if (!cypherUseEventForValue &&
-          (cypherAliasForHeader &&
-              cypherAliasForKey &&
-              cypherAliasForValue &&
-              cypherAliasForTimestamp)) {
+      if (
+          !cypherUseEventForValue &&
+              (cypherAliasForHeader &&
+                  cypherAliasForKey &&
+                  cypherAliasForValue &&
+                  cypherAliasForTimestamp)
+      ) {
         config
             .configValues()
             .filter {
@@ -165,11 +168,13 @@ class SinkConfiguration : Neo4jConfiguration {
                       CYPHER_BIND_HEADER_AS,
                       CYPHER_BIND_KEY_AS,
                       CYPHER_BIND_VALUE_AS,
-                      CYPHER_BIND_VALUE_AS_EVENT)
+                      CYPHER_BIND_VALUE_AS_EVENT,
+                  )
             }
             .forEach {
               it.addErrorMessage(
-                  "At least one variable binding must be specified for Cypher strategies.")
+                  "At least one variable binding must be specified for Cypher strategies."
+              )
             }
       }
     }
@@ -186,33 +191,38 @@ class SinkConfiguration : Neo4jConfiguration {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = ""
                   group = Groups.CONNECTOR.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CDC_SCHEMA_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = ""
                   group = Groups.CONNECTOR.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CUD_TOPICS, ConfigDef.Type.LIST) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = ""
                   group = Groups.CONNECTOR.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_SIZE
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = ConfigDef.Range.atLeast(1)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(BATCH_TIMEOUT, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -220,7 +230,8 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_PROPERTY_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -228,31 +239,36 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_HEADER_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_KEY_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(CYPHER_BIND_VALUE_AS_EVENT, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -260,31 +276,36 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
                   recommender = Recommenders.bool()
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_TIMESTAMP_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_TIMESTAMP_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_HEADER_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_HEADER_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_KEY_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_KEY_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_BIND_VALUE_AS, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_BIND_VALUE_ALIAS
                   group = Groups.CONNECTOR_ADVANCED.title
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_MERGE_NODE_PROPERTIES, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -292,7 +313,8 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
                   recommender = Recommenders.bool()
-                })
+                }
+            )
             .define(
                 ConfigKeyBuilder.of(PATTERN_MERGE_RELATIONSHIP_PROPERTIES, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
@@ -300,6 +322,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
                   recommender = Recommenders.bool()
-                })
+                }
+            )
   }
 }

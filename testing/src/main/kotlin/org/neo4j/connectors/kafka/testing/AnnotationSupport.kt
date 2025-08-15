@@ -27,10 +27,7 @@ internal object AnnotationSupport {
     while (current != null) {
       if (current.testMethod.isPresent) {
         val methodAnnotation =
-            AnnotationSupport.findAnnotation(
-                current.testMethod.get(),
-                T::class.java,
-            )
+            AnnotationSupport.findAnnotation(current.testMethod.get(), T::class.java)
         if (methodAnnotation.isPresent) {
           return methodAnnotation.get()
         }

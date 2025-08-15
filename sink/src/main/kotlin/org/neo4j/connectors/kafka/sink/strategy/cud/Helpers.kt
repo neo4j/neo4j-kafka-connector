@@ -38,12 +38,13 @@ fun buildNode(labels: Set<String>, ids: Map<String, Any?>, keys: Expression): No
 fun <T : ExposesWhere> T.applyFilter(node: Node, ids: Map<String, Any?>, keys: Expression): T {
   return if (ids.containsKey(Keys.PHYSICAL_ID)) {
     this.where(
-        Cypher.raw("id(${'$'}E)", node.requiredSymbolicName).eq(keys.property(Keys.PHYSICAL_ID)))
-        as T
+        Cypher.raw("id(${'$'}E)", node.requiredSymbolicName).eq(keys.property(Keys.PHYSICAL_ID))
+    ) as T
   } else if (ids.containsKey(Keys.ELEMENT_ID)) {
     this.where(
         Cypher.raw("elementId(${'$'}E)", node.requiredSymbolicName)
-            .eq(keys.property(Keys.ELEMENT_ID))) as T
+            .eq(keys.property(Keys.ELEMENT_ID))
+    ) as T
   } else {
     this
   }
@@ -75,5 +76,6 @@ fun lookupNodes(
                   .with(startNode, endNode)
           LookupMode.MERGE -> it.merge(endNode).with(startNode, endNode)
         }
-      })
+      },
+  )
 }
