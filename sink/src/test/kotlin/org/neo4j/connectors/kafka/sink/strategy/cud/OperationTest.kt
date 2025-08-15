@@ -32,11 +32,15 @@ class OperationTest {
                 Keys.TYPE to Type.NODE.name,
                 Keys.OPERATION to OperationType.CREATE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         CreateNode(
-            setOf("LabelA", "LabelB"), mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            setOf("LabelA", "LabelB"),
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -48,13 +52,16 @@ class OperationTest {
                 Keys.OPERATION to OperationType.UPDATE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         UpdateNode(
             setOf("LabelA", "LabelB"),
             mapOf("id1" to 1, "id2" to "string"),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -66,13 +73,16 @@ class OperationTest {
                 Keys.OPERATION to OperationType.MERGE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         MergeNode(
             setOf("LabelA", "LabelB"),
             mapOf("id1" to 1, "id2" to "string"),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -83,7 +93,9 @@ class OperationTest {
                 Keys.TYPE to Type.NODE.name,
                 Keys.OPERATION to OperationType.DELETE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
-                Keys.IDS to mapOf("id1" to 1, "id2" to "string")))
+                Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
+            )
+        )
 
     operation shouldBe
         DeleteNode(setOf("LabelA", "LabelB"), mapOf("id1" to 1, "id2" to "string"), false)
@@ -98,7 +110,9 @@ class OperationTest {
                 Keys.OPERATION to OperationType.DELETE.name,
                 Keys.LABELS to listOf("LabelA", "LabelB"),
                 Keys.IDS to mapOf("id1" to 1, "id2" to "string"),
-                Keys.DETACH to true))
+                Keys.DETACH to true,
+            )
+        )
 
     operation shouldBe
         DeleteNode(setOf("LabelA", "LabelB"), mapOf("id1" to 1, "id2" to "string"), true)
@@ -112,24 +126,19 @@ class OperationTest {
                 Keys.TYPE to Type.RELATIONSHIP.name,
                 Keys.OPERATION to OperationType.CREATE.name,
                 Keys.RELATION_TYPE to "RELATED_TO",
-                Keys.FROM to
-                    mapOf(
-                        Keys.LABELS to listOf("LabelA"),
-                        Keys.IDS to mapOf("id" to 1),
-                    ),
-                Keys.TO to
-                    mapOf(
-                        Keys.LABELS to listOf("LabelB"),
-                        Keys.IDS to mapOf("id" to 2),
-                    ),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.FROM to mapOf(Keys.LABELS to listOf("LabelA"), Keys.IDS to mapOf("id" to 1)),
+                Keys.TO to mapOf(Keys.LABELS to listOf("LabelB"), Keys.IDS to mapOf("id" to 2)),
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         CreateRelationship(
             "RELATED_TO",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -144,20 +153,25 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                        Keys.OPERATION to "MERGE",
+                    ),
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         CreateRelationship(
             "RELATED_TO",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -172,13 +186,17 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                        Keys.OPERATION to "MERGE",
+                    ),
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         UpdateRelationship(
@@ -186,7 +204,8 @@ class OperationTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -201,14 +220,18 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
+                        Keys.OPERATION to "MERGE",
+                    ),
                 Keys.IDS to mapOf("id" to 3),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         UpdateRelationship(
@@ -216,7 +239,8 @@ class OperationTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
             mapOf("id" to 3),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -231,13 +255,17 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                        Keys.OPERATION to "MERGE",
+                    ),
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         MergeRelationship(
@@ -245,7 +273,8 @@ class OperationTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
             emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -260,14 +289,18 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
+                        Keys.OPERATION to "MERGE",
+                    ),
                 Keys.IDS to mapOf("id" to 3),
-                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)))
+                Keys.PROPERTIES to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
+        )
 
     operation shouldBe
         MergeRelationship(
@@ -275,7 +308,8 @@ class OperationTest {
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
             mapOf("id" to 3),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
   }
 
   @Test
@@ -290,19 +324,24 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE")))
+                        Keys.OPERATION to "MERGE",
+                    ),
+            )
+        )
 
     operation shouldBe
         DeleteRelationship(
             "RELATED_TO",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            emptyMap())
+            emptyMap(),
+        )
   }
 
   @Test
@@ -317,20 +356,25 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "MATCH"),
+                        Keys.OPERATION to "MATCH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "MERGE"),
-                Keys.IDS to mapOf("id" to 3)))
+                        Keys.OPERATION to "MERGE",
+                    ),
+                Keys.IDS to mapOf("id" to 3),
+            )
+        )
 
     operation shouldBe
         DeleteRelationship(
             "RELATED_TO",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("id" to 3))
+            mapOf("id" to 3),
+        )
   }
 
   @Test
@@ -345,20 +389,25 @@ class OperationTest {
                     mapOf(
                         Keys.LABELS to listOf("LabelA"),
                         Keys.IDS to mapOf("id" to 1),
-                        Keys.OPERATION to "mAtcH"),
+                        Keys.OPERATION to "mAtcH",
+                    ),
                 Keys.TO to
                     mapOf(
                         Keys.LABELS to listOf("LabelB"),
                         Keys.IDS to mapOf("id" to 2),
-                        Keys.OPERATION to "mErgE"),
-                Keys.IDS to mapOf("id" to 3)))
+                        Keys.OPERATION to "mErgE",
+                    ),
+                Keys.IDS to mapOf("id" to 3),
+            )
+        )
 
     operation shouldBe
         DeleteRelationship(
             "RELATED_TO",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("id" to 3))
+            mapOf("id" to 3),
+        )
   }
 
   @Test
@@ -377,7 +426,8 @@ class OperationTest {
             "prop2": "value"
           }
         }
-        """)
+        """
+    )
   }
 
   @Test
@@ -389,7 +439,8 @@ class OperationTest {
           "op": "create",
           "labels": []
         }
-        """)
+        """
+    )
   }
 
   @Test
@@ -405,7 +456,8 @@ class OperationTest {
             "prop1": 1
           }
         }
-        """)
+        """
+      )
     }
   }
 
@@ -424,7 +476,8 @@ class OperationTest {
             "prop1": 1
           }
         }
-        """)
+        """
+    )
   }
 
   @Test
@@ -451,7 +504,8 @@ class OperationTest {
             "prop2": "value"
           }
         }
-        """)
+        """
+    )
   }
 
   @Test
@@ -471,7 +525,8 @@ class OperationTest {
             "ids": { "id": 2 } 
           }
         }
-        """)
+        """
+    )
   }
 
   @Test
@@ -494,7 +549,8 @@ class OperationTest {
             "prop1": 1
           }
         }
-        """)
+        """
+      )
     }
   }
 
@@ -518,7 +574,8 @@ class OperationTest {
             "prop1": 1
           }
         }
-        """)
+        """
+    )
   }
 
   private fun assertDataExceptionThrown(json: String): InvalidDataException {

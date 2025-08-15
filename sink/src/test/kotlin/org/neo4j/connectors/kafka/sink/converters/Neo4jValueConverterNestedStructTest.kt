@@ -100,7 +100,8 @@ class Neo4jValueConverterNestedStructTest {
                     Struct(PREF_SCHEMA)
                         .put("preferenceType", it["preferenceType"])
                         .put("endEffectiveDate", it["endEffectiveDate"])
-                  })
+                  },
+              )
 
       val emailList = listOf(email)
       val tnsList =
@@ -113,7 +114,8 @@ class Neo4jValueConverterNestedStructTest {
                       Struct(PREF_SCHEMA)
                           .put("preferenceType", it["preferenceType"])
                           .put("endEffectiveDate", it["endEffectiveDate"])
-                    })
+                    },
+                )
           }
 
       return Struct(EVENT_SCHEMA)

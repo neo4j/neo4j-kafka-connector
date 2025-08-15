@@ -30,26 +30,28 @@ enum class ConstraintType(val value: String) {
   NODE_EXISTENCE("NODE_PROPERTY_EXISTENCE"),
   RELATIONSHIP_KEY("RELATIONSHIP_KEY"),
   RELATIONSHIP_UNIQUENESS("RELATIONSHIP_UNIQUENESS"),
-  RELATIONSHIP_EXISTENCE("RELATIONSHIP_PROPERTY_EXISTENCE")
+  RELATIONSHIP_EXISTENCE("RELATIONSHIP_PROPERTY_EXISTENCE"),
 }
 
 val NODE_CONSTRAINTS =
     listOf(
         ConstraintType.NODE_KEY.value,
         ConstraintType.NODE_UNIQUENESS.value,
-        ConstraintType.NODE_EXISTENCE.value)
+        ConstraintType.NODE_EXISTENCE.value,
+    )
 
 val RELATIONSHIP_CONSTRAINTS =
     listOf(
         ConstraintType.RELATIONSHIP_KEY.value,
         ConstraintType.RELATIONSHIP_UNIQUENESS.value,
-        ConstraintType.RELATIONSHIP_EXISTENCE.value)
+        ConstraintType.RELATIONSHIP_EXISTENCE.value,
+    )
 
 data class ConstraintData(
     val entityType: String,
     val constraintType: String,
     val labelOrType: String,
-    val properties: List<String>
+    val properties: List<String>,
 )
 
 fun fetchConstraintData(driver: Driver, sessionConfig: SessionConfig): List<ConstraintData> {
@@ -63,7 +65,8 @@ fun fetchConstraintData(driver: Driver, sessionConfig: SessionConfig): List<Cons
                 entityType = it.get("entityType").asString(),
                 constraintType = it.get("type").asString(),
                 labelOrType = it.get("labelsOrTypes").asList()[0].toString(),
-                properties = it.get("properties").asList().map { property -> property.toString() })
+                properties = it.get("properties").asList().map { property -> property.toString() },
+            )
           }
     }
   } catch (e: Exception) {

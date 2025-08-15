@@ -47,23 +47,28 @@ interface Operation {
                 is String -> type
                 else ->
                     throw IllegalArgumentException(
-                        "Unsupported data type ('$type') in CUD file type.")
-              }) ?: throw IllegalArgumentException("CUD file type must be specified.")
+                        "Unsupported data type ('$type') in CUD file type."
+                    )
+              }
+          ) ?: throw IllegalArgumentException("CUD file type must be specified.")
       val operation =
           OperationType.fromString(
               when (val operation = values[Keys.OPERATION]) {
                 is String -> operation
                 else ->
                     throw IllegalArgumentException(
-                        "Unsupported data type ('$operation') for CUD file operation")
-              }) ?: throw IllegalArgumentException("CUD file operation must be specified.")
+                        "Unsupported data type ('$operation') for CUD file operation"
+                    )
+              }
+          ) ?: throw IllegalArgumentException("CUD file operation must be specified.")
 
       val mapper = JSONUtils.getObjectMapper()
       val node = mapper.valueToTree<JsonNode>(values)
       val errors = SCHEMA.validate(node)
       if (errors.isNotEmpty()) {
         throw InvalidDataException(
-            errors.joinToString(", ") { "${it.evaluationPath}: ${it.message}" })
+            errors.joinToString(", ") { "${it.evaluationPath}: ${it.message}" }
+        )
       }
 
       return when (type to operation) {
@@ -77,7 +82,7 @@ interface Operation {
         RELATIONSHIP to DELETE -> DeleteRelationship.from(values)
         else ->
             throw IllegalArgumentException(
-                "Unknown type ('$type') and operation ('$operation') for CUD file",
+                "Unknown type ('$type') and operation ('$operation') for CUD file"
             )
       }
     }

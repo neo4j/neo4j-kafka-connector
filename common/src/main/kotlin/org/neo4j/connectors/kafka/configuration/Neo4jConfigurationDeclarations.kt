@@ -38,14 +38,16 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               group = Groups.CONNECTION.title
               validator =
                   Validators.uri("neo4j", "neo4j+s", "neo4j+ssc", "bolt", "bolt+s", "bolt+ssc")
-            })
+            }
+        )
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.DATABASE, ConfigDef.Type.STRING) {
               importance = Importance.HIGH
               defaultValue = ""
               group = Groups.CONNECTION.title
               validator = ConfigDef.NonNullValidator()
-            })
+            }
+        )
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.AUTHENTICATION_TYPE, ConfigDef.Type.STRING) {
               importance = Importance.HIGH
@@ -53,106 +55,143 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               group = Groups.CONNECTION.title
               validator = Validators.enum(AuthenticationType::class.java)
               recommender = Recommenders.enum(AuthenticationType::class.java)
-            })
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME, ConfigDef.Type.STRING) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD, ConfigDef.Type.PASSWORD) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD,
+                ConfigDef.Type.PASSWORD,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_BASIC_REALM, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.BASIC.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_BASIC_REALM,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.LOW
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET, ConfigDef.Type.PASSWORD) {
-                  group = Groups.CONNECTION.title
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.KERBEROS.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_KERBEROS_TICKET,
+                ConfigDef.Type.PASSWORD,
+            ) {
+              group = Groups.CONNECTION.title
+              importance = Importance.HIGH
+              defaultValue = ""
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.KERBEROS.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN, ConfigDef.Type.PASSWORD) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.BEARER.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_BEARER_TOKEN,
+                ConfigDef.Type.PASSWORD,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.BEARER.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME, ConfigDef.Type.STRING) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.CUSTOM.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_CUSTOM_SCHEME,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL, ConfigDef.Type.STRING) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.CUSTOM.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_CUSTOM_PRINCIPAL,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS, ConfigDef.Type.PASSWORD) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.CUSTOM.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_CUSTOM_CREDENTIALS,
+                ConfigDef.Type.PASSWORD,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM, ConfigDef.Type.STRING) {
-                  importance = Importance.HIGH
-                  defaultValue = ""
-                  group = Groups.CONNECTION.title
-                  recommender =
-                      Recommenders.visibleIf(
-                          Neo4jConfiguration.AUTHENTICATION_TYPE,
-                          Predicate.isEqual(AuthenticationType.CUSTOM.toString()))
-                })
+                Neo4jConfiguration.AUTHENTICATION_CUSTOM_REALM,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.HIGH
+              defaultValue = ""
+              group = Groups.CONNECTION.title
+              recommender =
+                  Recommenders.visibleIf(
+                      Neo4jConfiguration.AUTHENTICATION_TYPE,
+                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                  )
+            }
+        )
 
 fun ConfigDef.defineEncryptionSettings(): ConfigDef =
     this.define(
@@ -175,8 +214,11 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                                 else -> throw ConfigException("Must be a String or a List")
                               }
                             }
-                          }))
-            })
+                          },
+                      ),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.SECURITY_TRUST_STRATEGY, ConfigDef.Type.STRING) {
               importance = Importance.LOW
@@ -197,35 +239,47 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                                 else -> throw ConfigException("Must be a String or a List")
                               }
                             }
-                          }),
+                          },
+                      ),
                       Recommenders.visibleIf(
-                          Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true)))
-            })
+                          Neo4jConfiguration.SECURITY_ENCRYPTED,
+                          Predicate.isEqual(true),
+                      ),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue = "true"
-                  group = Groups.CONNECTION_TLS.title
-                  validator = Validators.bool()
-                  recommender =
-                      Recommenders.and(
-                          Recommenders.bool(),
-                          Recommenders.visibleIf(
-                              Neo4jConfiguration.URI,
-                              object : Predicate<Any?> {
-                                override fun test(t: Any?): Boolean {
-                                  return when (t) {
-                                    null -> false
-                                    is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
-                                    is List<*> -> t.any { test(it) }
-                                    else -> throw ConfigException("Must be a String or a List")
-                                  }
-                                }
-                              }),
-                          Recommenders.visibleIf(
-                              Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true)))
-                })
+                Neo4jConfiguration.SECURITY_HOST_NAME_VERIFICATION_ENABLED,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.LOW
+              defaultValue = "true"
+              group = Groups.CONNECTION_TLS.title
+              validator = Validators.bool()
+              recommender =
+                  Recommenders.and(
+                      Recommenders.bool(),
+                      Recommenders.visibleIf(
+                          Neo4jConfiguration.URI,
+                          object : Predicate<Any?> {
+                            override fun test(t: Any?): Boolean {
+                              return when (t) {
+                                null -> false
+                                is String -> URI(t).scheme in arrayOf("bolt", "neo4j")
+                                is List<*> -> t.any { test(it) }
+                                else -> throw ConfigException("Must be a String or a List")
+                              }
+                            }
+                          },
+                      ),
+                      Recommenders.visibleIf(
+                          Neo4jConfiguration.SECURITY_ENCRYPTED,
+                          Predicate.isEqual(true),
+                      ),
+                  )
+            }
+        )
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.SECURITY_CERT_FILES, ConfigDef.Type.LIST) {
               importance = Importance.LOW
@@ -245,14 +299,19 @@ fun ConfigDef.defineEncryptionSettings(): ConfigDef =
                                 else -> throw ConfigException("Must be a String or a List")
                               }
                             }
-                          }),
+                          },
+                      ),
                       Recommenders.visibleIf(
-                          Neo4jConfiguration.SECURITY_ENCRYPTED, Predicate.isEqual(true)),
+                          Neo4jConfiguration.SECURITY_ENCRYPTED,
+                          Predicate.isEqual(true),
+                      ),
                       Recommenders.visibleIf(
                           Neo4jConfiguration.SECURITY_TRUST_STRATEGY,
-                          Predicate.isEqual(
-                              Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString())))
-            })
+                          Predicate.isEqual(Strategy.TRUST_CUSTOM_CA_SIGNED_CERTIFICATES.toString()),
+                      ),
+                  )
+            }
+        )
 
 fun ConfigDef.definePoolSettings(): ConfigDef =
     this.define(
@@ -262,55 +321,68 @@ fun ConfigDef.definePoolSettings(): ConfigDef =
                   Config.defaultConfig().connectionTimeoutMillis().milliseconds.toSimpleString()
               group = Groups.CONNECTION_ADVANCED.title
               validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-            })
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE, ConfigDef.Type.INT) {
-                  importance = Importance.LOW
-                  defaultValue = Config.defaultConfig().maxConnectionPoolSize()
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator = Range.atLeast(1)
-                })
+                Neo4jConfiguration.POOL_MAX_CONNECTION_POOL_SIZE,
+                ConfigDef.Type.INT,
+            ) {
+              importance = Importance.LOW
+              defaultValue = Config.defaultConfig().maxConnectionPoolSize()
+              group = Groups.CONNECTION_ADVANCED.title
+              validator = Range.atLeast(1)
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue =
-                      Config.defaultConfig()
-                          .connectionAcquisitionTimeoutMillis()
-                          .milliseconds
-                          .toSimpleString()
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                Neo4jConfiguration.POOL_CONNECTION_ACQUISITION_TIMEOUT,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.LOW
+              defaultValue =
+                  Config.defaultConfig()
+                      .connectionAcquisitionTimeoutMillis()
+                      .milliseconds
+                      .toSimpleString()
+              group = Groups.CONNECTION_ADVANCED.title
+              validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue =
-                      Config.defaultConfig()
-                          .maxConnectionLifetimeMillis()
-                          .milliseconds
-                          .toSimpleString()
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                })
+                Neo4jConfiguration.POOL_MAX_CONNECTION_LIFETIME,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.LOW
+              defaultValue =
+                  Config.defaultConfig().maxConnectionLifetimeMillis().milliseconds.toSimpleString()
+              group = Groups.CONNECTION_ADVANCED.title
+              validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+            }
+        )
         .define(
             ConfigKeyBuilder.of(
-                Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST, ConfigDef.Type.STRING) {
-                  importance = Importance.LOW
-                  defaultValue = ""
-                  group = Groups.CONNECTION_ADVANCED.title
-                  validator =
-                      Validators.or(Validators.blank(), Validators.pattern(SIMPLE_DURATION_PATTERN))
-                })
+                Neo4jConfiguration.POOL_IDLE_TIME_BEFORE_TEST,
+                ConfigDef.Type.STRING,
+            ) {
+              importance = Importance.LOW
+              defaultValue = ""
+              group = Groups.CONNECTION_ADVANCED.title
+              validator =
+                  Validators.or(Validators.blank(), Validators.pattern(SIMPLE_DURATION_PATTERN))
+            }
+        )
 
 fun ConfigDef.defineRetrySettings(): ConfigDef =
     this.define(
         ConfigKeyBuilder.of(
-            Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT, ConfigDef.Type.STRING) {
-              importance = Importance.LOW
-              defaultValue = Neo4jConfiguration.DEFAULT_MAX_RETRY_DURATION.toSimpleString()
-              group = Groups.CONNECTION_ADVANCED.title
-              validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-            })
+            Neo4jConfiguration.MAX_TRANSACTION_RETRY_TIMEOUT,
+            ConfigDef.Type.STRING,
+        ) {
+          importance = Importance.LOW
+          defaultValue = Neo4jConfiguration.DEFAULT_MAX_RETRY_DURATION.toSimpleString()
+          group = Groups.CONNECTION_ADVANCED.title
+          validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+        }
+    )

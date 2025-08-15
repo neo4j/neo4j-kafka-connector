@@ -69,16 +69,15 @@ class Neo4jSinkExtensionTest {
         registrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
             kafkaConnectServer.internalServerError(
-                exchange, "expected handler flag to be initially false")
+                exchange,
+                "expected handler flag to be initially false",
+            )
             return@start true
           }
           return@start false
-        },
+        }
     )
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val session = mock<Session>()
     val driver =
         mock<Driver> {
@@ -101,16 +100,15 @@ class Neo4jSinkExtensionTest {
         unregistrationHandler = { exchange ->
           if (!handlerCalled.compareAndSet(false, true)) {
             kafkaConnectServer.internalServerError(
-                exchange, "expected handler flag to be initially false")
+                exchange,
+                "expected handler flag to be initially false",
+            )
             return@start true
           }
           return@start false
-        },
+        }
     )
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val session = mock<Session>()
     val driver =
         mock<Driver> {
@@ -168,10 +166,7 @@ class Neo4jSinkExtensionTest {
   fun `verifies connectivity if driver is initialized before each test`() {
     kafkaConnectServer.start()
     val session = mock<Session>()
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val driver =
         mock<Driver> {
           on { session() } doReturn session
@@ -179,10 +174,7 @@ class Neo4jSinkExtensionTest {
           on { verifyConnectivity() } doAnswer {}
         }
     val extension =
-        Neo4jSinkExtension(
-            envAccessor = environment::get,
-            driverFactory = { _, _ -> driver },
-        )
+        Neo4jSinkExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
@@ -196,20 +188,14 @@ class Neo4jSinkExtensionTest {
   fun `closes Driver and Session after each test`() {
     kafkaConnectServer.start()
     val session = mock<Session>()
-    val environment =
-        mapOf(
-            "KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address(),
-        )
+    val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
     val driver =
         mock<Driver> {
           on { session() } doReturn session
           on { session(any(SessionConfig::class.java)) } doReturn session
         }
     val extension =
-        Neo4jSinkExtension(
-            envAccessor = environment::get,
-            driverFactory = { _, _ -> driver },
-        )
+        Neo4jSinkExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
     extension.resolveParameter(parameterContextForType(Session::class), extensionContext)
@@ -335,7 +321,8 @@ class Neo4jSinkExtensionTest {
       neo4jUser = "user",
       neo4jPassword = "password",
       cypher = [CypherStrategy("topic1", "MERGE ()")],
-      schemaControlRegistryUri = "http://example.com")
+      schemaControlRegistryUri = "http://example.com",
+  )
   @Suppress("UNUSED")
   fun validMethod() {}
 
@@ -345,7 +332,8 @@ class Neo4jSinkExtensionTest {
       neo4jUser = "user",
       neo4jPassword = "password",
       cypher = [CypherStrategy("topic1", "MERGE ()")],
-      schemaControlRegistryUri = "http://example.com")
+      schemaControlRegistryUri = "http://example.com",
+  )
   @Suppress("UNUSED")
   fun onlyKafkaConnectExternalUriFromEnvMethod() {}
 
@@ -370,7 +358,8 @@ class Neo4jSinkExtensionTest {
       neo4jUser = "user",
       neo4jPassword = "password",
       cypher = [CypherStrategy("topic1", "MERGE ()")],
-      cud = [CudStrategy("topic1")])
+      cud = [CudStrategy("topic1")],
+  )
   @Suppress("UNUSED")
   fun duplicateTopicMethod() {}
 }

@@ -39,8 +39,10 @@ internal class Cypher5Renderer(neo4j: Neo4j) : Renderer {
                     Dialect.DEFAULT
                   } else {
                     Dialect.NEO4J_5
-                  })
-              .build())
+                  }
+              )
+              .build()
+      )
 
   override fun render(statement: Statement?): String? {
     val rendered = delegateRenderer.render(statement)

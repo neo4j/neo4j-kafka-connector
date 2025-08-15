@@ -45,7 +45,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -74,7 +75,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -87,7 +89,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -116,7 +119,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -129,7 +133,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -158,7 +163,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -171,7 +177,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = false,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -202,7 +209,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -215,7 +223,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -245,7 +254,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -258,7 +268,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = false,
             mergeRelationshipProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -290,7 +301,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -303,7 +315,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -332,7 +345,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -345,7 +359,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -374,7 +389,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -387,7 +403,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     handler.query shouldBe
         CypherParser.parse(
@@ -416,7 +433,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                   }
                   RETURN sum(created) AS created, sum(deleted) AS deleted
                   """
-                    .trimIndent())
+                    .trimIndent()
+            )
             .cypher
   }
 
@@ -433,13 +451,19 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar")))))
+                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -456,18 +480,25 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
                             mapOf<String, Any?>(
                                 "foo" to "foo",
                                 "bar" to "bar",
                                 "nested.baz" to "baz",
-                                "nested.bak" to "bak")))))
+                                "nested.bak" to "bak",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -484,14 +515,20 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
-                            mapOf<String, Any?>("nested.baz" to "baz", "nested.bak" to "bak")))))
+                            mapOf<String, Any?>("nested.baz" to "baz", "nested.bak" to "bak"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -508,14 +545,19 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to
-                            mapOf<String, Any?>("bar" to "bar", "nested.baz" to "baz")))))
+                        "properties" to mapOf<String, Any?>("bar" to "bar", "nested.baz" to "baz"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -532,13 +574,19 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar")))))
+                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -555,14 +603,19 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to
-                            mapOf<String, Any?>("new_foo" to "foo", "new_bar" to "bar")))))
+                        "properties" to mapOf<String, Any?>("new_foo" to "foo", "new_bar" to "bar"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -579,17 +632,24 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
                             mapOf<String, Any?>(
                                 "new_foo" to "foo",
                                 "new_bar" to "bar",
-                                "new_nested_baz" to "baz")))))
+                                "new_nested_baz" to "baz",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -606,18 +666,25 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
                             mapOf<String, Any?>(
                                 "new_foo" to "foo",
                                 "new_bar" to "bar",
                                 "new_nested.baz" to "baz",
-                                "new_nested.bak" to "bak")))))
+                                "new_nested.bak" to "bak",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -633,13 +700,19 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar")))))
+                        "properties" to mapOf<String, Any?>("foo" to "foo", "bar" to "bar"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -656,14 +729,20 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
-                            mapOf<String, Any?>("foo" to "foo", "bar" to "bar", "baz" to "baz")))))
+                            mapOf<String, Any?>("foo" to "foo", "bar" to "bar", "baz" to "baz"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -680,18 +759,25 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
                             mapOf<String, Any?>(
                                 "foo" to "foo",
                                 "bar" to "bar",
                                 "new_nested.baz" to "baz",
-                                "new_nested.bak" to "bak")))))
+                                "new_nested.bak" to "bak",
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -708,14 +794,20 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
-                            mapOf<String, Any?>("foo" to "foo", "bar" to "bar", "baz" to "baz")))))
+                            mapOf<String, Any?>("foo" to "foo", "bar" to "bar", "baz" to "baz"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -733,18 +825,25 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                         "start" to
                             mapOf(
                                 "keys" to mapOf("id" to 1),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
-                                "properties" to emptyMap<String, Any?>()),
+                                "properties" to emptyMap<String, Any?>(),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
                         "properties" to
                             mapOf<String, Any?>(
                                 "foo" to "foo",
                                 "bar" to "bar",
                                 "created_at" to
-                                    Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC))))))
+                                    Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
+                            ),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -764,15 +863,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                                 "keys" to mapOf("id" to 1),
                                 "properties" to
                                     mapOf<String, Any?>(
-                                        "propA" to "a", "foo" to "foo", "nested.baz" to "baz")),
+                                        "propA" to "a",
+                                        "foo" to "foo",
+                                        "nested.baz" to "baz",
+                                    ),
+                            ),
                         "end" to
                             mapOf(
                                 "keys" to mapOf("id" to 2),
                                 "properties" to
                                     mapOf<String, Any?>(
-                                        "propB" to "b", "foo" to "foo", "nested.bak" to "bak")),
+                                        "propB" to "b",
+                                        "foo" to "foo",
+                                        "nested.bak" to "bak",
+                                    ),
+                            ),
                         "keys" to mapOf<String, Any?>("id" to 3),
-                        "properties" to mapOf<String, Any?>("bar" to "bar")))))
+                        "properties" to mapOf<String, Any?>("bar" to "bar"),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -788,7 +899,11 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     mapOf(
                         "start" to mapOf("keys" to mapOf("id" to 1)),
                         "end" to mapOf("keys" to mapOf("id" to 2)),
-                        "keys" to mapOf<String, Any?>("id" to 3)))))
+                        "keys" to mapOf<String, Any?>("id" to 3),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -804,7 +919,11 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     mapOf(
                         "start" to mapOf("keys" to mapOf("id" to 1)),
                         "end" to mapOf("keys" to mapOf("id" to 2)),
-                        "keys" to mapOf<String, Any?>("id" to 3)))))
+                        "keys" to mapOf<String, Any?>("id" to 3),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -828,7 +947,11 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                     mapOf(
                         "start" to mapOf("keys" to mapOf("id" to 1)),
                         "end" to mapOf("keys" to mapOf("id" to 2)),
-                        "keys" to mapOf<String, Any?>("id" to 3)))))
+                        "keys" to mapOf<String, Any?>("id" to 3),
+                    ),
+                )
+            ),
+    )
   }
 
   @Test
@@ -836,7 +959,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
         key = """{"rel_id": 1, "end": 1}""",
-        message = "Key 'start' could not be located in the message.")
+        message = "Key 'start' could not be located in the message.",
+    )
   }
 
   @Test
@@ -844,7 +968,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
         key = """{"start": 1, "end": 1}""",
-        message = "Key 'rel_id' could not be located in the message.")
+        message = "Key 'rel_id' could not be located in the message.",
+    )
   }
 
   @Test
@@ -852,7 +977,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
         key = """{"start": 1, "rel_id": 1}""",
-        message = "Key 'end' could not be located in the message.")
+        message = "Key 'end' could not be located in the message.",
+    )
   }
 
   @Test
@@ -860,7 +986,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
         key = """{"rel_id": 1, "end": 1}""",
-        message = "Key 'start' could not be located in the keys.")
+        message = "Key 'start' could not be located in the keys.",
+    )
   }
 
   @Test
@@ -868,7 +995,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: __key.rel_id}]->(:LabelB{!id: end})",
         key = """{"start": 1, "end": 1}""",
-        message = "Key 'rel_id' could not be located in the keys.")
+        message = "Key 'rel_id' could not be located in the keys.",
+    )
   }
 
   @Test
@@ -876,7 +1004,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: __key.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: __key.end})",
         key = """{"start": 1, "rel_id": 1}""",
-        message = "Key 'end' could not be located in the keys.")
+        message = "Key 'end' could not be located in the keys.",
+    )
   }
 
   @Test
@@ -884,7 +1013,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: __value.start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: end})",
         value = """{"rel_id": 1, "end": 1}""",
-        message = "Key 'start' could not be located in the values.")
+        message = "Key 'start' could not be located in the values.",
+    )
   }
 
   @Test
@@ -892,7 +1022,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: __value.rel_id}]->(:LabelB{!id: end})",
         value = """{"start": 1, "end": 1}""",
-        message = "Key 'rel_id' could not be located in the values.")
+        message = "Key 'rel_id' could not be located in the values.",
+    )
   }
 
   @Test
@@ -900,7 +1031,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
     assertThrowsHandler<InvalidDataException>(
         pattern = "(:LabelA{!id: start})-[:REL_TYPE{!id: rel_id}]->(:LabelB{!id: __value.end})",
         value = """{"start": 1, "rel_id": 1}""",
-        message = "Key 'end' could not be located in the values.")
+        message = "Key 'end' could not be located in the values.",
+    )
   }
 
   @Test
@@ -912,7 +1044,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -920,17 +1053,21 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelA",
-                properties = listOf("idStart")),
+                properties = listOf("idStart"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_KEY.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id", "second_id")),
+                properties = listOf("id", "second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelB",
-                properties = listOf("idEnd")))
+                properties = listOf("idEnd"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -946,7 +1083,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -954,27 +1092,33 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelA",
-                properties = listOf("idStart")),
+                properties = listOf("idStart"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_UNIQUENESS.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id", "second_id")),
+                properties = listOf("id", "second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("second_id")),
+                properties = listOf("second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelB",
-                properties = listOf("idEnd")))
+                properties = listOf("idEnd"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -990,7 +1134,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints = emptyList<ConstraintData>()
 
@@ -1042,7 +1187,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -1050,17 +1196,21 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelA",
-                properties = listOf("idStart")),
+                properties = listOf("idStart"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_KEY.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelB",
-                properties = listOf("idEnd")))
+                properties = listOf("idEnd"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -1088,7 +1238,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = true,
             mergeRelationshipProperties = true,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
 
     val constraints =
         listOf(
@@ -1096,22 +1247,27 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelA",
-                properties = listOf("idStart")),
+                properties = listOf("idStart"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_UNIQUENESS.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id", "second_id")),
+                properties = listOf("id", "second_id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.RELATIONSHIP.value,
                 constraintType = ConstraintType.RELATIONSHIP_EXISTENCE.value,
                 labelOrType = "REL_TYPE",
-                properties = listOf("id")),
+                properties = listOf("id"),
+            ),
             ConstraintData(
                 entityType = ConstraintEntityType.NODE.value,
                 constraintType = ConstraintType.NODE_KEY.value,
                 labelOrType = "LabelB",
-                properties = listOf("idEnd")))
+                properties = listOf("idEnd"),
+            ),
+        )
 
     val warningMessages = handler.checkConstraints(constraints)
 
@@ -1148,13 +1304,10 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = mergeNodeProperties,
             mergeRelationshipProperties = mergeRelationshipProperties,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
     val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
-    handler.handle(
-        listOf(
-            sinkMessage,
-        ),
-    ) shouldBe
+    handler.handle(listOf(sinkMessage)) shouldBe
         listOf(
             listOf(
                 ChangeQuery(
@@ -1191,12 +1344,13 @@ class RelationshipPatternHandlerTest : HandlerTest() {
                                 }
                                 RETURN sum(created) AS created, sum(deleted) AS deleted
                                 """
-                                    .trimIndent())
+                                    .trimIndent()
+                            )
                             .cypher,
                         mapOf("events" to expected),
                     ),
-                ),
-            ),
+                )
+            )
         )
   }
 
@@ -1206,7 +1360,7 @@ class RelationshipPatternHandlerTest : HandlerTest() {
       key: Any? = null,
       valueSchema: Schema = Schema.STRING_SCHEMA,
       value: Any? = null,
-      message: String? = null
+      message: String? = null,
   ) {
     val handler =
         RelationshipPatternHandler(
@@ -1215,7 +1369,8 @@ class RelationshipPatternHandlerTest : HandlerTest() {
             mergeNodeProperties = false,
             mergeRelationshipProperties = false,
             renderer = Renderer.getDefaultRenderer(),
-            batchSize = 1)
+            batchSize = 1,
+        )
     val sinkMessage = newMessage(valueSchema, value, keySchema = keySchema, key = key)
 
     if (message != null) {

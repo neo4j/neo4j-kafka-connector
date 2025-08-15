@@ -33,7 +33,8 @@ class CreateRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MATCH),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -45,12 +46,14 @@ class CreateRelationshipTest {
                       WITH start, end 
                       CREATE (start)-[r:`RELATED`]->(end) SET r = ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -61,7 +64,8 @@ class CreateRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MERGE),
             NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -73,12 +77,14 @@ class CreateRelationshipTest {
                       WITH start, end 
                       CREATE (start)-[r:`RELATED`]->(end) SET r = ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -89,7 +95,8 @@ class CreateRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("_id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_id" to 2), LookupMode.MATCH),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -101,12 +108,14 @@ class CreateRelationshipTest {
                       WITH start, end 
                       CREATE (start)-[r:`RELATED`]->(end) SET r = ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("_id" to 1)),
                 "end" to mapOf("keys" to mapOf("_id" to 2)),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -117,7 +126,8 @@ class CreateRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA"), mapOf("_elementId" to "db:1"), LookupMode.MATCH),
             NodeReference(setOf("LabelB"), mapOf("_elementId" to "db:2"), LookupMode.MATCH),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -133,7 +143,8 @@ class CreateRelationshipTest {
             mapOf(
                 "start" to mapOf("keys" to mapOf("_elementId" to "db:1")),
                 "end" to mapOf("keys" to mapOf("_elementId" to "db:2")),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -144,7 +155,8 @@ class CreateRelationshipTest {
             "RELATED",
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     operation.toQuery() shouldBe
         Query(
@@ -156,12 +168,14 @@ class CreateRelationshipTest {
                       WITH start, end 
                       CREATE (start)-[r:`RELATED`]->(end) SET r = ${'$'}properties
                     """
-                        .trimIndent())
+                        .trimIndent()
+                )
                 .cypher,
             mapOf(
                 "start" to mapOf("keys" to mapOf("id" to 1)),
                 "end" to mapOf("keys" to mapOf("id" to 2)),
-                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true)),
+                "properties" to mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            ),
         )
   }
 
@@ -174,7 +188,11 @@ class CreateRelationshipTest {
       withClue("from: $from, to: $to") {
         val operation =
             CreateRelationship(
-                "RELATED", from, to, mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+                "RELATED",
+                from,
+                to,
+                mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            )
 
         assertThrows<InvalidDataException> { operation.toQuery() } shouldHaveMessage
             "'from' and 'to' must contain at least one ID property."
@@ -189,7 +207,8 @@ class CreateRelationshipTest {
             "",
             NodeReference(setOf("LabelA", "LabelC"), mapOf("id" to 1), LookupMode.MATCH),
             NodeReference(setOf("LabelB", "LabelD"), mapOf("id" to 2), LookupMode.MERGE),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true))
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
 
     assertThrows<InvalidDataException> { operation.toQuery() } shouldHaveMessage
         "'rel_type' must be specified."

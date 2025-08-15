@@ -32,6 +32,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -57,9 +58,11 @@ object TestUtils {
                 ZonedDateTime.now().minusSeconds(1),
                 ZonedDateTime.now(),
                 mapOf("user" to "app_user", "app" to "hr"),
-                emptyMap()),
-            event)
-    val changeConnect = ChangeEventConverter().toConnectValue(change)
+                emptyMap(),
+            ),
+            event,
+        )
+    val changeConnect = ChangeEventConverter(PayloadMode.EXTENDED).toConnectValue(change)
 
     return SinkMessage(
         SinkRecord(
@@ -72,7 +75,9 @@ object TestUtils {
             0,
             System.currentTimeMillis(),
             TimestampType.CREATE_TIME,
-            Headers.from(change)))
+            Headers.from(change),
+        )
+    )
   }
 
   fun randomChangeEvent(): Event =
@@ -86,7 +91,8 @@ object TestUtils {
               listOf("Person"),
               mapOf("Person" to listOf(mapOf("id" to id))),
               null,
-              NodeState(listOf("Person"), mapOf("id" to id)))
+              NodeState(listOf("Person"), mapOf("id" to id)),
+          )
         }
         1 -> {
           val id = random.nextInt()
@@ -99,15 +105,18 @@ object TestUtils {
               Node(
                   UUID.randomUUID().toString(),
                   listOf("Person"),
-                  mapOf("Person" to listOf(mapOf("id" to startId)))),
+                  mapOf("Person" to listOf(mapOf("id" to startId))),
+              ),
               Node(
                   UUID.randomUUID().toString(),
                   listOf("Person"),
-                  mapOf("Person" to listOf(mapOf("id" to endId)))),
+                  mapOf("Person" to listOf(mapOf("id" to endId))),
+              ),
               listOf(mapOf("id" to id)),
               EntityOperation.CREATE,
               null,
-              RelationshipState(emptyMap()))
+              RelationshipState(emptyMap()),
+          )
         }
         else -> throw IllegalArgumentException("unexpected value from random.nextBits")
       }

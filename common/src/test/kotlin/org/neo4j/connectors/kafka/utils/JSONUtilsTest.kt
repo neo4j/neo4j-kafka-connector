@@ -54,7 +54,8 @@ class JSONUtilsTest {
             "point2dWgs84" to Values.point(WGS84_Code, 1.0, 2.0),
             "point3dWgs84" to Values.point(WGS84_3D_Code, 1.0, 2.0, 3.0),
             "time" to Values.value(OffsetTime.of(14, 1, 1, 1, UTC)),
-            "dateTime" to Values.value(ZonedDateTime.of(2017, 12, 17, 17, 14, 35, 123456789, UTC)))
+            "dateTime" to Values.value(ZonedDateTime.of(2017, 12, 17, 17, 14, 35, 123456789, UTC)),
+        )
 
     // When
     val jsonString = JSONUtils.writeValueAsString(map)
@@ -76,7 +77,8 @@ class JSONUtilsTest {
                     txId = 1,
                     txEventId = 0,
                     txEventsCount = 1,
-                    operation = OperationType.created),
+                    operation = OperationType.created,
+                ),
             payload =
                 NodePayload(
                     id = "0",
@@ -84,9 +86,12 @@ class JSONUtilsTest {
                     after =
                         NodeChange(
                             properties = mapOf("prop1" to "foo", "bar" to 1),
-                            labels = listOf("LabelCDC")),
-                    type = EntityType.node),
-            schema = Schema())
+                            labels = listOf("LabelCDC"),
+                        ),
+                    type = EntityType.node,
+                ),
+            schema = Schema(),
+        )
     val cdcMap =
         mapOf<String, Any>(
             "meta" to
@@ -96,7 +101,8 @@ class JSONUtilsTest {
                     "txId" to 1,
                     "txEventId" to 0,
                     "txEventsCount" to 1,
-                    "operation" to OperationType.created),
+                    "operation" to OperationType.created,
+                ),
             "payload" to
                 mapOf(
                     "id" to "0",
@@ -104,9 +110,12 @@ class JSONUtilsTest {
                     "after" to
                         NodeChange(
                             properties = mapOf("prop1" to "foo", "bar" to 1),
-                            labels = listOf("LabelCDC")),
-                    "type" to EntityType.node),
-            "schema" to emptyMap<String, Any>())
+                            labels = listOf("LabelCDC"),
+                        ),
+                    "type" to EntityType.node,
+                ),
+            "schema" to emptyMap<String, Any>(),
+        )
     val cdcString =
         """{
             |"meta":{"timestamp":$timestamp,"username":"user","txId":1,"txEventId":0,"txEventsCount":1,"operation":"created"},

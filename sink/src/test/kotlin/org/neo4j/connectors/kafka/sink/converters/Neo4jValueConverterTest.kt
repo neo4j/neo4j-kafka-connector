@@ -100,7 +100,8 @@ class Neo4jValueConverterTest {
     assertTrue { int64Timestamp is LocalDateTime }
     assertEquals(
         Date.from(Instant.ofEpochMilli(789)).toInstant().atZone(utc).toLocalDateTime(),
-        int64Timestamp)
+        int64Timestamp,
+    )
 
     val int32 = result["int32"]
     assertTrue { int32 is Int }
@@ -109,12 +110,16 @@ class Neo4jValueConverterTest {
     val int32Date = result["int32Date"]
     assertTrue { int32Date is LocalDate }
     assertEquals(
-        Date.from(Instant.ofEpochMilli(456)).toInstant().atZone(utc).toLocalDate(), int32Date)
+        Date.from(Instant.ofEpochMilli(456)).toInstant().atZone(utc).toLocalDate(),
+        int32Date,
+    )
 
     val int32Time = result["int32Time"]
     assertTrue { int32Time is LocalTime }
     assertEquals(
-        Date.from(Instant.ofEpochMilli(123)).toInstant().atZone(utc).toLocalTime(), int32Time)
+        Date.from(Instant.ofEpochMilli(123)).toInstant().atZone(utc).toLocalTime(),
+        int32Time,
+    )
 
     val nullField = result["nullField"]
     assertTrue { nullField == null }
@@ -198,7 +203,9 @@ class Neo4jValueConverterTest {
                     "long" to long,
                     "bigDouble" to bigDouble,
                     "string" to string,
-                    "date" to date))
+                    "date" to date,
+                )
+            )
 
     assertEquals(double, result["double"])
     assertEquals(long, result["long"])
@@ -236,7 +243,8 @@ class Neo4jValueConverterTest {
                 Struct(propertiesStruct)
                     .put("ID_NUM", 36950L)
                     .put("EMP_NAME", "Edythe")
-                    .put("PHONE", "3333"))
+                    .put("PHONE", "3333"),
+            )
 
     val actual = Neo4jValueConverter().convert(cudStruct) as Map<*, *>
     val expected =
@@ -246,7 +254,8 @@ class Neo4jValueConverterTest {
             "op" to "merge",
             "ids" to mapOf<String, Any?>("ID_NUM" to 36950L),
             "properties" to
-                mapOf<String, Any?>("ID_NUM" to 36950L, "EMP_NAME" to "Edythe", "PHONE" to "3333"))
+                mapOf<String, Any?>("ID_NUM" to 36950L, "EMP_NAME" to "Edythe", "PHONE" to "3333"),
+        )
     assertEquals(expected, actual)
   }
 
@@ -291,13 +300,15 @@ class Neo4jValueConverterTest {
                 Struct(fromNodeStruct)
                     .put("ids", Struct(fromIdStruct).put("person_id", 1L))
                     .put("op", "match")
-                    .put("labels", listOf("Person")))
+                    .put("labels", listOf("Person")),
+            )
             .put(
                 "to",
                 Struct(toNodeStruct)
                     .put("ids", Struct(toIdStruct).put("product_id", 10L))
                     .put("op", "merge")
-                    .put("labels", listOf("Product")))
+                    .put("labels", listOf("Product")),
+            )
             .put("properties", Struct(propertiesStruct).put("quantity", 10).put("year", "2023"))
 
     val actual = Neo4jValueConverter().convert(cudStruct) as Map<*, *>
@@ -310,13 +321,16 @@ class Neo4jValueConverterTest {
                 mapOf<String, Any?>(
                     "ids" to mapOf<String, Any?>("person_id" to 1L),
                     "labels" to listOf("Person"),
-                    "op" to "match"),
+                    "op" to "match",
+                ),
             "to" to
                 mapOf<String, Any?>(
                     "ids" to mapOf<String, Any?>("product_id" to 10L),
                     "labels" to listOf("Product"),
-                    "op" to "merge"),
-            "properties" to mapOf<String, Any?>("quantity" to 10, "year" to "2023"))
+                    "op" to "merge",
+                ),
+            "properties" to mapOf<String, Any?>("quantity" to 10, "year" to "2023"),
+        )
     assertEquals(expected, actual)
   }
 
@@ -378,7 +392,9 @@ class Neo4jValueConverterTest {
                     BigDecimal.valueOf(123.4),
                     Decimal.LOGICAL_NAME,
                     null,
-                    null))
+                    null,
+                ),
+            )
             .field(
                 "largeDecimal",
                 ConnectSchema(
@@ -387,14 +403,24 @@ class Neo4jValueConverterTest {
                     BigDecimal.valueOf(Double.MAX_VALUE).pow(2),
                     Decimal.LOGICAL_NAME,
                     null,
-                    null))
+                    null,
+                ),
+            )
             .field(
                 "byteArray",
                 ConnectSchema(
-                    Schema.Type.BYTES, false, "Foo".toByteArray(), "name.byteArray", null, null))
+                    Schema.Type.BYTES,
+                    false,
+                    "Foo".toByteArray(),
+                    "name.byteArray",
+                    null,
+                    null,
+                ),
+            )
             .field(
                 "int64",
-                ConnectSchema(Schema.Type.INT64, false, Long.MAX_VALUE, "name.int64", null, null))
+                ConnectSchema(Schema.Type.INT64, false, Long.MAX_VALUE, "name.int64", null, null),
+            )
             .field(
                 "int64Timestamp",
                 ConnectSchema(
@@ -403,7 +429,9 @@ class Neo4jValueConverterTest {
                     Date.from(Instant.ofEpochMilli(789)),
                     Timestamp.LOGICAL_NAME,
                     null,
-                    null))
+                    null,
+                ),
+            )
             .field("int32", ConnectSchema(Schema.Type.INT32, false, 123, "name.int32", null, null))
             .field(
                 "int32Date",
@@ -413,7 +441,9 @@ class Neo4jValueConverterTest {
                     Date.from(Instant.ofEpochMilli(456)),
                     org.apache.kafka.connect.data.Date.LOGICAL_NAME,
                     null,
-                    null))
+                    null,
+                ),
+            )
             .field(
                 "int32Time",
                 ConnectSchema(
@@ -422,13 +452,17 @@ class Neo4jValueConverterTest {
                     Date.from(Instant.ofEpochMilli(123)),
                     Time.LOGICAL_NAME,
                     null,
-                    null))
+                    null,
+                ),
+            )
             .field(
                 "nullField",
-                ConnectSchema(Schema.Type.INT64, false, null, Time.LOGICAL_NAME, null, null))
+                ConnectSchema(Schema.Type.INT64, false, null, Time.LOGICAL_NAME, null, null),
+            )
             .field(
                 "nullFieldBytes",
-                ConnectSchema(Schema.Type.BYTES, false, null, Time.LOGICAL_NAME, null, null))
+                ConnectSchema(Schema.Type.BYTES, false, null, Time.LOGICAL_NAME, null, null),
+            )
             .build()
 
     fun getTreeStruct(): Struct? {
@@ -440,19 +474,24 @@ class Neo4jValueConverterTest {
                       Struct(LI_SCHEMA).put("value", "First UL - First Element"),
                       Struct(LI_SCHEMA)
                           .put("value", "First UL - Second Element")
-                          .put("class", listOf("ClassA", "ClassB"))))
+                          .put("class", listOf("ClassA", "ClassB")),
+                  ),
+              )
       val secondUL =
           Struct(UL_SCHEMA)
               .put(
                   "value",
                   listOf(
                       Struct(LI_SCHEMA).put("value", "Second UL - First Element"),
-                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element")))
+                      Struct(LI_SCHEMA).put("value", "Second UL - Second Element"),
+                  ),
+              )
       val ulList = listOf(firstUL, secondUL)
       val pList =
           listOf(
               Struct(P_SCHEMA).put("value", "First Paragraph"),
-              Struct(P_SCHEMA).put("value", "Second Paragraph"))
+              Struct(P_SCHEMA).put("value", "Second Paragraph"),
+          )
       return Struct(BODY_SCHEMA).put("ul", ulList).put("p", pList)
     }
 
@@ -464,13 +503,18 @@ class Neo4jValueConverterTest {
                       mapOf("value" to "First UL - First Element", "class" to null),
                       mapOf(
                           "value" to "First UL - Second Element",
-                          "class" to listOf("ClassA", "ClassB"))))
+                          "class" to listOf("ClassA", "ClassB"),
+                      ),
+                  )
+          )
       val secondULMap =
           mapOf(
               "value" to
                   listOf(
                       mapOf("value" to "Second UL - First Element", "class" to null),
-                      mapOf("value" to "Second UL - Second Element", "class" to null)))
+                      mapOf("value" to "Second UL - Second Element", "class" to null),
+                  )
+          )
       val ulListMap = listOf(firstULMap, secondULMap)
       val pListMap =
           listOf(mapOf("value" to "First Paragraph"), mapOf("value" to "Second Paragraph"))
@@ -485,13 +529,18 @@ class Neo4jValueConverterTest {
                       mapOf("value" to "First UL - First Element", "class" to null),
                       mapOf(
                           "value" to "First UL - Second Element",
-                          "class" to listOf("ClassA", "ClassB"))))
+                          "class" to listOf("ClassA", "ClassB"),
+                      ),
+                  )
+          )
       val secondULMap =
           mapOf(
               "value" to
                   listOf(
                       mapOf("value" to "Second UL - First Element", "class" to null),
-                      mapOf("value" to "Second UL - Second Element", "class" to null)))
+                      mapOf("value" to "Second UL - Second Element", "class" to null),
+                  )
+          )
       val ulListMap = listOf(firstULMap, secondULMap)
       val pListMap =
           listOf(mapOf("value" to "First Paragraph"), mapOf("value" to "Second Paragraph"))

@@ -101,7 +101,8 @@ class Neo4jCdcTaskTest {
     driver.session(SessionConfig.forDatabase("system")).use {
       it.run(
               "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
-              mapOf("db" to db, "mode" to "FULL"))
+              mapOf("db" to db, "mode" to "FULL"),
+          )
           .consume()
     }
     session = driver.session(SessionConfig.forDatabase(db))
@@ -124,7 +125,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // poll for changes
     val changes = task.poll()
@@ -147,7 +150,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // create data (2)
     session.run("UNWIND RANGE(1, 75) AS x CREATE (n), (m), (n)-[:RELATED_TO]->(m)").consume()
@@ -180,7 +185,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
             SourceConfiguration.START_FROM_VALUE to changeId,
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // poll for changes
     val changes = task.poll()
@@ -214,7 +221,8 @@ class Neo4jCdcTaskTest {
           }
           put("neo4j.cdc.topic.nodes.patterns", "()")
           put("neo4j.cdc.topic.relationships.patterns", "()-[]-()")
-        })
+        }
+    )
 
     // poll for changes
     val changes = task.poll()
@@ -244,7 +252,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true",
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // poll for changes
     val changes = task.poll()
@@ -271,7 +281,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true",
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // create data (2), 100 nodes + 50 relationships
     session.run("UNWIND RANGE(1, 50) AS x CREATE (n), (m), (n)-[:RELATED_TO]->(m)").consume()
@@ -302,7 +314,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.START_FROM_VALUE to currentChangeId(),
             SourceConfiguration.IGNORE_STORED_OFFSET to "true",
             "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()"))
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
 
     // create data (2), 100 nodes + 50 relationships
     session.run("UNWIND RANGE(1, 50) AS x CREATE (n), (m), (n)-[:RELATED_TO]->(m)").consume()
@@ -334,7 +348,8 @@ class Neo4jCdcTaskTest {
               MATCH (c:Company {id: n%25+1})
               CREATE (p)-[:WORKS_FOR {id: n, since: date()}]->(c)
             """
-                .trimIndent())
+                .trimIndent()
+        )
         .consume()
 
     task.start(
@@ -356,7 +371,8 @@ class Neo4jCdcTaskTest {
             "neo4j.cdc.topic.works_for-key.patterns" to
                 "(:Person)-[:WORKS_FOR{id: 11}]->(:Company)",
             "neo4j.cdc.topic.none.patterns" to "(:People),()-[:KNOWS]-()",
-        ))
+        )
+    )
 
     val changes = task.poll().toList()
 
@@ -382,7 +398,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.BATCH_SIZE to "5",
-            "neo4j.cdc.topic.nodes.patterns" to "()"))
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+        )
+    )
 
     session.run("UNWIND RANGE(1, 100) AS n CREATE ()").consume()
 
@@ -410,7 +428,9 @@ class Neo4jCdcTaskTest {
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.CDC_POLL_DURATION to "5s",
-            "neo4j.cdc.topic.nodes.patterns" to "()"))
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+        )
+    )
 
     // should block at most CDC_POLL_DURATION waiting for an event
     measureTime {

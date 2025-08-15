@@ -34,12 +34,12 @@ class ProducerResolver(
     private val brokerExternalHostProvider: () -> String,
     private val schemaControlRegistryExternalUriProvider: () -> String,
     private val schemaControlKeyCompatibilityProvider: () -> SchemaCompatibilityMode,
-    private val schemaControlValueCompatibilityProvider: () -> SchemaCompatibilityMode
+    private val schemaControlValueCompatibilityProvider: () -> SchemaCompatibilityMode,
 ) {
 
   fun resolveGenericProducer(
       parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): Any {
     val producerAnnotation = parameterContext?.parameter?.getAnnotation(TopicProducer::class.java)!!
     return ConvertingKafkaProducer(
@@ -49,18 +49,16 @@ class ProducerResolver(
         valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext),
         valueCompatibilityMode = schemaControlValueCompatibilityProvider(),
         kafkaProducer = resolveProducer(parameterContext, extensionContext),
-        topic = topicRegistry.resolveTopic(producerAnnotation.topic))
+        topic = topicRegistry.resolveTopic(producerAnnotation.topic),
+    )
   }
 
   private fun resolveProducer(
       @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?
+      extensionContext: ExtensionContext?,
   ): KafkaProducer<Any, Any> {
     val properties = Properties()
-    properties.setProperty(
-        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-        brokerExternalHostProvider(),
-    )
+    properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerExternalHostProvider())
     val keyConverter = keyValueConverterResolver.resolveKeyConverter(extensionContext)
     val valueConverter = keyValueConverterResolver.resolveValueConverter(extensionContext)
     if (keyConverter.supportsSchemaRegistry || valueConverter.supportsSchemaRegistry) {

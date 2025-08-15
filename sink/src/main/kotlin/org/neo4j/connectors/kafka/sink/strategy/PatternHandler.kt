@@ -57,7 +57,9 @@ abstract class PatternHandler<T : Pattern>(
                   bindTimestampAs to
                       Instant.ofEpochMilli(message.record.timestamp()).atOffset(ZoneOffset.UTC),
                   bindHeaderAs to message.headerFromConnectValue(),
-                  bindKeyAs to message.keyFromConnectValue()))
+                  bindKeyAs to message.keyFromConnectValue(),
+              )
+          )
           if (message.value != null) {
             this[bindValueAs] =
                 when (val value = message.valueFromConnectValue()) {
@@ -92,7 +94,7 @@ abstract class PatternHandler<T : Pattern>(
       flattened: Map<String, Any?>,
       isTombstone: Boolean,
       usedTracker: MutableSet<String>,
-      vararg prefixes: String
+      vararg prefixes: String,
   ): Map<String, Any?> =
       pattern.keyProperties
           .associateBy { it.to }
@@ -105,11 +107,11 @@ abstract class PatternHandler<T : Pattern>(
               }
               if (mapping.from.startsWith("$bindKeyAs.")) {
                 throw InvalidDataException(
-                    "Key '${mapping.from.replace("$bindKeyAs.", "")}' could not be located in the keys.",
+                    "Key '${mapping.from.replace("$bindKeyAs.", "")}' could not be located in the keys."
                 )
               } else {
                 throw InvalidDataException(
-                    "Key '${mapping.from.replace("$bindValueAs.", "")}' could not be located in the values.",
+                    "Key '${mapping.from.replace("$bindValueAs.", "")}' could not be located in the values."
                 )
               }
             } else {
@@ -122,7 +124,7 @@ abstract class PatternHandler<T : Pattern>(
                 }
               }
               throw InvalidDataException(
-                  "Key '${mapping.from}' could not be located in the message.",
+                  "Key '${mapping.from}' could not be located in the message."
               )
             }
           }
@@ -144,7 +146,7 @@ abstract class PatternHandler<T : Pattern>(
   protected fun computeProperties(
       pattern: Pattern,
       flattened: Map<String, Any?>,
-      used: MutableSet<String>
+      used: MutableSet<String>,
   ): Map<String, Any?> {
     return buildMap {
       if (pattern.includeAllValueProperties) {
@@ -152,7 +154,8 @@ abstract class PatternHandler<T : Pattern>(
             flattened
                 .filterKeys { !used.contains(it) }
                 .filterKeys { it.startsWith(bindValueAs) }
-                .mapKeys { it.key.substring(bindValueAs.length + 1) })
+                .mapKeys { it.key.substring(bindValueAs.length + 1) }
+        )
       }
 
       pattern.includeProperties.forEach { mapping ->
@@ -167,7 +170,8 @@ abstract class PatternHandler<T : Pattern>(
                   .mapKeys {
                     used += it.key
                     mapping.to + it.key.substring(key.length)
-                  })
+                  }
+          )
         }
       }
 

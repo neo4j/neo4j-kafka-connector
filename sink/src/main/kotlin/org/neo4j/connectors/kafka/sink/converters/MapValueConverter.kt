@@ -37,7 +37,7 @@ open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
   override fun setBytesField(
       result: MutableMap<String, T?>?,
       fieldName: String,
-      value: ByteArray?
+      value: ByteArray?,
   ) {
     setValue(result, fieldName, value)
   }
@@ -58,7 +58,7 @@ open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
       result: MutableMap<String, T?>?,
       fieldName: String,
       schema: Schema?,
-      array: MutableList<Any?>?
+      array: MutableList<Any?>?,
   ) {
     val convertedArray = array?.map { convertInner(it) }
     setValue(result, fieldName, convertedArray)
@@ -85,7 +85,7 @@ open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
       result: MutableMap<String, T?>?,
       fieldName: String,
       schema: Schema?,
-      map: MutableMap<Any?, Any?>?
+      map: MutableMap<Any?, Any?>?,
   ) {
     if (map != null) {
       val converted = convert(map) as MutableMap<Any?, Any?>
@@ -118,7 +118,7 @@ open class MapValueConverter<T> : ValueConverter<MutableMap<String, T?>>() {
   override fun setDecimalField(
       result: MutableMap<String, T?>?,
       fieldName: String,
-      value: BigDecimal
+      value: BigDecimal,
   ) {
     setValue(result, fieldName, value)
   }

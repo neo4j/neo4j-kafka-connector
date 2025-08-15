@@ -30,7 +30,7 @@ open class HandlerTest {
       value: Any?,
       keySchema: Schema? = null,
       key: Any? = null,
-      headers: Iterable<Header> = emptyList()
+      headers: Iterable<Header> = emptyList(),
   ): SinkMessage {
     return SinkMessage(
         SinkRecord(
@@ -43,7 +43,9 @@ open class HandlerTest {
             0,
             TIMESTAMP,
             TimestampType.CREATE_TIME,
-            headers))
+            headers,
+        )
+    )
   }
 
   companion object {

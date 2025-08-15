@@ -14,21 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.configuration
+package org.neo4j.connectors.kafka.data.converter
 
 import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.data.ValueConverter
-import org.neo4j.connectors.kafka.data.converter.CompactValueConverter
-import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
-import org.neo4j.connectors.kafka.data.converter.RawJsonStringValueConverter
+import org.neo4j.connectors.kafka.utils.JSONUtils
 
-enum class PayloadMode(private val converter: ValueConverter) : ValueConverter {
-  EXTENDED(ExtendedValueConverter()),
-  COMPACT(CompactValueConverter()),
-  RAW_JSON_STRING(RawJsonStringValueConverter());
+class RawJsonStringValueConverter : ValueConverter {
 
-  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema =
-      converter.schema(value, optional, forceMapsAsStruct)
+  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema {
+    return Schema.STRING_SCHEMA
+  }
 
-  override fun value(schema: Schema, value: Any?): Any? = converter.value(schema, value)
+  override fun value(schema: Schema, value: Any?): Any? {
+    if (value == null) {
+      return null
+    }
+
+    return JSONUtils.writeValueAsString(value)
+  }
 }

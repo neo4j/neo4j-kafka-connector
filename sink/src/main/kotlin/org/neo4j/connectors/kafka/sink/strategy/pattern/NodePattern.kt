@@ -21,7 +21,7 @@ data class NodePattern(
     override val includeAllValueProperties: Boolean,
     override val keyProperties: Set<PropertyMapping>,
     override val includeProperties: Set<PropertyMapping>,
-    override val excludeProperties: Set<String>
+    override val excludeProperties: Set<String>,
 ) : Pattern {
   override val text: String
     get() {

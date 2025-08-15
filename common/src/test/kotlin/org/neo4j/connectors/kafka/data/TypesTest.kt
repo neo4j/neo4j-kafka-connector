@@ -98,7 +98,8 @@ class TypesTest {
         System.getenv("NEO4J_TEST_IMAGE")
             .ifBlank {
               throw IllegalArgumentException(
-                  "NEO4J_TEST_IMAGE environment variable is not defined!")
+                  "NEO4J_TEST_IMAGE environment variable is not defined!"
+              )
             }
             .run { DockerImageName.parse(this).asCompatibleSubstituteFor("neo4j") }
   }
@@ -116,12 +117,12 @@ class TypesTest {
       input: Any?,
       payloadMode: PayloadMode,
       expectedSchema: Schema,
-      expectedValue: Any?
+      expectedValue: Any?,
   ) {
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
-      val schema = DynamicTypes.toConnectSchema(payloadMode, returned)
-      val converted = DynamicTypes.toConnectValue(schema, returned)
+      val schema = payloadMode.schema(returned)
+      val converted = payloadMode.value(schema, returned)
       val reverted = DynamicTypes.fromConnectValue(schema, converted)
 
       schema shouldBe expectedSchema
@@ -134,74 +135,100 @@ class TypesTest {
 
     override fun provideArguments(
         parameters: ParameterDeclarations?,
-        context: ExtensionContext?
+        context: ExtensionContext?,
     ): Stream<out Arguments?>? {
       return Stream.of(
           Arguments.of(
-              Named.of("null-extended", null), PayloadMode.EXTENDED, PropertyType.schema, null),
+              Named.of("null-extended", null),
+              PayloadMode.EXTENDED,
+              PropertyType.schema,
+              null,
+          ),
           Arguments.of(
-              Named.of("null-compact", null), PayloadMode.COMPACT, SimpleTypes.NULL.schema, null),
+              Named.of("null-compact", null),
+              PayloadMode.COMPACT,
+              SimpleTypes.NULL.schema,
+              null,
+          ),
           Arguments.of(
               Named.of("boolean-extended", true),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.getPropertyStruct(BOOLEAN, true)),
+              PropertyType.getPropertyStruct(BOOLEAN, true),
+          ),
           Arguments.of(
               Named.of("boolean-compact", true),
               PayloadMode.COMPACT,
               SimpleTypes.BOOLEAN.schema,
-              true),
+              true,
+          ),
           Arguments.of(
               Named.of("long-extended", 1),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.toConnectValue(1L)),
+              PropertyType.toConnectValue(1L),
+          ),
           Arguments.of(
-              Named.of("long-compact", 1), PayloadMode.COMPACT, SimpleTypes.LONG.schema, 1L),
+              Named.of("long-compact", 1),
+              PayloadMode.COMPACT,
+              SimpleTypes.LONG.schema,
+              1L,
+          ),
           Arguments.of(
               Named.of("float-extended", 1.0),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.getPropertyStruct(FLOAT, 1.0)),
+              PropertyType.getPropertyStruct(FLOAT, 1.0),
+          ),
           Arguments.of(
-              Named.of("float-extended", 1.0), PayloadMode.COMPACT, SimpleTypes.FLOAT.schema, 1.0),
+              Named.of("float-compact", 1.0),
+              PayloadMode.COMPACT,
+              SimpleTypes.FLOAT.schema,
+              1.0,
+          ),
           Arguments.of(
               Named.of("string-extended", "a string"),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.toConnectValue("a string")),
+              PropertyType.toConnectValue("a string"),
+          ),
           Arguments.of(
               Named.of("string-compact", "a string"),
               PayloadMode.COMPACT,
               SimpleTypes.STRING.schema,
-              "a string"),
+              "a string",
+          ),
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date-extended", it),
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
-                PropertyType.getPropertyStruct(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(it)))
+                PropertyType.getPropertyStruct(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(it)),
+            )
           },
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.LOCALDATE.schema,
-                DateTimeFormatter.ISO_DATE.format(it))
+                DateTimeFormatter.ISO_DATE.format(it),
+            )
           },
           LocalTime.of(23, 59, 59, 5).let {
             Arguments.of(
                 Named.of("local time-extended", it),
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
-                PropertyType.getPropertyStruct(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(it)))
+                PropertyType.getPropertyStruct(LOCAL_TIME, DateTimeFormatter.ISO_TIME.format(it)),
+            )
           },
           LocalTime.of(23, 59, 59, 5).let {
             Arguments.of(
                 Named.of("local time-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.LOCALTIME.schema,
-                DateTimeFormatter.ISO_TIME.format(it))
+                DateTimeFormatter.ISO_TIME.format(it),
+            )
           },
           LocalDateTime.of(1999, 12, 31, 23, 59, 59, 5).let {
             Arguments.of(
@@ -209,28 +236,34 @@ class TypesTest {
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
                 PropertyType.getPropertyStruct(
-                    LOCAL_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
+                    LOCAL_DATE_TIME,
+                    DateTimeFormatter.ISO_DATE_TIME.format(it),
+                ),
+            )
           },
           LocalDateTime.of(1999, 12, 31, 23, 59, 59, 5).let {
             Arguments.of(
                 Named.of("local date time-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.LOCALDATETIME.schema,
-                DateTimeFormatter.ISO_DATE_TIME.format(it))
+                DateTimeFormatter.ISO_DATE_TIME.format(it),
+            )
           },
           OffsetTime.of(23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
                 Named.of("offset time-extended", it),
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
-                PropertyType.getPropertyStruct(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(it)))
+                PropertyType.getPropertyStruct(OFFSET_TIME, DateTimeFormatter.ISO_TIME.format(it)),
+            )
           },
           OffsetTime.of(23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
                 Named.of("offset time-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.OFFSETTIME.schema,
-                DateTimeFormatter.ISO_TIME.format(it))
+                DateTimeFormatter.ISO_TIME.format(it),
+            )
           },
           OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
@@ -238,14 +271,18 @@ class TypesTest {
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
                 PropertyType.getPropertyStruct(
-                    ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
+                    ZONED_DATE_TIME,
+                    DateTimeFormatter.ISO_DATE_TIME.format(it),
+                ),
+            )
           },
           OffsetDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneOffset.ofHours(1)).let {
             Arguments.of(
                 Named.of("offset date time-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.ZONEDDATETIME.schema,
-                DateTimeFormatter.ISO_DATE_TIME.format(it))
+                DateTimeFormatter.ISO_DATE_TIME.format(it),
+            )
           },
           ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneId.of("Europe/Istanbul")).let {
             Arguments.of(
@@ -253,14 +290,18 @@ class TypesTest {
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
                 PropertyType.getPropertyStruct(
-                    ZONED_DATE_TIME, DateTimeFormatter.ISO_DATE_TIME.format(it)))
+                    ZONED_DATE_TIME,
+                    DateTimeFormatter.ISO_DATE_TIME.format(it),
+                ),
+            )
           },
           ZonedDateTime.of(1999, 12, 31, 23, 59, 59, 5, ZoneId.of("Europe/Istanbul")).let {
             Arguments.of(
                 Named.of("zoned date time-compact", it),
                 PayloadMode.COMPACT,
                 SimpleTypes.ZONEDDATETIME.schema,
-                DateTimeFormatter.ISO_DATE_TIME.format(it))
+                DateTimeFormatter.ISO_DATE_TIME.format(it),
+            )
           },
           Arguments.of(
               Named.of("duration-extended", Values.isoDuration(5, 2, 23, 5).asIsoDuration()),
@@ -272,7 +313,9 @@ class TypesTest {
                       .put("months", 5L)
                       .put("days", 2L)
                       .put("seconds", 23L)
-                      .put("nanoseconds", 5))),
+                      .put("nanoseconds", 5),
+              ),
+          ),
           Arguments.of(
               Named.of("duration-compact", Values.isoDuration(5, 2, 23, 5).asIsoDuration()),
               PayloadMode.COMPACT,
@@ -281,7 +324,8 @@ class TypesTest {
                   .put("months", 5L)
                   .put("days", 2L)
                   .put("seconds", 23L)
-                  .put("nanoseconds", 5)),
+                  .put("nanoseconds", 5),
+          ),
           Arguments.of(
               Named.of("point - 2d-extended", Values.point(7203, 2.3, 4.5).asPoint()),
               PayloadMode.EXTENDED,
@@ -293,7 +337,9 @@ class TypesTest {
                       .put("srid", 7203)
                       .put("x", 2.3)
                       .put("y", 4.5)
-                      .put("z", null))),
+                      .put("z", null),
+              ),
+          ),
           Arguments.of(
               Named.of("point - 2d-compact", Values.point(7203, 2.3, 4.5).asPoint()),
               PayloadMode.COMPACT,
@@ -303,7 +349,8 @@ class TypesTest {
                   .put("srid", 7203)
                   .put("x", 2.3)
                   .put("y", 4.5)
-                  .put("z", null)),
+                  .put("z", null),
+          ),
           Arguments.of(
               Named.of("point - 3d-extended", Values.point(4979, 12.78, 56.7, 100.0).asPoint()),
               PayloadMode.EXTENDED,
@@ -315,7 +362,9 @@ class TypesTest {
                       .put("srid", 4979)
                       .put("x", 12.78)
                       .put("y", 56.7)
-                      .put("z", 100.0))),
+                      .put("z", 100.0),
+              ),
+          ),
           Arguments.of(
               Named.of("point - 3d-compact", Values.point(4979, 12.78, 56.7, 100.0).asPoint()),
               PayloadMode.COMPACT,
@@ -325,40 +374,51 @@ class TypesTest {
                   .put("srid", 4979)
                   .put("x", 12.78)
                   .put("y", 56.7)
-                  .put("z", 100.0)),
+                  .put("z", 100.0),
+          ),
           Arguments.of(
               Named.of("list - empty-extended", emptyList<Any>()),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.getPropertyStruct(LONG_LIST, emptyList<Long>())),
+              PropertyType.getPropertyStruct(LONG_LIST, emptyList<Long>()),
+          ),
           Arguments.of(
               Named.of("list - empty-compact", emptyList<Any>()),
               PayloadMode.COMPACT,
               SchemaBuilder.array(SimpleTypes.NULL.schema(true)).build(),
-              emptyList<Any>()),
+              emptyList<Any>(),
+          ),
           Arguments.of(
               Named.of("list - long-extended", (1L..50L).toList()),
               PayloadMode.EXTENDED,
               PropertyType.schema,
-              PropertyType.getPropertyStruct(LONG_LIST, (1L..50L).toList())),
+              PropertyType.getPropertyStruct(LONG_LIST, (1L..50L).toList()),
+          ),
           Arguments.of(
               Named.of("list - long-compact", (1L..50L).toList()),
               PayloadMode.COMPACT,
               SchemaBuilder.array(SimpleTypes.LONG.schema()).build(),
-              (1L..50L).toList()),
+              (1L..50L).toList(),
+          ),
           Arguments.of(
               Named.of(
-                  "list - non-uniformly typed elements-extended", listOf(1, true, 2.0, "a string")),
+                  "list - non-uniformly typed elements-extended",
+                  listOf(1, true, 2.0, "a string"),
+              ),
               PayloadMode.EXTENDED,
               SchemaBuilder.array(PropertyType.schema).build(),
               listOf(
                   PropertyType.toConnectValue(1L),
                   PropertyType.getPropertyStruct(BOOLEAN, true),
                   PropertyType.getPropertyStruct(FLOAT, 2.0),
-                  PropertyType.toConnectValue("a string"))),
+                  PropertyType.toConnectValue("a string"),
+              ),
+          ),
           Arguments.of(
               Named.of(
-                  "list - non-uniformly typed elements-compact", listOf(1, true, 2.0, "a string")),
+                  "list - non-uniformly typed elements-compact",
+                  listOf(1, true, 2.0, "a string"),
+              ),
               PayloadMode.COMPACT,
               SchemaBuilder.struct()
                   .field("e0", SimpleTypes.LONG.schema())
@@ -372,39 +432,50 @@ class TypesTest {
                           .field("e1", SimpleTypes.BOOLEAN.schema())
                           .field("e2", SimpleTypes.FLOAT.schema())
                           .field("e3", SimpleTypes.STRING.schema())
-                          .build())
+                          .build()
+                  )
                   .put("e0", 1L)
                   .put("e1", true)
                   .put("e2", 2.0)
-                  .put("e3", "a string")),
+                  .put("e3", "a string"),
+          ),
           Arguments.of(
               Named.of(
-                  "map - uniformly typed values-extended", mapOf("a" to 1, "b" to 2, "c" to 3)),
+                  "map - uniformly typed values-extended",
+                  mapOf("a" to 1, "b" to 2, "c" to 3),
+              ),
               PayloadMode.EXTENDED,
               SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
               mapOf(
                   "a" to PropertyType.toConnectValue(1L),
                   "b" to PropertyType.toConnectValue(2L),
-                  "c" to PropertyType.toConnectValue(3L))),
+                  "c" to PropertyType.toConnectValue(3L),
+              ),
+          ),
           Arguments.of(
               Named.of("map - uniformly typed values-compact", mapOf("a" to 1, "b" to 2, "c" to 3)),
               PayloadMode.COMPACT,
               SchemaBuilder.map(SimpleTypes.STRING.schema(), SimpleTypes.LONG.schema()).build(),
-              mapOf("a" to 1L, "b" to 2L, "c" to 3L)),
+              mapOf("a" to 1L, "b" to 2L, "c" to 3L),
+          ),
           Arguments.of(
               Named.of(
                   "map - non-uniformly typed values-extended",
-                  mapOf("a" to 1, "b" to true, "c" to 3.0)),
+                  mapOf("a" to 1, "b" to true, "c" to 3.0),
+              ),
               PayloadMode.EXTENDED,
               SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
               mapOf(
                   "a" to PropertyType.toConnectValue(1L),
                   "b" to PropertyType.getPropertyStruct(BOOLEAN, true),
-                  "c" to PropertyType.getPropertyStruct(FLOAT, 3.0))),
+                  "c" to PropertyType.getPropertyStruct(FLOAT, 3.0),
+              ),
+          ),
           Arguments.of(
               Named.of(
                   "map - non-uniformly typed values-compact",
-                  mapOf("a" to 1, "b" to true, "c" to 3.0)),
+                  mapOf("a" to 1, "b" to true, "c" to 3.0),
+              ),
               PayloadMode.COMPACT,
               SchemaBuilder.struct()
                   .field("a", SimpleTypes.LONG.schema())
@@ -416,10 +487,13 @@ class TypesTest {
                           .field("a", SimpleTypes.LONG.schema())
                           .field("b", SimpleTypes.BOOLEAN.schema())
                           .field("c", SimpleTypes.FLOAT.schema())
-                          .build())
+                          .build()
+                  )
                   .put("a", 1L)
                   .put("b", true)
-                  .put("c", 3.0)))
+                  .put("c", 3.0),
+          ),
+      )
     }
   }
 
@@ -442,10 +516,13 @@ class TypesTest {
                           mapOf(
                               "name" to "john",
                               "surname" to "doe",
-                              "dob" to LocalDate.of(1999, 12, 31)),
+                              "dob" to LocalDate.of(1999, 12, 31),
+                          ),
                       "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
                       "works_for" to
-                          mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+                          mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5)),
+                  ),
+              )
               .single()
 
       val person = record.get("p").asNode()
@@ -473,7 +550,8 @@ class TypesTest {
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
-                "dob" to LocalDate.of(1999, 12, 31))
+                "dob" to LocalDate.of(1999, 12, 31),
+            )
       }
 
       val company = record.get("c").asNode()
@@ -498,7 +576,8 @@ class TypesTest {
                 "<id>" to company.id(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
-                "est" to LocalDate.of(1980, 1, 1))
+                "est" to LocalDate.of(1980, 1, 1),
+            )
       }
 
       val worksFor = record.get("r").asRelationship()
@@ -529,7 +608,8 @@ class TypesTest {
                 "<start.id>" to worksFor.startNodeId(),
                 "<end.id>" to worksFor.endNodeId(),
                 "contractId" to 5916L,
-                "since" to LocalDate.of(2000, 1, 5))
+                "since" to LocalDate.of(2000, 1, 5),
+            )
       }
     }
   }
@@ -552,10 +632,13 @@ class TypesTest {
                           mapOf(
                               "name" to "john",
                               "surname" to "doe",
-                              "dob" to LocalDate.of(1999, 12, 31)),
+                              "dob" to LocalDate.of(1999, 12, 31),
+                          ),
                       "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
                       "works_for" to
-                          mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+                          mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5)),
+                  ),
+              )
               .single()
 
       val person = record.get("p").asNode()
@@ -583,7 +666,8 @@ class TypesTest {
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
-                "dob" to LocalDate.of(1999, 12, 31))
+                "dob" to LocalDate.of(1999, 12, 31),
+            )
       }
 
       val company = record.get("c").asNode()
@@ -608,7 +692,8 @@ class TypesTest {
                 "<id>" to company.id(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
-                "est" to LocalDate.of(1980, 1, 1))
+                "est" to LocalDate.of(1980, 1, 1),
+            )
       }
 
       val worksFor = record.get("r").asRelationship()
@@ -639,7 +724,8 @@ class TypesTest {
                 "<start.id>" to worksFor.startNodeId(),
                 "<end.id>" to worksFor.endNodeId(),
                 "contractId" to 5916L,
-                "since" to LocalDate.of(2000, 1, 5))
+                "since" to LocalDate.of(2000, 1, 5),
+            )
       }
     }
   }
@@ -647,7 +733,8 @@ class TypesTest {
   @Test
   fun `should build schema and value for change events and convert back with extended payload`() {
     Assumptions.assumeTrue(
-        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver)))
+        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver))
+    )
 
     val payloadMode = PayloadMode.EXTENDED
     // set-up cdc
@@ -675,14 +762,17 @@ class TypesTest {
                       mapOf(
                           "name" to "john",
                           "surname" to "doe",
-                          "dob" to LocalDate.of(1999, 12, 31)),
+                          "dob" to LocalDate.of(1999, 12, 31),
+                      ),
                   "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
-                  "works_for" to mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+                  "works_for" to mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5)),
+              ),
+          )
           .consume()
 
       val changes = cdc.query(changeId).collectList().block()
 
-      val changeEventConverter = ChangeEventConverter(payloadMode = payloadMode)
+      val changeEventConverter = ChangeEventConverter(payloadMode)
       changes!!.take(2).forEach { change ->
         val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
@@ -720,7 +810,8 @@ class TypesTest {
   @Test
   fun `should build schema and value for change events and convert back with compact payload`() {
     Assumptions.assumeTrue(
-        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver)))
+        canIUse(Dbms.changeDataCapture()).withNeo4j(Neo4jDetector.detect(driver))
+    )
 
     val payloadMode = PayloadMode.COMPACT
     // set-up cdc
@@ -748,14 +839,17 @@ class TypesTest {
                       mapOf(
                           "name" to "john",
                           "surname" to "doe",
-                          "dob" to LocalDate.of(1999, 12, 31)),
+                          "dob" to LocalDate.of(1999, 12, 31),
+                      ),
                   "company" to mapOf("name" to "acme corp", "est" to LocalDate.of(1980, 1, 1)),
-                  "works_for" to mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5))))
+                  "works_for" to mapOf("contractId" to 5916, "since" to LocalDate.of(2000, 1, 5)),
+              ),
+          )
           .consume()
 
       val changes = cdc.query(changeId).collectList().block()
 
-      val changeEventConverter = ChangeEventConverter(payloadMode = payloadMode)
+      val changeEventConverter = ChangeEventConverter(payloadMode)
       changes!!.take(2).forEach { change ->
         val converted = changeEventConverter.toConnectValue(change)
         val schema = converted.schema()
@@ -809,7 +903,8 @@ class TypesTest {
                          arr_mixed: [{foo: "bar"}, null, {foo: 1}]
                       } AS data
                       RETURN data, data.id AS id
-                    """)
+                    """
+                  )
                   .single()
 
           buildMap {
@@ -829,17 +924,21 @@ class TypesTest {
                         SchemaBuilder.array(
                                 SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "arr_mixed",
                         SchemaBuilder.array(
                                 SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field("id", PropertyType.schema)
                     .field(
                         "root",
@@ -848,23 +947,30 @@ class TypesTest {
                                         Schema.STRING_SCHEMA,
                                         SchemaBuilder.array(
                                                 SchemaBuilder.map(
-                                                        Schema.STRING_SCHEMA, PropertyType.schema)
+                                                        Schema.STRING_SCHEMA,
+                                                        PropertyType.schema,
+                                                    )
                                                     .optional()
-                                                    .build())
+                                                    .build()
+                                            )
                                             .optional()
-                                            .build())
+                                            .build(),
+                                    )
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .optional()
             .build()
-    val schema = DynamicTypes.toConnectSchema(payloadMode, returned, optional = true)
+    val schema = payloadMode.schema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = DynamicTypes.toConnectValue(schema, returned)
+    val converted = payloadMode.value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", PropertyType.toConnectValue("ROOT_ID"))
@@ -877,7 +983,9 @@ class TypesTest {
                         listOf(
                             mapOf("foo" to PropertyType.toConnectValue("bar")),
                             null,
-                            mapOf("foo" to PropertyType.toConnectValue(1L))))
+                            mapOf("foo" to PropertyType.toConnectValue(1L)),
+                        ),
+                    )
                     .put("id", PropertyType.toConnectValue("ROOT_ID"))
                     .put(
                         "root",
@@ -885,8 +993,11 @@ class TypesTest {
                             mapOf("children" to listOf<Any>()),
                             mapOf(
                                 "children" to
-                                    listOf(
-                                        mapOf("name" to PropertyType.toConnectValue("child")))))))
+                                    listOf(mapOf("name" to PropertyType.toConnectValue("child")))
+                            ),
+                        ),
+                    ),
+            )
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe returned
@@ -911,7 +1022,8 @@ class TypesTest {
                          arr_mixed: [{foo: "bar"}, null, {foo: 1}]
                       } AS data
                       RETURN data, data.id AS id
-                    """)
+                    """
+                  )
                   .single()
 
           buildMap {
@@ -930,29 +1042,40 @@ class TypesTest {
                         "arr",
                         SchemaBuilder.array(
                                 SchemaBuilder.map(
-                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                                        Schema.STRING_SCHEMA,
+                                        Schema.OPTIONAL_STRING_SCHEMA,
+                                    )
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field(
                         "arr_mixed",
                         SchemaBuilder.struct()
                             .field(
                                 "e0",
                                 SchemaBuilder.map(
-                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                                        Schema.STRING_SCHEMA,
+                                        Schema.OPTIONAL_STRING_SCHEMA,
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .field("e1", SimpleTypes.NULL.schema())
                             .field(
                                 "e2",
                                 SchemaBuilder.map(
-                                        Schema.STRING_SCHEMA, Schema.OPTIONAL_INT64_SCHEMA)
+                                        Schema.STRING_SCHEMA,
+                                        Schema.OPTIONAL_INT64_SCHEMA,
+                                    )
                                     .optional()
-                                    .build())
+                                    .build(),
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .field("id", Schema.OPTIONAL_STRING_SCHEMA)
                     .field(
                         "root",
@@ -962,23 +1085,29 @@ class TypesTest {
                                         SchemaBuilder.array(
                                                 SchemaBuilder.map(
                                                         Schema.STRING_SCHEMA,
-                                                        Schema.OPTIONAL_STRING_SCHEMA)
+                                                        Schema.OPTIONAL_STRING_SCHEMA,
+                                                    )
                                                     .optional()
-                                                    .build())
+                                                    .build()
+                                            )
                                             .optional()
-                                            .build())
+                                            .build(),
+                                    )
                                     .optional()
-                                    .build())
+                                    .build()
+                            )
                             .optional()
-                            .build())
+                            .build(),
+                    )
                     .optional()
-                    .build())
+                    .build(),
+            )
             .optional()
             .build()
-    val schema = DynamicTypes.toConnectSchema(payloadMode, returned, optional = true)
+    val schema = payloadMode.schema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = DynamicTypes.toConnectValue(schema, returned)
+    val converted = payloadMode.value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", "ROOT_ID")
@@ -991,21 +1120,25 @@ class TypesTest {
                         Struct(schema.field("data").schema().field("arr_mixed").schema())
                             .put("e0", mapOf("foo" to "bar"))
                             .put("e1", null)
-                            .put("e2", mapOf("foo" to 1L)))
+                            .put("e2", mapOf("foo" to 1L)),
+                    )
                     .put("id", "ROOT_ID")
                     .put(
                         "root",
                         listOf(
                             mapOf("children" to listOf<Any>()),
-                            mapOf("children" to listOf(mapOf("name" to "child"))))))
+                            mapOf("children" to listOf(mapOf("name" to "child"))),
+                        ),
+                    ),
+            )
 
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe returned
   }
 
   private fun schemaAndValue(payloadMode: PayloadMode, value: Any): Triple<Schema, Any?, Any?> {
-    val schema = DynamicTypes.toConnectSchema(payloadMode, value)
-    val converted = DynamicTypes.toConnectValue(schema, value)
+    val schema = payloadMode.schema(value)
+    val converted = payloadMode.value(schema, value)
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     return Triple(schema, converted, reverted)
   }
