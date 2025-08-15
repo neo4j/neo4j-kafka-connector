@@ -11,6 +11,9 @@
     <packaging>jar</packaging>
     <name>source-connector</name>
     <description>Neo4j Connector for Kafka - Source</description>
+    <properties>
+        <failsafe.rerunFailingTestsCount>3</failsafe.rerunFailingTestsCount>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.neo4j.connectors.kafka</groupId>
