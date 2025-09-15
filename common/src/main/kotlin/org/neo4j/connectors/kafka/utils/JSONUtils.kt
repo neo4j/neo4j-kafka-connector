@@ -56,18 +56,27 @@ abstract class StreamsPoint {
   abstract val crs: String
 }
 
-data class StreamsPointCartesian(
+data class StreamsPointCartesian2D(override val crs: String, val x: Double, val y: Double) :
+    StreamsPoint()
+
+data class StreamsPointCartesian3D(
     override val crs: String,
     val x: Double,
     val y: Double,
-    val z: Double? = null,
+    val z: Double,
 ) : StreamsPoint()
 
-data class StreamsPointWgs(
+data class StreamsPointWgs2D(
     override val crs: String,
-    val latitude: Double,
     val longitude: Double,
-    val height: Double? = null,
+    val latitude: Double,
+) : StreamsPoint()
+
+data class StreamsPointWgs3D(
+    override val crs: String,
+    val longitude: Double,
+    val latitude: Double,
+    val height: Double,
 ) : StreamsPoint()
 
 fun PointValue.toStreamsPoint(): StreamsPoint {
@@ -78,10 +87,10 @@ fun PointValue.toStreamsPoint(): StreamsPoint {
 fun Point.toStreamsPoint(): StreamsPoint {
   val point = this
   return when (val crsType = point.srid()) {
-    7203 -> StreamsPointCartesian("cartesian", point.x(), point.y())
-    9157 -> StreamsPointCartesian("cartesian-3d", point.x(), point.y(), point.z())
-    4326 -> StreamsPointWgs("wgs-84", point.x(), point.y())
-    4979 -> StreamsPointWgs("wgs-84-3d", point.x(), point.y(), point.z())
+    7203 -> StreamsPointCartesian2D("cartesian", point.x(), point.y())
+    9157 -> StreamsPointCartesian3D("cartesian-3d", point.x(), point.y(), point.z())
+    4326 -> StreamsPointWgs2D("wgs-84", point.x(), point.y())
+    4979 -> StreamsPointWgs3D("wgs-84-3d", point.x(), point.y(), point.z())
     else -> throw IllegalArgumentException("Point type $crsType not supported")
   }
 }
