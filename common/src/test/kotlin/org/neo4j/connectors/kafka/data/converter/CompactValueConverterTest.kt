@@ -446,6 +446,7 @@ class DynamicTypesCompactTest {
           is IntArray -> value.toList()
           is LongArray -> value.toList()
           is ShortArray -> value.toList()
+          is Array<*> -> value.toList()
           else -> value
         }
 
