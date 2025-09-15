@@ -83,7 +83,7 @@
         <mockito-kotlin.version>6.0.0</mockito-kotlin.version>
         <mockito.version>5.19.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.11.0</neo4j-cypher-dsl.version>
-        <neo4j-java-driver.version>4.4.20</neo4j-java-driver.version>
+        <neo4j-java-driver.version>4.4.21</neo4j-java-driver.version>
         <netty.version>4.1.127.Final</netty.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
