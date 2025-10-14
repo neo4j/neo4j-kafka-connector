@@ -88,7 +88,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
         <protobuf.version>3.25.5</protobuf.version>
-        <reactor.version>2024.0.10</reactor.version>
+        <reactor.version>2024.0.11</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
         <spotless-maven-plugin.version>2.46.1</spotless-maven-plugin.version>
