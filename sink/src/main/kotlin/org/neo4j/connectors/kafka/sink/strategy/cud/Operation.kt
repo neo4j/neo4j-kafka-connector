@@ -17,9 +17,9 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.networknt.schema.JsonSchema
-import com.networknt.schema.JsonSchemaFactory
-import com.networknt.schema.SpecVersion.VersionFlag
+import com.networknt.schema.Schema
+import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SpecificationVersion
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.CREATE
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.DELETE
@@ -36,8 +36,8 @@ interface Operation {
   fun toQuery(renderer: Renderer = Renderer.getDefaultRenderer()): Query
 
   companion object {
-    private val SCHEMA: JsonSchema =
-        JsonSchemaFactory.getInstance(VersionFlag.V202012)
+    private val SCHEMA: Schema =
+        SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
             .getSchema(Operation::class.java.getResourceAsStream("cud.schema.v1.json"))
 
     fun from(values: Map<String, Any?>): Operation {
