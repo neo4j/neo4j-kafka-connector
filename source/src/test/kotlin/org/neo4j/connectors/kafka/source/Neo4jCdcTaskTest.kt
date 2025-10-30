@@ -19,12 +19,13 @@ package org.neo4j.connectors.kafka.source
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.equals.shouldNotBeEqual
+import io.kotest.matchers.shouldBe
 import java.util.UUID
 import kotlin.collections.get
 import kotlin.run
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
-import org.apache.kafka.connect.source.SourceTask
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.junit.jupiter.api.AfterAll
@@ -83,7 +84,7 @@ class Neo4jCdcTaskTest {
     }
   }
 
-  private lateinit var task: SourceTask
+  private lateinit var task: Neo4jCdcTask
   private lateinit var db: String
   private lateinit var session: Session
 
@@ -343,10 +344,10 @@ class Neo4jCdcTaskTest {
     session
         .run(
             """
-              UNWIND RANGE(1, 100, 2) AS n 
-              MATCH (p:Person {id: n})
-              MATCH (c:Company {id: n%25+1})
-              CREATE (p)-[:WORKS_FOR {id: n, since: date()}]->(c)
+            UNWIND RANGE(1, 100, 2) AS n 
+            MATCH (p:Person {id: n})
+            MATCH (c:Company {id: n%25+1})
+            CREATE (p)-[:WORKS_FOR {id: n, since: date()}]->(c)
             """
                 .trimIndent()
         )
@@ -447,6 +448,38 @@ class Neo4jCdcTaskTest {
 
       changes shouldHaveSize 100
     } shouldBeLessThan 5.seconds
+  }
+
+  @Test
+  fun `should update in-memory offset even if no changes are polled`() {
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            SourceConfiguration.CDC_POLL_DURATION to "1s",
+            SourceConfiguration.CDC_POLL_INTERVAL to "250ms",
+            "neo4j.cdc.topic.nodes.patterns" to "(:Company)",
+        )
+    )
+
+    val startedWith = task.latestOffset()
+
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
+
+    task.poll() shouldBe emptyList()
+    val afterFirstPoll = task.latestOffset()
+    startedWith shouldNotBeEqual afterFirstPoll
+
+    session
+        .run("UNWIND RANGE(1, 10) AS n CREATE (:Employee {id: n, name: 'employee ' + n})")
+        .consume()
+
+    task.poll() shouldBe emptyList()
+    val finishedWith = task.latestOffset()
+    finishedWith shouldNotBeEqual afterFirstPoll
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
