@@ -23,7 +23,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
@@ -103,10 +102,7 @@ class Neo4jCdcTask : SourceTask() {
       val limit = start + config.cdcPollingDuration
 
       while (limit.hasNotPassedNow()) {
-        // capture current change identifier
-        val lastKnownCurrent = cdc.current().asFlow().first()
-
-        cdc.query(ChangeIdentifier(offset.get()))
+        cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
             .take(config.batchSize.toLong(), true)
             .asFlow()
             .flatMapConcat { build(it) }
@@ -114,9 +110,6 @@ class Neo4jCdcTask : SourceTask() {
         if (list.isNotEmpty()) {
           break
         }
-
-        // we reached at least the last known current change, so let's just update the offset to it
-        offset.set(lastKnownCurrent.id)
 
         delay(config.cdcPollingInterval)
       }
