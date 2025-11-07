@@ -117,7 +117,7 @@ class Build(
 
             it.features {
               loginToECR()
-              requireDiskSpace("10gb")
+              requireDiskSpace("15gb")
               if (!forCompatibility) enableCommitStatusPublisher()
               if (forPullRequests) enablePullRequests()
             }
