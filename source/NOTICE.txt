@@ -26,6 +26,7 @@ Apache Software License, Version 2.0
   jackson-databind
   jackson-module-kotlin
   JetBrains Java Annotations
+  JSpecify annotations
   Kotlin Reflect
   Kotlin Stdlib
   kotlinx-coroutines-core
