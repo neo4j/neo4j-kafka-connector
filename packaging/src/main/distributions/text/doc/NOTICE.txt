@@ -29,6 +29,7 @@ Apache Software License, Version 2.0
   jackson-module-kotlin
   JetBrains Java Annotations
   JsonSchemaValidator
+  JSpecify annotations
   Kotlin Reflect
   Kotlin Stdlib
   kotlinx-coroutines-core
