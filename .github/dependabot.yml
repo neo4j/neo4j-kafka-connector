@@ -6,12 +6,18 @@ updates:
       interval: "daily"
       time: "08:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 3
     open-pull-requests-limit: 15
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 3
   - package-ecosystem: "bundler"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 3
