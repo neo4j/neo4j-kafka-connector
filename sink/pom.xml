@@ -13,7 +13,7 @@
     <description>Neo4j Connector for Kafka - Sink</description>
     <properties>
         <antlr4.version>4.13.2</antlr4.version>
-        <json-schema-validator.version>2.0.0</json-schema-validator.version>
+        <json-schema-validator.version>2.0.1</json-schema-validator.version>
     </properties>
     <dependencies>
         <dependency>
