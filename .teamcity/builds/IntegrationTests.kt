@@ -2,10 +2,7 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildStep
 import jetbrains.buildServer.configs.kotlin.BuildType
-import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
-import jetbrains.buildServer.configs.kotlin.buildSteps.MavenBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
-import jetbrains.buildServer.configs.kotlin.buildSteps.maven
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -68,16 +65,11 @@ class IntegrationTests(
               dockerImage = javaVersion.dockerImage
               dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
-            maven {
+            commonMaven(javaVersion) {
               this.goals = "verify"
               this.runnerArgs =
                   "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests"
 
-              // this is the settings name we uploaded to Connectors project
-              userSettingsSelection = "github"
-              localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
-              dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
-              dockerImage = javaVersion.dockerImage
               dockerRunParameters =
                   "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
             }
@@ -123,15 +115,7 @@ class IntegrationTests(
             }
           }
 
-          features {
-            buildCache {
-              this.name = "neo4j-kafka-connector"
-              publish = true
-              use = true
-              publishOnlyChanged = true
-              rules = ".m2/repository"
-            }
-          }
+          features { buildCache(javaVersion) }
 
           requirements { runOnLinux(LinuxSize.LARGE) }
         },

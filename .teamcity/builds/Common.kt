@@ -8,6 +8,7 @@ import jetbrains.buildServer.configs.kotlin.FailureAction
 import jetbrains.buildServer.configs.kotlin.Requirements
 import jetbrains.buildServer.configs.kotlin.ReuseBuilds
 import jetbrains.buildServer.configs.kotlin.buildFeatures.PullRequests
+import jetbrains.buildServer.configs.kotlin.buildFeatures.buildCache
 import jetbrains.buildServer.configs.kotlin.buildFeatures.commitStatusPublisher
 import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerRegistryConnections
 import jetbrains.buildServer.configs.kotlin.buildFeatures.freeDiskSpace
@@ -20,8 +21,16 @@ import jetbrains.buildServer.configs.kotlin.vcs.GitVcsRoot
 
 const val GITHUB_OWNER = "neo4j"
 const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
-const val MAVEN_DEFAULT_ARGS =
-    "--no-transfer-progress --batch-mode -Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository"
+val MAVEN_DEFAULT_ARGS = buildString {
+  append("--no-transfer-progress ")
+  append("--batch-mode ")
+  append("-Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository ")
+  append("-Dmaven.wagon.http.retryHandler.class=standard ")
+  append("-Dmaven.wagon.http.retryHandler.timeout=60 ")
+  append("-Dmaven.wagon.http.retryHandler.count=3 ")
+  append(
+      "-Dmaven.wagon.http.retryHandler.nonRetryableClasses=java.io.InterruptedIOException,java.net.UnknownHostException,java.net.ConnectException ")
+}
 const val DEFAULT_BRANCH = "main"
 
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
@@ -110,6 +119,14 @@ fun BuildFeatures.loginToECR() = dockerRegistryConnections {
   loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID }
 }
 
+fun BuildFeatures.buildCache(javaVersion: JavaVersion) = buildCache {
+  this.name = "neo4j-kafka-connector-${DEFAULT_BRANCH}-${javaVersion.version}"
+  publish = true
+  use = true
+  publishOnlyChanged = true
+  rules = ".m2/repository"
+}
+
 fun CompoundStage.dependentBuildType(bt: BuildType, reuse: ReuseBuilds = ReuseBuilds.SUCCESSFUL) =
     buildType(bt) {
       onDependencyCancel = FailureAction.CANCEL
@@ -134,8 +151,6 @@ fun BuildSteps.commonMaven(
 ): MavenBuildStep {
   val maven =
       this.maven {
-        // this is the settings name we uploaded to Connectors project
-        userSettingsSelection = "github"
         localRepoScope = MavenBuildStep.RepositoryScope.MAVEN_DEFAULT
 
         dockerImagePlatform = MavenBuildStep.ImagePlatform.Linux
