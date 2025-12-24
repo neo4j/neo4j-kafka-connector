@@ -298,7 +298,7 @@ object DynamicTypes {
       when (value) {
         is java.util.Date ->
             LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(Timestamp.fromLogical(schema, value).toLong()),
+                Instant.ofEpochMilli(Timestamp.fromLogical(schema, value)),
                 ZoneOffset.UTC,
             )
 

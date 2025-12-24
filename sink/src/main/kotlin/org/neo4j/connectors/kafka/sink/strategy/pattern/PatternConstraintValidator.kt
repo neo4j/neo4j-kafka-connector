@@ -70,7 +70,7 @@ object PatternConstraintValidator {
             .groupBy { "${it.constraintType}-${it.labelOrType}" }
 
     val keys = pattern.keyProperties.map { it.to }
-    val type = pattern.type!!
+    val type = pattern.type
 
     if (checkRelationshipKey(type, keys, typeConstraintMap)) {
       return null
@@ -210,7 +210,7 @@ object PatternConstraintValidator {
   ): String {
     val stringBuilder = StringBuilder()
 
-    val type = pattern.type!!
+    val type = pattern.type
 
     stringBuilder.append(
         "Relationship '$type' does not match the key(s) defined by the pattern $patternString."
