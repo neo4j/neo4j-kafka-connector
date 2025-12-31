@@ -49,6 +49,8 @@ class Build(
                         "-pl :packaging -am -DskipTests",
                     )
 
+                dependentBuildType(SemgrepCheck("${name}-semgrep-check", "semgrep check"))
+
                 sequential {
                   dependentBuildType(
                       Maven(
