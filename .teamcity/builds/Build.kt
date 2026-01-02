@@ -38,6 +38,8 @@ class Build(
             if (forPullRequests) dependentBuildType(PRCheck("${name}-pr-check", "pr check"))
 
             parallel {
+              dependentBuildType(SemgrepCheck("${name}-semgrep-check", "semgrep check"))
+
               JavaPlatform.entries.forEach { java ->
                 val packaging =
                     Maven(
@@ -48,8 +50,6 @@ class Build(
                         Neo4jVersion.V_NONE,
                         "-pl :packaging -am -DskipTests",
                     )
-
-                dependentBuildType(SemgrepCheck("${name}-semgrep-check", "semgrep check"))
 
                 sequential {
                   dependentBuildType(
