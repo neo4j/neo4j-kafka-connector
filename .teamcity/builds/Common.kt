@@ -33,6 +33,8 @@ val MAVEN_DEFAULT_ARGS = buildString {
 }
 const val DEFAULT_BRANCH = "main"
 
+const val SEMGREP_DOCKER_IMAGE = "semgrep/semgrep:1.146.0"
+
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
