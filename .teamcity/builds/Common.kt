@@ -33,6 +33,9 @@ val MAVEN_DEFAULT_ARGS = buildString {
 }
 const val DEFAULT_BRANCH = "main"
 
+const val FULL_GITHUB_REPOSITORY = "$GITHUB_OWNER/$GITHUB_REPOSITORY"
+const val GITHUB_URL = "https://github.com/$FULL_GITHUB_REPOSITORY"
+
 const val SEMGREP_DOCKER_IMAGE = "semgrep/semgrep:1.146.0"
 
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
