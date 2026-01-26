@@ -16,6 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink
 
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
@@ -42,29 +44,53 @@ class Neo4jSinkTask : SinkTask() {
   }
 
   override fun put(records: Collection<SinkRecord>?) {
-    records
-        ?.map { SinkMessage(it) }
-        ?.groupBy { it.topic }
-        ?.mapKeys { config.topicHandlers.getValue(it.key) }
-        ?.forEach { (handler, messages) -> processMessages(handler, messages) }
+    log.info("received {} records", records?.size ?: 0)
+    val duration = measureTime {
+      records
+          ?.map { SinkMessage(it) }
+          ?.groupBy { it.topic }
+          ?.mapKeys { config.topicHandlers.getValue(it.key) }
+          ?.forEach { (handler, messages) -> processMessages(handler, messages) }
+    }
+    log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
 
   private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
     val handled = mutableSetOf<SinkMessage>()
     try {
-      val txGroups = handler.handle(messages)
+      log.debug("handing {} messages to handler {}", messages.size, handler.strategy())
+      val (txGroups, handlerDuration) = measureTimedValue { handler.handle(messages) }
+      log.debug(
+          "handler {} produced {} transaction groups in {} ms",
+          handler.strategy(),
+          txGroups.count(),
+          handlerDuration.inWholeMilliseconds,
+      )
 
-      txGroups.forEach { group ->
-        config.driver.session(config.sessionConfig()).use { session ->
-          session.writeTransaction(
-              { tx -> group.forEach { tx.run(it.query).consume() } },
-              config.txConfig(),
-          )
+      log.debug("writing to neo4j")
+      val writeDuration = measureTime {
+        txGroups.forEachIndexed { index, group ->
+          log.trace("processing queries for group {}", index)
+          config.driver.session(config.sessionConfig()).use { session ->
+            log.trace("before write transaction for group {}", index)
+            session.writeTransaction(
+                { tx -> group.forEach { tx.run(it.query).consume() } },
+                config.txConfig(),
+            )
+            log.trace("after write transaction for group {}", index)
+          }
+
+          handled.addAll(group.flatMap { it.messages })
         }
-
-        handled.addAll(group.flatMap { it.messages })
       }
+      log.debug(
+          "wrote {} transaction groups to neo4j in {} ms",
+          txGroups.count(),
+          writeDuration.inWholeMilliseconds,
+      )
     } catch (e: Throwable) {
+      log.warn("failed to process messages, trying to identify offending message", e)
+
       val unhandled = messages.minus(handled)
 
       if (unhandled.size > 1) {
