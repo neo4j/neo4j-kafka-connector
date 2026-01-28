@@ -40,7 +40,7 @@
     </modules>
     <properties>
         <annotations.version>26.0.2-1</annotations.version>
-        <assertj-core.version>3.27.6</assertj-core.version>
+        <assertj-core.version>3.27.7</assertj-core.version>
         <avro.version>1.12.1</avro.version>
         <awaitility.version>4.3.0</awaitility.version>
         <build-resources.version>2025.11.1</build-resources.version>
