@@ -26,6 +26,7 @@ import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
 import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
+import org.neo4j.connectors.kafka.sink.strategy.BatchedCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
@@ -220,7 +221,12 @@ interface SinkStrategyHandler {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
-        handler = CdcSchemaHandler(topic, config.renderer)
+        handler =
+            if (config.batchMode) {
+              BatchedCdcSchemaHandler(topic, config.batchSize)
+            } else {
+              CdcSchemaHandler(topic, config.renderer)
+            }
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
