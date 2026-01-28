@@ -2,17 +2,14 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 
-class SemgrepCheck(
-  id: String,
-  name: String
-): Maven(
-    id,
-    name,
-    "dependency:tree",
-    JavaVersion.V_17,
-    Neo4jVersion.V_NONE,
-    "-DoutputFile=maven_dep_tree.txt"
-) {
+class SemgrepCheck(id: String, name: String) :
+    Maven(
+        id,
+        name,
+        "dependency:tree",
+        JavaVersion.V_17,
+        Neo4jVersion.V_NONE,
+        "-DoutputFile=maven_dep_tree.txt") {
 
   init {
 
@@ -23,13 +20,13 @@ class SemgrepCheck(
     params.text("env.SEMGREP_JOB_URL", "%env.BUILD_URL%")
     params.text("env.SEMGREP_COMMIT", "%env.BUILD_VCS_NUMBER%")
 
-    steps.step(ScriptBuildStep {
-      scriptContent="semgrep ci --no-git-ignore"
-      dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
-      dockerImage = SEMGREP_DOCKER_IMAGE
-      dockerRunParameters =
-          "--volume /var/run/docker.sock:/var/run/docker.sock --volume %teamcity.build.checkoutDir%/signingkeysandbox:/root/.gnupg"
-    })
+    steps.step(
+        ScriptBuildStep {
+          scriptContent = "semgrep ci --no-git-ignore"
+          dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+          dockerImage = SEMGREP_DOCKER_IMAGE
+          dockerRunParameters =
+              "--volume /var/run/docker.sock:/var/run/docker.sock --volume %teamcity.build.checkoutDir%/signingkeysandbox:/root/.gnupg"
+        })
   }
-
 }
