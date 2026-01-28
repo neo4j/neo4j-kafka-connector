@@ -15,7 +15,7 @@ interaction:
     description: build connector packages
     runner: local
     command: >
-      sh -c "./mvnw clean package -DskipTests -pl :packaging -am &&
+      sh -c "dip format && ./mvnw clean package -DskipTests -pl :packaging -am &&
         find ./docker/plugins ! -name '.keep' -type f -exec rm -f {} + && 
         cp ./packaging/target/*$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout).jar ./docker/plugins"
 

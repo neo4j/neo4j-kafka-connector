@@ -117,6 +117,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val CYPHER_BIND_KEY_AS = "neo4j.cypher.bind-key-as"
     const val CYPHER_BIND_VALUE_AS = "neo4j.cypher.bind-value-as"
     const val CYPHER_BIND_VALUE_AS_EVENT = "neo4j.cypher.bind-value-as-event"
+    const val CDC_MAX_BATCHED_QUERIES = "neo4j.cdc.max-batched-queries"
     const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.source-id.topics"
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
     const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
@@ -139,6 +140,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val DEFAULT_BIND_KEY_ALIAS = "__key"
     const val DEFAULT_BIND_VALUE_ALIAS = "__value"
     const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
+    const val DEFAULT_CDC_MAX_BATCHED_QUERIES = 50
     const val DEFAULT_SOURCE_ID_LABEL_NAME = "SourceEvent"
     const val DEFAULT_SOURCE_ID_PROPERTY_NAME = "sourceId"
 
@@ -224,12 +226,24 @@ class SinkConfiguration : Neo4jConfiguration {
                 }
             )
             .define(
+                ConfigKeyBuilder.of(CDC_MAX_BATCHED_QUERIES, ConfigDef.Type.INT) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_CDC_MAX_BATCHED_QUERIES
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
+                }
+            )
+            .define(
                 ConfigKeyBuilder.of(CDC_SOURCE_ID_LABEL_NAME, ConfigDef.Type.STRING) {
                   importance = ConfigDef.Importance.LOW
                   defaultValue = DEFAULT_SOURCE_ID_LABEL_NAME
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
-                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
+                      Recommenders.visibleIfNotEmpty(
+                          Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
+                              .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
+                      )
                 }
             )
             .define(
