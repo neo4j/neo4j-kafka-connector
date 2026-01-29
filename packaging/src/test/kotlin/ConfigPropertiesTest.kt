@@ -16,20 +16,32 @@
  */
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.instanceOf
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.io.File
 import java.io.FileInputStream
 import java.util.*
+import kotlin.reflect.KClass
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.Cypher25CdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.Cypher25CdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -45,32 +57,44 @@ class ConfigPropertiesTest {
     configDirectory.listFiles()!!.size shouldBe 8
   }
 
-  @Test
-  fun `sink cdc schema quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("cdcSchemaHandlers")
+  fun `sink cdc schema quick start config should be valid`(
+      neo4j: Neo4j,
+      expectedHandlerType: KClass<SinkStrategyHandler>,
+  ) {
     val properties = loadConfigProperties("sink-cdc-schema-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j)
+    }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSchemaHandler>()
-    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSchemaHandler>()
-    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSchemaHandler>()
+    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
-  @Test
-  fun `sink cdc source id quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("cdcSourceHandlers")
+  fun `sink cdc source id quick start config should be valid`(
+      neo4j: Neo4j,
+      expectedHandlerType: KClass<SinkStrategyHandler>,
+  ) {
     val properties = loadConfigProperties("sink-cdc-source-id-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j)
+    }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSourceIdHandler>()
-    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSourceIdHandler>()
-    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSourceIdHandler>()
+    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
   @Test
@@ -176,5 +200,27 @@ class ConfigPropertiesTest {
       }
       BASE_CONFIG_PATH = properties.getProperty("quickstart.config.properties.path")
     }
+
+    @JvmStatic
+    fun cdcSourceHandlers(): List<Arguments> {
+      return listOf(
+          Arguments.argumentSet("Cypher 5", neo4j5, CdcSourceIdHandler::class),
+          Arguments.argumentSet("Cypher 25", neo4j2025, Cypher25CdcSourceIdHandler::class),
+      )
+    }
+
+    @JvmStatic
+    fun cdcSchemaHandlers(): List<Arguments> {
+      return listOf(
+          Arguments.argumentSet("Cypher 5", neo4j5, CdcSchemaHandler::class),
+          Arguments.argumentSet("Cypher 25", neo4j2025, Cypher25CdcSchemaHandler::class),
+      )
+    }
+
+    private val neo4j5 =
+        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+
+    private val neo4j2025 =
+        Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
   }
 }
