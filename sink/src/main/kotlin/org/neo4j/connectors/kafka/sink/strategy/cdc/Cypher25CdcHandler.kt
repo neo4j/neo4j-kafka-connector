@@ -70,9 +70,19 @@ data class GroupingKey(
       if (i >= other.propertyKeys.size) {
         return 1
       }
-      val cmp = this.propertyKeys[i].size.compareTo(other.propertyKeys[i].size)
+      val myKeys = this.propertyKeys[i]
+      val otherKeys = other.propertyKeys[i]
+      val cmp = myKeys.size.compareTo(otherKeys.size)
       if (cmp != 0) {
         return cmp
+      }
+      val myKeysIterator = myKeys.sorted().iterator()
+      val otherKeysIterator = otherKeys.sorted().iterator()
+      (0 until myKeys.size).forEach { _ ->
+        val cmp = myKeysIterator.next().compareTo(otherKeysIterator.next())
+        if (cmp != 0) {
+          return cmp
+        }
       }
     }
 
@@ -262,15 +272,32 @@ abstract class Cypher25CdcHandler(
   ): List<ChangeQuery> {
     val result = mutableListOf<ChangeQuery>()
 
+    var currentGroupId = 0
+    val groupIds = mutableMapOf<GroupingKey, Int>()
     val queries = TreeMap<GroupingKey, String>()
     val paramsList = mutableListOf<Map<String, Any>>()
 
     var lastIndex = 0
     events.forEachIndexed { index, event ->
       val key = event.cdcData.groupingBasedOn()
+      if (!queries.containsKey(key) && (queries.size >= maxBatchedStatements)) {
+        result.add(
+            ChangeQuery(
+                null,
+                null,
+                events.subList(lastIndex, index).map { it.message },
+                batchedStatement(queries, paramsList),
+            )
+        )
+        lastIndex = index
+        groupIds.clear()
+        queries.clear()
+        paramsList.clear()
+      }
       queries.computeIfAbsent(key) { event.cdcData.buildStatement() }
-      paramsList.add(event.cdcData.toParams(queries.keys.indexOf(key)))
-      if (queries.size >= maxBatchedStatements || paramsList.size >= batchSize) {
+      val groupId = groupIds.computeIfAbsent(key) { currentGroupId++ }
+      paramsList.add(event.cdcData.toParams(groupId))
+      if (paramsList.size >= batchSize) {
         result.add(
             ChangeQuery(
                 null,
@@ -282,6 +309,7 @@ abstract class Cypher25CdcHandler(
 
         // reset for next batch
         lastIndex = index + 1
+        groupIds.clear()
         queries.clear()
         paramsList.clear()
       }

@@ -23,7 +23,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import kotlin.collections.emptyList
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.neo4j.cdc.client.model.EntityOperation
@@ -37,6 +36,8 @@ import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createKnowsRelationshipEvent
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
@@ -821,13 +822,12 @@ class Cypher25CdcSchemaHandlerTest {
   }
 
   @Test
-  @Disabled // TODO rewrite?
-  fun `should split changes into transactional boundaries`() {
+  fun `should split changes over batch size`() {
     val handler =
         Cypher25CdcSchemaHandler(
             "my-topic",
             50,
-            1000,
+            2,
             Renderer.getRenderer(Configuration.defaultConfig()),
         )
 
@@ -840,40 +840,47 @@ class Cypher25CdcSchemaHandlerTest {
                 newChangeEventMessage(randomChangeEvent(), 1, 0),
                 newChangeEventMessage(randomChangeEvent(), 1, 1),
                 newChangeEventMessage(randomChangeEvent(), 2, 0),
+                newChangeEventMessage(randomChangeEvent(), 3, 0),
             )
         )
 
+    result.shouldHaveSize(1)
     result
-        .shouldHaveSize(3)
+        .first()
+        .shouldHaveSize(4)
         .shouldMatchInOrder(
-            { first ->
-              first
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 0
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 3
-                  })
-            },
-            { second ->
-              second
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 1
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 2
-                  })
-            },
-            { third ->
-              third
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 2
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 1
-                  })
-            },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 1 },
         )
+  }
+
+  @Test
+  fun `should split changes over max batched statement count`() {
+    val handler =
+        Cypher25CdcSchemaHandler(
+            "my-topic",
+            2,
+            1000,
+            Renderer.getRenderer(Configuration.defaultConfig()),
+        )
+
+    val result =
+        handler.handle(
+            listOf(
+                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0),
+                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1),
+                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0),
+                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0),
+            )
+        )
+
+    result.shouldHaveSize(1)
+    result
+        .first()
+        .shouldHaveSize(2)
+        .shouldMatchInOrder({ it.messages shouldHaveSize 3 }, { it.messages shouldHaveSize 1 })
   }
 
   @Test
