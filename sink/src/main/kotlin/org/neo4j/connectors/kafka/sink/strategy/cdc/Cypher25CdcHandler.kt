@@ -16,7 +16,6 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cdc
 
-import java.util.TreeMap
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
@@ -273,71 +272,56 @@ abstract class Cypher25CdcHandler(
     val result = mutableListOf<ChangeQuery>()
 
     var currentGroupId = 0
-    val groupIds = mutableMapOf<GroupingKey, Int>()
-    val queries = TreeMap<GroupingKey, String>()
-    val paramsList = mutableListOf<Map<String, Any>>()
+    val queries = mutableMapOf<GroupingKey, Pair<Int, String>>()
+    val currentEvents = mutableListOf<Map<String, Any>>()
+    val currentMessages = mutableListOf<SinkMessage>()
 
-    var lastIndex = 0
-    events.forEachIndexed { index, event ->
-      val key = event.cdcData.groupingBasedOn()
-      if (!queries.containsKey(key) && (queries.size >= maxBatchedStatements)) {
-        result.add(
-            ChangeQuery(
-                null,
-                null,
-                events.subList(lastIndex, index).map { it.message },
-                batchedStatement(queries, paramsList),
-            )
-        )
-        lastIndex = index
-        groupIds.clear()
-        queries.clear()
-        paramsList.clear()
-      }
-      queries.computeIfAbsent(key) { event.cdcData.buildStatement() }
-      val groupId = groupIds.computeIfAbsent(key) { currentGroupId++ }
-      paramsList.add(event.cdcData.toParams(groupId))
-      if (paramsList.size >= batchSize) {
-        result.add(
-            ChangeQuery(
-                null,
-                null,
-                events.subList(lastIndex, index + 1).map { it.message },
-                batchedStatement(queries, paramsList),
-            )
-        )
-
-        // reset for next batch
-        lastIndex = index + 1
-        groupIds.clear()
-        queries.clear()
-        paramsList.clear()
-      }
-    }
-
-    // handle final batch, if any
-    if (queries.isNotEmpty() && paramsList.isNotEmpty()) {
+    fun flush() {
       result.add(
           ChangeQuery(
               null,
               null,
-              events.subList(lastIndex, events.size).map { it.message },
-              batchedStatement(queries, paramsList),
+              currentMessages.toList(),
+              batchedStatement(queries, currentEvents),
           )
       )
+      queries.clear()
+      currentEvents.clear()
+      currentMessages.clear()
+    }
+
+    events.forEach { event ->
+      val key = event.cdcData.groupingBasedOn()
+      if (!queries.containsKey(key) && (queries.size >= maxBatchedStatements)) {
+        flush()
+      }
+
+      val (groupId, _) =
+          queries.getOrPut(key) { currentGroupId++ to event.cdcData.buildStatement() }
+      currentEvents.add(event.cdcData.toParams(groupId))
+      currentMessages.add(event.message)
+      if (currentEvents.size >= batchSize) {
+        flush()
+      }
+    }
+
+    // handle final batch, if any
+    if (queries.isNotEmpty() && currentEvents.isNotEmpty()) {
+      flush()
     }
 
     return result
   }
 
   private fun batchedStatement(
-      queries: Map<GroupingKey, String>,
+      queries: Map<GroupingKey, Pair<Int, String>>,
       events: List<Map<String, Any>>,
   ): Query {
     val event = Cypher.name("e")
 
     var unwind = Cypher.unwind(Cypher.parameter("events", events)).`as`(event)
-    queries.entries.forEachIndexed { index, (_, query) ->
+    queries.keys.sorted().forEach { key ->
+      val (index, query) = queries[key]!!
       unwind =
           unwind.call(
               Cypher.with(event)

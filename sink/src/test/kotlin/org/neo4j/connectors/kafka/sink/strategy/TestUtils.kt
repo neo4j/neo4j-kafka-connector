@@ -124,4 +124,24 @@ object TestUtils {
           null,
           RelationshipState(emptyMap()),
       )
+
+  fun updateKnowsRelationshipEvent(startId: Int, endId: Int, id: Int): RelationshipEvent =
+      RelationshipEvent(
+          UUID.randomUUID().toString(),
+          "KNOWS",
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to startId))),
+          ),
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to endId))),
+          ),
+          listOf(mapOf("id" to id)),
+          EntityOperation.UPDATE,
+          RelationshipState(emptyMap()),
+          RelationshipState(emptyMap()),
+      )
 }

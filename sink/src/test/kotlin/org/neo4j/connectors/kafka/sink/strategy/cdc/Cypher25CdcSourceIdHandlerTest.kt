@@ -21,7 +21,6 @@ import io.kotest.matchers.collections.shouldMatchInOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.neo4j.cdc.client.model.EntityOperation
@@ -33,8 +32,11 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createKnowsRelationshipEvent
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.updateKnowsRelationshipEvent
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
@@ -657,9 +659,8 @@ class Cypher25CdcSourceIdHandlerTest {
   }
 
   @Test
-  @Disabled // TODO rewrite?
-  fun `should split changes into transactional boundaries`() {
-    val handler = createHandler()
+  fun `should split over batch size`() {
+    val handler = createHandler(batchSize = 2)
 
     val result =
         handler.handle(
@@ -670,40 +671,42 @@ class Cypher25CdcSourceIdHandlerTest {
                 newChangeEventMessage(randomChangeEvent(), 1, 0),
                 newChangeEventMessage(randomChangeEvent(), 1, 1),
                 newChangeEventMessage(randomChangeEvent(), 2, 0),
+                newChangeEventMessage(randomChangeEvent(), 3, 0),
             )
         )
 
+    result.shouldHaveSize(1)
     result
-        .shouldHaveSize(3)
+        .first()
+        .shouldHaveSize(4)
         .shouldMatchInOrder(
-            { first ->
-              first
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 0
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 3
-                  })
-            },
-            { second ->
-              second
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 1
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 2
-                  })
-            },
-            { third ->
-              third
-                  .shouldHaveSize(1)
-                  .shouldMatchInOrder({ q1 ->
-                    q1.txId shouldBe 2
-                    q1.seq shouldBe null
-                    q1.messages shouldHaveSize 1
-                  })
-            },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 2 },
+            { it.messages shouldHaveSize 1 },
         )
+  }
+
+  @Test
+  fun `should split changes over max batched statement count`() {
+    val handler = createHandler(maxBatchedStatements = 2)
+
+    val result =
+        handler.handle(
+            listOf(
+                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0),
+                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1),
+                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0),
+                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0),
+                newChangeEventMessage(updateKnowsRelationshipEvent(2, 3, 4), 3, 0),
+            )
+        )
+
+    result.shouldHaveSize(1)
+    result
+        .first()
+        .shouldHaveSize(2)
+        .shouldMatchInOrder({ it.messages shouldHaveSize 4 }, { it.messages shouldHaveSize 1 })
   }
 
   @Test
@@ -874,11 +877,14 @@ class Cypher25CdcSourceIdHandlerTest {
     } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
-  private fun createHandler() =
+  private fun createHandler(
+      maxBatchedStatements: Int = 1000,
+      batchSize: Int = 1000,
+  ): Cypher25CdcSourceIdHandler =
       Cypher25CdcSourceIdHandler(
           "my-topic",
-          1000,
-          1000,
+          maxBatchedStatements,
+          batchSize,
           Renderer.getRenderer(Configuration.defaultConfig()),
           "SourceEvent",
           "sourceElementId",
