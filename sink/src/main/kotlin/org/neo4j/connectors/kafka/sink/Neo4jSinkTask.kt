@@ -20,7 +20,6 @@ import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
-import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

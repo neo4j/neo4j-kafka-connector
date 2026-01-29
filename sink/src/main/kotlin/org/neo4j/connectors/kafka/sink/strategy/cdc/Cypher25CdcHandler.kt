@@ -220,35 +220,40 @@ abstract class Cypher25CdcHandler(
   )
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
-    val changeEvents = messages
-        .onEach { logger.trace("received message: {}", it) }
-        .map {
-          MessageToEvent(
-              it,
-              it.toChangeEvent(),
-              when (val event = it.toChangeEvent().event) {
-                is NodeEvent ->
-                    when (event.operation) {
-                      EntityOperation.CREATE -> transformCreate(event)
-                      EntityOperation.UPDATE -> transformUpdate(event)
-                      EntityOperation.DELETE -> transformDelete(event)
-                      else -> throw IllegalArgumentException("unknown operation ${event.operation}")
-                    }
+    val changeEvents =
+        messages
+            .onEach { logger.trace("received message: {}", it) }
+            .map {
+              MessageToEvent(
+                  it,
+                  it.toChangeEvent(),
+                  when (val event = it.toChangeEvent().event) {
+                    is NodeEvent ->
+                        when (event.operation) {
+                          EntityOperation.CREATE -> transformCreate(event)
+                          EntityOperation.UPDATE -> transformUpdate(event)
+                          EntityOperation.DELETE -> transformDelete(event)
+                          else ->
+                              throw IllegalArgumentException("unknown operation ${event.operation}")
+                        }
 
-                is RelationshipEvent ->
-                    when (event.operation) {
-                      EntityOperation.CREATE -> transformCreate(event)
-                      EntityOperation.UPDATE -> transformUpdate(event)
-                      EntityOperation.DELETE -> transformDelete(event)
-                      else -> throw IllegalArgumentException("unknown operation ${event.operation}")
-                    }
+                    is RelationshipEvent ->
+                        when (event.operation) {
+                          EntityOperation.CREATE -> transformCreate(event)
+                          EntityOperation.UPDATE -> transformUpdate(event)
+                          EntityOperation.DELETE -> transformDelete(event)
+                          else ->
+                              throw IllegalArgumentException("unknown operation ${event.operation}")
+                        }
 
-                else -> throw IllegalArgumentException("unsupported event type ${event.eventType}")
-              },
-          )
-        }
-        return listOf(splitEventsIntoBatches(changeEvents, maxBatchedStatements))
-            .onEach { logger.trace("messages: {} ", it) }
+                    else ->
+                        throw IllegalArgumentException("unsupported event type ${event.eventType}")
+                  },
+              )
+            }
+    return listOf(splitEventsIntoBatches(changeEvents, maxBatchedStatements)).onEach {
+      logger.trace("messages: {} ", it)
+    }
   }
 
   private fun splitEventsIntoBatches(

@@ -21,6 +21,7 @@ import io.kotest.matchers.maps.shouldHaveKey
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import io.kotest.matchers.types.instanceOf
+import kotlin.reflect.KClass
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
@@ -34,7 +35,6 @@ import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.sink.strategy.CdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
@@ -44,7 +44,6 @@ import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
-import kotlin.reflect.KClass
 
 class SinkConfigurationTest {
 
@@ -294,13 +293,16 @@ class SinkConfigurationTest {
   }
 
   companion object {
-    private val neo4j2025 = Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
-    private val neo4j5 = Neo4j(Neo4jVersion(5, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2025 =
+        Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5 =
+        Neo4j(Neo4jVersion(5, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
-    @JvmStatic fun cdcHandlersTypes() = listOf(
-        Arguments.argumentSet("2025", neo4j2025, Cypher25CdcHandler::class),
-        Arguments.argumentSet("5", neo4j5, CdcHandler::class),
-    )
-
+    @JvmStatic
+    fun cdcHandlersTypes() =
+        listOf(
+            Arguments.argumentSet("2025", neo4j2025, Cypher25CdcHandler::class),
+            Arguments.argumentSet("5", neo4j5, CdcHandler::class),
+        )
   }
 }

@@ -34,7 +34,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
 import org.neo4j.cypherdsl.core.renderer.Renderer
-import java.util.concurrent.atomic.AtomicBoolean
 
 class SinkConfiguration : Neo4jConfiguration {
   private var fixedRenderer: Renderer? = null
@@ -45,7 +44,7 @@ class SinkConfiguration : Neo4jConfiguration {
   constructor(
       originals: Map<String, *>,
       renderer: Renderer?,
-      neo4j: Neo4j? = null
+      neo4j: Neo4j? = null,
   ) : super(config(), originals, ConnectorType.SINK) {
     fixedRenderer = renderer
     _neo4j = neo4j
@@ -83,11 +82,12 @@ class SinkConfiguration : Neo4jConfiguration {
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
   var _neo4j: Neo4j? = null
+
   fun neo4j(): Neo4j {
-      if (_neo4j == null) {
-        _neo4j = Neo4jDetector.detect(driver)
-      }
-      return _neo4j!!
+    if (_neo4j == null) {
+      _neo4j = Neo4jDetector.detect(driver)
+    }
+    return _neo4j!!
   }
 
   val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j()) }
@@ -239,8 +239,9 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_CDC_MAX_BATCHED_QUERIES
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
-                      Recommenders.visibleIfNotEmpty(Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
-                          .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
+                      Recommenders.visibleIfNotEmpty(
+                          Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
+                              .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
                       )
                 }
             )
@@ -250,9 +251,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_SOURCE_ID_LABEL_NAME
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
-                      Recommenders.visibleIfNotEmpty(
-                          Predicate.isEqual(CDC_SOURCE_ID_TOPICS)
-                      )
+                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
                 }
             )
             .define(
