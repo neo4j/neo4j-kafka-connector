@@ -240,7 +240,7 @@ interface SinkStrategyHandler {
 
         handler =
             if (
-                canIUse(Cypher.dynamicLabelsAndTypesCanLeverageIndicesOnPropertyValues())
+                canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
                     .withNeo4j(config.neo4j)
             )
                 Cypher25CdcSchemaHandler(
