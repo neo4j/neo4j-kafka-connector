@@ -252,8 +252,9 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |  WHERE event.entityType = 'NODE' AND event.operation = 'DELETE'
       |  WITH event, apoc.map.fromPairs([lbl IN event.keyLabels | [lbl, keys(event.keyProperties)]]) AS labelPropMap,
       |       head(keys(event.keyProperties)) AS firstKey
-      |  CALL apoc.search.nodeAll(labelPropMap, '=', event.keyProperties[firstKey]) YIELD node
-      |  WHERE all(key IN keys(event.keyProperties) WHERE node[key] = event.keyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(labelPropMap, '=', event.keyProperties[firstKey]) YIELD id AS nodeId
+      |  MATCH (node) WHERE id(node) = nodeId
+      |  AND all(key IN keys(event.keyProperties) WHERE node[key] = event.keyProperties[key])
       |  DELETE node
       |  FINISH
       |}
@@ -266,10 +267,12 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |       head(keys(event.startKeyProperties)) AS startFirstKey,
       |       apoc.map.fromPairs([lbl IN event.endKeyLabels | [lbl, keys(event.endKeyProperties)]]) AS endLabelPropMap,
       |       head(keys(event.endKeyProperties)) AS endFirstKey
-      |  CALL apoc.search.nodeAll(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD node AS startNode
-      |  WHERE all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
-      |  CALL apoc.search.nodeAll(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD node AS endNode
-      |  WHERE all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD id AS startNodeId
+      |  MATCH (startNode) WHERE id(startNode) = startNodeId
+      |  AND all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD id AS endNodeId
+      |  MATCH (endNode) WHERE id(endNode) = endNodeId
+      |  AND all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
       |  CALL apoc.create.relationship(startNode, event.type, apoc.map.merge(event.relKeyProperties, event.properties), endNode) YIELD rel
       |  FINISH
       |}
@@ -282,10 +285,12 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |       head(keys(event.startKeyProperties)) AS startFirstKey,
       |       apoc.map.fromPairs([lbl IN event.endKeyLabels | [lbl, keys(event.endKeyProperties)]]) AS endLabelPropMap,
       |       head(keys(event.endKeyProperties)) AS endFirstKey
-      |  CALL apoc.search.nodeAll(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD node AS startNode
-      |  WHERE all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
-      |  CALL apoc.search.nodeAll(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD node AS endNode
-      |  WHERE all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD id AS startNodeId
+      |  MATCH (startNode) WHERE id(startNode) = startNodeId
+      |  AND all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD id AS endNodeId
+      |  MATCH (endNode) WHERE id(endNode) = endNodeId
+      |  AND all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
       |  MATCH (startNode)-[r:$(event.type)]->(endNode)
       |  WHERE all(key IN keys(event.relKeyProperties) WHERE r[key] = event.relKeyProperties[key])
       |  SET r += event.properties
@@ -300,10 +305,12 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |       head(keys(event.startKeyProperties)) AS startFirstKey,
       |       apoc.map.fromPairs([lbl IN event.endKeyLabels | [lbl, keys(event.endKeyProperties)]]) AS endLabelPropMap,
       |       head(keys(event.endKeyProperties)) AS endFirstKey
-      |  CALL apoc.search.nodeAll(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD node AS startNode
-      |  WHERE all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
-      |  CALL apoc.search.nodeAll(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD node AS endNode
-      |  WHERE all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD id AS startNodeId
+      |  MATCH (startNode) WHERE id(startNode) = startNodeId
+      |  AND all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD id AS endNodeId
+      |  MATCH (endNode) WHERE id(endNode) = endNodeId
+      |  AND all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
       |  MATCH (startNode)-[r:$(event.type)]->(endNode)
       |  SET r += event.properties
       |  FINISH
@@ -317,10 +324,12 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |       head(keys(event.startKeyProperties)) AS startFirstKey,
       |       apoc.map.fromPairs([lbl IN event.endKeyLabels | [lbl, keys(event.endKeyProperties)]]) AS endLabelPropMap,
       |       head(keys(event.endKeyProperties)) AS endFirstKey
-      |  CALL apoc.search.nodeAll(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD node AS startNode
-      |  WHERE all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
-      |  CALL apoc.search.nodeAll(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD node AS endNode
-      |  WHERE all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD id AS startNodeId
+      |  MATCH (startNode) WHERE id(startNode) = startNodeId
+      |  AND all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD id AS endNodeId
+      |  MATCH (endNode) WHERE id(endNode) = endNodeId
+      |  AND all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
       |  MATCH (startNode)-[r:$(event.type)]->(endNode)
       |  WHERE all(key IN keys(event.relKeyProperties) WHERE r[key] = event.relKeyProperties[key])
       |  DELETE r
@@ -335,10 +344,12 @@ class BatchedCdcSchemaHandler(val topic: String, private val batchSize: Int = 10
       |       head(keys(event.startKeyProperties)) AS startFirstKey,
       |       apoc.map.fromPairs([lbl IN event.endKeyLabels | [lbl, keys(event.endKeyProperties)]]) AS endLabelPropMap,
       |       head(keys(event.endKeyProperties)) AS endFirstKey
-      |  CALL apoc.search.nodeAll(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD node AS startNode
-      |  WHERE all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
-      |  CALL apoc.search.nodeAll(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD node AS endNode
-      |  WHERE all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(startLabelPropMap, '=', event.startKeyProperties[startFirstKey]) YIELD id AS startNodeId
+      |  MATCH (startNode) WHERE id(startNode) = startNodeId
+      |  AND all(key IN keys(event.startKeyProperties) WHERE startNode[key] = event.startKeyProperties[key])
+      |  CALL apoc.search.nodeAllReduced(endLabelPropMap, '=', event.endKeyProperties[endFirstKey]) YIELD id AS endNodeId
+      |  MATCH (endNode) WHERE id(endNode) = endNodeId
+      |  AND all(key IN keys(event.endKeyProperties) WHERE endNode[key] = event.endKeyProperties[key])
       |  MATCH (startNode)-[r:$(event.type)]->(endNode)
       |  DELETE r
       |  FINISH
