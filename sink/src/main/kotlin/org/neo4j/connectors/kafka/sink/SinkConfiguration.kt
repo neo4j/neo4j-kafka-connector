@@ -53,6 +53,9 @@ class SinkConfiguration : Neo4jConfiguration {
   val batchSize
     get(): Int = getInt(BATCH_SIZE)
 
+  val batchMode
+    get(): Boolean = getString(BATCH_MODE).toBoolean()
+
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
 
@@ -110,6 +113,7 @@ class SinkConfiguration : Neo4jConfiguration {
   companion object {
     const val BATCH_SIZE = "neo4j.batch-size"
     const val BATCH_TIMEOUT = "neo4j.batch-timeout"
+    const val BATCH_MODE = "neo4j.batch-mode"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
     const val CYPHER_BIND_TIMESTAMP_AS = "neo4j.cypher.bind-timestamp-as"
@@ -132,6 +136,7 @@ class SinkConfiguration : Neo4jConfiguration {
 
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_BATCH_TIMEOUT = 0.seconds
+    private const val DEFAULT_BATCH_MODE = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
     const val DEFAULT_BIND_TIMESTAMP_ALIAS = "__timestamp"
@@ -221,6 +226,18 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(BATCH_MODE, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_BATCH_MODE.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
+                  documentation =
+                      "Enable batched query mode for CDC handlers. When enabled, multiple events " +
+                          "are processed in a single UNWIND query, reducing round trips to Neo4j."
                 }
             )
             .define(
