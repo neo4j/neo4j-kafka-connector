@@ -220,7 +220,7 @@ abstract class Cypher25CdcHandler(
   )
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
-    return messages
+    val changeEvents = messages
         .onEach { logger.trace("received message: {}", it) }
         .map {
           MessageToEvent(
@@ -247,14 +247,11 @@ abstract class Cypher25CdcHandler(
               },
           )
         }
-        .groupBy({ it.changeEvent.txId })
-        .mapValues { (txId, events) -> splitEventsIntoBatches(txId, events, maxBatchedStatements) }
-        .onEach { logger.trace("mapped messages: {} to {}", it.key, it.value) }
-        .values
+        return listOf(splitEventsIntoBatches(changeEvents, maxBatchedStatements))
+            .onEach { logger.trace("messages: {} ", it) }
   }
 
   private fun splitEventsIntoBatches(
-      txId: Long,
       events: List<MessageToEvent>,
       maxBatchedStatements: Int,
   ): List<ChangeQuery> {
@@ -271,7 +268,7 @@ abstract class Cypher25CdcHandler(
       if (queries.size >= maxBatchedStatements || paramsList.size >= batchSize) {
         result.add(
             ChangeQuery(
-                txId,
+                null,
                 null,
                 events.subList(lastIndex, index + 1).map { it.message },
                 batchedStatement(queries, paramsList),
@@ -289,7 +286,7 @@ abstract class Cypher25CdcHandler(
     if (queries.isNotEmpty() && paramsList.isNotEmpty()) {
       result.add(
           ChangeQuery(
-              txId,
+              null,
               null,
               events.subList(lastIndex, events.size).map { it.message },
               batchedStatement(queries, paramsList),

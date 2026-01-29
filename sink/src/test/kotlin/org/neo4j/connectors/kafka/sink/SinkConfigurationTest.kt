@@ -25,17 +25,26 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.sink.strategy.CdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.Cypher25CdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
+import kotlin.reflect.KClass
 
 class SinkConfigurationTest {
 
@@ -144,7 +153,7 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j5)
 
     config.topicHandlers shouldHaveKey "foo"
     config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
@@ -157,8 +166,9 @@ class SinkConfigurationTest {
     (config.topicHandlers["bar"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
   }
 
-  @Test
-  fun `should return multiple CDC schema topics`() {
+  @ParameterizedTest
+  @MethodSource("cdcHandlersTypes")
+  fun `should return multiple CDC schema topics`(neo4jVersion: Neo4j, clazz: KClass<CdcHandler>) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -166,13 +176,13 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4jVersion)
 
     config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CdcSchemaHandler>()
+    config.topicHandlers["foo"] shouldBe instanceOf(clazz)
 
     config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CdcSchemaHandler>()
+    config.topicHandlers["bar"] shouldBe instanceOf(clazz)
   }
 
   @Test
@@ -208,7 +218,7 @@ class SinkConfigurationTest {
               else -> throw IllegalArgumentException(strategy.name)
             } to "bar",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j2025)
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -276,10 +286,21 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j2025)
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe
         TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-sink")).build()
+  }
+
+  companion object {
+    private val neo4j2025 = Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5 = Neo4j(Neo4jVersion(5, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+
+    @JvmStatic fun cdcHandlersTypes() = listOf(
+        Arguments.argumentSet("2025", neo4j2025, Cypher25CdcHandler::class),
+        Arguments.argumentSet("5", neo4j5, CdcHandler::class),
+    )
+
   }
 }

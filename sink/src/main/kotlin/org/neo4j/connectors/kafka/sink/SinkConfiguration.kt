@@ -34,6 +34,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SinkConfiguration : Neo4jConfiguration {
   private var fixedRenderer: Renderer? = null
@@ -44,9 +45,10 @@ class SinkConfiguration : Neo4jConfiguration {
   constructor(
       originals: Map<String, *>,
       renderer: Renderer?,
+      neo4j: Neo4j? = null
   ) : super(config(), originals, ConnectorType.SINK) {
     fixedRenderer = renderer
-
+    _neo4j = neo4j
     validateAllTopics()
   }
 
@@ -80,9 +82,15 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  val neo4j: Neo4j by lazy { Neo4jDetector.detect(driver) }
+  var _neo4j: Neo4j? = null
+  fun neo4j(): Neo4j {
+      if (_neo4j == null) {
+        _neo4j = Neo4jDetector.detect(driver)
+      }
+      return _neo4j!!
+  }
 
-  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j) }
+  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j()) }
 
   val topicNames: List<String>
     get() =
@@ -231,7 +239,9 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_CDC_MAX_BATCHED_QUERIES
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
-                      Recommenders.visibleIfNotEmpty(Predicate.isEqual(CDC_SOURCE_ID_TOPICS))
+                      Recommenders.visibleIfNotEmpty(Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
+                          .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
+                      )
                 }
             )
             .define(
@@ -241,8 +251,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   group = Groups.CONNECTOR_ADVANCED.title
                   recommender =
                       Recommenders.visibleIfNotEmpty(
-                          Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
-                              .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
+                          Predicate.isEqual(CDC_SOURCE_ID_TOPICS)
                       )
                 }
             )

@@ -102,7 +102,7 @@ class Cypher25CdcSourceIdHandler(
         mapOf(propertyName to event.end.elementId),
         event.type,
         mapOf(propertyName to event.elementId),
-        event.after.properties + mapOf(propertyName to event.elementId),
+        event.after.properties,
     )
   }
 
@@ -122,7 +122,7 @@ class Cypher25CdcSourceIdHandler(
         mapOf(propertyName to event.end.elementId),
         event.type,
         mapOf(propertyName to event.elementId),
-        event.mutatedProperties() + mapOf(propertyName to event.elementId),
+        event.mutatedProperties(),
     )
   }
 

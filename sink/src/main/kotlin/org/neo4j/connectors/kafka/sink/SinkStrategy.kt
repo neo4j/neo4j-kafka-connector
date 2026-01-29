@@ -219,13 +219,13 @@ interface SinkStrategyHandler {
         handler =
             if (
                 canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
-                    .withNeo4j(config.neo4j)
+                    .withNeo4j(config.neo4j())
             )
                 Cypher25CdcSourceIdHandler(
                     topic,
                     cdcMaxBatchedStatements,
                     config.batchSize,
-                    Cypher25Renderer(config.neo4j),
+                    Cypher25Renderer(config.neo4j()),
                     labelName,
                     propertyName,
                 )
@@ -241,13 +241,13 @@ interface SinkStrategyHandler {
         handler =
             if (
                 canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
-                    .withNeo4j(config.neo4j)
+                    .withNeo4j(config.neo4j())
             )
                 Cypher25CdcSchemaHandler(
                     topic,
                     cdcMaxBatchedStatements,
                     config.batchSize,
-                    Cypher25Renderer(config.neo4j),
+                    Cypher25Renderer(config.neo4j()),
                 )
             else CdcSchemaHandler(topic, config.renderer)
       }
