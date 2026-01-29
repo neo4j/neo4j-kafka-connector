@@ -126,7 +126,7 @@ data class CdcRelationshipData(
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        "MERGE (start:\$(e.start.matchLabels) {$startMatchProps}) MERGE (end:\$(e.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$(e.matchType) {$matchProps}]->(end) SET r = e.setProperties"
+        "MERGE (start:\$(e.start.matchLabels) {$startMatchProps}) MERGE (end:\$(e.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$(e.matchType) {$matchProps}]->(end) SET r += e.setProperties"
       }
       EntityOperation.UPDATE -> {
         if (matchProperties.isEmpty()) {

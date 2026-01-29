@@ -449,7 +449,7 @@ class Cypher25CdcSourceIdHandlerTest {
                             "MERGE (start:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId}) " +
                             "MERGE (end:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
                             "MERGE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
-                            "SET r = e.setProperties} RETURN count(*) AS c0} RETURN NULL",
+                            "SET r += e.setProperties} RETURN count(*) AS c0} RETURN NULL",
                         mapOf(
                             "events" to
                                 listOf(

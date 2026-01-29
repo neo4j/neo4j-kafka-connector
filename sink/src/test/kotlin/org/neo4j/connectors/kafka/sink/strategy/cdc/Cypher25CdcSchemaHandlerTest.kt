@@ -516,7 +516,7 @@ class Cypher25CdcSchemaHandlerTest {
                             "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
                             "MERGE (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "SET r = e.setProperties} RETURN count(*) AS c0} " +
+                            "SET r += e.setProperties} RETURN count(*) AS c0} " +
                             "RETURN NULL",
                         mapOf(
                             "events" to
