@@ -24,8 +24,6 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.toChangeEvent
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.Functions
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -133,24 +131,19 @@ abstract class Cypher25CdcHandler(
       queries: Map<GroupingKey, Pair<Int, String>>,
       events: List<Map<String, Any>>,
   ): Query {
-    val event = Cypher.name("e")
+    val query = buildString {
+      append("UNWIND \$events AS $EVENT ")
+      queries.keys.sorted().forEach { key ->
+        val (index, stmt) = queries[key]!!
 
-    var unwind = Cypher.unwind(Cypher.parameter("events", events)).`as`(event)
-    queries.keys.sorted().forEach { key ->
-      val (index, query) = queries[key]!!
-      unwind =
-          unwind.call(
-              Cypher.with(event)
-                  .where(event.property("q").eq(Cypher.literalOf<Int>(index)))
-                  .callRawCypher("WITH e $query")
-                  .returning(Functions.count(Cypher.asterisk()).`as`(Cypher.name("c$index")))
-                  .build(),
-              event,
-          )
+        append(
+            "CALL ($EVENT) { WITH $EVENT WHERE $EVENT.q = $index CALL ($EVENT) { $stmt } FINISH } "
+        )
+      }
+      append("FINISH")
     }
 
-    val stmt = unwind.returning(Cypher.literalNull()).build()
-    return Query(renderer.render(stmt), stmt.parameters)
+    return Query(query, mapOf("events" to events))
   }
 
   protected abstract fun transformCreate(event: NodeEvent): CdcData

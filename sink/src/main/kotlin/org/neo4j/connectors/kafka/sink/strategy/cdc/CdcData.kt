@@ -20,6 +20,8 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.connectors.kafka.events.EntityType
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 
+const val EVENT = "e"
+
 interface CdcData {
 
   fun groupingBasedOn(): GroupingKey
@@ -55,16 +57,16 @@ data class CdcNodeData(
   override fun buildStatement(): String {
     val matchProps =
         matchProperties
-            .map { "${SchemaNames.sanitize(it.key).orElseThrow()}: e.matchProperties.${it.key}" }
-            .joinToString(", ")
+            .map { SchemaNames.sanitize(it.key).orElseThrow() }
+            .joinToString(", ") { "$it: $EVENT.matchProperties.$it" }
 
     return when (operation) {
       EntityOperation.CREATE,
       EntityOperation.UPDATE -> {
-        "MERGE (n:\$(e.matchLabels) {$matchProps}) SET n += e.setProperties SET n:\$(e.addLabels) REMOVE n:\$(e.removeLabels)"
+        "MERGE (n:\$($EVENT.matchLabels) {$matchProps}) SET n += $EVENT.setProperties SET n:\$($EVENT.addLabels) REMOVE n:\$($EVENT.removeLabels)"
       }
       EntityOperation.DELETE -> {
-        "MATCH (n:\$(e.matchLabels) {$matchProps}) DETACH DELETE n"
+        "MATCH (n:\$($EVENT.matchLabels) {$matchProps}) DETACH DELETE n"
       }
     }
   }
@@ -109,37 +111,33 @@ data class CdcRelationshipData(
   override fun buildStatement(): String {
     val startMatchProps =
         startMatchProperties
-            .map {
-              "${SchemaNames.sanitize(it.key).orElseThrow()}: e.start.matchProperties.${it.key}"
-            }
-            .joinToString(", ")
+            .map { SchemaNames.sanitize(it.key).orElseThrow() }
+            .joinToString(", ") { "$it: $EVENT.start.matchProperties.$it" }
     val endMatchProps =
         endMatchProperties
-            .map {
-              "${SchemaNames.sanitize(it.key).orElseThrow()}: e.end.matchProperties.${it.key}"
-            }
-            .joinToString(", ")
+            .map { SchemaNames.sanitize(it.key).orElseThrow() }
+            .joinToString(", ") { "$it: $EVENT.end.matchProperties.$it" }
     val matchProps =
         matchProperties
-            .map { "${SchemaNames.sanitize(it.key).orElseThrow()}: e.matchProperties.${it.key}" }
-            .joinToString(", ")
+            .map { SchemaNames.sanitize(it.key).orElseThrow() }
+            .joinToString(", ") { "$it: $EVENT.matchProperties.$it" }
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        "MERGE (start:\$(e.start.matchLabels) {$startMatchProps}) MERGE (end:\$(e.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$(e.matchType) {$matchProps}]->(end) SET r += e.setProperties"
+        "MERGE (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MERGE (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) SET r += $EVENT.setProperties"
       }
       EntityOperation.UPDATE -> {
         if (matchProperties.isEmpty()) {
-          "MERGE (start:\$(e.start.matchLabels) {$startMatchProps}) MERGE (end:\$(e.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties"
+          "MERGE (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MERGE (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$($EVENT.matchType)]->(end) SET r += $EVENT.setProperties"
         } else {
-          "MATCH (:\$(e.start.matchLabels) {$startMatchProps})-[r:\$(e.matchType) {$matchProps}]->(:\$(e.end.matchLabels) {$endMatchProps}) SET r += e.setProperties"
+          "MATCH (:\$($EVENT.start.matchLabels) {$startMatchProps})-[r:\$($EVENT.matchType) {$matchProps}]->(:\$($EVENT.end.matchLabels) {$endMatchProps}) SET r += $EVENT.setProperties"
         }
       }
       EntityOperation.DELETE -> {
         if (matchProperties.isEmpty()) {
-          "MATCH (start:\$(e.start.matchLabels) {$startMatchProps}) MATCH (end:\$(e.end.matchLabels) {$endMatchProps}) MATCH (start)-[r:\$(e.matchType) {$matchProps}]->(end) DELETE r"
+          "MATCH (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MATCH (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MATCH (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) DELETE r"
         } else {
-          "MATCH ()-[r:\$(e.matchType) {$matchProps}]->() DELETE r"
+          "MATCH ()-[r:\$($EVENT.matchType) {$matchProps}]->() DELETE r"
         }
       }
     }

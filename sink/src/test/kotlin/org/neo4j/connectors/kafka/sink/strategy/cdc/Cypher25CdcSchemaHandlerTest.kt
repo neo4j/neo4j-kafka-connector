@@ -161,11 +161,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -216,11 +216,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -274,11 +274,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -331,11 +331,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -392,11 +392,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname, id: e.matchProperties.id}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -454,9 +454,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {" +
-                            "WITH e MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
-                            "DETACH DELETE n} RETURN count(*) AS c0} RETURN NULL",
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                            "MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
+                            "DETACH DELETE n } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -512,12 +512,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
                             "MERGE (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "SET r += e.setProperties} RETURN count(*) AS c0} " +
-                            "RETURN NULL",
+                            "SET r += e.setProperties } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -587,10 +586,10 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId}) " +
                             "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id, contractId: e.end.matchProperties.contractId}) " +
-                            "MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties} RETURN count(*) AS c0} RETURN NULL",
+                            "MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -656,9 +655,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH (:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "SET r += e.setProperties} RETURN count(*) AS c0} RETURN NULL",
+                            "SET r += e.setProperties } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -722,11 +721,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
                             "MATCH (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "DELETE r} RETURN count(*) AS c0} RETURN NULL",
+                            "DELETE r } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -789,9 +788,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() " +
-                            "DELETE r} RETURN count(*) AS c0} RETURN NULL",
+                            "DELETE r } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1111,7 +1110,7 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DETACH DELETE n} RETURN count(*) AS c0} RETURN NULL",
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DETACH DELETE n } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1157,11 +1156,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels)} RETURN count(*) AS c0} RETURN NULL",
+                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1407,9 +1406,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH (:\$(e.start.matchLabels) {})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {name: e.end.matchProperties.name}) " +
-                            "SET r += e.setProperties} RETURN count(*) AS c0} RETURN NULL",
+                            "SET r += e.setProperties } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1474,9 +1473,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH (:\$(e.start.matchLabels) {name: e.start.matchProperties.name})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {}) " +
-                            "SET r += e.setProperties} RETURN count(*) AS c0} RETURN NULL",
+                            "SET r += e.setProperties } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1657,9 +1656,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {" +
-                            "WITH e MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() DELETE r} " +
-                            "RETURN count(*) AS c0} RETURN NULL",
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                            "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() DELETE r } " +
+                            "FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
@@ -1723,9 +1722,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL {WITH e WITH e WHERE e.q = 0 CALL {WITH e " +
+                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
                             "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() " +
-                            "DELETE r} RETURN count(*) AS c0} RETURN NULL",
+                            "DELETE r } FINISH } FINISH",
                         mapOf(
                             "events" to
                                 listOf(
