@@ -63,7 +63,7 @@
         <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
         <!-- so we set the version to the first version that the vulnerability is resolved -->
         <kafka.version>3.8.1</kafka.version>
-        <kotest-assertions-core-jvm.version>6.1.1</kotest-assertions-core-jvm.version>
+        <kotest-assertions-core-jvm.version>6.1.2</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.10.2</kotlin.coroutines.version>
         <kotlin.version>2.3.0</kotlin.version>
         <license-maven-plugin.version>5.0.0</license-maven-plugin.version>
