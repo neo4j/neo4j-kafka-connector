@@ -83,41 +83,65 @@ object TestUtils {
   fun randomChangeEvent(): Event =
       when (random.nextBits(1)) {
         0 -> {
-          val id = random.nextInt()
-
-          NodeEvent(
-              UUID.randomUUID().toString(),
-              EntityOperation.CREATE,
-              listOf("Person"),
-              mapOf("Person" to listOf(mapOf("id" to id))),
-              null,
-              NodeState(listOf("Person"), mapOf("id" to id)),
-          )
+          createNodePersonEvent("id", random.nextInt())
         }
         1 -> {
           val id = random.nextInt()
           val startId = random.nextInt()
           val endId = random.nextInt()
 
-          RelationshipEvent(
-              UUID.randomUUID().toString(),
-              "KNOWS",
-              Node(
-                  UUID.randomUUID().toString(),
-                  listOf("Person"),
-                  mapOf("Person" to listOf(mapOf("id" to startId))),
-              ),
-              Node(
-                  UUID.randomUUID().toString(),
-                  listOf("Person"),
-                  mapOf("Person" to listOf(mapOf("id" to endId))),
-              ),
-              listOf(mapOf("id" to id)),
-              EntityOperation.CREATE,
-              null,
-              RelationshipState(emptyMap()),
-          )
+          createKnowsRelationshipEvent(startId, endId, id)
         }
         else -> throw IllegalArgumentException("unexpected value from random.nextBits")
       }
+
+  fun createNodePersonEvent(keyName: String, keyValue: Any): NodeEvent =
+      NodeEvent(
+          UUID.randomUUID().toString(),
+          EntityOperation.CREATE,
+          listOf("Person"),
+          mapOf("Person" to listOf(mapOf(keyName to keyValue))),
+          null,
+          NodeState(listOf("Person"), mapOf(keyName to keyValue)),
+      )
+
+  fun createKnowsRelationshipEvent(startId: Int, endId: Int, id: Int): RelationshipEvent =
+      RelationshipEvent(
+          UUID.randomUUID().toString(),
+          "KNOWS",
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to startId))),
+          ),
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to endId))),
+          ),
+          listOf(mapOf("id" to id)),
+          EntityOperation.CREATE,
+          null,
+          RelationshipState(emptyMap()),
+      )
+
+  fun updateKnowsRelationshipEvent(startId: Int, endId: Int, id: Int): RelationshipEvent =
+      RelationshipEvent(
+          UUID.randomUUID().toString(),
+          "KNOWS",
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to startId))),
+          ),
+          Node(
+              UUID.randomUUID().toString(),
+              listOf("Person"),
+              mapOf("Person" to listOf(mapOf("id" to endId))),
+          ),
+          listOf(mapOf("id" to id)),
+          EntityOperation.UPDATE,
+          RelationshipState(emptyMap()),
+          RelationshipState(emptyMap()),
+      )
 }
