@@ -225,7 +225,6 @@ interface SinkStrategyHandler {
                     topic,
                     cdcMaxBatchedStatements,
                     config.batchSize,
-                    Cypher25Renderer(config.neo4j()),
                     labelName,
                     propertyName,
                 )
@@ -243,12 +242,7 @@ interface SinkStrategyHandler {
                 canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
                     .withNeo4j(config.neo4j())
             )
-                Cypher25CdcSchemaHandler(
-                    topic,
-                    cdcMaxBatchedStatements,
-                    config.batchSize,
-                    Cypher25Renderer(config.neo4j()),
-                )
+                Cypher25CdcSchemaHandler(topic, cdcMaxBatchedStatements, config.batchSize)
             else CdcSchemaHandler(topic, config.renderer)
       }
 

@@ -24,16 +24,11 @@ import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Cypher25CdcSchemaHandler(
-    val topic: String,
-    maxBatchedStatements: Int,
-    batchSize: Int,
-    renderer: Renderer,
-) : Cypher25CdcHandler(maxBatchedStatements, batchSize, renderer) {
+class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batchSize: Int) :
+    Cypher25CdcHandler(maxBatchedStatements, batchSize) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {

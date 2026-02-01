@@ -24,7 +24,6 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.toChangeEvent
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -32,7 +31,6 @@ import org.slf4j.LoggerFactory
 abstract class Cypher25CdcHandler(
     private val maxBatchedStatements: Int,
     private val batchSize: Int,
-    private val renderer: Renderer,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
@@ -132,18 +130,23 @@ abstract class Cypher25CdcHandler(
       events: List<Map<String, Any>>,
   ): Query {
     val query = buildString {
-      append("UNWIND \$events AS $EVENT ")
+      append("CYPHER 25 ")
+      append("UNWIND \$events AS $EVENT CALL ($EVENT) { ")
       queries.keys.sorted().forEach { key ->
         val (index, stmt) = queries[key]!!
 
-        append(
-            "CALL ($EVENT) { WITH $EVENT WHERE $EVENT.q = $index CALL ($EVENT) { $stmt } FINISH } "
-        )
+        append("WHEN $EVENT.q = \$q$index THEN $stmt ")
       }
-      append("FINISH")
+      append("} FINISH")
     }
 
-    return Query(query, mapOf("events" to events))
+    return Query(
+        query,
+        buildMap {
+          queries.values.forEach { (index, _) -> put("q$index", index) }
+          put("events", events)
+        },
+    )
   }
 
   protected abstract fun transformCreate(event: NodeEvent): CdcData

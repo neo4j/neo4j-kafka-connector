@@ -41,8 +41,6 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.cypherdsl.core.renderer.Configuration
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 class Cypher25CdcSchemaHandlerTest {
@@ -115,13 +113,7 @@ class Cypher25CdcSchemaHandlerTest {
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler =
-                    Cypher25CdcSchemaHandler(
-                        "my-topic",
-                        50,
-                        1000,
-                        Renderer.getRenderer(Configuration.defaultConfig()),
-                    )
+                val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
                 handler.handle(listOf(it))
               }
@@ -161,12 +153,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -183,7 +176,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to emptyList<String>(),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -216,12 +209,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -238,7 +232,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to listOf("Employee"),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -274,12 +268,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -295,7 +290,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to emptyList<String>(),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -331,12 +326,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -353,7 +349,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to listOf("Manager"),
                                         "removeLabels" to listOf("Employee"),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -392,12 +388,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname, id: e.matchProperties.id}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -418,7 +415,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to listOf("Manager"),
                                         "removeLabels" to listOf("Employee"),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -454,10 +451,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
-                            "DETACH DELETE n } FINISH } FINISH",
+                            "DETACH DELETE n } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -469,7 +467,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to emptyList<String>(),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -479,7 +477,7 @@ class Cypher25CdcSchemaHandlerTest {
   }
 
   @Test
-  fun `should generate correct statement for relationship creation events`() {
+  fun `should generate correct statement for relationship creation events for key-less relationships`() {
     val sinkMessage =
         newChangeEventMessage(
             RelationshipEvent(
@@ -512,12 +510,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "MERGE (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "SET r += e.setProperties } FINISH } FINISH",
+                            "CREATE (start)-[r:\$(e.matchType) {}]->(end) " +
+                            "SET r += e.setProperties } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -537,7 +536,79 @@ class Cypher25CdcSchemaHandlerTest {
                                         "setProperties" to
                                             mapOf("since" to LocalDate.of(2000, 1, 1)),
                                     )
-                                )
+                                ),
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
+  }
+
+  @Test
+  fun `should generate correct statement for relationship creation events for relationships with key`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 1L))),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to listOf(mapOf("id" to 2L))),
+                ),
+                listOf(mapOf("id" to 1001L)),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(mapOf("id" to 1001L, "since" to LocalDate.of(2000, 1, 1))),
+            ),
+            1,
+            0,
+        )
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    listOf(sinkMessage),
+                    Query(
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
+                            "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
+                            "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
+                            "MERGE (start)-[r:\$(e.matchType) {id: e.matchProperties.id}]->(end) " +
+                            "SET r += e.setProperties } FINISH",
+                        mapOf(
+                            "q0" to 0,
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "q" to 0,
+                                        "matchType" to "KNOWS",
+                                        "matchProperties" to mapOf("id" to 1001L),
+                                        "start" to
+                                            mapOf(
+                                                "matchLabels" to listOf("Person"),
+                                                "matchProperties" to mapOf("id" to 1L),
+                                            ),
+                                        "end" to
+                                            mapOf(
+                                                "matchLabels" to listOf("Person"),
+                                                "matchProperties" to mapOf("id" to 2L),
+                                            ),
+                                        "setProperties" to
+                                            mapOf(
+                                                "id" to 1001L,
+                                                "since" to LocalDate.of(2000, 1, 1),
+                                            ),
+                                    )
+                                ),
                         ),
                     ),
                 )
@@ -586,11 +657,12 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId}) " +
                             "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id, contractId: e.end.matchProperties.contractId}) " +
-                            "MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties } FINISH } FINISH",
+                            "MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -612,7 +684,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "setProperties" to
                                             mapOf("since" to LocalDate.of(1999, 1, 1)),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -655,10 +727,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "SET r += e.setProperties } FINISH } FINISH",
+                            "SET r += e.setProperties } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -678,7 +751,7 @@ class Cypher25CdcSchemaHandlerTest {
                                             ),
                                         "setProperties" to mapOf("name" to "joe"),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -721,12 +794,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
                             "MATCH (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "DELETE r } FINISH } FINISH",
+                            "DELETE r } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -745,7 +819,7 @@ class Cypher25CdcSchemaHandlerTest {
                                             ),
                                         "setProperties" to emptyMap<String, Any>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -788,10 +862,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() " +
-                            "DELETE r } FINISH } FINISH",
+                            "DELETE r } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -811,7 +886,7 @@ class Cypher25CdcSchemaHandlerTest {
                                             ),
                                         "setProperties" to emptyMap<String, Any>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -822,13 +897,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over batch size`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            2,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 2)
 
     val result =
         handler.handle(
@@ -857,13 +926,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over max batched statement count`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            2,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 2, 1000)
 
     val result =
         handler.handle(
@@ -884,13 +947,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -913,13 +970,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -952,13 +1003,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -981,13 +1026,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1020,13 +1059,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1049,13 +1082,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1110,8 +1137,9 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DETACH DELETE n } FINISH } FINISH",
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DETACH DELETE n } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1122,7 +1150,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to emptyList<String>(),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -1156,12 +1184,13 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MERGE (n:\$(e.matchLabels) {name: e.matchProperties.name}) " +
                             "SET n += e.setProperties " +
                             "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH } FINISH",
+                            "REMOVE n:\$(e.removeLabels) } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1172,7 +1201,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "addLabels" to emptyList<String>(),
                                         "removeLabels" to emptyList<String>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -1406,10 +1435,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (:\$(e.start.matchLabels) {})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {name: e.end.matchProperties.name}) " +
-                            "SET r += e.setProperties } FINISH } FINISH",
+                            "SET r += e.setProperties } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1429,7 +1459,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "setProperties" to
                                             mapOf("since" to LocalDate.of(2000, 1, 1)),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -1473,10 +1503,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (:\$(e.start.matchLabels) {name: e.start.matchProperties.name})-[r:\$(e.matchType) {id: e.matchProperties.id}]->(:\$(e.end.matchLabels) {}) " +
-                            "SET r += e.setProperties } FINISH } FINISH",
+                            "SET r += e.setProperties } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1496,7 +1527,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "setProperties" to
                                             mapOf("since" to LocalDate.of(2000, 1, 1)),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -1656,10 +1687,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() DELETE r } " +
-                            "FINISH } FINISH",
+                            "FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1678,7 +1710,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "matchProperties" to mapOf("id" to 1L),
                                         "setProperties" to emptyMap<String, Any>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -1722,10 +1754,11 @@ class Cypher25CdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { WITH e WHERE e.q = 0 CALL (e) { " +
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH ()-[r:\$(e.matchType) {id: e.matchProperties.id}]->() " +
-                            "DELETE r } FINISH } FINISH",
+                            "DELETE r } FINISH",
                         mapOf(
+                            "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
@@ -1744,7 +1777,7 @@ class Cypher25CdcSchemaHandlerTest {
                                         "matchProperties" to mapOf("id" to 1L),
                                         "setProperties" to emptyMap<String, Any>(),
                                     )
-                                )
+                                ),
                         ),
                     ),
                 )
@@ -2027,13 +2060,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler =
-              Cypher25CdcSchemaHandler(
-                  "my-topic",
-                  50,
-                  1000,
-                  Renderer.getRenderer(Configuration.defaultConfig()),
-              )
+          val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2046,13 +2073,7 @@ class Cypher25CdcSchemaHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler =
-        Cypher25CdcSchemaHandler(
-            "my-topic",
-            50,
-            1000,
-            Renderer.getRenderer(Configuration.defaultConfig()),
-        )
+    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
 
     val result = handler.handle(messages)
 

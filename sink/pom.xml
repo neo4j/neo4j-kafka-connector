@@ -79,6 +79,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.mockito.kotlin</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-cypher-dsl-parser</artifactId>
             <scope>test</scope>
