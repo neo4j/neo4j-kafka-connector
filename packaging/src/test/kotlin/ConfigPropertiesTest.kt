@@ -40,8 +40,8 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.Cypher25CdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.Cypher25CdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.BatchedCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -205,7 +205,7 @@ class ConfigPropertiesTest {
     fun cdcSourceHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet("Cypher 5", neo4j5, CdcSourceIdHandler::class),
-          Arguments.argumentSet("Cypher 25", neo4j2025, Cypher25CdcSourceIdHandler::class),
+          Arguments.argumentSet("Cypher 25", neo4j2025, BatchedCdcSourceIdHandler::class),
       )
     }
 
@@ -213,7 +213,7 @@ class ConfigPropertiesTest {
     fun cdcSchemaHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet("Cypher 5", neo4j5, CdcSchemaHandler::class),
-          Arguments.argumentSet("Cypher 25", neo4j2025, Cypher25CdcSchemaHandler::class),
+          Arguments.argumentSet("Cypher 25", neo4j2025, BatchedCdcSchemaHandler::class),
       )
     }
 

@@ -28,7 +28,7 @@ import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class Cypher25CdcHandler(
+abstract class BatchedCdcHandler(
     private val maxBatchedStatements: Int,
     private val batchSize: Int,
 ) : SinkStrategyHandler {

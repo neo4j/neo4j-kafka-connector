@@ -43,7 +43,7 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
-class Cypher25CdcSchemaHandlerTest {
+class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on empty keys`() {
@@ -113,7 +113,7 @@ class Cypher25CdcSchemaHandlerTest {
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+                val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
                 handler.handle(listOf(it))
               }
@@ -897,7 +897,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over batch size`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 2)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 2)
 
     val result =
         handler.handle(
@@ -926,7 +926,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over max batched statement count`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 2, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 2, 1000)
 
     val result =
         handler.handle(
@@ -947,7 +947,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -970,7 +970,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1003,7 +1003,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1026,7 +1026,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1059,7 +1059,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1082,7 +1082,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -2060,7 +2060,7 @@ class Cypher25CdcSchemaHandlerTest {
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+          val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2073,7 +2073,7 @@ class Cypher25CdcSchemaHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = Cypher25CdcSchemaHandler("my-topic", 50, 1000)
+    val handler = BatchedCdcSchemaHandler("my-topic", 50, 1000)
 
     val result = handler.handle(messages)
 

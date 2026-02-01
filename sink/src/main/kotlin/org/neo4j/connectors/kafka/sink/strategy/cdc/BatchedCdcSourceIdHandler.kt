@@ -20,6 +20,7 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
@@ -27,29 +28,32 @@ import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batchSize: Int) :
-    Cypher25CdcHandler(maxBatchedStatements, batchSize) {
+class BatchedCdcSourceIdHandler(
+    val topic: String,
+    maxBatchedStatements: Int,
+    batchSize: Int,
+    val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
+    val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
+) : BatchedCdcHandler(maxBatchedStatements, batchSize) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using CYPHER 25 compatible CDC SCHEMA strategy for topic '{}'", topic)
+    logger.info("using CYPHER 25 compatible CDC SOURCE_ID strategy for topic '{}'", topic)
   }
 
-  override fun strategy() = SinkStrategy.CDC_SCHEMA
+  override fun strategy() = SinkStrategy.CDC_SOURCE_ID
 
   override fun transformCreate(event: NodeEvent): CdcNodeData {
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
 
-    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
-
     return CdcNodeData(
         EntityOperation.CREATE,
-        matchLabels,
-        matchProperties,
+        setOf(labelName),
+        mapOf(propertyName to event.elementId),
         event.after.properties,
-        event.after.labels.minus(matchLabels).toSet(),
+        event.after.labels.minus(labelName).toSet(),
         emptySet(),
     )
   }
@@ -62,12 +66,10 @@ class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, bat
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
-    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
-
     return CdcNodeData(
         EntityOperation.UPDATE,
-        matchLabels,
-        matchProperties,
+        setOf(labelName),
+        mapOf(propertyName to event.elementId),
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -75,12 +77,10 @@ class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, bat
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
-    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
-
     return CdcNodeData(
         EntityOperation.DELETE,
-        matchLabels,
-        matchProperties,
+        setOf(labelName),
+        mapOf(propertyName to event.elementId),
         emptyMap(),
         emptySet(),
         emptySet(),
@@ -92,18 +92,14 @@ class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, bat
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
 
-    val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
-    val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
-
     return CdcRelationshipData(
         EntityOperation.CREATE,
-        startMatchLabels,
-        startMatchProperties,
-        endMatchLabels,
-        endMatchProperties,
-        relMatchType,
-        relMatchProperties,
+        setOf(labelName),
+        mapOf(propertyName to event.start.elementId),
+        setOf(labelName),
+        mapOf(propertyName to event.end.elementId),
+        event.type,
+        mapOf(propertyName to event.elementId),
         event.after.properties,
     )
   }
@@ -116,75 +112,28 @@ class Cypher25CdcSchemaHandler(val topic: String, maxBatchedStatements: Int, bat
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
-    val (startMatchLabels, startMatchProperties) =
-        buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
-    val (endMatchLabels, endMatchProperties) =
-        buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
-
     return CdcRelationshipData(
         EntityOperation.UPDATE,
-        startMatchLabels,
-        startMatchProperties,
-        endMatchLabels,
-        endMatchProperties,
-        relMatchType,
-        relMatchProperties,
+        setOf(labelName),
+        mapOf(propertyName to event.start.elementId),
+        setOf(labelName),
+        mapOf(propertyName to event.end.elementId),
+        event.type,
+        mapOf(propertyName to event.elementId),
         event.mutatedProperties(),
     )
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
-    val (startMatchLabels, startMatchProperties) =
-        buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
-    val (endMatchLabels, endMatchProperties) =
-        buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
-
     return CdcRelationshipData(
         EntityOperation.DELETE,
-        startMatchLabels,
-        startMatchProperties,
-        endMatchLabels,
-        endMatchProperties,
-        relMatchType,
-        relMatchProperties,
+        emptySet(),
         emptyMap(),
-    )
-  }
-
-  private fun buildMatchLabelsAndProperties(
-      keys: Map<String, List<Map<String, Any>>>,
-      forceKeys: Boolean = true,
-  ): Pair<Set<String>, Map<String, Any>> {
-    val validKeys =
-        keys
-            .mapValues { kvp -> kvp.value.filter { it.isNotEmpty() } }
-            .filterValues { it.isNotEmpty() }
-
-    if (forceKeys && validKeys.isEmpty()) {
-      throw InvalidDataException(
-          "schema strategy requires at least one node key with valid properties on nodes."
-      )
-    }
-
-    return Pair(
-        validKeys.keys.toSet(),
-        validKeys
-            .flatMap { it.value }
-            .asSequence()
-            .flatMap { it.asSequence() }
-            .associate { it.key to it.value },
-    )
-  }
-
-  private fun buildMatchLabelsAndProperties(
-      type: String,
-      keys: List<Map<String, Any>>,
-  ): Pair<String, Map<String, Any>> {
-    return Pair(
-        type,
-        keys.asSequence().flatMap { it.asSequence() }.associate { it.key to it.value },
+        emptySet(),
+        emptyMap(),
+        event.type,
+        mapOf(propertyName to event.elementId),
+        emptyMap(),
     )
   }
 }

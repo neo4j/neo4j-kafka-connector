@@ -49,7 +49,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class Cypher25CdcSourceIdHandlerTaskTest {
+class BatchedCdcSourceIdHandlerTaskTest {
   companion object {
     @Container
     val container: Neo4jContainer<*> =

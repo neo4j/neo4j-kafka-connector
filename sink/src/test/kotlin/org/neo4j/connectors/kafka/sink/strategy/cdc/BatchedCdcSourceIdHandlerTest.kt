@@ -39,7 +39,7 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.updateKnowsRelationshipEvent
 import org.neo4j.driver.Query
 
-class Cypher25CdcSourceIdHandlerTest {
+class BatchedCdcSourceIdHandlerTest {
 
   @Test
   fun `should generate correct statement for node creation events`() {
@@ -889,8 +889,8 @@ class Cypher25CdcSourceIdHandlerTest {
   private fun createHandler(
       maxBatchedStatements: Int = 1000,
       batchSize: Int = 1000,
-  ): Cypher25CdcSourceIdHandler =
-      Cypher25CdcSourceIdHandler(
+  ): BatchedCdcSourceIdHandler =
+      BatchedCdcSourceIdHandler(
           "my-topic",
           maxBatchedStatements,
           batchSize,
