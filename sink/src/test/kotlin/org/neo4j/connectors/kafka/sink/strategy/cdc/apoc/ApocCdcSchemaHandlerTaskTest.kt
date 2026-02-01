@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
@@ -26,7 +26,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -51,12 +50,13 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class BatchedCdcSchemaHandlerTaskTest {
+class ApocCdcSchemaHandlerTaskTest {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
         Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withPlugins("apoc")
             .withExposedPorts(7687)
             .withoutAuthentication()
 
@@ -107,7 +107,7 @@ class BatchedCdcSchemaHandlerTaskTest {
         )
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(BatchedCdcSchemaHandler::class)
+    task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSchemaHandler::class)
   }
 
   @Test
@@ -412,7 +412,6 @@ class BatchedCdcSchemaHandlerTaskTest {
   }
 
   @Test
-  @Disabled("dynamic labels with composite keys do not seem to work properly")
   fun `should update node with composite key`() {
     session
         .run("CREATE CONSTRAINT FOR (n:Order) REQUIRE (n.customerId, n.orderId) IS NODE KEY")

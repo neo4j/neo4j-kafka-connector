@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
@@ -50,12 +50,13 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class BatchedCdcSourceIdHandlerTaskTest {
+class ApocCdcSourceIdHandlerTaskTest {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
         Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+            .withPlugins("apoc")
             .withExposedPorts(7687)
             .withoutAuthentication()
 
@@ -109,7 +110,7 @@ class BatchedCdcSourceIdHandlerTaskTest {
         )
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(BatchedCdcSourceIdHandler::class)
+    task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSourceIdHandler::class)
   }
 
   @Test

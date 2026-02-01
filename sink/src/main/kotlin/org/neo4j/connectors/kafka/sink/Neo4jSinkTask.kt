@@ -20,6 +20,7 @@ import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
+import org.jetbrains.annotations.VisibleForTesting
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -28,7 +29,7 @@ class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
 
   private lateinit var settings: Map<String, String>
-  private lateinit var config: SinkConfiguration
+  @VisibleForTesting lateinit var config: SinkConfiguration
 
   override fun version(): String = VersionUtil.version(Neo4jSinkTask::class.java)
 

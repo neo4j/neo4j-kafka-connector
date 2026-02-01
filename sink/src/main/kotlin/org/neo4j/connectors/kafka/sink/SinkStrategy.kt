@@ -34,6 +34,8 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
@@ -217,7 +219,15 @@ interface SinkStrategyHandler {
         val propertyName = config.getString(SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME)
 
         handler =
-            if (
+            if (config.isApocCypherDoItAvailable())
+                ApocCdcSourceIdHandler(
+                    topic,
+                    config.neo4j(),
+                    config.batchSize,
+                    labelName,
+                    propertyName,
+                )
+            else if (
                 canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
                     .withNeo4j(config.neo4j())
             )
@@ -238,7 +248,9 @@ interface SinkStrategyHandler {
         }
 
         handler =
-            if (
+            if (config.isApocCypherDoItAvailable())
+                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize)
+            else if (
                 canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
                     .withNeo4j(config.neo4j())
             )
@@ -301,6 +313,18 @@ interface SinkStrategyHandler {
       }
 
       throw ConfigException("Topic $topic is not assigned a sink strategy")
+    }
+
+    private fun SinkConfiguration.isApocCypherDoItAvailable(): Boolean {
+      return this.driver.session(this.sessionConfig()).use { session ->
+        session
+            .run(
+                "SHOW PROCEDURES YIELD name WHERE name = 'apoc.cypher.doIt' RETURN count(*) > 0 AS available"
+            )
+            .single()
+            .get("available")
+            .asBoolean()
+      }
     }
   }
 }
