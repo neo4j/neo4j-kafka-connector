@@ -80,6 +80,7 @@ data class CdcRelationshipData(
     val endMatchProperties: Map<String, Any?>,
     val matchType: String,
     val matchProperties: Map<String, Any?>,
+    val hasKeys: Boolean,
     val setProperties: Map<String, Any?>,
 ) : CdcData {
   override fun groupingBasedOn(): GroupingKey {
@@ -124,19 +125,18 @@ data class CdcRelationshipData(
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        val operation = if (matchProperties.isEmpty()) "CREATE" else "MERGE"
-        "MERGE (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MERGE (end:\$($EVENT.end.matchLabels) {$endMatchProps}) $operation (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) SET r += $EVENT.setProperties"
+        "MATCH (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MATCH (end:\$($EVENT.end.matchLabels) {$endMatchProps}) CREATE (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) SET r += $EVENT.setProperties"
       }
       EntityOperation.UPDATE -> {
-        if (matchProperties.isEmpty()) {
-          "MERGE (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MERGE (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MERGE (start)-[r:\$($EVENT.matchType)]->(end) SET r += $EVENT.setProperties"
+        if (!hasKeys) {
+          "MATCH (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MATCH (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MATCH (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) WITH r LIMIT 1 SET r += $EVENT.setProperties"
         } else {
           "MATCH (:\$($EVENT.start.matchLabels) {$startMatchProps})-[r:\$($EVENT.matchType) {$matchProps}]->(:\$($EVENT.end.matchLabels) {$endMatchProps}) SET r += $EVENT.setProperties"
         }
       }
       EntityOperation.DELETE -> {
-        if (matchProperties.isEmpty()) {
-          "MATCH (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MATCH (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MATCH (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) DELETE r"
+        if (!hasKeys) {
+          "MATCH (start:\$($EVENT.start.matchLabels) {$startMatchProps}) MATCH (end:\$($EVENT.end.matchLabels) {$endMatchProps}) MATCH (start)-[r:\$($EVENT.matchType) {$matchProps}]->(end) WITH r LIMIT 1 DELETE r"
         } else {
           "MATCH ()-[r:\$($EVENT.matchType) {$matchProps}]->() DELETE r"
         }

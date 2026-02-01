@@ -511,8 +511,8 @@ class BatchedCdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
-                            "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
+                            "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
+                            "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
                             "CREATE (start)-[r:\$(e.matchType) {}]->(end) " +
                             "SET r += e.setProperties } FINISH",
                         mapOf(
@@ -580,9 +580,9 @@ class BatchedCdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
-                            "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "MERGE (start)-[r:\$(e.matchType) {id: e.matchProperties.id}]->(end) " +
+                            "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
+                            "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
+                            "CREATE (start)-[r:\$(e.matchType) {id: e.matchProperties.id}]->(end) " +
                             "SET r += e.setProperties } FINISH",
                         mapOf(
                             "q0" to 0,
@@ -658,9 +658,9 @@ class BatchedCdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId}) " +
-                            "MERGE (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id, contractId: e.end.matchProperties.contractId}) " +
-                            "MERGE (start)-[r:\$(e.matchType)]->(end) SET r += e.setProperties } FINISH",
+                            "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id, contractId: e.start.matchProperties.contractId}) " +
+                            "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id, contractId: e.end.matchProperties.contractId}) " +
+                            "MATCH (start)-[r:\$(e.matchType) {since: e.matchProperties.since}]->(end) WITH r LIMIT 1 SET r += e.setProperties } FINISH",
                         mapOf(
                             "q0" to 0,
                             "events" to
@@ -680,7 +680,8 @@ class BatchedCdcSchemaHandlerTest {
                                                     mapOf("id" to 2L, "contractId" to 5001L),
                                             ),
                                         "matchType" to "KNOWS",
-                                        "matchProperties" to emptyMap<String, Any>(),
+                                        "matchProperties" to
+                                            mapOf("since" to LocalDate.of(2000, 1, 1)),
                                         "setProperties" to
                                             mapOf("since" to LocalDate.of(1999, 1, 1)),
                                     )
@@ -797,8 +798,8 @@ class BatchedCdcSchemaHandlerTest {
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "MATCH (start)-[r:\$(e.matchType) {}]->(end) " +
-                            "DELETE r } FINISH",
+                            "MATCH (start)-[r:\$(e.matchType) {name: e.matchProperties.name, surname: e.matchProperties.surname}]->(end) " +
+                            "WITH r LIMIT 1 DELETE r } FINISH",
                         mapOf(
                             "q0" to 0,
                             "events" to
@@ -806,7 +807,8 @@ class BatchedCdcSchemaHandlerTest {
                                     mapOf(
                                         "q" to 0,
                                         "matchType" to "KNOWS",
-                                        "matchProperties" to emptyMap<String, Any>(),
+                                        "matchProperties" to
+                                            mapOf("name" to "john", "surname" to "doe"),
                                         "start" to
                                             mapOf(
                                                 "matchLabels" to listOf("Person"),

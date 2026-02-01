@@ -94,7 +94,8 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
 
     val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
     val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, event.keys, null)
 
     return CdcRelationshipData(
         EntityOperation.CREATE,
@@ -104,6 +105,7 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
         endMatchProperties,
         relMatchType,
         relMatchProperties,
+        event.keys.isNotEmpty(),
         event.after.properties,
     )
   }
@@ -120,7 +122,8 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
         buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
     val (endMatchLabels, endMatchProperties) =
         buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, event.keys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.UPDATE,
@@ -130,6 +133,7 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
         endMatchProperties,
         relMatchType,
         relMatchProperties,
+        event.keys.isNotEmpty(),
         event.mutatedProperties(),
     )
   }
@@ -139,7 +143,8 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
         buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
     val (endMatchLabels, endMatchProperties) =
         buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
-    val (relMatchType, relMatchProperties) = buildMatchLabelsAndProperties(event.type, event.keys)
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, event.keys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.DELETE,
@@ -149,6 +154,7 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
         endMatchProperties,
         relMatchType,
         relMatchProperties,
+        event.keys.isNotEmpty(),
         emptyMap(),
     )
   }
@@ -181,10 +187,15 @@ class BatchedCdcSchemaHandler(val topic: String, maxBatchedStatements: Int, batc
   private fun buildMatchLabelsAndProperties(
       type: String,
       keys: List<Map<String, Any>>,
+      properties: Map<String, Any>?,
   ): Pair<String, Map<String, Any>> {
     return Pair(
         type,
-        keys.asSequence().flatMap { it.asSequence() }.associate { it.key to it.value },
+        if (keys.isEmpty()) {
+          properties ?: emptyMap()
+        } else {
+          keys.asSequence().flatMap { it.asSequence() }.associate { it.key to it.value }
+        },
     )
   }
 }

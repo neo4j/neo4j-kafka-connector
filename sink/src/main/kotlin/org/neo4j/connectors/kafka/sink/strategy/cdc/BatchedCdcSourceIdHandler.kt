@@ -100,6 +100,7 @@ class BatchedCdcSourceIdHandler(
         mapOf(propertyName to event.end.elementId),
         event.type,
         mapOf(propertyName to event.elementId),
+        true,
         event.after.properties,
     )
   }
@@ -120,6 +121,7 @@ class BatchedCdcSourceIdHandler(
         mapOf(propertyName to event.end.elementId),
         event.type,
         mapOf(propertyName to event.elementId),
+        true,
         event.mutatedProperties(),
     )
   }
@@ -133,6 +135,7 @@ class BatchedCdcSourceIdHandler(
         emptyMap(),
         event.type,
         mapOf(propertyName to event.elementId),
+        true,
         emptyMap(),
     )
   }

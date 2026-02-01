@@ -451,9 +451,9 @@ class BatchedCdcSourceIdHandlerTest {
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "" +
-                            "MERGE (start:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId}) " +
-                            "MERGE (end:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
-                            "MERGE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
+                            "MATCH (start:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId}) " +
+                            "MATCH (end:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
+                            "CREATE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
                             "SET r += e.setProperties } FINISH",
                         mapOf(
                             "q0" to 0,
