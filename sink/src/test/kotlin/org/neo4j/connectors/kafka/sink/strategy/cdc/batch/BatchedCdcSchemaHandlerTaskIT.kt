@@ -51,7 +51,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class BatchedCdcSchemaHandlerTaskTest {
+class BatchedCdcSchemaHandlerTaskIT {
   companion object {
     @Container
     val container: Neo4jContainer<*> =

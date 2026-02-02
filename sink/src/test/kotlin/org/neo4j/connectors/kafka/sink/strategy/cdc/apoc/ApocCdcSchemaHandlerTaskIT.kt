@@ -50,7 +50,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-class ApocCdcSchemaHandlerTaskTest {
+class ApocCdcSchemaHandlerTaskIT {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
