@@ -23,7 +23,10 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.seconds
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.events.Constraint
 import org.neo4j.connectors.kafka.events.Meta
 import org.neo4j.connectors.kafka.events.NodeChange
@@ -57,7 +60,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     producer.publish(
         StreamsTransactionEvent(
             meta = newMetadata(operation = OperationType.created),
@@ -97,7 +103,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:SourceEvent:Person) SET n = ${'$'}props",
@@ -162,7 +171,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:SourceEvent) SET n = ${'$'}props",
@@ -201,7 +213,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -264,7 +279,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -340,7 +358,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n1:SourceEvent:Person) SET n1 = ${'$'}person1 " +
@@ -403,7 +424,10 @@ class Neo4jCdcSourceIdFromStreamsMessageIT {
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     producer.publish(
         StreamsTransactionEvent(
             meta =

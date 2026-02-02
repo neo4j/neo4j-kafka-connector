@@ -24,8 +24,10 @@ import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.seconds
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -60,7 +62,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     producer.publish(
         newEvent(
             0,
@@ -93,7 +98,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
@@ -147,7 +155,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
@@ -183,7 +194,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
@@ -225,7 +239,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             "CREATE (n:Person) SET n = ${'$'}props",
@@ -266,7 +283,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -323,7 +343,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -372,7 +395,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -421,7 +447,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -470,7 +499,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -519,7 +551,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -569,7 +604,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -628,7 +666,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -693,7 +734,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -758,7 +802,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -823,7 +870,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -875,6 +925,8 @@ abstract class Neo4jCdcSchemaIT {
       sink: Neo4jSinkRegistration,
       neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
         .run(
@@ -936,7 +988,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -982,7 +1037,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -1033,7 +1091,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -1084,7 +1145,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -1135,7 +1199,10 @@ abstract class Neo4jCdcSchemaIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
       sink: Neo4jSinkRegistration,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session
         .run(
             """
@@ -1188,6 +1255,8 @@ abstract class Neo4jCdcSchemaIT {
       sink: Neo4jSinkRegistration,
       neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session.createRelationshipKeyConstraint(neo4j, "KNOWS_KEY", "KNOWS", "id")
     session
         .run(
@@ -1238,7 +1307,10 @@ abstract class Neo4jCdcSchemaIT {
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
+      neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     producer.publish(
         newEvent(
             0,

@@ -32,8 +32,10 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.apache.kafka.connect.storage.SimpleHeaderConverter
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -712,6 +714,8 @@ abstract class Neo4jSinkErrorIT {
       session: Session,
       neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val event1ToFail =
@@ -837,6 +841,8 @@ abstract class Neo4jSinkErrorIT {
       session: Session,
       neo4j: Neo4j,
   ) = runTest {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
     val event1 =
