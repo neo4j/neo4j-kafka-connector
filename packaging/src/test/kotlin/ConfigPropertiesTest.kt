@@ -40,8 +40,8 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -60,7 +60,8 @@ class ConfigPropertiesTest {
   @ParameterizedTest
   @MethodSource("cdcSchemaHandlers")
   fun `sink cdc schema quick start config should be valid`(
-      neo4j: Neo4j,
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
       expectedHandlerType: KClass<SinkStrategyHandler>,
   ) {
     val properties = loadConfigProperties("sink-cdc-schema-quickstart.properties")
@@ -68,7 +69,7 @@ class ConfigPropertiesTest {
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
     val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j)
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
     }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
@@ -80,7 +81,8 @@ class ConfigPropertiesTest {
   @ParameterizedTest
   @MethodSource("cdcSourceHandlers")
   fun `sink cdc source id quick start config should be valid`(
-      neo4j: Neo4j,
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
       expectedHandlerType: KClass<SinkStrategyHandler>,
   ) {
     val properties = loadConfigProperties("sink-cdc-source-id-quickstart.properties")
@@ -88,7 +90,7 @@ class ConfigPropertiesTest {
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
     val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j)
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
     }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
@@ -204,23 +206,30 @@ class ConfigPropertiesTest {
     @JvmStatic
     fun cdcSourceHandlers(): List<Arguments> {
       return listOf(
-          Arguments.argumentSet("Cypher 5", neo4j5, CdcSourceIdHandler::class),
-          Arguments.argumentSet("Cypher 25", neo4j2025, BatchedCdcSourceIdHandler::class),
+          Arguments.argumentSet(
+              "APOC DoIT available",
+              true,
+              neo4j5_23,
+              ApocCdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet("APOC DoIT not available", false, null, CdcSourceIdHandler::class),
       )
     }
 
     @JvmStatic
     fun cdcSchemaHandlers(): List<Arguments> {
       return listOf(
-          Arguments.argumentSet("Cypher 5", neo4j5, CdcSchemaHandler::class),
-          Arguments.argumentSet("Cypher 25", neo4j2025, BatchedCdcSchemaHandler::class),
+          Arguments.argumentSet(
+              "APOC DoIT available",
+              true,
+              neo4j5_23,
+              ApocCdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet("APOC DoIT not available", false, null, CdcSchemaHandler::class),
       )
     }
 
-    private val neo4j5 =
-        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
-
-    private val neo4j2025 =
-        Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5_23 =
+        Neo4j(Neo4jVersion(5, 23), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
   }
 }

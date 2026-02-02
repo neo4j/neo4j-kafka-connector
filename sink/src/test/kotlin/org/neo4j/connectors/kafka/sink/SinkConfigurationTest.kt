@@ -39,7 +39,8 @@ import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -152,7 +153,8 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j5)
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.topicHandlers shouldHaveKey "foo"
     config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
@@ -167,7 +169,11 @@ class SinkConfigurationTest {
 
   @ParameterizedTest
   @MethodSource("cdcHandlersTypes")
-  fun `should return multiple CDC schema topics`(neo4jVersion: Neo4j, clazz: KClass<CdcHandler>) {
+  fun `should return multiple CDC schema topics`(
+      apocDoItAvailable: Boolean,
+      neo4jTarget: Neo4j?,
+      clazz: KClass<CdcHandler>,
+  ) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -175,7 +181,13 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4jVersion)
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            neo4j = neo4jTarget,
+            apocCypherDoItAvailable = apocDoItAvailable,
+        )
 
     config.topicHandlers shouldHaveKey "foo"
     config.topicHandlers["foo"] shouldBe instanceOf(clazz)
@@ -217,7 +229,8 @@ class SinkConfigurationTest {
               else -> throw IllegalArgumentException(strategy.name)
             } to "bar",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j2025)
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -285,7 +298,8 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer(), neo4j2025)
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe
@@ -293,16 +307,19 @@ class SinkConfigurationTest {
   }
 
   companion object {
-    private val neo4j2025 =
-        Neo4j(Neo4jVersion(2025, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
-    private val neo4j5 =
-        Neo4j(Neo4jVersion(5, 12), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5_23 =
+        Neo4j(Neo4jVersion(5, 23), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
     @JvmStatic
     fun cdcHandlersTypes() =
         listOf(
-            Arguments.argumentSet("2025", neo4j2025, BatchedCdcHandler::class),
-            Arguments.argumentSet("5", neo4j5, CdcHandler::class),
+            Arguments.argumentSet(
+                "APOC DoIt available",
+                true,
+                neo4j5_23,
+                ApocCdcHandler::class,
+            ),
+            Arguments.argumentSet("APOC DoIt not available", false, null, CdcHandler::class),
         )
   }
 }

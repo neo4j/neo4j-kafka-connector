@@ -51,6 +51,7 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
+@Disabled("not activated yet")
 class BatchedCdcSchemaHandlerTaskIT {
   companion object {
     @Container

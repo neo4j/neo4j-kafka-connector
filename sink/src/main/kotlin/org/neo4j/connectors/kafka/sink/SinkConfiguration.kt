@@ -45,9 +45,11 @@ class SinkConfiguration : Neo4jConfiguration {
       originals: Map<String, *>,
       renderer: Renderer?,
       neo4j: Neo4j? = null,
+      apocCypherDoItAvailable: Boolean? = null,
   ) : super(config(), originals, ConnectorType.SINK) {
     fixedRenderer = renderer
     _neo4j = neo4j
+    this.apocCypherDoItAvailable = apocCypherDoItAvailable
     validateAllTopics()
   }
 
@@ -81,13 +83,31 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  var _neo4j: Neo4j? = null
+  private var _neo4j: Neo4j? = null
 
   fun neo4j(): Neo4j {
     if (_neo4j == null) {
       _neo4j = Neo4jDetector.detect(driver)
     }
     return _neo4j!!
+  }
+
+  private var apocCypherDoItAvailable: Boolean? = null
+
+  fun isApocCypherDoItAvailable(): Boolean {
+    if (apocCypherDoItAvailable == null) {
+      apocCypherDoItAvailable =
+          this.driver.session(this.sessionConfig()).use { session ->
+            session
+                .run(
+                    "SHOW PROCEDURES YIELD name WHERE name = 'apoc.cypher.doIt' RETURN count(*) > 0 AS available"
+                )
+                .single()
+                .get("available")
+                .asBoolean()
+          }
+    }
+    return apocCypherDoItAvailable!!
   }
 
   val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j()) }

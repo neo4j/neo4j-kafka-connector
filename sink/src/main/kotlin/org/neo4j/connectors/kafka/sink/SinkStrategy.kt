@@ -21,8 +21,6 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.header.Header
 import org.apache.kafka.connect.sink.SinkRecord
-import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
@@ -36,8 +34,6 @@ import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -227,17 +223,6 @@ interface SinkStrategyHandler {
                     labelName,
                     propertyName,
                 )
-            else if (
-                canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
-                    .withNeo4j(config.neo4j())
-            )
-                BatchedCdcSourceIdHandler(
-                    topic,
-                    cdcMaxBatchedStatements,
-                    config.batchSize,
-                    labelName,
-                    propertyName,
-                )
             else CdcSourceIdHandler(topic, config.renderer, labelName, propertyName)
       }
 
@@ -250,11 +235,6 @@ interface SinkStrategyHandler {
         handler =
             if (config.isApocCypherDoItAvailable())
                 ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize)
-            else if (
-                canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices())
-                    .withNeo4j(config.neo4j())
-            )
-                BatchedCdcSchemaHandler(topic, cdcMaxBatchedStatements, config.batchSize)
             else CdcSchemaHandler(topic, config.renderer)
       }
 
@@ -313,18 +293,6 @@ interface SinkStrategyHandler {
       }
 
       throw ConfigException("Topic $topic is not assigned a sink strategy")
-    }
-
-    private fun SinkConfiguration.isApocCypherDoItAvailable(): Boolean {
-      return this.driver.session(this.sessionConfig()).use { session ->
-        session
-            .run(
-                "SHOW PROCEDURES YIELD name WHERE name = 'apoc.cypher.doIt' RETURN count(*) > 0 AS available"
-            )
-            .single()
-            .get("available")
-            .asBoolean()
-      }
     }
   }
 }
