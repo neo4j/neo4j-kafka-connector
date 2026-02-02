@@ -543,7 +543,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) CREATE (start)-[r:KNOWS {}]->(end) SET r += \$e.setProperties",
+                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) CREATE (start)-[r:KNOWS]->(end) SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1497,7 +1497,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (: {})-[r:KNOWS {id: \$e.matchProperties.id}]->(:Person {name: \$e.end.matchProperties.name}) SET r += \$e.setProperties",
+                                            "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->(:Person {name: \$e.end.matchProperties.name}) SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1570,7 +1570,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (:Person {name: \$e.start.matchProperties.name})-[r:KNOWS {id: \$e.matchProperties.id}]->(: {}) SET r += \$e.setProperties",
+                                            "MATCH (:Person {name: \$e.start.matchProperties.name})-[r:KNOWS {id: \$e.matchProperties.id}]->() SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1846,6 +1846,149 @@ class ApocCdcSchemaHandlerTest {
                                                             ),
                                                         "matchProperties" to mapOf("id" to 1L),
                                                         "setProperties" to emptyMap<String, Any>(),
+                                                    )
+                                            ),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
+  }
+
+  @Test
+  fun `should generate correct statement when relationship start and end keys are empty but relationship has its own keys for deletion`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.DELETE,
+                RelationshipState(mapOf("id" to 1L)),
+                null,
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    listOf(sinkMessage),
+                    Query(
+                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        mapOf(
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "stmt" to
+                                            "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() DELETE r",
+                                        "params" to
+                                            mapOf(
+                                                "e" to
+                                                    mapOf(
+                                                        "start" to
+                                                            mapOf(
+                                                                "matchProperties" to
+                                                                    emptyMap<String, Any>()
+                                                            ),
+                                                        "end" to
+                                                            mapOf(
+                                                                "matchProperties" to
+                                                                    emptyMap<String, Any>()
+                                                            ),
+                                                        "matchProperties" to mapOf("id" to 1L),
+                                                        "setProperties" to emptyMap<String, Any>(),
+                                                    )
+                                            ),
+                                    )
+                                )
+                        ),
+                    ),
+                )
+            )
+        ),
+    )
+  }
+
+  @Test
+  fun `should generate correct statement when relationship start and end keys are empty but relationship has its own keys for update`() {
+    val sinkMessage =
+        newChangeEventMessage(
+            RelationshipEvent(
+                "rel-element-id",
+                "KNOWS",
+                Node(
+                    "start-element-id",
+                    listOf("Person"),
+                    mapOf("Person" to emptyList<Map<String, Any>>()),
+                ),
+                Node(
+                    "end-element-id",
+                    listOf("Person"),
+                    emptyMap<String, List<Map<String, Any>>>(),
+                ),
+                listOf(mapOf("id" to 1L)),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("id" to 1L)),
+                RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2021, 1, 1))),
+            ),
+            1,
+            0,
+        )
+
+    verify(
+        listOf(sinkMessage),
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    listOf(sinkMessage),
+                    Query(
+                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        mapOf(
+                            "events" to
+                                listOf(
+                                    mapOf(
+                                        "stmt" to
+                                            "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() SET r += \$e.setProperties",
+                                        "params" to
+                                            mapOf(
+                                                "e" to
+                                                    mapOf(
+                                                        "start" to
+                                                            mapOf(
+                                                                "matchProperties" to
+                                                                    emptyMap<String, Any>()
+                                                            ),
+                                                        "end" to
+                                                            mapOf(
+                                                                "matchProperties" to
+                                                                    emptyMap<String, Any>()
+                                                            ),
+                                                        "matchProperties" to mapOf("id" to 1L),
+                                                        "setProperties" to
+                                                            mapOf<String, Any>(
+                                                                "since" to LocalDate.of(2021, 1, 1)
+                                                            ),
                                                     )
                                             ),
                                     )

@@ -54,21 +54,25 @@ data class CdcNodeData(
   }
 
   override fun buildStatement(): String {
-    val matchLabels = matchLabels.joinToString(":") { SchemaNames.sanitize(it).orElseThrow() }
+    val matchLabels =
+        if (matchLabels.isEmpty()) ""
+        else matchLabels.joinToString(":", ":") { SchemaNames.sanitize(it).orElseThrow() }
     val matchProps =
-        matchProperties
-            .map { SchemaNames.sanitize(it.key).orElseThrow() }
-            .joinToString(", ") { "$it: ${'$'}$EVENT.matchProperties.$it" }
+        if (matchProperties.isEmpty()) ""
+        else
+            matchProperties
+                .map { SchemaNames.sanitize(it.key).orElseThrow() }
+                .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.matchProperties.$it" }
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        "CREATE (n:$matchLabels {$matchProps}) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels)"
+        "CREATE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels)"
       }
       EntityOperation.UPDATE -> {
-        "MERGE (n:$matchLabels {$matchProps}) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels) REMOVE n:\$(${'$'}$EVENT.removeLabels)"
+        "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels) REMOVE n:\$(${'$'}$EVENT.removeLabels)"
       }
       EntityOperation.DELETE -> {
-        "MATCH (n:$matchLabels {$matchProps}) DETACH DELETE n"
+        "MATCH (n$matchLabels$matchProps) DETACH DELETE n"
       }
     }
   }
@@ -104,42 +108,51 @@ data class CdcRelationshipData(
 
   override fun buildStatement(): String {
     val startMatchLabels =
-        startMatchLabels.joinToString(":") { SchemaNames.sanitize(it).orElseThrow() }
+        if (startMatchLabels.isEmpty()) ""
+        else startMatchLabels.joinToString(":", ":") { SchemaNames.sanitize(it).orElseThrow() }
     val startMatchProps =
-        startMatchProperties
-            .map { SchemaNames.sanitize(it.key).orElseThrow() }
-            .joinToString(", ") { "$it: ${'$'}$EVENT.start.matchProperties.$it" }
-    val endMatchLabels = endMatchLabels.joinToString(":") { SchemaNames.sanitize(it).orElseThrow() }
+        if (startMatchProperties.isEmpty()) ""
+        else
+            startMatchProperties
+                .map { SchemaNames.sanitize(it.key).orElseThrow() }
+                .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.start.matchProperties.$it" }
+    val endMatchLabels =
+        if (endMatchLabels.isEmpty()) ""
+        else endMatchLabels.joinToString(":", ":") { SchemaNames.sanitize(it).orElseThrow() }
     val endMatchProps =
-        endMatchProperties
-            .map { SchemaNames.sanitize(it.key).orElseThrow() }
-            .joinToString(", ") { "$it: ${'$'}$EVENT.end.matchProperties.$it" }
+        if (endMatchProperties.isEmpty()) ""
+        else
+            endMatchProperties
+                .map { SchemaNames.sanitize(it.key).orElseThrow() }
+                .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.end.matchProperties.$it" }
     val matchType = SchemaNames.sanitize(matchType).orElseThrow()
     val matchProps =
-        matchProperties
-            .map { SchemaNames.sanitize(it.key).orElseThrow() }
-            .joinToString(", ") { "$it: ${'$'}$EVENT.matchProperties.$it" }
+        if (matchProperties.isEmpty()) ""
+        else
+            matchProperties
+                .map { SchemaNames.sanitize(it.key).orElseThrow() }
+                .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.matchProperties.$it" }
 
     return when (operation) {
       EntityOperation.CREATE -> {
         if (!hasKeys) {
-          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) CREATE (start)-[r:$matchType {$matchProps}]->(end) SET r += ${'$'}$EVENT.setProperties"
+          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) CREATE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
         } else {
-          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) MERGE (start)-[r:$matchType {$matchProps}]->(end) SET r += ${'$'}$EVENT.setProperties"
+          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MERGE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
         }
       }
       EntityOperation.UPDATE -> {
         if (!hasKeys) {
-          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) MATCH (start)-[r:$matchType {$matchProps}]->(end) WITH r LIMIT 1 SET r += ${'$'}$EVENT.setProperties"
+          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH r LIMIT 1 SET r += ${'$'}$EVENT.setProperties"
         } else {
-          "MATCH (:$startMatchLabels {$startMatchProps})-[r:$matchType {$matchProps}]->(:$endMatchLabels {$endMatchProps}) SET r += ${'$'}$EVENT.setProperties"
+          "MATCH ($startMatchLabels$startMatchProps)-[r:$matchType$matchProps]->($endMatchLabels$endMatchProps) SET r += ${'$'}$EVENT.setProperties"
         }
       }
       EntityOperation.DELETE -> {
         if (!hasKeys) {
-          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) MATCH (start)-[r:$matchType {$matchProps}]->(end) WITH r LIMIT 1 DELETE r"
+          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH r LIMIT 1 DELETE r"
         } else {
-          "MATCH ()-[r:$matchType {$matchProps}]->() DELETE r"
+          "MATCH ()-[r:$matchType$matchProps]->() DELETE r"
         }
       }
     }

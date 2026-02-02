@@ -24,11 +24,14 @@ import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
@@ -89,6 +92,10 @@ class ApocCdcSourceIdHandlerTaskIT {
 
   @BeforeEach
   fun before() {
+    // TODO: we have to properly deal with unsupported Cypher syntax, i.e. FINISH
+    // This is just a temporary measure to skip the tests for 4.4 or older versions of 5.x
+    Assumptions.assumeTrue { canIUse(Cypher.explicitCypherSelection()).withNeo4j(neo4j) }
+
     db = "test-${UUID.randomUUID()}"
     driver.session(SessionConfig.forDatabase("system")).use {
       it.run("CREATE OR REPLACE DATABASE \$db WAIT", mapOf("db" to db)).consume()
