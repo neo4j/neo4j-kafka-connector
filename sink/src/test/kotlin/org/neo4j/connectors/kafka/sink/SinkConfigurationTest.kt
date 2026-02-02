@@ -40,7 +40,6 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -313,12 +312,7 @@ class SinkConfigurationTest {
     @JvmStatic
     fun cdcHandlersTypes() =
         listOf(
-            Arguments.argumentSet(
-                "APOC DoIt available",
-                true,
-                neo4j5_23,
-                ApocCdcHandler::class,
-            ),
+            Arguments.argumentSet("APOC DoIt available", true, neo4j5_23, ApocCdcHandler::class),
             Arguments.argumentSet("APOC DoIt not available", false, null, CdcHandler::class),
         )
   }
