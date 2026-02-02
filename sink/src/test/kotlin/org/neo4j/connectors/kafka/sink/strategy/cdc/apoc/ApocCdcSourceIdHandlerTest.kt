@@ -491,7 +491,7 @@ class ApocCdcSourceIdHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (start:SourceEvent {sourceElementId: \$e.start.matchProperties.sourceElementId}) MATCH (end:SourceEvent {sourceElementId: \$e.end.matchProperties.sourceElementId}) CREATE (start)-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->(end) SET r += \$e.setProperties",
+                                            "MATCH (start:SourceEvent {sourceElementId: \$e.start.matchProperties.sourceElementId}) MATCH (end:SourceEvent {sourceElementId: \$e.end.matchProperties.sourceElementId}) MERGE (start)-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->(end) SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to

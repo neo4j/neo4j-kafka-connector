@@ -582,7 +582,7 @@ class BatchedCdcSchemaHandlerTest {
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (start:\$(e.start.matchLabels) {id: e.start.matchProperties.id}) " +
                             "MATCH (end:\$(e.end.matchLabels) {id: e.end.matchProperties.id}) " +
-                            "CREATE (start)-[r:\$(e.matchType) {id: e.matchProperties.id}]->(end) " +
+                            "MERGE (start)-[r:\$(e.matchType) {id: e.matchProperties.id}]->(end) " +
                             "SET r += e.setProperties } FINISH",
                         mapOf(
                             "q0" to 0,

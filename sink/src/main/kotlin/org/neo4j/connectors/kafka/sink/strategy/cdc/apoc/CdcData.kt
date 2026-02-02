@@ -122,7 +122,11 @@ data class CdcRelationshipData(
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) CREATE (start)-[r:$matchType {$matchProps}]->(end) SET r += ${'$'}$EVENT.setProperties"
+        if (!hasKeys) {
+          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) CREATE (start)-[r:$matchType {$matchProps}]->(end) SET r += ${'$'}$EVENT.setProperties"
+        } else {
+          "MATCH (start:$startMatchLabels {$startMatchProps}) MATCH (end:$endMatchLabels {$endMatchProps}) MERGE (start)-[r:$matchType {$matchProps}]->(end) SET r += ${'$'}$EVENT.setProperties"
+        }
       }
       EntityOperation.UPDATE -> {
         if (!hasKeys) {

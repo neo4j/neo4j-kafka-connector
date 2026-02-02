@@ -453,7 +453,7 @@ class BatchedCdcSourceIdHandlerTest {
                             "" +
                             "MATCH (start:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId}) " +
                             "MATCH (end:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
-                            "CREATE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
+                            "MERGE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
                             "SET r += e.setProperties } FINISH",
                         mapOf(
                             "q0" to 0,

@@ -616,7 +616,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) CREATE (start)-[r:KNOWS {id: \$e.matchProperties.id}]->(end) SET r += \$e.setProperties",
+                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) MERGE (start)-[r:KNOWS {id: \$e.matchProperties.id}]->(end) SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
