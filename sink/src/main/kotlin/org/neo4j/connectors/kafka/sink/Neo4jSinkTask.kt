@@ -41,7 +41,10 @@ class Neo4jSinkTask : SinkTask() {
   }
 
   override fun stop() {
-    config.close()
+    // SinkConfiguration could have thrown, leaving config uninitialized
+    if (this::config.isInitialized) {
+      config.close()
+    }
   }
 
   override fun put(records: Collection<SinkRecord>?) {
