@@ -45,6 +45,12 @@ class ApocCdcSourceIdHandler(
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID
 
   override fun transformCreate(event: NodeEvent): CdcNodeData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object"
+      )
+    }
+
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
@@ -78,6 +84,12 @@ class ApocCdcSourceIdHandler(
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object"
+      )
+    }
+
     return CdcNodeData(
         EntityOperation.DELETE,
         setOf(labelName),
@@ -89,6 +101,12 @@ class ApocCdcSourceIdHandler(
   }
 
   override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object"
+      )
+    }
+
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
@@ -128,6 +146,12 @@ class ApocCdcSourceIdHandler(
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object"
+      )
+    }
+
     return CdcRelationshipData(
         EntityOperation.DELETE,
         emptySet(),
