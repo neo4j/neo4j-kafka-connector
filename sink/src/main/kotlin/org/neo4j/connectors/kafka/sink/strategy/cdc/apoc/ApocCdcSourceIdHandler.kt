@@ -39,7 +39,7 @@ class ApocCdcSourceIdHandler(
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using CYPHER 25 compatible CDC SOURCE_ID strategy for topic '{}'", topic)
+    logger.info("using APOC compatible CDC SOURCE_ID strategy for topic '{}'", topic)
   }
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID

@@ -33,7 +33,7 @@ class ApocCdcSchemaHandler(val topic: String, neo4j: Neo4j, batchSize: Int) :
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using CYPHER 25 compatible CDC SCHEMA strategy for topic '{}'", topic)
+    logger.info("using APOC compatible CDC SCHEMA strategy for topic '{}'", topic)
   }
 
   override fun strategy() = SinkStrategy.CDC_SCHEMA
