@@ -79,7 +79,7 @@ class Neo4jSinkTask : SinkTask() {
             log.trace("before write transaction for group {}", index)
             session.writeTransaction(
                 { tx -> group.forEach { tx.run(it.query).consume() } },
-                config.txConfig(),
+                config.txConfig { this["batch-size"] = group.flatMap { it.messages }.size },
             )
             log.trace("after write transaction for group {}", index)
           }
