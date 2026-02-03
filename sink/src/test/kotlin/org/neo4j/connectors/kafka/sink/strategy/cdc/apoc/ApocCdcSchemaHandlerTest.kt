@@ -478,7 +478,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) DETACH DELETE n",
+                                            "MATCH (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -543,7 +543,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) CREATE (start)-[r:KNOWS]->(end) SET r += \$e.setProperties",
+                                            "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) MERGE (start)-[r:KNOWS {since: \$e.matchProperties.since}]->(end) SET r += \$e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -559,7 +559,9 @@ class ApocCdcSchemaHandlerTest {
                                                                     mapOf("id" to 2L)
                                                             ),
                                                         "matchProperties" to
-                                                            emptyMap<String, Any>(),
+                                                            mapOf(
+                                                                "since" to LocalDate.of(2000, 1, 1)
+                                                            ),
                                                         "setProperties" to
                                                             mapOf(
                                                                 "since" to LocalDate.of(2000, 1, 1)
@@ -1191,7 +1193,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (n:Person {name: \$e.matchProperties.name}) DETACH DELETE n",
+                                            "MATCH (n:Person {name: \$e.matchProperties.name}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to

@@ -453,7 +453,7 @@ class BatchedCdcSchemaHandlerTest {
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name, surname: e.matchProperties.surname}) " +
-                            "DETACH DELETE n } FINISH",
+                            "DELETE n } FINISH",
                         mapOf(
                             "q0" to 0,
                             "events" to
@@ -1139,7 +1139,7 @@ class BatchedCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DETACH DELETE n } FINISH",
+                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN MATCH (n:\$(e.matchLabels) {name: e.matchProperties.name}) DELETE n } FINISH",
                         mapOf(
                             "q0" to 0,
                             "events" to

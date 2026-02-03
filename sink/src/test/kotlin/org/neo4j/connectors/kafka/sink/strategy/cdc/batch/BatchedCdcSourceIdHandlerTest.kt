@@ -400,7 +400,7 @@ class BatchedCdcSourceIdHandlerTest {
                     Query(
                         "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
                             "MATCH (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "DETACH DELETE n } FINISH",
+                            "DELETE n } FINISH",
                         mapOf(
                             "q0" to 0,
                             "events" to
