@@ -21,17 +21,25 @@ import io.kotest.matchers.maps.shouldHaveKey
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import io.kotest.matchers.types.instanceOf
+import kotlin.reflect.KClass
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.CdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -144,7 +152,8 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.topicHandlers shouldHaveKey "foo"
     config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
@@ -157,8 +166,13 @@ class SinkConfigurationTest {
     (config.topicHandlers["bar"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
   }
 
-  @Test
-  fun `should return multiple CDC schema topics`() {
+  @ParameterizedTest
+  @MethodSource("cdcHandlersTypes")
+  fun `should return multiple CDC schema topics`(
+      apocDoItAvailable: Boolean,
+      neo4jTarget: Neo4j?,
+      clazz: KClass<CdcHandler>,
+  ) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -166,13 +180,19 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            neo4j = neo4jTarget,
+            apocCypherDoItAvailable = apocDoItAvailable,
+        )
 
     config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CdcSchemaHandler>()
+    config.topicHandlers["foo"] shouldBe instanceOf(clazz)
 
     config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CdcSchemaHandler>()
+    config.topicHandlers["bar"] shouldBe instanceOf(clazz)
   }
 
   @Test
@@ -208,7 +228,8 @@ class SinkConfigurationTest {
               else -> throw IllegalArgumentException(strategy.name)
             } to "bar",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -276,10 +297,53 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe
         TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-sink")).build()
+  }
+
+  companion object {
+    private val neo4j5_26 =
+        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j4_4 =
+        Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+
+    @JvmStatic
+    fun cdcHandlersTypes() =
+        listOf(
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels not available",
+                false,
+                neo4j4_4,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt available && Dynamic Labels not available",
+                true,
+                neo4j4_4,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt not available && Dynamic Labels available",
+                false,
+                neo4j5_26,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels available",
+                true,
+                neo4j5_26,
+                ApocCdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels not available",
+                false,
+                null,
+                CdcHandler::class,
+            ),
+        )
   }
 }

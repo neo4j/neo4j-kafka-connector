@@ -21,6 +21,8 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.header.Header
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
@@ -32,6 +34,8 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -202,6 +206,7 @@ interface SinkStrategyHandler {
         handler = patternHandler
       }
 
+      val cdcMaxBatchedStatements = config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES)
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
       if (cdcSourceIdTopics.contains(topic)) {
         if (handler != null) {
@@ -211,7 +216,20 @@ interface SinkStrategyHandler {
         val labelName = config.getString(SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME)
         val propertyName = config.getString(SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME)
 
-        handler = CdcSourceIdHandler(topic, config.renderer, labelName, propertyName)
+        handler =
+            if (
+                config.isApocCypherDoItAvailable() &&
+                    canIUse(Cypher.setDynamicLabels()).withNeo4j(config.neo4j()) &&
+                    canIUse(Cypher.removeDynamicLabels()).withNeo4j(config.neo4j())
+            )
+                ApocCdcSourceIdHandler(
+                    topic,
+                    config.neo4j(),
+                    config.batchSize,
+                    labelName,
+                    propertyName,
+                )
+            else CdcSourceIdHandler(topic, config.renderer, labelName, propertyName)
       }
 
       val cdcSchemaTopics = config.getList(SinkConfiguration.CDC_SCHEMA_TOPICS)
@@ -220,7 +238,14 @@ interface SinkStrategyHandler {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
-        handler = CdcSchemaHandler(topic, config.renderer)
+        handler =
+            if (
+                config.isApocCypherDoItAvailable() &&
+                    canIUse(Cypher.setDynamicLabels()).withNeo4j(config.neo4j()) &&
+                    canIUse(Cypher.removeDynamicLabels()).withNeo4j(config.neo4j())
+            )
+                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize)
+            else CdcSchemaHandler(topic, config.renderer)
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)

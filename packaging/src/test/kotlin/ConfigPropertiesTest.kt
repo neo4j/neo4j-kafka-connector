@@ -16,20 +16,32 @@
  */
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.instanceOf
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.io.File
 import java.io.FileInputStream
 import java.util.*
+import kotlin.reflect.KClass
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -45,32 +57,46 @@ class ConfigPropertiesTest {
     configDirectory.listFiles()!!.size shouldBe 8
   }
 
-  @Test
-  fun `sink cdc schema quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("cdcSchemaHandlers")
+  fun `sink cdc schema quick start config should be valid`(
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
+      expectedHandlerType: KClass<SinkStrategyHandler>,
+  ) {
     val properties = loadConfigProperties("sink-cdc-schema-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
+    }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSchemaHandler>()
-    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSchemaHandler>()
-    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSchemaHandler>()
+    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
-  @Test
-  fun `sink cdc source id quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("cdcSourceIdHandlers")
+  fun `sink cdc source id quick start config should be valid`(
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
+      expectedHandlerType: KClass<SinkStrategyHandler>,
+  ) {
     val properties = loadConfigProperties("sink-cdc-source-id-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
+    }
 
     config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"].shouldBeInstanceOf<CdcSourceIdHandler>()
-    config.topicHandlers["updates"].shouldBeInstanceOf<CdcSourceIdHandler>()
-    config.topicHandlers["deletes"].shouldBeInstanceOf<CdcSourceIdHandler>()
+    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
   @Test
@@ -176,5 +202,84 @@ class ConfigPropertiesTest {
       }
       BASE_CONFIG_PATH = properties.getProperty("quickstart.config.properties.path")
     }
+
+    @JvmStatic
+    fun cdcSourceIdHandlers(): List<Arguments> {
+      return listOf(
+          Arguments.argumentSet(
+              "5.26 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j5_26,
+              ApocCdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "2026.1 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j2026_1,
+              ApocCdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT availabe & Dynamic Labels not available",
+              true,
+              neo4j4_4,
+              CdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT not availabe & Dynamic Labels available",
+              false,
+              neo4j5_26,
+              CdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT & Dynamic Labels not available",
+              false,
+              neo4j4_4,
+              CdcSourceIdHandler::class,
+          ),
+      )
+    }
+
+    @JvmStatic
+    fun cdcSchemaHandlers(): List<Arguments> {
+      return listOf(
+          Arguments.argumentSet(
+              "5.26 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j5_26,
+              ApocCdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "2026.1 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j2026_1,
+              ApocCdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT availabe & Dynamic Labels not available",
+              true,
+              neo4j4_4,
+              CdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT not availabe & Dynamic Labels available",
+              false,
+              neo4j5_26,
+              CdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT & Dynamic Labels not available",
+              false,
+              neo4j4_4,
+              CdcSchemaHandler::class,
+          ),
+      )
+    }
+
+    private val neo4j4_4 =
+        Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5_26 =
+        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2026_1 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
   }
 }

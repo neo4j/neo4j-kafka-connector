@@ -396,8 +396,10 @@ class SourceConfiguration(originals: Map<*, *>) :
         .toSet()
   }
 
-  override fun txConfig(): TransactionConfig {
-    val original = super.txConfig()
+  override fun txConfig(
+      applyCustomMetadata: MutableMap<String, Any>.() -> Unit
+  ): TransactionConfig {
+    val original = super.txConfig(applyCustomMetadata)
     val new = TransactionConfig.builder()
 
     if (queryTimeout.isPositive()) {

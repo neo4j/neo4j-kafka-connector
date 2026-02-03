@@ -44,9 +44,12 @@ class SinkConfiguration : Neo4jConfiguration {
   constructor(
       originals: Map<String, *>,
       renderer: Renderer?,
+      neo4j: Neo4j? = null,
+      apocCypherDoItAvailable: Boolean? = null,
   ) : super(config(), originals, ConnectorType.SINK) {
     fixedRenderer = renderer
-
+    _neo4j = neo4j
+    this.apocCypherDoItAvailable = apocCypherDoItAvailable
     validateAllTopics()
   }
 
@@ -80,9 +83,35 @@ class SinkConfiguration : Neo4jConfiguration {
   val patternBindValueAs
     get(): String = getString(PATTERN_BIND_VALUE_AS)
 
-  val neo4j: Neo4j by lazy { Neo4jDetector.detect(driver) }
+  private var _neo4j: Neo4j? = null
 
-  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j) }
+  fun neo4j(): Neo4j {
+    if (_neo4j == null) {
+      _neo4j = Neo4jDetector.detect(driver)
+    }
+    return _neo4j!!
+  }
+
+  private var apocCypherDoItAvailable: Boolean? = null
+
+  fun isApocCypherDoItAvailable(): Boolean {
+    if (apocCypherDoItAvailable == null) {
+      apocCypherDoItAvailable =
+          this.driver.session(this.sessionConfig()).use { session ->
+            session.readTransaction { tx ->
+              tx.run(
+                      "SHOW PROCEDURES YIELD name WHERE name = 'apoc.cypher.doIt' RETURN count(*) > 0 AS available"
+                  )
+                  .single()
+                  .get("available")
+                  .asBoolean()
+            }
+          }
+    }
+    return apocCypherDoItAvailable!!
+  }
+
+  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j()) }
 
   val topicNames: List<String>
     get() =
@@ -117,6 +146,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val CYPHER_BIND_KEY_AS = "neo4j.cypher.bind-key-as"
     const val CYPHER_BIND_VALUE_AS = "neo4j.cypher.bind-value-as"
     const val CYPHER_BIND_VALUE_AS_EVENT = "neo4j.cypher.bind-value-as-event"
+    const val CDC_MAX_BATCHED_QUERIES = "neo4j.cdc.max-batched-queries"
     const val CDC_SOURCE_ID_TOPICS = "neo4j.cdc.source-id.topics"
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
     const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
@@ -139,6 +169,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val DEFAULT_BIND_KEY_ALIAS = "__key"
     const val DEFAULT_BIND_VALUE_ALIAS = "__value"
     const val DEFAULT_CYPHER_BIND_VALUE_AS_EVENT = true
+    const val DEFAULT_CDC_MAX_BATCHED_QUERIES = 50
     const val DEFAULT_SOURCE_ID_LABEL_NAME = "SourceEvent"
     const val DEFAULT_SOURCE_ID_PROPERTY_NAME = "sourceId"
 
@@ -221,6 +252,18 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(CDC_MAX_BATCHED_QUERIES, ConfigDef.Type.INT) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = DEFAULT_CDC_MAX_BATCHED_QUERIES
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIfNotEmpty(
+                          Predicate.isEqual<String>(CDC_SOURCE_ID_TOPICS)
+                              .or(Predicate.isEqual(CDC_SCHEMA_TOPICS))
+                      )
                 }
             )
             .define(

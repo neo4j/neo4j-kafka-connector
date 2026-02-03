@@ -209,10 +209,14 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     return config.build()
   }
 
-  open fun txConfig(): TransactionConfig =
+  open fun txConfig(
+      applyCustomMetadata: MutableMap<String, Any>.() -> Unit = {}
+  ): TransactionConfig =
       TransactionConfig.builder()
           .withMetadata(
               buildMap {
+                this.applyCustomMetadata()
+
                 this["app"] = connectorInformation(type.description)
 
                 val metadata = telemetryData()

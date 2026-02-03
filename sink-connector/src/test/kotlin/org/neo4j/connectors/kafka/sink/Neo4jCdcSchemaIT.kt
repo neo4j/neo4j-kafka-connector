@@ -963,7 +963,7 @@ abstract class Neo4jCdcSchemaIT {
                 Node("person2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
                 emptyList(),
                 EntityOperation.DELETE,
-                RelationshipState(mapOf("since" to LocalDate.of(1999, 1, 1))),
+                RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1), "type" to "friend")),
                 null,
             ),
         )

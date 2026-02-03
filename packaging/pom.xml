@@ -8,7 +8,7 @@
         <version>5.1.20-SNAPSHOT</version>
     </parent>
     <artifactId>packaging</artifactId>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
     <name>packaging</name>
     <description>Neo4j Connector for Kafka - Packaging</description>
     <properties>
@@ -75,14 +75,6 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>test-compile</id>
-                        <goals>
-                            <goal>test-compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

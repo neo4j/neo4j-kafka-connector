@@ -20,6 +20,7 @@ import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
+import org.jetbrains.annotations.VisibleForTesting
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -28,7 +29,7 @@ class Neo4jSinkTask : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
 
   private lateinit var settings: Map<String, String>
-  private lateinit var config: SinkConfiguration
+  @VisibleForTesting lateinit var config: SinkConfiguration
 
   override fun version(): String = VersionUtil.version(Neo4jSinkTask::class.java)
 
@@ -40,7 +41,10 @@ class Neo4jSinkTask : SinkTask() {
   }
 
   override fun stop() {
-    config.close()
+    // SinkConfiguration could have thrown, leaving config uninitialized
+    if (this::config.isInitialized) {
+      config.close()
+    }
   }
 
   override fun put(records: Collection<SinkRecord>?) {
@@ -75,7 +79,7 @@ class Neo4jSinkTask : SinkTask() {
             log.trace("before write transaction for group {}", index)
             session.writeTransaction(
                 { tx -> group.forEach { tx.run(it.query).consume() } },
-                config.txConfig(),
+                config.txConfig { this["batch-size"] = group.flatMap { it.messages }.size },
             )
             log.trace("after write transaction for group {}", index)
           }
