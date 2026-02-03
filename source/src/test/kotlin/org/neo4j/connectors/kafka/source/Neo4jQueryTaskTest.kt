@@ -40,6 +40,8 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
@@ -68,35 +70,37 @@ class Neo4jQueryTaskTest {
             .waitingFor(neo4jDatabase())
 
     private lateinit var driver: Driver
-    private lateinit var session: Session
 
     @BeforeAll
     @JvmStatic
     fun setUpContainer() {
       driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
-      session = driver.session()
     }
 
     @AfterAll
     @JvmStatic
     fun tearDownContainer() {
-      session.close()
       driver.close()
     }
   }
 
+  private lateinit var db: String
+  private lateinit var session: Session
   private lateinit var task: SourceTask
 
   @AfterEach
   fun after() {
-    driver.session(SessionConfig.forDatabase("system")).use {
-      it.run("CREATE OR REPLACE DATABASE neo4j WAIT").consume()
-    }
-    task.stop()
+    if (this::db.isInitialized) driver.dropDatabase(db)
+    if (this::session.isInitialized) session.close()
+    if (this::task.isInitialized) task.stop()
   }
 
   @BeforeEach
   fun before() {
+    db = "test-${UUID.randomUUID()}"
+    driver.createDatabase(db, withCdc = true)
+    session = driver.session(SessionConfig.forDatabase(db))
+
     task = Neo4jQueryTask()
     task.initialize(newTaskContextWithOffset(emptyMap()))
   }

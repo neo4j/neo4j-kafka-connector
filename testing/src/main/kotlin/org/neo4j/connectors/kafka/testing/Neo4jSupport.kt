@@ -20,6 +20,7 @@ import java.time.Duration
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Schema
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.GraphDatabase
@@ -38,36 +39,8 @@ class DatabaseAvailability(
   override fun waitUntilReady() {
     val boltUrl = "bolt://${waitStrategyTarget.host}:${waitStrategyTarget.getMappedPort(7687)}"
     GraphDatabase.driver(boltUrl, auth).use { driver ->
-      driver.session(SessionConfig.forDatabase("system")).use { systemSession ->
-        systemSession.writeTransaction { tx ->
-          databases.forEach { db -> tx.run("CREATE DATABASE $db IF NOT EXISTS") }
-        }
-
-        if (databases.isNotEmpty()) {
-          val deadline = System.currentTimeMillis() + startupTimeout.toMillis()
-
-          while (System.currentTimeMillis() < deadline) {
-            val databaseStatuses =
-                systemSession.readTransaction { tx ->
-                  tx.run("SHOW DATABASES")
-                      .list { db ->
-                        db.get("name").asString() to db.get("currentStatus").asString()
-                      }
-                      .toMap()
-                }
-
-            val notOnline = databaseStatuses.filter { it.key in databases && it.value != "online" }
-            if (notOnline.isEmpty()) {
-              return
-            }
-
-            Thread.sleep(1000)
-          }
-        }
-
-        throw RuntimeException(
-            "Databases $databases not ready before timeout ${startupTimeout.toMillis()} ms"
-        )
+      driver.session(SessionConfig.forDatabase("system")).use { session ->
+        databases.forEach { db -> session.createDatabase(db, timeout = startupTimeout) }
       }
     }
   }

@@ -16,28 +16,82 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import java.time.Duration
+import java.util.Locale
+import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
 
 object DatabaseSupport {
 
+  private val DEFAULT_TIMEOUT = Duration.ofMinutes(1)
   internal const val DEFAULT_DATABASE = "neo4j"
 
-  internal fun Session.createDatabase(database: String, withCdc: Boolean = false): Session {
+  fun Driver.createDatabase(
+      db: String,
+      withCdc: Boolean = false,
+      timeout: Duration = DEFAULT_TIMEOUT,
+  ) {
+    this.session(SessionConfig.forDatabase("system")).use { session ->
+      session.createDatabase(db, withCdc)
+    }
+  }
+
+  fun Driver.dropDatabase(db: String) {
+    this.session(SessionConfig.forDatabase("system")).use { session -> session.dropDatabase(db) }
+  }
+
+  fun Session.createDatabase(
+      database: String,
+      withCdc: Boolean = false,
+      timeout: Duration = DEFAULT_TIMEOUT,
+  ): Session {
     if (database == DEFAULT_DATABASE) {
       return this
     }
     if (withCdc) {
       this.run(
-          "CREATE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
+          "CREATE DATABASE \$db_name IF NOT EXISTS OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
           mapOf("db_name" to database),
       )
     } else {
-      this.run("CREATE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
+      this.run(
+          "CREATE DATABASE \$db_name IF NOT EXISTS WAIT 30 SECONDS",
+          mapOf("db_name" to database),
+      )
     }
+
+    this.waitForDatabaseToBeOnline(database, timeout)
+
     return this
   }
 
-  internal fun Session.dropDatabase(database: String): Session {
+  fun Session.waitForDatabaseToBeOnline(database: String, timeout: Duration = DEFAULT_TIMEOUT) {
+    val deadline = System.currentTimeMillis() + timeout.toMillis()
+
+    tailrec fun poll(): Boolean {
+      if (System.currentTimeMillis() >= deadline) return false
+
+      val status =
+          this.run(
+                  "SHOW DATABASES YIELD name, currentStatus WHERE name = \$db_name RETURN currentStatus",
+                  mapOf("db_name" to database),
+              )
+              .single()
+              ?.get("currentStatus")
+              ?.asString()
+              ?.lowercase(Locale.ROOT)
+
+      if (status == "online") return true
+
+      Thread.sleep(1000)
+      return poll()
+    }
+
+    require(poll()) { "Database $database did not become online within ${timeout.toMillis()} ms" }
+  }
+
+  fun Session.dropDatabase(database: String): Session {
     if (database == DEFAULT_DATABASE) {
       return this
     }

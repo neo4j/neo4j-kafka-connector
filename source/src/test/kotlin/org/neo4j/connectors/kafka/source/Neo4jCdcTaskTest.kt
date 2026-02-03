@@ -43,6 +43,8 @@ import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
@@ -90,6 +92,7 @@ class Neo4jCdcTaskTest {
 
   @AfterEach
   fun after() {
+    if (this::db.isInitialized) driver.dropDatabase(db)
     if (this::session.isInitialized) session.close()
     if (this::task.isInitialized) task.stop()
   }
@@ -99,13 +102,7 @@ class Neo4jCdcTaskTest {
     Assumptions.assumeTrue(canIUse(Dbms.changeDataCapture()).withNeo4j(neo4j))
 
     db = "test-${UUID.randomUUID()}"
-    driver.session(SessionConfig.forDatabase("system")).use {
-      it.run(
-              "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
-              mapOf("db" to db, "mode" to "FULL"),
-          )
-          .consume()
-    }
+    driver.createDatabase(db, withCdc = true)
     session = driver.session(SessionConfig.forDatabase(db))
 
     task = Neo4jCdcTask()
