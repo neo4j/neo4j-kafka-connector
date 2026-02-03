@@ -65,9 +65,7 @@ data class CdcNodeData(
                 .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.matchProperties.$it" }
 
     return when (operation) {
-      EntityOperation.CREATE -> {
-        "CREATE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels)"
-      }
+      EntityOperation.CREATE,
       EntityOperation.UPDATE -> {
         "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels) REMOVE n:\$(${'$'}$EVENT.removeLabels)"
       }

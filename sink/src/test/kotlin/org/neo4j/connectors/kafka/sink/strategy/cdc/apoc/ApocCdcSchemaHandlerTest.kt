@@ -163,7 +163,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "CREATE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels)",
+                                            "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -223,7 +223,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "CREATE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels)",
+                                            "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1244,7 +1244,7 @@ class ApocCdcSchemaHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "CREATE (n:Person {name: \$e.matchProperties.name}) SET n += \$e.setProperties SET n:\$(\$e.addLabels)",
+                                            "MERGE (n:Person {name: \$e.matchProperties.name}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
