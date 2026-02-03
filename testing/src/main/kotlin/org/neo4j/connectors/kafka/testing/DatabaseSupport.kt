@@ -33,7 +33,7 @@ object DatabaseSupport {
       timeout: Duration = DEFAULT_TIMEOUT,
   ) {
     this.session(SessionConfig.forDatabase("system")).use { session ->
-      session.createDatabase(db, withCdc)
+      session.createDatabase(db, withCdc, timeout)
     }
   }
 
@@ -41,7 +41,7 @@ object DatabaseSupport {
     this.session(SessionConfig.forDatabase("system")).use { session -> session.dropDatabase(db) }
   }
 
-  fun Session.createDatabase(
+  private fun Session.createDatabase(
       database: String,
       withCdc: Boolean = false,
       timeout: Duration = DEFAULT_TIMEOUT,
@@ -66,7 +66,10 @@ object DatabaseSupport {
     return this
   }
 
-  fun Session.waitForDatabaseToBeOnline(database: String, timeout: Duration = DEFAULT_TIMEOUT) {
+  private fun Session.waitForDatabaseToBeOnline(
+      database: String,
+      timeout: Duration = DEFAULT_TIMEOUT,
+  ) {
     val deadline = System.currentTimeMillis() + timeout.toMillis()
 
     tailrec fun poll(): Boolean {
@@ -91,7 +94,7 @@ object DatabaseSupport {
     require(poll()) { "Database $database did not become online within ${timeout.toMillis()} ms" }
   }
 
-  fun Session.dropDatabase(database: String): Session {
+  private fun Session.dropDatabase(database: String): Session {
     if (database == DEFAULT_DATABASE) {
       return this
     }

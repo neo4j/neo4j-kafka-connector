@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.any
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
@@ -40,8 +40,11 @@ import org.neo4j.connectors.kafka.testing.JUnitSupport.extensionContextFor
 import org.neo4j.connectors.kafka.testing.JUnitSupport.parameterContextForType
 import org.neo4j.connectors.kafka.testing.KafkaConnectServer
 import org.neo4j.driver.Driver
+import org.neo4j.driver.Record
+import org.neo4j.driver.Result
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.Values
 
 class Neo4jSinkExtensionTest {
 
@@ -78,12 +81,7 @@ class Neo4jSinkExtensionTest {
         }
     )
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, _) = setupDetectableDriver()
     val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -109,12 +107,7 @@ class Neo4jSinkExtensionTest {
         }
     )
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, _) = setupDetectableDriver()
     val extension = Neo4jSinkExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -145,12 +138,7 @@ class Neo4jSinkExtensionTest {
 
   @Test
   fun `resolves Session parameter`() {
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, session) = setupDetectableDriver()
     val extension = Neo4jSinkExtension(driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::validMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -165,14 +153,8 @@ class Neo4jSinkExtensionTest {
   @Test
   fun `verifies connectivity if driver is initialized before each test`() {
     kafkaConnectServer.start()
-    val session = mock<Session>()
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-          on { verifyConnectivity() } doAnswer {}
-        }
+    val (driver, _) = setupDetectableDriver()
     val extension =
         Neo4jSinkExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
@@ -187,13 +169,9 @@ class Neo4jSinkExtensionTest {
   @Test
   fun `closes Driver and Session after each test`() {
     kafkaConnectServer.start()
-    val session = mock<Session>()
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, session) = setupDetectableDriver()
+
     val extension =
         Neo4jSinkExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
@@ -362,4 +340,31 @@ class Neo4jSinkExtensionTest {
   )
   @Suppress("UNUSED")
   fun duplicateTopicMethod() {}
+
+  private fun setupDetectableDriver(): Pair<Driver, Session> {
+    val versionRecord =
+        mock<Record> {
+          on { get("version") } doReturn Values.value("5.26.0")
+          on { get("edition") } doReturn Values.value("enterprise")
+        }
+    val versionResult = mock<org.neo4j.driver.Result> { on { single() } doReturn versionRecord }
+
+    val statusRecord = mock<Record> { on { get("currentStatus") } doReturn Values.value("online") }
+    val statusResult = mock<Result> { on { single() } doReturn statusRecord }
+
+    val session =
+        mock<Session> {
+          on { run(ArgumentMatchers.contains("dbms.components"), any<Map<String, Any>>()) } doReturn
+              versionResult
+          on {
+            run(ArgumentMatchers.contains("RETURN currentStatus"), any<Map<String, Any>>())
+          } doReturn statusResult
+        }
+    val driver =
+        mock<Driver> {
+          on { session() } doReturn session
+          on { session(any(SessionConfig::class.java)) } doReturn session
+        }
+    return Pair(driver, session)
+  }
 }

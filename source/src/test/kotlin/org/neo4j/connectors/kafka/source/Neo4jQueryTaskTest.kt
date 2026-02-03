@@ -143,6 +143,7 @@ class Neo4jQueryTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.DATABASE to db,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -174,6 +175,7 @@ class Neo4jQueryTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.DATABASE to db,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
@@ -211,6 +213,7 @@ class Neo4jQueryTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.DATABASE to db,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
@@ -257,6 +260,7 @@ class Neo4jQueryTaskTest {
     task.start(
         buildMap {
           put(Neo4jConfiguration.URI, neo4j.boltUrl)
+          put(Neo4jConfiguration.DATABASE, db)
           put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
           put(SourceConfiguration.STRATEGY, SourceType.QUERY.toString())
           put(SourceConfiguration.QUERY_TOPIC, UUID.randomUUID().toString())
@@ -292,6 +296,7 @@ class Neo4jQueryTaskTest {
         task.start(
             mapOf(
                 Neo4jConfiguration.URI to neo4j.boltUrl,
+                Neo4jConfiguration.DATABASE to db,
                 Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
                 SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
                 SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -325,6 +330,7 @@ class Neo4jQueryTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
+            Neo4jConfiguration.DATABASE to db,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
@@ -365,6 +371,7 @@ class Neo4jQueryTaskTest {
         task.start(
             mapOf(
                 Neo4jConfiguration.URI to neo4j.boltUrl,
+                Neo4jConfiguration.DATABASE to db,
                 Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
                 SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
                 SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
@@ -384,6 +391,7 @@ class Neo4jQueryTaskTest {
   fun `should support null values returned from query`() = runTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[Neo4jConfiguration.DATABASE] = db
     props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "1s"
     props[SourceConfiguration.QUERY] =
@@ -432,6 +440,7 @@ class Neo4jQueryTaskTest {
   fun `should source data with complex type with custom QUERY`() = runTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[Neo4jConfiguration.DATABASE] = db
     props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY] =
@@ -484,6 +493,7 @@ class Neo4jQueryTaskTest {
   fun `should source data with complex type as JSON with custom QUERY`() = runTest {
     val props = mutableMapOf<String, String>()
     props[Neo4jConfiguration.URI] = neo4j.boltUrl
+    props[Neo4jConfiguration.DATABASE] = db
     props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY_FORCE_MAPS_AS_STRUCT] = "false"
@@ -539,6 +549,7 @@ class Neo4jQueryTaskTest {
     assertFailsWith(ClientException::class) {
       val props = mutableMapOf<String, String>()
       props[Neo4jConfiguration.URI] = neo4j.boltUrl
+      props[Neo4jConfiguration.DATABASE] = db
       props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
       props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
       props[SourceConfiguration.QUERY] = "WRONG QUERY".trimMargin()

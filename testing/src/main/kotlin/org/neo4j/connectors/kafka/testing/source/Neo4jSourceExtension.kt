@@ -213,15 +213,13 @@ internal class Neo4jSourceExtension(
     source.unregister()
     if (this::driver.isInitialized) {
       if (!testFailed) {
-        driver.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
+        driver.dropDatabase(neo4jDatabase)
       }
       session.close()
       driver.close()
     } else {
       if (!testFailed) {
-        createDriver().use { dr ->
-          dr.session(SessionConfig.forDatabase("system")).use { it.dropDatabase(neo4jDatabase) }
-        }
+        createDriver().use { dr -> dr.dropDatabase(neo4jDatabase) }
       }
     }
   }
@@ -255,12 +253,10 @@ internal class Neo4jSourceExtension(
         "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",
     )
     createDriver().use { driver ->
-      driver.session(SessionConfig.forDatabase("system")).use { session ->
-        session.createDatabase(
-            neo4jDatabase,
-            withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
-        )
-      }
+      driver.createDatabase(
+          neo4jDatabase,
+          withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
+      )
 
       // want to make sure that CDC is functional before running the test
       if (sourceAnnotation.strategy == SourceStrategy.CDC) {

@@ -25,7 +25,6 @@ import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import org.neo4j.driver.SessionConfig
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy
 import org.testcontainers.containers.wait.strategy.WaitAllStrategy
@@ -39,9 +38,7 @@ class DatabaseAvailability(
   override fun waitUntilReady() {
     val boltUrl = "bolt://${waitStrategyTarget.host}:${waitStrategyTarget.getMappedPort(7687)}"
     GraphDatabase.driver(boltUrl, auth).use { driver ->
-      driver.session(SessionConfig.forDatabase("system")).use { session ->
-        databases.forEach { db -> session.createDatabase(db, timeout = startupTimeout) }
-      }
+      databases.forEach { db -> driver.createDatabase(db, timeout = startupTimeout) }
     }
   }
 }

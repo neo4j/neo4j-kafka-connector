@@ -259,14 +259,12 @@ internal class Neo4jSinkExtension(
   override fun afterEach(extensionContent: ExtensionContext?) {
     if (driver != null) {
       if (sinkAnnotation.dropDatabase) {
-        driver!!.session(SessionConfig.forDatabase("system")).use {
-          it.dropDatabase(neo4jDatabase!!)
-        }
+        driver!!.dropDatabase(neo4jDatabase!!)
         session?.close()
       }
       driver!!.close()
     } else if (sinkAnnotation.dropDatabase) {
-      createDriver().use { dr -> dr.session().use { it.dropDatabase(neo4jDatabase!!) } }
+      createDriver().use { dr -> dr.dropDatabase(neo4jDatabase!!) }
     }
     sink.unregister()
 
@@ -325,9 +323,7 @@ internal class Neo4jSinkExtension(
     driver = driver ?: createDriver()
     driver?.apply {
       this.verifyConnectivity()
-      this.session(SessionConfig.forDatabase("system")).use { session ->
-        session.createDatabase(neo4jDatabase!!)
-      }
+      this.createDatabase(neo4jDatabase!!)
     }
   }
 
