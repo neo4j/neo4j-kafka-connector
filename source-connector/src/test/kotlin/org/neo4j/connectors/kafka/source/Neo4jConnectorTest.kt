@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.source
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSingleElement
 import io.kotest.matchers.shouldBe
+import org.apache.kafka.connect.source.ExactlyOnceSupport
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 
@@ -243,5 +244,19 @@ class Neo4jConnectorTest {
     )
 
     connector.taskClass() shouldBe Neo4jCdcTask::class.java
+  }
+
+  @Test
+  fun `should return correct exactlyOnceSupport based on strategy`() {
+    val connector = Neo4jConnector()
+
+    connector.exactlyOnceSupport(mapOf(SourceConfiguration.STRATEGY to "CDC")) shouldBe
+        ExactlyOnceSupport.SUPPORTED
+
+    connector.exactlyOnceSupport(mapOf(SourceConfiguration.STRATEGY to "QUERY")) shouldBe
+        ExactlyOnceSupport.UNSUPPORTED
+
+    connector.exactlyOnceSupport(emptyMap()) shouldBe null
+    connector.exactlyOnceSupport(null) shouldBe null
   }
 }
