@@ -30,9 +30,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
-import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -93,7 +94,7 @@ class ApocCdcSourceIdHandlerTaskIT {
   fun before() {
     // TODO: we have to properly deal with unsupported Cypher syntax, i.e. FINISH
     // This is just a temporary measure to skip the tests for 4.4 or older versions of 5.x
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
+    Assumptions.assumeTrue { canIUse(Cypher.explicitCypherSelection()).withNeo4j(neo4j) }
 
     db = "test-${UUID.randomUUID()}"
     driver.session(SessionConfig.forDatabase("system")).use {

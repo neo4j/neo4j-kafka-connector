@@ -24,10 +24,7 @@ import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import kotlin.time.Duration.Companion.seconds
-import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
-import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -59,10 +56,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should create node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     producer.publish(
         newEvent(
             0,
@@ -100,10 +94,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should update node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     session
         .run(
             "CREATE (n:SourceEvent:Person) SET n = ${'$'}props",
@@ -164,10 +155,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should delete node`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     session
         .run(
             "CREATE (n:SourceEvent) SET n = ${'$'}props",
@@ -208,10 +196,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should create relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     session
         .run(
             """
@@ -273,10 +258,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should update relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     session
         .run(
             """
@@ -345,10 +327,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should delete relationship`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     session
         .run(
             "CREATE (n1:SourceEvent:Person) SET n1 = ${'$'}person1 " +
@@ -406,10 +385,7 @@ abstract class Neo4jCdcSourceIdIT {
   fun `should sync continuous changes`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
-      neo4j: Neo4j,
   ) = runTest {
-    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 19, 0) }
-
     producer.publish(
         newEvent(
             0,
