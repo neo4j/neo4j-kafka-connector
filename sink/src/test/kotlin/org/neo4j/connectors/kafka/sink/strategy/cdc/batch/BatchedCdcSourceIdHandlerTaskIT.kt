@@ -40,6 +40,7 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -60,6 +61,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withExposedPorts(7687)
             .withoutAuthentication()
+            .waitingFor(neo4jDatabase())
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j

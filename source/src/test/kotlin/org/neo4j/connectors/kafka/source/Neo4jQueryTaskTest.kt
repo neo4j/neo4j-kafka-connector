@@ -41,6 +41,7 @@ import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
+import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
@@ -64,6 +65,7 @@ class Neo4jQueryTaskTest {
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withExposedPorts(7687)
             .withoutAuthentication()
+            .waitingFor(neo4jDatabase())
 
     private lateinit var driver: Driver
     private lateinit var session: Session

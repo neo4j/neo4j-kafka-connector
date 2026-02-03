@@ -16,11 +16,69 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import java.time.Duration
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Schema
+import org.neo4j.driver.AuthToken
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import org.neo4j.driver.SessionConfig
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy
+import org.testcontainers.containers.wait.strategy.WaitAllStrategy
+import org.testcontainers.containers.wait.strategy.WaitStrategy
 import org.testcontainers.utility.DockerImageName
+
+class DatabaseAvailability(
+    private val auth: AuthToken = AuthTokens.none(),
+    private val databases: List<String> = listOf("neo4j"),
+) : AbstractWaitStrategy() {
+  override fun waitUntilReady() {
+    val boltUrl = "bolt://${waitStrategyTarget.host}:${waitStrategyTarget.getMappedPort(7687)}"
+    GraphDatabase.driver(boltUrl, auth).use { driver ->
+      driver.session(SessionConfig.forDatabase("system")).use { systemSession ->
+        systemSession.writeTransaction { tx ->
+          databases.forEach { db -> tx.run("CREATE DATABASE $db IF NOT EXISTS") }
+        }
+
+        if (databases.isNotEmpty()) {
+          val deadline = System.currentTimeMillis() + startupTimeout.toMillis()
+
+          while (System.currentTimeMillis() < deadline) {
+            val databaseStatuses =
+                systemSession.readTransaction { tx ->
+                  tx.run("SHOW DATABASES")
+                      .list { db ->
+                        db.get("name").asString() to db.get("currentStatus").asString()
+                      }
+                      .toMap()
+                }
+
+            val notOnline = databaseStatuses.filter { it.key in databases && it.value != "online" }
+            if (notOnline.isEmpty()) {
+              return
+            }
+
+            Thread.sleep(1000)
+          }
+        }
+
+        throw RuntimeException(
+            "Databases $databases not ready before timeout ${startupTimeout.toMillis()} ms"
+        )
+      }
+    }
+  }
+}
+
+fun neo4jDatabase(auth: AuthToken = AuthTokens.none()): WaitStrategy =
+    WaitAllStrategy()
+        .withStrategy(Neo4jContainer.WAIT_FOR_BOLT)
+        .withStrategy(
+            DatabaseAvailability(auth, listOf("neo4j")).withStartupTimeout(Duration.ofMinutes(2))
+        )
 
 fun neo4jImage(): DockerImageName =
     System.getenv("NEO4J_TEST_IMAGE")
