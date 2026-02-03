@@ -98,7 +98,7 @@ class Neo4jQueryTaskTest {
   @BeforeEach
   fun before() {
     db = "test-${UUID.randomUUID()}"
-    driver.createDatabase(db, withCdc = true)
+    driver.createDatabase(db)
     session = driver.session(SessionConfig.forDatabase(db))
 
     task = Neo4jQueryTask()
