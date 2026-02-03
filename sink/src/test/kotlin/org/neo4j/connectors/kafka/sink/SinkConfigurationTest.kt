@@ -306,14 +306,44 @@ class SinkConfigurationTest {
   }
 
   companion object {
-    private val neo4j5_23 =
-        Neo4j(Neo4jVersion(5, 23), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5_26 =
+        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j4_4 =
+        Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
     @JvmStatic
     fun cdcHandlersTypes() =
         listOf(
-            Arguments.argumentSet("APOC DoIt available", true, neo4j5_23, ApocCdcHandler::class),
-            Arguments.argumentSet("APOC DoIt not available", false, null, CdcHandler::class),
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels not available",
+                false,
+                neo4j4_4,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt available && Dynamic Labels not available",
+                true,
+                neo4j4_4,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt not available && Dynamic Labels available",
+                false,
+                neo4j5_26,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels available",
+                true,
+                neo4j5_26,
+                ApocCdcHandler::class,
+            ),
+            Arguments.argumentSet(
+                "APOC DoIt && Dynamic Labels not available",
+                false,
+                null,
+                CdcHandler::class,
+            ),
         )
   }
 }

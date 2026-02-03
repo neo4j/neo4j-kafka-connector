@@ -79,7 +79,7 @@ class ConfigPropertiesTest {
   }
 
   @ParameterizedTest
-  @MethodSource("cdcSourceHandlers")
+  @MethodSource("cdcSourceIdHandlers")
   fun `sink cdc source id quick start config should be valid`(
       apocDoITAvailable: Boolean,
       neo4j: Neo4j?,
@@ -204,15 +204,38 @@ class ConfigPropertiesTest {
     }
 
     @JvmStatic
-    fun cdcSourceHandlers(): List<Arguments> {
+    fun cdcSourceIdHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet(
-              "APOC DoIT available",
+              "5.26 & APOC DoIT & Dynamic Labels available",
               true,
-              neo4j5_23,
+              neo4j5_26,
               ApocCdcSourceIdHandler::class,
           ),
-          Arguments.argumentSet("APOC DoIT not available", false, null, CdcSourceIdHandler::class),
+          Arguments.argumentSet(
+              "2026.1 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j2026_1,
+              ApocCdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT availabe & Dynamic Labels not available",
+              true,
+              neo4j4_4,
+              CdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT not availabe & Dynamic Labels available",
+              false,
+              neo4j5_26,
+              CdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT & Dynamic Labels not available",
+              false,
+              neo4j4_4,
+              CdcSourceIdHandler::class,
+          ),
       )
     }
 
@@ -220,16 +243,43 @@ class ConfigPropertiesTest {
     fun cdcSchemaHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet(
-              "APOC DoIT available",
+              "5.26 & APOC DoIT & Dynamic Labels available",
               true,
-              neo4j5_23,
+              neo4j5_26,
               ApocCdcSchemaHandler::class,
           ),
-          Arguments.argumentSet("APOC DoIT not available", false, null, CdcSchemaHandler::class),
+          Arguments.argumentSet(
+              "2026.1 & APOC DoIT & Dynamic Labels available",
+              true,
+              neo4j2026_1,
+              ApocCdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT availabe & Dynamic Labels not available",
+              true,
+              neo4j4_4,
+              CdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT not availabe & Dynamic Labels available",
+              false,
+              neo4j5_26,
+              CdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "APOC DoIT & Dynamic Labels not available",
+              false,
+              neo4j4_4,
+              CdcSchemaHandler::class,
+          ),
       )
     }
 
-    private val neo4j5_23 =
-        Neo4j(Neo4jVersion(5, 23), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j4_4 =
+        Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j5_26 =
+        Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2026_1 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
   }
 }

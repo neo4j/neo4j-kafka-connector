@@ -24,7 +24,7 @@ import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assumptions
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,6 +44,7 @@ import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
+import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -58,7 +59,7 @@ class ApocCdcSchemaHandlerTaskIT {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
-        Neo4jContainer("neo4j:5-enterprise")
+        Neo4jContainer(neo4jImage())
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withPlugins("apoc")
             .withExposedPorts(7687)
@@ -93,9 +94,10 @@ class ApocCdcSchemaHandlerTaskIT {
 
   @BeforeEach
   fun before() {
-    // TODO: we have to properly deal with unsupported Cypher syntax, i.e. FINISH
-    // This is just a temporary measure to skip the tests for 4.4 or older versions of 5.x
-    Assumptions.assumeTrue { canIUse(Cypher.explicitCypherSelection()).withNeo4j(neo4j) }
+    assumeTrue {
+      canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j) &&
+          canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
+    }
 
     db = "test-${UUID.randomUUID()}"
     driver.session(SessionConfig.forDatabase("system")).use {

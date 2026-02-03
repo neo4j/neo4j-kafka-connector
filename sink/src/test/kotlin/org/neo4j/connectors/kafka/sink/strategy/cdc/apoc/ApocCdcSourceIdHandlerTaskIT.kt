@@ -24,7 +24,7 @@ import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assumptions
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -92,9 +92,10 @@ class ApocCdcSourceIdHandlerTaskIT {
 
   @BeforeEach
   fun before() {
-    // TODO: we have to properly deal with unsupported Cypher syntax, i.e. FINISH
-    // This is just a temporary measure to skip the tests for 4.4 or older versions of 5.x
-    Assumptions.assumeTrue { canIUse(Cypher.explicitCypherSelection()).withNeo4j(neo4j) }
+    assumeTrue {
+      canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j) &&
+          canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
+    }
 
     db = "test-${UUID.randomUUID()}"
     driver.session(SessionConfig.forDatabase("system")).use {

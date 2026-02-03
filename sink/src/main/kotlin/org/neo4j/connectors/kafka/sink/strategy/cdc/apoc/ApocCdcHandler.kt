@@ -23,6 +23,7 @@ import kotlin.sequences.toList
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
@@ -90,13 +91,15 @@ abstract class ApocCdcHandler(private val neo4j: Neo4j, private val batchSize: I
   }
 
   private fun batchedStatement(events: List<Map<String, Any>>): Query {
+    val termination = if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN 1"
+
     val query = buildString {
       append("UNWIND \$events AS $EVENT ")
       if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
           append("CALL ($EVENT) { ")
       else append("CALL { WITH $EVENT ")
-      append("CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value FINISH ")
-      append("} FINISH")
+      append("CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination ")
+      append("} $termination")
     }
 
     return Query(query, buildMap { put("events", events) })
