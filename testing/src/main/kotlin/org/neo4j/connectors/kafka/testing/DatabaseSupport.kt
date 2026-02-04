@@ -48,11 +48,13 @@ object DatabaseSupport {
   ): Session {
     if (withCdc) {
       this.run(
-          "CREATE OR REPLACE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
-          mapOf("db_name" to database),
-      )
+              "CREATE OR REPLACE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
+              mapOf("db_name" to database),
+          )
+          .consume()
     } else {
       this.run("CREATE OR REPLACE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
+          .consume()
     }
 
     this.waitForDatabaseToBeOnline(database, timeout)
@@ -92,7 +94,7 @@ object DatabaseSupport {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run("DROP DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
+    this.run("DROP DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database)).consume()
     return this
   }
 }
