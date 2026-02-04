@@ -19,8 +19,10 @@ package org.neo4j.connectors.kafka.source
 import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
+import org.apache.kafka.connect.source.ExactlyOnceSupport
 import org.apache.kafka.connect.source.SourceConnector
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.source.SourceConfiguration.Companion.STRATEGY
 
 class Neo4jConnector : SourceConnector() {
   private lateinit var props: Map<String, String>
@@ -55,5 +57,14 @@ class Neo4jConnector : SourceConnector() {
     SourceConfiguration.validate(result, originals)
 
     return result
+  }
+
+  override fun exactlyOnceSupport(connectorConfig: Map<String?, String?>?): ExactlyOnceSupport? {
+    val strategy = connectorConfig?.get(STRATEGY)?.let { SourceType.valueOf(it) }
+    return when (strategy) {
+      SourceType.CDC -> ExactlyOnceSupport.SUPPORTED
+      SourceType.QUERY -> ExactlyOnceSupport.UNSUPPORTED
+      else -> super.exactlyOnceSupport(connectorConfig)
+    }
   }
 }
