@@ -46,19 +46,13 @@ object DatabaseSupport {
       withCdc: Boolean = false,
       timeout: Duration = DEFAULT_TIMEOUT,
   ): Session {
-    if (database == DEFAULT_DATABASE) {
-      return this
-    }
     if (withCdc) {
       this.run(
-          "CREATE DATABASE \$db_name IF NOT EXISTS OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
+          "CREATE OR REPLACE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
           mapOf("db_name" to database),
       )
     } else {
-      this.run(
-          "CREATE DATABASE \$db_name IF NOT EXISTS WAIT 30 SECONDS",
-          mapOf("db_name" to database),
-      )
+      this.run("CREATE OR REPLACE DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database))
     }
 
     this.waitForDatabaseToBeOnline(database, timeout)
