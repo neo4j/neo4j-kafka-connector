@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.any
+import org.mockito.internal.verification.VerificationModeFactory.atLeastOnce
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
@@ -163,7 +164,7 @@ class Neo4jSinkExtensionTest {
 
     extension.beforeEach(extensionContext)
 
-    verify(driver).verifyConnectivity()
+    verify(driver, atLeastOnce()).verifyConnectivity()
   }
 
   @Test

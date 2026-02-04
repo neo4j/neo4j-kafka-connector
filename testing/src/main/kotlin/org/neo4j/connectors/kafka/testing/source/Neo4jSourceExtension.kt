@@ -16,13 +16,9 @@
  */
 package org.neo4j.connectors.kafka.testing.source
 
-import io.kotest.assertions.nondeterministic.eventually
-import io.kotest.matchers.shouldBe
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.KProperty1
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -56,11 +52,37 @@ import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+internal class SourceAnnotationResolvers(envAccessor: (String) -> String?) {
+  val brokerExternalHost = AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
+
+  val schemaControlRegistryUri =
+      AnnotationValueResolver(Neo4jSource::schemaControlRegistryUri, envAccessor)
+
+  val schemaControlRegistryExternalUri =
+      AnnotationValueResolver(Neo4jSource::schemaControlRegistryExternalUri, envAccessor)
+
+  val kafkaConnectExternalUri =
+      AnnotationValueResolver(Neo4jSource::kafkaConnectExternalUri, envAccessor)
+
+  val neo4jUri = AnnotationValueResolver(Neo4jSource::neo4jUri, envAccessor)
+
+  val neo4jExternalUri = AnnotationValueResolver(Neo4jSource::neo4jExternalUri, envAccessor)
+
+  val neo4jUser = AnnotationValueResolver(Neo4jSource::neo4jUser, envAccessor)
+
+  val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
+
+  val keyValueConverterResolver = KeyValueConverterResolver()
+
+  val mandatorySettings =
+      listOf(brokerExternalHost, schemaControlRegistryUri, neo4jUri, neo4jUser, neo4jPassword)
+}
+
 internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
-    consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray> =
+    private val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray> =
         { properties, topic ->
           ConsumerResolver.getSubscribedConsumer(properties, topic)
         },
@@ -71,7 +93,9 @@ internal class Neo4jSourceExtension(
     ParameterResolver,
     TestExecutionExceptionHandler {
 
-  private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
+  companion object {
+    private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
+  }
 
   private val paramResolvers =
       ParameterResolvers(
@@ -83,63 +107,109 @@ internal class Neo4jSourceExtension(
           )
       )
 
-  private lateinit var sourceAnnotation: Neo4jSource
+  private val annotationResolvers = SourceAnnotationResolvers(envAccessor)
 
-  private lateinit var source: Neo4jSourceRegistration
+  private data class TestState(
+      val driverFactory: (String, AuthToken) -> Driver,
+      val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray>,
+      val sourceAnnotation: Neo4jSource,
+      val resolvers: SourceAnnotationResolvers,
+      private var driver: Driver? = null,
+      private var session: Session? = null,
+      var source: Neo4jSourceRegistration? = null,
+      var testFailed: Boolean = false,
+  ) : AutoCloseable {
+    val topicRegistry = TopicRegistry()
+    val neo4jDatabase =
+        sourceAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
 
-  private var driver: Driver? = null
+    fun driver(): Driver {
+      if (driver != null) {
+        return driver!!
+      }
 
-  private var session: Session? = null
+      val uri = resolvers.neo4jExternalUri.resolve(sourceAnnotation)
+      val username = resolvers.neo4jUser.resolve(sourceAnnotation)
+      val password = resolvers.neo4jPassword.resolve(sourceAnnotation)
+      driver =
+          driverFactory(uri, AuthTokens.basic(username, password)).also {
+            it.verifyConnectivity()
+            it.createDatabase(
+                neo4jDatabase,
+                withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
+            )
+          }
+      return driver!!
+    }
 
-  private var neo4jDatabase: String? = null
+    fun session(): Session {
+      if (session != null) {
+        return session!!
+      }
 
-  private var testFailed: Boolean = false
+      session = driver().session(SessionConfig.forDatabase(neo4jDatabase))
+      return session!!
+    }
 
-  private val brokerExternalHost =
-      AnnotationValueResolver(Neo4jSource::brokerExternalHost, envAccessor)
-
-  private val schemaRegistryUri =
-      AnnotationValueResolver(Neo4jSource::schemaControlRegistryUri, envAccessor)
-
-  private val schemaControlRegistryExternalUri =
-      AnnotationValueResolver(Neo4jSource::schemaControlRegistryExternalUri, envAccessor)
-
-  private val kafkaConnectExternalUri =
-      AnnotationValueResolver(Neo4jSource::kafkaConnectExternalUri, envAccessor)
-
-  private val neo4jUri = AnnotationValueResolver(Neo4jSource::neo4jUri, envAccessor)
-
-  private val neo4jExternalUri = AnnotationValueResolver(Neo4jSource::neo4jExternalUri, envAccessor)
-
-  private val neo4jUser = AnnotationValueResolver(Neo4jSource::neo4jUser, envAccessor)
-
-  private val neo4jPassword = AnnotationValueResolver(Neo4jSource::neo4jPassword, envAccessor)
-
-  private val mandatorySettings =
-      listOf(brokerExternalHost, schemaRegistryUri, neo4jUri, neo4jUser, neo4jPassword)
-
-  private val topicRegistry = TopicRegistry()
-
-  private val keyValueConverterResolver = KeyValueConverterResolver()
-
-  private val consumerResolver =
-      ConsumerResolver(
-          keyValueConverterResolver,
+    fun consumerResolver(): ConsumerResolver {
+      return ConsumerResolver(
+          resolvers.keyValueConverterResolver,
           topicRegistry,
-          brokerExternalHostProvider = { brokerExternalHost.resolve(sourceAnnotation) },
+          brokerExternalHostProvider = { resolvers.brokerExternalHost.resolve(sourceAnnotation) },
           schemaControlRegistryExternalUriProvider = {
-            schemaControlRegistryExternalUri.resolve(sourceAnnotation)
+            resolvers.schemaControlRegistryExternalUri.resolve(sourceAnnotation)
           },
           consumerFactory,
       )
+    }
 
-  override fun evaluateExecutionCondition(context: ExtensionContext?): ConditionEvaluationResult {
-    val metadata =
-        AnnotationSupport.findAnnotation<Neo4jSource>(context)
-            ?: throw ExtensionConfigurationException("@Neo4jSource not found")
+    override fun close() {
+      source?.unregister()
+      session?.close()
+      if (!testFailed) {
+        driver?.dropDatabase(neo4jDatabase)
+      }
+      driver?.close()
+
+      source = null
+      session = null
+      driver = null
+    }
+  }
+
+  private fun getStore(context: ExtensionContext): ExtensionContext.Store {
+    return context.getStore(
+        ExtensionContext.Namespace.create(
+            javaClass,
+            context.requiredTestClass,
+            context.requiredTestMethod,
+        )
+    )
+  }
+
+  private fun getState(context: ExtensionContext): TestState {
+    return getStore(context)
+        .getOrComputeIfAbsent(
+            "state",
+            {
+              TestState(
+                  driverFactory,
+                  consumerFactory,
+                  AnnotationSupport.findAnnotation<Neo4jSource>(context)
+                      ?: throw ExtensionConfigurationException("@Neo4jSource not found"),
+                  annotationResolvers,
+              )
+            },
+            TestState::class.java,
+        )
+  }
+
+  override fun evaluateExecutionCondition(context: ExtensionContext): ConditionEvaluationResult {
+    val state = getState(context)
+    val metadata = state.sourceAnnotation
 
     val errors = mutableListOf<String>()
-    mandatorySettings.forEach {
+    annotationResolvers.mandatorySettings.forEach {
       if (!it.isValid(metadata)) {
         errors.add(it.errorMessage())
       }
@@ -150,11 +220,9 @@ internal class Neo4jSourceExtension(
       )
     }
 
-    this.sourceAnnotation = metadata
-
     if (metadata.strategy == SourceStrategy.CDC) {
-      createDriver().use {
-        var version = Neo4jDetector.detect(it)
+      state.driver().also {
+        val version = Neo4jDetector.detect(it)
         if (!canIUse(Dbms.changeDataCapture()).withNeo4j(version)) {
           return ConditionEvaluationResult.disabled(
               "CDC is not available with this version of Neo4j: $version"
@@ -166,152 +234,127 @@ internal class Neo4jSourceExtension(
     return ConditionEvaluationResult.enabled("@Neo4jSource and environment properly configured")
   }
 
-  override fun beforeEach(context: ExtensionContext?) {
-    ensureDatabase(context)
+  override fun beforeEach(context: ExtensionContext) {
+    val state = getState(context)
+    log.info(
+        "Using database {} for test {}",
+        state.neo4jDatabase,
+        "${context.testClass?.getOrNull()?.simpleName}#${context.displayName}",
+    )
+    state.driver().verifyConnectivity()
 
-    source =
+    state.source =
         Neo4jSourceRegistration(
-            schemaControlRegistryUri = schemaRegistryUri.resolve(sourceAnnotation),
-            neo4jUri = neo4jUri.resolve(sourceAnnotation),
-            neo4jUser = neo4jUser.resolve(sourceAnnotation),
-            neo4jPassword = neo4jPassword.resolve(sourceAnnotation),
-            neo4jDatabase = neo4jDatabase!!,
-            topic = topicRegistry.resolveTopic(sourceAnnotation.topic),
-            streamingProperty = sourceAnnotation.streamingProperty,
-            startFrom = sourceAnnotation.startFrom,
-            startFromValue = sourceAnnotation.startFromValue,
-            query = sourceAnnotation.query,
-            forceMapsAsStruct = sourceAnnotation.forceMapsAsStruct,
-            strategy = sourceAnnotation.strategy,
-            keyConverter = keyValueConverterResolver.resolveKeyConverter(context),
-            valueConverter = keyValueConverterResolver.resolveValueConverter(context),
-            cdcPatternsIndexed = sourceAnnotation.cdc.patternsIndexed,
-            cdcPatterns = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::patterns),
-            cdcOperations = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::operations),
-            cdcChangesTo = sourceAnnotation.cdc.paramAsMap(CdcSourceTopic::changesTo),
-            cdcMetadata = sourceAnnotation.cdc.metadataAsMap(),
-            cdcKeySerializations = sourceAnnotation.cdc.keySerializationsAsMap(),
-            cdcValueSerializations = sourceAnnotation.cdc.valueSerializationsAsMap(),
-            payloadMode = keyValueConverterResolver.resolvePayloadMode(context),
+            schemaControlRegistryUri =
+                annotationResolvers.schemaControlRegistryUri.resolve(state.sourceAnnotation),
+            neo4jUri = annotationResolvers.neo4jUri.resolve(state.sourceAnnotation),
+            neo4jUser = annotationResolvers.neo4jUser.resolve(state.sourceAnnotation),
+            neo4jPassword = annotationResolvers.neo4jPassword.resolve(state.sourceAnnotation),
+            neo4jDatabase = state.neo4jDatabase,
+            topic = state.topicRegistry.resolveTopic(state.sourceAnnotation.topic),
+            streamingProperty = state.sourceAnnotation.streamingProperty,
+            startFrom = state.sourceAnnotation.startFrom,
+            startFromValue = state.sourceAnnotation.startFromValue,
+            query = state.sourceAnnotation.query,
+            forceMapsAsStruct = state.sourceAnnotation.forceMapsAsStruct,
+            strategy = state.sourceAnnotation.strategy,
+            keyConverter =
+                annotationResolvers.keyValueConverterResolver.resolveKeyConverter(context),
+            valueConverter =
+                annotationResolvers.keyValueConverterResolver.resolveValueConverter(context),
+            cdcPatternsIndexed = state.sourceAnnotation.cdc.patternsIndexed,
+            cdcPatterns =
+                state.sourceAnnotation.cdc.paramAsMap(
+                    state.topicRegistry,
+                    CdcSourceTopic::patterns,
+                ),
+            cdcOperations =
+                state.sourceAnnotation.cdc.paramAsMap(
+                    state.topicRegistry,
+                    CdcSourceTopic::operations,
+                ),
+            cdcChangesTo =
+                state.sourceAnnotation.cdc.paramAsMap(
+                    state.topicRegistry,
+                    CdcSourceTopic::changesTo,
+                ),
+            cdcMetadata = state.sourceAnnotation.cdc.metadataAsMap(state.topicRegistry),
+            cdcKeySerializations =
+                state.sourceAnnotation.cdc.keySerializationsAsMap(state.topicRegistry),
+            cdcValueSerializations =
+                state.sourceAnnotation.cdc.valueSerializationsAsMap(state.topicRegistry),
+            payloadMode = annotationResolvers.keyValueConverterResolver.resolvePayloadMode(context),
         )
 
-    source.register(kafkaConnectExternalUri.resolve(sourceAnnotation))
-    log.info("registered source connector with name {}", source.name)
-    topicRegistry.log()
+    state.source!!.register(
+        annotationResolvers.kafkaConnectExternalUri.resolve(state.sourceAnnotation)
+    )
+    log.info("registered source connector with name {}", state.source!!.name)
+    state.topicRegistry.log()
 
-    testFailed = false
+    state.testFailed = false
   }
 
-  override fun handleTestExecutionException(context: ExtensionContext?, throwable: Throwable) {
-    // we do not drop database if the test fails
-    testFailed = true
-
+  override fun handleTestExecutionException(context: ExtensionContext, throwable: Throwable) {
+    val state = getState(context)
+    state.testFailed = true
     throw throwable
   }
 
-  override fun afterEach(context: ExtensionContext?) {
-    source.unregister()
-    if (driver != null) {
-      if (!testFailed) {
-        driver!!.dropDatabase(neo4jDatabase!!)
-      }
-      session!!.close()
-      driver!!.close()
-    } else {
-      if (!testFailed) {
-        createDriver().use { dr -> dr.dropDatabase(neo4jDatabase!!) }
-      }
-    }
+  override fun afterEach(context: ExtensionContext) {
+    val state = getState(context)
+    state.close()
+  }
 
-    topicRegistry.clear()
-    neo4jDatabase = null
-    driver = null
-    session = null
+  override fun supportsParameter(
+      parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
+  ): Boolean {
+    return paramResolvers.supportsParameter(parameterContext, extensionContext)
+  }
+
+  override fun resolveParameter(
+      parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
+  ): Any {
+    return paramResolvers.resolveParameter(parameterContext, extensionContext)
   }
 
   private fun resolveSession(
-      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?,
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
   ): Any {
-    ensureDatabase(extensionContext)
-    driver = createDriver()
-    session = driver!!.session(SessionConfig.forDatabase(neo4jDatabase))
-    return session!!
+    val state = getState(extensionContext)
+    return state.session()
   }
 
-  private fun createDriver(): Driver {
-    val uri = neo4jExternalUri.resolve(sourceAnnotation)
-    val username = neo4jUser.resolve(sourceAnnotation)
-    val password = neo4jPassword.resolve(sourceAnnotation)
-    return driverFactory(uri, AuthTokens.basic(username, password))
-  }
-
-  private fun ensureDatabase(context: ExtensionContext?) {
-    if (neo4jDatabase != null) {
-      return
-    }
-    neo4jDatabase =
-        sourceAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
-    log.info(
-        "Using database {} for test {}",
-        neo4jDatabase,
-        "${context?.testClass?.getOrNull()?.simpleName}#${context?.displayName}",
-    )
-    createDriver().use { driver ->
-      driver.createDatabase(
-          neo4jDatabase!!,
-          withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
-      )
-
-      // want to make sure that CDC is functional before running the test
-      if (sourceAnnotation.strategy == SourceStrategy.CDC) {
-        log.info("waiting cdc to be available")
-        runBlocking {
-          eventually(30.seconds) {
-            driver.session(SessionConfig.forDatabase(neo4jDatabase)).use { session ->
-              try {
-                val earliest = session.run("CALL db.cdc.earliest").single().get(0).asString()
-                val count =
-                    session
-                        .run("CALL db.cdc.query(${'$'}from)", mapOf("from" to earliest))
-                        .list()
-                        .count()
-
-                count shouldBe 0
-              } catch (e: Exception) {
-                log.debug("error received while waiting for cdc to be available", e)
-              }
-            }
-          }
-        }
-        log.info("cdc is available")
-      }
-    }
+  private fun resolveNeo4j(
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
+  ): Neo4j {
+    val state = getState(extensionContext)
+    return Neo4jDetector.detect(state.driver())
   }
 
   private fun resolveTopicConsumer(
-      parameterContext: ParameterContext?,
-      context: ExtensionContext?,
+      parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
   ): ConvertingKafkaConsumer {
-    return consumerResolver.resolveGenericConsumer(parameterContext, context)
-  }
-
-  private fun resolveNeo4j(parameterContext: ParameterContext?, context: ExtensionContext?): Neo4j {
-    if (driver == null) {
-      driver = createDriver()
-    }
-    return Neo4jDetector.detect(driver!!)
+    return getState(extensionContext)
+        .consumerResolver()
+        .resolveGenericConsumer(parameterContext, extensionContext)
   }
 
   private fun resolvePayloadMode(
-      parameterContext: ParameterContext?,
-      context: ExtensionContext?,
+      @Suppress("UNUSED_PARAMETER") parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
   ): PayloadMode {
-    return keyValueConverterResolver.resolvePayloadMode(context)
+    return annotationResolvers.keyValueConverterResolver.resolvePayloadMode(extensionContext)
   }
 
   private fun CdcSource.paramAsMap(
-      property: KProperty1<CdcSourceTopic, Array<CdcSourceParam>>
+      topicRegistry: TopicRegistry,
+      property: KProperty1<CdcSourceTopic, Array<CdcSourceParam>>,
   ): Map<String, List<String>> {
     val result = mutableMapOf<String, MutableList<String>>()
     this.topics.forEach { topic ->
@@ -323,7 +366,9 @@ internal class Neo4jSourceExtension(
     return result
   }
 
-  private fun CdcSource.metadataAsMap(): Map<String, List<Map<String, String>>> {
+  private fun CdcSource.metadataAsMap(
+      topicRegistry: TopicRegistry
+  ): Map<String, List<Map<String, String>>> {
     val result = mutableMapOf<String, MutableList<MutableMap<String, String>>>()
     this.topics.forEach { topic ->
       topic.metadata.forEach { metadata ->
@@ -339,31 +384,19 @@ internal class Neo4jSourceExtension(
     return result
   }
 
-  private fun CdcSource.keySerializationsAsMap(): Map<String, String> {
+  private fun CdcSource.keySerializationsAsMap(topicRegistry: TopicRegistry): Map<String, String> {
     return this.topics
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
         .mapValues { entry -> entry.value.map { it.keySerializationStrategy }.single() }
   }
 
-  private fun CdcSource.valueSerializationsAsMap(): Map<String, String> {
+  private fun CdcSource.valueSerializationsAsMap(
+      topicRegistry: TopicRegistry
+  ): Map<String, String> {
     return this.topics
         .groupBy { it.topic }
         .mapKeys { entry -> topicRegistry.resolveTopic(entry.key) }
         .mapValues { entry -> entry.value.map { it.valueSerializationStrategy }.single() }
-  }
-
-  override fun supportsParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?,
-  ): Boolean {
-    return paramResolvers.supportsParameter(parameterContext, extensionContext)
-  }
-
-  override fun resolveParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?,
-  ): Any {
-    return paramResolvers.resolveParameter(parameterContext, extensionContext)
   }
 }
