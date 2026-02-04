@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.testing.source
 
 import java.util.*
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.jvm.optionals.getOrNull
 import kotlin.reflect.KProperty1
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -115,17 +117,22 @@ internal class Neo4jSourceExtension(
       val sourceAnnotation: Neo4jSource,
       val resolvers: SourceAnnotationResolvers,
       private var driver: Driver? = null,
-      private var session: Session? = null,
       var source: Neo4jSourceRegistration? = null,
       var testFailed: Boolean = false,
   ) : AutoCloseable {
+    @OptIn(ExperimentalAtomicApi::class) val dbCreated = AtomicBoolean(false)
     val topicRegistry = TopicRegistry()
     val neo4jDatabase =
         sourceAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
 
-    fun driver(): Driver {
+    @OptIn(ExperimentalAtomicApi::class)
+    fun driver(ensureDatabase: Boolean = true): Driver {
       if (driver != null) {
-        return driver!!
+        return driver!!.also {
+          if (ensureDatabase) {
+            ensureDatabase(it)
+          }
+        }
       }
 
       val uri = resolvers.neo4jExternalUri.resolve(sourceAnnotation)
@@ -134,21 +141,25 @@ internal class Neo4jSourceExtension(
       driver =
           driverFactory(uri, AuthTokens.basic(username, password)).also {
             it.verifyConnectivity()
-            it.createDatabase(
-                neo4jDatabase,
-                withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
-            )
+            if (ensureDatabase) {
+              ensureDatabase(it)
+            }
           }
       return driver!!
     }
 
-    fun session(): Session {
-      if (session != null) {
-        return session!!
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun ensureDatabase(driver: Driver) {
+      if (dbCreated.compareAndSet(expectedValue = false, newValue = true)) {
+        driver.createDatabase(
+            neo4jDatabase,
+            withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
+        )
       }
+    }
 
-      session = driver().session(SessionConfig.forDatabase(neo4jDatabase))
-      return session!!
+    fun session(): Session {
+      return driver().session(SessionConfig.forDatabase(neo4jDatabase))
     }
 
     fun consumerResolver(): ConsumerResolver {
@@ -165,14 +176,12 @@ internal class Neo4jSourceExtension(
 
     override fun close() {
       source?.unregister()
-      session?.close()
       if (!testFailed) {
         driver?.dropDatabase(neo4jDatabase)
       }
       driver?.close()
 
       source = null
-      session = null
       driver = null
     }
   }
@@ -221,7 +230,7 @@ internal class Neo4jSourceExtension(
     }
 
     if (metadata.strategy == SourceStrategy.CDC) {
-      state.driver().also {
+      state.driver(false).also {
         val version = Neo4jDetector.detect(it)
         if (!canIUse(Dbms.changeDataCapture()).withNeo4j(version)) {
           return ConditionEvaluationResult.disabled(

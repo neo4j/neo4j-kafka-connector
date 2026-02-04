@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import java.util.*
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.jvm.optionals.getOrNull
 import kotlin.text.ifEmpty
 import org.junit.jupiter.api.extension.AfterEachCallback
@@ -105,16 +107,20 @@ internal class Neo4jSinkExtension(
       val sinkAnnotation: Neo4jSink,
       val resolvers: SinkAnnotationResolvers,
       private var driver: Driver? = null,
-      private var session: Session? = null,
       var sink: Neo4jSinkRegistration? = null,
   ) : AutoCloseable {
+    @OptIn(ExperimentalAtomicApi::class) val dbCreated = AtomicBoolean(false)
     val topicRegistry = TopicRegistry()
     val neo4jDatabase =
         sinkAnnotation.neo4jDatabase.ifEmpty { "test-" + UUID.randomUUID().toString() }
 
-    fun driver(): Driver {
+    fun driver(ensureDatabase: Boolean = true): Driver {
       if (driver != null) {
-        return driver!!
+        return driver!!.also {
+          if (ensureDatabase) {
+            ensureDatabase(it)
+          }
+        }
       }
 
       val uri = resolvers.neo4jExternalUri.resolve(sinkAnnotation)
@@ -123,16 +129,21 @@ internal class Neo4jSinkExtension(
       driver =
           driverFactory(uri, AuthTokens.basic(username, password)).also {
             it.verifyConnectivity()
-            it.createDatabase(neo4jDatabase)
+            if (ensureDatabase) {
+              ensureDatabase(it)
+            }
           }
       return driver!!
     }
 
-    fun session(): Session {
-      if (session != null) {
-        return session!!
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun ensureDatabase(driver: Driver) {
+      if (dbCreated.compareAndSet(expectedValue = false, newValue = true)) {
+        driver.createDatabase(neo4jDatabase)
       }
+    }
 
+    fun session(): Session {
       return driver().session(SessionConfig.forDatabase(neo4jDatabase))
     }
 
@@ -165,11 +176,9 @@ internal class Neo4jSinkExtension(
 
     override fun close() {
       sink?.unregister()
-      session?.close()
       driver?.also { it.dropDatabase(neo4jDatabase) }?.close()
 
       sink = null
-      session = null
       driver = null
     }
   }
