@@ -174,9 +174,16 @@ internal class Neo4jSinkExtension(
       )
     }
 
+    @OptIn(ExperimentalAtomicApi::class)
     override fun close() {
       sink?.unregister()
-      driver?.also { it.dropDatabase(neo4jDatabase) }?.close()
+      driver
+          ?.also {
+            if (dbCreated.load()) {
+              it.dropDatabase(neo4jDatabase)
+            }
+          }
+          ?.close()
 
       sink = null
       driver = null

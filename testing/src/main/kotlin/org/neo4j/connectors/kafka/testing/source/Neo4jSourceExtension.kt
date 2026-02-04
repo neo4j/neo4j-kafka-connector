@@ -174,10 +174,13 @@ internal class Neo4jSourceExtension(
       )
     }
 
+    @OptIn(ExperimentalAtomicApi::class)
     override fun close() {
       source?.unregister()
       if (!testFailed) {
-        driver?.dropDatabase(neo4jDatabase)
+        if (dbCreated.load()) {
+          driver?.dropDatabase(neo4jDatabase)
+        }
       }
       driver?.close()
 
