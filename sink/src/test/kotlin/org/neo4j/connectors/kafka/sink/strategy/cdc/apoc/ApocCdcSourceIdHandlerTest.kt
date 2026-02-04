@@ -434,7 +434,7 @@ class ApocCdcSourceIdHandlerTest {
                                 listOf(
                                     mapOf(
                                         "stmt" to
-                                            "MATCH (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) DETACH DELETE n",
+                                            "MATCH (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to

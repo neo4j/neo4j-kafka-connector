@@ -70,7 +70,7 @@ data class CdcNodeData(
         "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties SET n:\$(${'$'}$EVENT.addLabels) REMOVE n:\$(${'$'}$EVENT.removeLabels)"
       }
       EntityOperation.DELETE -> {
-        "MATCH (n$matchLabels$matchProps) DETACH DELETE n"
+        "MATCH (n$matchLabels$matchProps) DELETE n"
       }
     }
   }
@@ -133,11 +133,7 @@ data class CdcRelationshipData(
 
     return when (operation) {
       EntityOperation.CREATE -> {
-        if (!hasKeys) {
-          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) CREATE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
-        } else {
-          "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MERGE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
-        }
+        "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MERGE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
       }
       EntityOperation.UPDATE -> {
         if (!hasKeys) {

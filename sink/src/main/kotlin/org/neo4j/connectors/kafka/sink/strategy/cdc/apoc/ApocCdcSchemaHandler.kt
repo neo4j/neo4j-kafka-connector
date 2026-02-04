@@ -114,7 +114,7 @@ class ApocCdcSchemaHandler(val topic: String, neo4j: Neo4j, batchSize: Int) :
     val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
     val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, event.keys, null)
+        buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
     return CdcRelationshipData(
         EntityOperation.CREATE,

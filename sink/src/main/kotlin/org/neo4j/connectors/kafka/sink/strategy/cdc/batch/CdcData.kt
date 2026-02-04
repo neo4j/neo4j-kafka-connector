@@ -66,7 +66,7 @@ data class CdcNodeData(
         "MERGE (n:\$($EVENT.matchLabels) {$matchProps}) SET n += $EVENT.setProperties SET n:\$($EVENT.addLabels) REMOVE n:\$($EVENT.removeLabels)"
       }
       EntityOperation.DELETE -> {
-        "MATCH (n:\$($EVENT.matchLabels) {$matchProps}) DETACH DELETE n"
+        "MATCH (n:\$($EVENT.matchLabels) {$matchProps}) DELETE n"
       }
     }
   }
