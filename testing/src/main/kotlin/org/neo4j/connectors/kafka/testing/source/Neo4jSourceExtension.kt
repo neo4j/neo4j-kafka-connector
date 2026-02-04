@@ -87,11 +87,11 @@ internal class Neo4jSourceExtension(
 
   private lateinit var source: Neo4jSourceRegistration
 
-  private lateinit var driver: Driver
+  private var driver: Driver? = null
 
-  private lateinit var session: Session
+  private var session: Session? = null
 
-  private lateinit var neo4jDatabase: String
+  private var neo4jDatabase: String? = null
 
   private var testFailed: Boolean = false
 
@@ -175,7 +175,7 @@ internal class Neo4jSourceExtension(
             neo4jUri = neo4jUri.resolve(sourceAnnotation),
             neo4jUser = neo4jUser.resolve(sourceAnnotation),
             neo4jPassword = neo4jPassword.resolve(sourceAnnotation),
-            neo4jDatabase = neo4jDatabase,
+            neo4jDatabase = neo4jDatabase!!,
             topic = topicRegistry.resolveTopic(sourceAnnotation.topic),
             streamingProperty = sourceAnnotation.streamingProperty,
             startFrom = sourceAnnotation.startFrom,
@@ -211,17 +211,22 @@ internal class Neo4jSourceExtension(
 
   override fun afterEach(context: ExtensionContext?) {
     source.unregister()
-    if (this::driver.isInitialized) {
+    if (driver != null) {
       if (!testFailed) {
-        driver.dropDatabase(neo4jDatabase)
+        driver!!.dropDatabase(neo4jDatabase!!)
       }
-      session.close()
-      driver.close()
+      session!!.close()
+      driver!!.close()
     } else {
       if (!testFailed) {
-        createDriver().use { dr -> dr.dropDatabase(neo4jDatabase) }
+        createDriver().use { dr -> dr.dropDatabase(neo4jDatabase!!) }
       }
     }
+
+    topicRegistry.clear()
+    neo4jDatabase = null
+    driver = null
+    session = null
   }
 
   private fun resolveSession(
@@ -230,8 +235,8 @@ internal class Neo4jSourceExtension(
   ): Any {
     ensureDatabase(extensionContext)
     driver = createDriver()
-    session = driver.session(SessionConfig.forDatabase(neo4jDatabase))
-    return session
+    session = driver!!.session(SessionConfig.forDatabase(neo4jDatabase))
+    return session!!
   }
 
   private fun createDriver(): Driver {
@@ -242,7 +247,7 @@ internal class Neo4jSourceExtension(
   }
 
   private fun ensureDatabase(context: ExtensionContext?) {
-    if (this::neo4jDatabase.isInitialized) {
+    if (neo4jDatabase != null) {
       return
     }
     neo4jDatabase =
@@ -254,7 +259,7 @@ internal class Neo4jSourceExtension(
     )
     createDriver().use { driver ->
       driver.createDatabase(
-          neo4jDatabase,
+          neo4jDatabase!!,
           withCdc = sourceAnnotation.strategy == SourceStrategy.CDC,
       )
 
@@ -292,10 +297,10 @@ internal class Neo4jSourceExtension(
   }
 
   private fun resolveNeo4j(parameterContext: ParameterContext?, context: ExtensionContext?): Neo4j {
-    if (!::driver.isInitialized) {
+    if (driver == null) {
       driver = createDriver()
     }
-    return Neo4jDetector.detect(driver)
+    return Neo4jDetector.detect(driver!!)
   }
 
   private fun resolvePayloadMode(
