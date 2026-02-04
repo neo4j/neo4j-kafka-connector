@@ -54,6 +54,7 @@ import org.neo4j.driver.Result
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.Values
+import org.neo4j.driver.summary.ResultSummary
 
 class Neo4jSourceExtensionTest {
 
@@ -222,6 +223,8 @@ class Neo4jSourceExtensionTest {
     val statusRecord = mock<Record> { on { get("currentStatus") } doReturn Values.value("online") }
     val statusResult = mock<Result> { on { single() } doReturn statusRecord }
 
+    val consumableResult = mock<Result> { on { consume() } doReturn mock<ResultSummary>() }
+
     val session =
         mock<Session> {
           on { run(ArgumentMatchers.contains("dbms.components"), any<Map<String, Any>>()) } doReturn
@@ -229,6 +232,12 @@ class Neo4jSourceExtensionTest {
           on {
             run(ArgumentMatchers.contains("RETURN currentStatus"), any<Map<String, Any>>())
           } doReturn statusResult
+          on {
+            run(
+                ArgumentMatchers.matches("^(CREATE OR REPLACE|DROP) DATABASE"),
+                any<Map<String, Any>>(),
+            )
+          } doReturn consumableResult
         }
     val driver =
         mock<Driver> {
