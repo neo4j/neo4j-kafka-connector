@@ -44,8 +44,10 @@ import org.neo4j.connectors.kafka.testing.kafka.ProducerResolver
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Config
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Logging
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
@@ -84,7 +86,9 @@ internal class SinkAnnotationResolvers(envAccessor: (String) -> String?) {
 internal class Neo4jSinkExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
-    private val driverFactory: (String, AuthToken) -> Driver = GraphDatabase::driver,
+    private val driverFactory: (String, AuthToken) -> Driver = { url, token ->
+      GraphDatabase.driver(url, token, Config.builder().withLogging(Logging.slf4j()).build())
+    },
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkExtension::class.java)
