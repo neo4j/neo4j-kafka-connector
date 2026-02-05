@@ -33,19 +33,17 @@ object DatabaseSupport {
       timeout: Duration = DEFAULT_TIMEOUT,
   ) {
     this.session(SessionConfig.forDatabase("system")).use { session ->
-      session.createDatabase(db, withCdc, timeout)
+      session.createDatabase(db, withCdc)
     }
+
+    this.waitForDatabaseToBeOnline(db, timeout)
   }
 
   fun Driver.dropDatabase(db: String) {
     this.session(SessionConfig.forDatabase("system")).use { session -> session.dropDatabase(db) }
   }
 
-  private fun Session.createDatabase(
-      database: String,
-      withCdc: Boolean = false,
-      timeout: Duration = DEFAULT_TIMEOUT,
-  ): Session {
+  private fun Session.createDatabase(database: String, withCdc: Boolean = false): Session {
     if (withCdc) {
       this.run(
               "CREATE OR REPLACE DATABASE \$db_name OPTIONS { txLogEnrichment: 'FULL' } WAIT 30 SECONDS",
@@ -57,12 +55,10 @@ object DatabaseSupport {
           .consume()
     }
 
-    this.waitForDatabaseToBeOnline(database, timeout)
-
     return this
   }
 
-  private fun Session.waitForDatabaseToBeOnline(
+  private fun Driver.waitForDatabaseToBeOnline(
       database: String,
       timeout: Duration = DEFAULT_TIMEOUT,
   ) {
@@ -72,14 +68,17 @@ object DatabaseSupport {
       if (System.currentTimeMillis() >= deadline) return false
 
       val status =
-          this.run(
-                  "SHOW DATABASES YIELD name, currentStatus WHERE name = \$db_name RETURN currentStatus",
-                  mapOf("db_name" to database),
-              )
-              .single()
-              ?.get("currentStatus")
-              ?.asString()
-              ?.lowercase(Locale.ROOT)
+          this.session(SessionConfig.forDatabase("system")).use { session ->
+            session
+                .run(
+                    "SHOW DATABASES YIELD name, currentStatus WHERE name = \$db_name RETURN currentStatus",
+                    mapOf("db_name" to database),
+                )
+                .single()
+                ?.get("currentStatus")
+                ?.asString()
+                ?.lowercase(Locale.ROOT)
+          }
 
       if (status == "online") return true
 
