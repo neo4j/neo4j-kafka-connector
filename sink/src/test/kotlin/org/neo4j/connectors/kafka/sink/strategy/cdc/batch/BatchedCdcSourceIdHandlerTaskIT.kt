@@ -132,6 +132,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -161,6 +162,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         ),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -194,6 +196,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -207,6 +210,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -220,6 +224,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -243,6 +248,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -260,6 +266,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         NodeState(listOf("Person", "Admin"), mapOf("name" to "Alice")),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -289,6 +296,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -306,6 +314,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         NodeState(listOf("Person"), mapOf("name" to "Alice")),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -335,6 +344,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -355,6 +365,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         ),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -384,6 +395,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -401,6 +413,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         NodeState(emptyList(), mapOf("name" to "Alice")),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -429,6 +442,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -446,6 +460,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         null,
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -474,6 +489,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -487,6 +503,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -499,6 +516,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         null,
                     ),
                     3,
+                    0,
                     0,
                 )
                 .record,
@@ -527,6 +545,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -540,6 +559,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
         )
@@ -559,6 +579,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         RelationshipState(mapOf("since" to LocalDate.of(2023, 6, 15))),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -589,6 +610,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -602,6 +624,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -617,6 +640,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -647,6 +671,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -660,6 +685,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -675,6 +701,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -690,6 +717,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     3,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -705,6 +733,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     4,
+                    0,
                 )
                 .record,
         )
@@ -734,6 +763,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -747,6 +777,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -762,6 +793,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -783,6 +815,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         ),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -814,6 +847,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -827,6 +861,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -844,6 +879,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -865,6 +901,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         RelationshipState(mapOf("since" to LocalDate.of(2020, 1, 1))),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -895,6 +932,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -908,6 +946,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -923,6 +962,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -942,6 +982,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         null,
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record
@@ -973,6 +1014,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -986,6 +1028,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1001,6 +1044,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -1021,6 +1065,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1035,6 +1080,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         null,
                     ),
                     3,
+                    0,
                     0,
                 )
                 .record,
@@ -1065,6 +1111,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1078,6 +1125,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1093,6 +1141,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1105,6 +1154,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         NodeState(emptyList(), mapOf("name" to "Alice", "age" to 30)),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record,
@@ -1140,6 +1190,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1153,6 +1204,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
         )
@@ -1171,6 +1223,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1184,6 +1237,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1196,6 +1250,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                         NodeState(emptyList(), mapOf("name" to "Alice", "score" to 15)),
                     ),
                     3,
+                    0,
                     0,
                 )
                 .record,
@@ -1210,6 +1265,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     1,
+                    0,
                 )
                 .record,
         )

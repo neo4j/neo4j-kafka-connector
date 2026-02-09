@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
 
+import org.apache.kafka.connect.sink.SinkRecord
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 
@@ -23,7 +24,7 @@ const val EVENT = "e"
 
 interface CdcData {
 
-  fun toParams(): Map<String, Any>
+  fun toParams(r: SinkRecord): Map<String, Any>
 
   fun buildStatement(): String
 }
@@ -37,8 +38,9 @@ data class CdcNodeData(
     val removeLabels: Set<String>,
 ) : CdcData {
 
-  override fun toParams(): Map<String, Any> {
+  override fun toParams(r: SinkRecord): Map<String, Any> {
     return mapOf(
+        "offset" to r.kafkaOffset(),
         "stmt" to buildStatement(),
         "params" to
             mapOf(
@@ -88,8 +90,9 @@ data class CdcRelationshipData(
     val setProperties: Map<String, Any?>,
 ) : CdcData {
 
-  override fun toParams(): Map<String, Any> {
+  override fun toParams(r: SinkRecord): Map<String, Any> {
     return mapOf(
+        "offset" to r.kafkaOffset(),
         "stmt" to buildStatement(),
         "params" to
             mapOf(

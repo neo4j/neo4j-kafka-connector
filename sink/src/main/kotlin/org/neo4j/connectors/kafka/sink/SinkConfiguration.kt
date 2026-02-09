@@ -33,6 +33,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration : Neo4jConfiguration {
@@ -55,6 +56,12 @@ class SinkConfiguration : Neo4jConfiguration {
 
   val batchSize
     get(): Int = getInt(BATCH_SIZE)
+
+  val eosOffsetLabel
+    get(): String =
+        getString(EOS_OFFSET_LABEL)
+            .takeIf { it.isNotBlank() }
+            ?.let { SchemaNames.sanitize(it, true).orElseThrow() } ?: ""
 
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
@@ -139,6 +146,7 @@ class SinkConfiguration : Neo4jConfiguration {
   companion object {
     const val BATCH_SIZE = "neo4j.batch-size"
     const val BATCH_TIMEOUT = "neo4j.batch-timeout"
+    const val EOS_OFFSET_LABEL = "neo4j.eos-offset-label"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
     const val CYPHER_BIND_TIMESTAMP_AS = "neo4j.cypher.bind-timestamp-as"
@@ -252,6 +260,13 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_BATCH_TIMEOUT.toSimpleString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(EOS_OFFSET_LABEL, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = ""
+                  group = Groups.CONNECTOR_ADVANCED.title
                 }
             )
             .define(

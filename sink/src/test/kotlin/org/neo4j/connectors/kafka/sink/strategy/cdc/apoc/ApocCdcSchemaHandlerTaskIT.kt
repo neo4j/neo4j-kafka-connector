@@ -57,8 +57,12 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
+class ApocCdcSchemaHandlerWithEosOffsetIT : ApocCdcSchemaHandlerTaskIT("__KafkaOffset")
+
+class ApocCdcSchemaHandlerWithoutEosOffsetIT : ApocCdcSchemaHandlerTaskIT("")
+
 @Testcontainers
-class ApocCdcSchemaHandlerTaskIT {
+abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
@@ -111,13 +115,16 @@ class ApocCdcSchemaHandlerTaskIT {
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
-        mapOf(
-            "topics" to "my-topic",
-            "neo4j.database" to db,
-            "neo4j.uri" to container.boltUrl,
-            "neo4j.authentication.type" to "NONE",
-            "neo4j.cdc.schema.topics" to "my-topic",
-        )
+        buildMap {
+          this["topics"] = "my-topic"
+          this["neo4j.database"] = db
+          this["neo4j.uri"] = container.boltUrl
+          this["neo4j.authentication.type"] = "NONE"
+          this["neo4j.cdc.schema.topics"] = "my-topic"
+          if (eosOffsetLabel.isNotEmpty()) {
+            this["neo4j.eos-offset-label"] = eosOffsetLabel
+          }
+        }
     )
 
     task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSchemaHandler::class)
@@ -138,6 +145,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -145,6 +153,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user1", "name" to "Alice")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -171,6 +181,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -183,6 +194,8 @@ class ApocCdcSchemaHandlerTaskIT {
     result.get(0).asMap() shouldBe
         mapOf("personId" to "p1", "name" to "Alice", "department" to "Engineering")
     result.get(1).asList { it.asString() }.sorted() shouldBe listOf("Employee", "Manager", "Person")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -200,6 +213,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -209,6 +223,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         "user2",
                         afterProps = mapOf("userId" to "user2", "name" to "Bob"),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -222,12 +237,15 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
         )
     )
 
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 3
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -251,6 +269,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -258,6 +277,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() }.sorted() shouldBe listOf("Admin", "User")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -281,6 +302,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -288,6 +310,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() } shouldBe listOf("User")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -307,6 +331,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -314,6 +339,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN n{.*}").single()
     result.get(0).asMap() shouldBe mapOf("userId" to "user1", "name" to "Alice")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -332,6 +359,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -339,6 +367,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -356,6 +386,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -369,6 +400,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -381,6 +413,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     3,
                     0,
+                    2,
                 )
                 .record,
         )
@@ -388,6 +421,8 @@ class ApocCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -410,6 +445,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -420,6 +456,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("customerId" to "c1", "orderId" to "o1", "total" to 100.00)
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -451,6 +489,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -462,6 +501,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("customerId" to "c1", "orderId" to "o1", "total" to 150.00, "status" to "shipped")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -486,6 +527,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -498,6 +540,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -515,6 +559,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -524,6 +569,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         "user2",
                         afterProps = mapOf("userId" to "user2", "name" to "Bob"),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -539,6 +585,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
         )
@@ -552,6 +599,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -572,6 +621,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -583,6 +633,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         EntityOperation.CREATE,
                         afterProps = emptyMap(),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -597,6 +648,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         afterProps = mapOf("since" to LocalDate.of(2020, 1, 1)),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -625,6 +677,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe emptyMap()
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -650,6 +704,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -660,6 +715,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1), "strength" to 5)
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -685,6 +742,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -695,6 +753,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1))
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -719,6 +779,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -733,6 +794,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .asInt() shouldBe 0
     // Nodes should still exist
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 2
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -754,6 +817,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -767,6 +831,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record,
         )
@@ -779,6 +844,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -803,6 +870,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -815,6 +883,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 99.99)
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -849,6 +919,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -861,6 +932,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 75.00, "status" to "updated")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -889,6 +962,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -901,6 +975,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -925,6 +1001,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -938,6 +1015,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         null,
                         RelationshipState(mapOf("orderId" to "order-002", "amount" to 20.00)),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -954,6 +1032,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         RelationshipState(mapOf("orderId" to "order-003", "amount" to 30.00)),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -975,6 +1054,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asDouble() shouldBe 20.00
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -1008,6 +1089,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1026,6 +1108,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asDouble() shouldBe 25.00
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -1063,6 +1147,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1074,6 +1159,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("reviewId" to "r1", "version" to 1L, "rating" to 5L, "comment" to "Great!")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -1123,6 +1210,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1140,6 +1228,8 @@ class ApocCdcSchemaHandlerTaskIT {
             "comment" to "Great!",
             "verified" to true,
         )
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -1186,6 +1276,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1212,6 +1303,8 @@ class ApocCdcSchemaHandlerTaskIT {
           it.get(0).asInt() shouldBe 5
           it.get(1).isNull shouldBe true
         }
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -1229,6 +1322,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1238,6 +1332,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         "user2",
                         afterProps = mapOf("userId" to "user2", "name" to "Bob"),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -1253,6 +1348,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1265,6 +1361,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record,
         )
@@ -1279,6 +1376,8 @@ class ApocCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 1
+
+    verifyEOSOffset(3)
   }
 
   @Test
@@ -1302,6 +1401,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1312,6 +1412,7 @@ class ApocCdcSchemaHandlerTaskIT {
                         beforeProps = mapOf("userId" to "user2", "name" to "Bob"),
                         afterProps = mapOf("userId" to "user2", "name" to "Bob", "score" to 20),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -1326,6 +1427,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1338,6 +1440,7 @@ class ApocCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     1,
+                    3,
                 )
                 .record,
         )
@@ -1347,6 +1450,226 @@ class ApocCdcSchemaHandlerTaskIT {
         mapOf("userId" to "user1", "name" to "Alice", "score" to 15)
     session.run("MATCH (a:User {userId: 'user2'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user2", "name" to "Bob", "score" to 25)
+
+    verifyEOSOffset(3)
+  }
+
+  @Test
+  fun `should be able to handle node key updates`() {
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEOSOffset(3)
+  }
+
+  @Test
+  fun `should be able to handle the same batch without any errors`() {
+    // This cannot work when not using EOS offset tracking, as the change queries would be
+    // re-executed and fail due to key changes
+    assumeTrue { eosOffsetLabel.isNotEmpty() }
+
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEOSOffset(3)
+
+    // retry, this should fail if the change query gets re-executed due to key changes
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEOSOffset(3)
+  }
+
+  private fun verifyEOSOffset(expectedOffset: Long) {
+    if (eosOffsetLabel.isNotEmpty()) {
+      session.run("MATCH (n:$eosOffsetLabel) RETURN n{.*}").single().get(0).asMap() shouldBe
+          mapOf(
+              "strategy" to "CDC_SCHEMA",
+              "topic" to "my-topic",
+              "partition" to 0,
+              "offset" to expectedOffset,
+          )
+    }
   }
 
   private fun newTaskContext(): SinkTaskContext {

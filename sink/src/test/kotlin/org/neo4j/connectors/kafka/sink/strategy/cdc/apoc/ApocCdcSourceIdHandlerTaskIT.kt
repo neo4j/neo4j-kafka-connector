@@ -55,8 +55,12 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
+class ApocCdcSourceIdHandlerWithEosOffsetIT : ApocCdcSourceIdHandlerTaskIT("__KafkaOffset")
+
+class ApocCdcSourceIdHandlerWithoutEosOffsetIT : ApocCdcSourceIdHandlerTaskIT("")
+
 @Testcontainers
-class ApocCdcSourceIdHandlerTaskIT {
+abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
   companion object {
     @Container
     val container: Neo4jContainer<*> =
@@ -112,13 +116,17 @@ class ApocCdcSourceIdHandlerTaskIT {
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
-        mapOf(
-            "topics" to "my-topic",
-            "neo4j.database" to db,
-            "neo4j.uri" to container.boltUrl,
-            "neo4j.authentication.type" to "NONE",
-            "neo4j.cdc.source-id.topics" to "my-topic",
-        )
+        buildMap {
+          this["topics"] = "my-topic"
+          this["neo4j.database"] = db
+          this["neo4j.uri"] = container.boltUrl
+          this["neo4j.authentication.type"] = "NONE"
+          this["neo4j.cdc.source-id.topics"] = "my-topic"
+
+          if (eosOffsetLabel.isNotEmpty()) {
+            this["neo4j.eos-offset-label"] = eosOffsetLabel
+          }
+        }
     )
 
     task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSourceIdHandler::class)
@@ -139,6 +147,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -149,6 +158,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -169,6 +180,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -184,6 +196,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         listOf("Employee", "Person", "SourceEvent")
     result.get(1).asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "department" to "Engineering")
+
+    verifyEOSOffset(0)
   }
 
   @Test
@@ -201,6 +215,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -212,6 +227,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -227,12 +243,15 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
         )
     )
 
     session.run("MATCH (n:SourceEvent) RETURN count(n)").single().get(0).asInt() shouldBe 3
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -250,6 +269,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -268,6 +288,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record
         )
@@ -279,6 +300,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .get(0)
         .asList { it.asString() }
         .sorted() shouldBe listOf("Admin", "Person", "SourceEvent")
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -295,6 +318,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         NodeState(listOf("Person", "Admin"), mapOf("name" to "Alice")),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -314,6 +338,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record
         )
@@ -325,6 +350,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .get(0)
         .asList { it.asString() }
         .sorted() shouldBe listOf("Person", "SourceEvent")
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -341,6 +368,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         NodeState(emptyList(), mapOf("name" to "Alice", "age" to 30)),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -363,6 +391,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record
         )
@@ -374,6 +403,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "age" to 31L, "city" to "NYC")
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -391,6 +422,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -409,6 +441,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record
         )
@@ -419,6 +452,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -436,6 +471,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -454,6 +490,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record
         )
@@ -464,6 +501,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(1)
   }
 
   @Test
@@ -481,6 +520,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -494,6 +534,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -507,6 +548,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
+                    2,
                 )
                 .record,
         )
@@ -517,6 +559,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -534,6 +578,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -545,6 +590,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -567,6 +613,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    2,
                 )
                 .record
         )
@@ -579,6 +626,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -596,6 +645,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -607,6 +657,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -624,6 +675,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
         )
@@ -637,6 +689,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
+
+    verifyEOSOffset(2)
   }
 
   @Test
@@ -654,6 +708,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -665,6 +720,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -682,6 +738,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -696,6 +753,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         RelationshipState(emptyMap()),
                     ),
                     1,
+                    3,
                     3,
                 )
                 .record,
@@ -712,6 +770,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     4,
+                    4,
                 )
                 .record,
         )
@@ -724,6 +783,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 3
+
+    verifyEOSOffset(4)
   }
 
   @Test
@@ -741,6 +802,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -752,6 +814,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -768,6 +831,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         RelationshipState(mapOf("since" to LocalDate.of(2020, 1, 1))),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -791,6 +855,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record
         )
@@ -804,6 +869,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1), "strength" to 5L)
+
+    verifyEOSOffset(3)
   }
 
   @Test
@@ -821,6 +888,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -832,6 +900,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -850,6 +919,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         ),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -873,6 +943,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record
         )
@@ -885,6 +956,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1))
+
+    verifyEOSOffset(3)
   }
 
   @Test
@@ -902,6 +975,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -913,6 +987,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -929,6 +1004,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         RelationshipState(mapOf("since" to LocalDate.of(2023, 1, 1))),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -950,6 +1026,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record
         )
@@ -963,6 +1040,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(3)
   }
 
   @Test
@@ -980,6 +1059,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -991,6 +1071,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -1007,6 +1088,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         RelationshipState(emptyMap()),
                     ),
                     1,
+                    2,
                     2,
                 )
                 .record,
@@ -1028,6 +1110,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record,
             newChangeEventMessage(
@@ -1043,6 +1126,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
+                    4,
                 )
                 .record,
         )
@@ -1055,6 +1139,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEOSOffset(4)
   }
 
   @Test
@@ -1072,6 +1158,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1083,6 +1170,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -1100,6 +1188,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1113,6 +1202,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    3,
                 )
                 .record,
         )
@@ -1130,6 +1220,8 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 1
+
+    verifyEOSOffset(3)
   }
 
   @Test
@@ -1147,6 +1239,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1158,6 +1251,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                         null,
                         NodeState(emptyList(), mapOf("name" to "Bob")),
                     ),
+                    1,
                     1,
                     1,
                 )
@@ -1178,6 +1272,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1191,6 +1286,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     1,
+                    3,
                 )
                 .record,
             newChangeEventMessage(
@@ -1204,6 +1300,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
+                    4,
                 )
                 .record,
             newChangeEventMessage(
@@ -1217,6 +1314,7 @@ class ApocCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     1,
+                    5,
                 )
                 .record,
         )
@@ -1232,6 +1330,20 @@ class ApocCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-2", "name" to "Bob", "score" to 25L)
+
+    verifyEOSOffset(5)
+  }
+
+  private fun verifyEOSOffset(expectedOffset: Long) {
+    if (eosOffsetLabel.isNotEmpty()) {
+      session.run("MATCH (n:$eosOffsetLabel) RETURN n{.*}").single().get(0).asMap() shouldBe
+          mapOf(
+              "strategy" to "CDC_SOURCE_ID",
+              "topic" to "my-topic",
+              "partition" to 0,
+              "offset" to expectedOffset,
+          )
+    }
   }
 
   private fun newTaskContext(): SinkTaskContext {

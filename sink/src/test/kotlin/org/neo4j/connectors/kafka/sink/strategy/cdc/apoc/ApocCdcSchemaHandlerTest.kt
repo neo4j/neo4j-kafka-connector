@@ -45,7 +45,37 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
-class ApocCdcSchemaHandlerTest {
+class ApocCdcSchemaHandlerWithEOSTest :
+    ApocCdcSchemaHandlerTest(
+        "__KafkaOffset",
+        """
+        |UNWIND ${'$'}events AS e
+        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |WITH k, e WHERE e.offset > k.offset
+        |WITH k, e ORDER BY e.offset ASC
+        |CALL (e) {
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |}
+        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
+        |FINISH
+        """
+            .trimMargin(),
+    )
+
+class ApocCdcSchemaHandlerWithoutEOSTest :
+    ApocCdcSchemaHandlerTest(
+        "",
+        """
+        |UNWIND ${'$'}events AS e
+        |CALL (e) {
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |}
+        |FINISH
+        """
+            .trimMargin(),
+    )
+
+abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expectedQuery: String) {
   private val neo4j =
       Neo4j(Neo4jVersion(2025, 12, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
@@ -63,6 +93,7 @@ class ApocCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                0,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -77,6 +108,7 @@ class ApocCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                1,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -95,6 +127,7 @@ class ApocCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                2,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -113,11 +146,12 @@ class ApocCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                3,
             ),
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+                val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
                 handler.handle(listOf(it))
               }
@@ -147,6 +181,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -157,11 +192,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -184,7 +220,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -207,6 +246,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -217,11 +257,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -244,7 +285,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -270,6 +314,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -280,11 +325,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -306,7 +352,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -332,6 +381,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -342,11 +392,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MERGE (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -369,7 +420,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -398,6 +452,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -408,11 +463,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 2L,
                                         "stmt" to
                                             "MERGE (n:Person:Employee {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname, id: \$e.matchProperties.id}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -436,7 +492,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -462,6 +521,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -472,11 +532,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (n:Person {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}) DELETE n",
                                         "params" to
@@ -494,7 +555,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -527,6 +591,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -537,11 +602,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) MERGE (start)-[r:KNOWS {since: \$e.matchProperties.since}]->(end) SET r += \$e.setProperties",
                                         "params" to
@@ -569,7 +635,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -602,6 +671,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -612,11 +682,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) MERGE (start)-[r:KNOWS {id: \$e.matchProperties.id}]->(end) SET r += \$e.setProperties",
                                         "params" to
@@ -642,7 +713,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -681,6 +755,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -691,11 +766,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (start:Person:Employee {id: \$e.start.matchProperties.id, contractId: \$e.start.matchProperties.contractId}) MATCH (end:Person:Employee {id: \$e.end.matchProperties.id, contractId: \$e.end.matchProperties.contractId}) MATCH (start)-[r:KNOWS {since: \$e.matchProperties.since}]->(end) WITH r LIMIT 1 SET r += \$e.setProperties",
                                         "params" to
@@ -729,7 +805,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -762,6 +841,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -772,11 +852,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (:Person:Employee {id: \$e.start.matchProperties.id, contractId: \$e.start.matchProperties.contractId})-[r:KNOWS {id: \$e.matchProperties.id}]->(:Person {id: \$e.end.matchProperties.id}) SET r += \$e.setProperties",
                                         "params" to
@@ -801,7 +882,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -834,6 +918,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -844,11 +929,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (start:Person {id: \$e.start.matchProperties.id}) MATCH (end:Person {id: \$e.end.matchProperties.id}) MATCH (start)-[r:KNOWS {name: \$e.matchProperties.name, surname: \$e.matchProperties.surname}]->(end) WITH r LIMIT 1 DELETE r",
                                         "params" to
@@ -874,7 +960,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -907,6 +996,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -917,11 +1007,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() DELETE r",
                                         "params" to
@@ -946,7 +1037,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -957,18 +1051,18 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over batch size`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 2)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 2, eosOffsetLabel)
 
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
-                newChangeEventMessage(randomChangeEvent(), 3, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
+                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
             )
         )
 
@@ -997,7 +1091,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1010,6 +1104,7 @@ class ApocCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1020,7 +1115,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1044,6 +1139,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1053,7 +1149,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1066,6 +1162,7 @@ class ApocCdcSchemaHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -1076,7 +1173,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1100,6 +1197,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1109,7 +1207,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1123,6 +1221,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1132,7 +1231,7 @@ class ApocCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1155,6 +1254,7 @@ class ApocCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1177,6 +1277,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -1187,11 +1288,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (n:Person {name: \$e.matchProperties.name}) DELETE n",
                                         "params" to
@@ -1206,7 +1308,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1230,6 +1335,7 @@ class ApocCdcSchemaHandlerTest {
                 ),
             txId = 1,
             seq = 0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -1240,11 +1346,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MERGE (n:Person {name: \$e.matchProperties.name}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -1259,7 +1366,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1282,6 +1392,7 @@ class ApocCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1312,6 +1423,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1336,6 +1448,7 @@ class ApocCdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1366,6 +1479,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1394,6 +1508,7 @@ class ApocCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1424,6 +1539,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1452,6 +1568,7 @@ class ApocCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1482,6 +1599,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1493,11 +1611,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->(:Person {name: \$e.end.matchProperties.name}) SET r += \$e.setProperties",
                                         "params" to
@@ -1522,7 +1641,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1555,6 +1677,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1566,11 +1689,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (:Person {name: \$e.start.matchProperties.name})-[r:KNOWS {id: \$e.matchProperties.id}]->() SET r += \$e.setProperties",
                                         "params" to
@@ -1595,7 +1719,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1628,6 +1755,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1656,6 +1784,7 @@ class ApocCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1686,6 +1815,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1714,6 +1844,7 @@ class ApocCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1744,6 +1875,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1755,11 +1887,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() DELETE r",
                                         "params" to
@@ -1781,7 +1914,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1814,6 +1950,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1825,11 +1962,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() DELETE r",
                                         "params" to
@@ -1851,7 +1989,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1884,6 +2025,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1895,11 +2037,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() DELETE r",
                                         "params" to
@@ -1921,7 +2064,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -1954,6 +2100,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1965,11 +2112,12 @@ class ApocCdcSchemaHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:KNOWS {id: \$e.matchProperties.id}]->() SET r += \$e.setProperties",
                                         "params" to
@@ -1977,12 +2125,12 @@ class ApocCdcSchemaHandlerTest {
                                                 "e" to
                                                     mapOf(
                                                         "start" to
-                                                            mapOf(
+                                                            mapOf<String, Any>(
                                                                 "matchProperties" to
                                                                     emptyMap<String, Any>()
                                                             ),
                                                         "end" to
-                                                            mapOf(
+                                                            mapOf<String, Any>(
                                                                 "matchProperties" to
                                                                     emptyMap<String, Any>()
                                                             ),
@@ -1994,7 +2142,10 @@ class ApocCdcSchemaHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SCHEMA",
                         ),
                     ),
                 )
@@ -2027,6 +2178,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -2055,6 +2207,7 @@ class ApocCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -2085,6 +2238,7 @@ class ApocCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -2113,6 +2267,7 @@ class ApocCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -2162,7 +2317,7 @@ class ApocCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }
@@ -2216,7 +2371,7 @@ class ApocCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }
@@ -2270,14 +2425,14 @@ class ApocCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+          val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2290,10 +2445,19 @@ class ApocCdcSchemaHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
 
     val result = handler.handle(messages)
 
+    result.zip(expected).forEach { (res, exp) ->
+      res.zip(exp).forEach { (r, e) ->
+        r.txId shouldBe e.txId
+        r.seq shouldBe e.seq
+        r.messages shouldBe e.messages
+        r.query.text() shouldBe e.query.text()
+        r.query.parameters().asMap() shouldBe e.query.parameters().asMap()
+      }
+    }
     result shouldBe expected
   }
 }

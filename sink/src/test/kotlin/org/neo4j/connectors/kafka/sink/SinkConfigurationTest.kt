@@ -140,6 +140,37 @@ class SinkConfigurationTest {
   }
 
   @Test
+  fun `should default to empty exactly once offset label`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
+        )
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+
+    config.eosOffsetLabel shouldBe ""
+  }
+
+  @Test
+  fun `should return configured exactly once offset label escaped`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.EOS_OFFSET_LABEL to "__MyKafkaOffset",
+            SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
+        )
+    val config =
+        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+
+    config.eosOffsetLabel shouldBe "`__MyKafkaOffset`"
+  }
+
+  @Test
   fun `should return specified CDC sourceId label and id names`() {
     val testLabel = "TestCdcLabel"
     val testId = "test_id"

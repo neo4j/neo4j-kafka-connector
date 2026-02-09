@@ -40,7 +40,7 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 object TestUtils {
   private val random = Random(System.currentTimeMillis())
 
-  fun <T : Event> newChangeEventMessage(event: T, txId: Long, seq: Int): SinkMessage {
+  fun <T : Event> newChangeEventMessage(event: T, txId: Long, seq: Int, offset: Long): SinkMessage {
     val change =
         ChangeEvent(
             ChangeIdentifier("change-id"),
@@ -72,7 +72,7 @@ object TestUtils {
             null,
             changeConnect.schema(),
             changeConnect.value(),
-            0,
+            offset,
             System.currentTimeMillis(),
             TimestampType.CREATE_TIME,
             Headers.from(change),

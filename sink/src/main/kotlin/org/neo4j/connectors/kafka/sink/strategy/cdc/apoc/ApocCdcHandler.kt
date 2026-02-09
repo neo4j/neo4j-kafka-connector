@@ -36,8 +36,11 @@ import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class ApocCdcHandler(private val neo4j: Neo4j, private val batchSize: Int) :
-    SinkStrategyHandler {
+abstract class ApocCdcHandler(
+    private val neo4j: Neo4j,
+    private val batchSize: Int,
+    private val eosOffsetLabel: String,
+) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   data class MessageToEvent(
@@ -47,14 +50,20 @@ abstract class ApocCdcHandler(private val neo4j: Neo4j, private val batchSize: I
   )
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
+    val (topic, partition) =
+        messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
+            ?: return emptyList()
+
     return messages
         .asSequence()
         .onEach { logger.trace("received message: {}", it) }
         .map {
+          val changeEvent = it.toChangeEvent()
+
           MessageToEvent(
               it,
-              it.toChangeEvent(),
-              when (val event = it.toChangeEvent().event) {
+              changeEvent,
+              when (val event = changeEvent.event) {
                 is NodeEvent ->
                     when (event.operation) {
                       EntityOperation.CREATE -> transformCreate(event)
@@ -82,7 +91,11 @@ abstract class ApocCdcHandler(private val neo4j: Neo4j, private val batchSize: I
                   null,
                   null,
                   batch.map { data -> data.message },
-                  batchedStatement(batch.map { it.cdcData.toParams() }),
+                  batchedStatement(
+                      topic,
+                      partition,
+                      batch.map { it.cdcData.toParams(it.message.record) },
+                  ),
               )
           )
         }
@@ -90,19 +103,55 @@ abstract class ApocCdcHandler(private val neo4j: Neo4j, private val batchSize: I
         .toList()
   }
 
-  private fun batchedStatement(events: List<Map<String, Any>>): Query {
+  private fun batchedStatement(
+      topic: String,
+      partition: Int,
+      events: List<Map<String, Any>>,
+  ): Query {
     val termination = if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN 1"
 
-    val query = buildString {
-      append("UNWIND \$events AS $EVENT ")
-      if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-          append("CALL ($EVENT) { ")
-      else append("CALL { WITH $EVENT ")
-      append("CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination ")
-      append("} $termination")
-    }
+    val query =
+        if (eosOffsetLabel.isNotBlank()) {
+          buildString {
+            appendLine("UNWIND \$events AS $EVENT")
+            appendLine(
+                "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
+            )
+            appendLine("WITH k, $EVENT WHERE $EVENT.offset > k.offset")
+            appendLine("WITH k, $EVENT ORDER BY $EVENT.offset ASC")
+            if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
+                appendLine("CALL ($EVENT) {")
+            else appendLine("CALL { WITH $EVENT")
+            appendLine(
+                "  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination"
+            )
+            appendLine("}")
+            appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
+            append(termination)
+          }
+        } else {
+          buildString {
+            appendLine("UNWIND \$events AS $EVENT")
+            if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
+                appendLine("CALL ($EVENT) {")
+            else appendLine("CALL { WITH $EVENT")
+            appendLine(
+                "  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination"
+            )
+            appendLine("}")
+            append(termination)
+          }
+        }
 
-    return Query(query, buildMap { put("events", events) })
+    return Query(
+        query,
+        buildMap {
+          put("events", events)
+          put("topic", topic)
+          put("partition", partition)
+          put("strategy", strategy().name)
+        },
+    )
   }
 
   protected abstract fun transformCreate(event: NodeEvent): CdcData
