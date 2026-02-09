@@ -121,13 +121,7 @@ abstract class ApocCdcHandler(
             )
             appendLine("WITH k, $EVENT WHERE $EVENT.offset > k.offset")
             appendLine("WITH k, $EVENT ORDER BY $EVENT.offset ASC")
-            if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-                appendLine("CALL ($EVENT) {")
-            else appendLine("CALL { WITH $EVENT")
-            appendLine(
-                "  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination"
-            )
-            appendLine("}")
+            appendCallSubquery(termination)
             appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
             append(termination)
           }
@@ -135,13 +129,7 @@ abstract class ApocCdcHandler(
           buildString {
             appendLine("UNWIND \$events AS $EVENT")
             appendLine("WITH $EVENT ORDER BY $EVENT.offset ASC")
-            if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-                appendLine("CALL ($EVENT) {")
-            else appendLine("CALL { WITH $EVENT")
-            appendLine(
-                "  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination"
-            )
-            appendLine("}")
+            appendCallSubquery(termination)
             append(termination)
           }
         }
@@ -155,6 +143,14 @@ abstract class ApocCdcHandler(
           put("strategy", strategy().name)
         },
     )
+  }
+
+  private fun StringBuilder.appendCallSubquery(termination: String) {
+    if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
+        appendLine("CALL ($EVENT) {")
+    else appendLine("CALL { WITH $EVENT")
+    appendLine("  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination")
+    appendLine("}")
   }
 
   protected abstract fun transformCreate(event: NodeEvent): CdcData
