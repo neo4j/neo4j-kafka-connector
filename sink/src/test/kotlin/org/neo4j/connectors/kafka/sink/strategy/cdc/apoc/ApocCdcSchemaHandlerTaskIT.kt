@@ -1550,6 +1550,99 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
   }
 
   @Test
+  fun `should be able to handle events even if they are provided out of order in terms of their offset values`() {
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
+  }
+
+  @Test
   fun `should be able to handle the same batch without any errors`() {
     // This cannot work when not using EOS offset tracking, as the change queries would be
     // re-executed and fail due to key changes

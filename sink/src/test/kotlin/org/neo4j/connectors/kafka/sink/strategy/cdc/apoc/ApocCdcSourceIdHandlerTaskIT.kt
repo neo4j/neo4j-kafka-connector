@@ -1336,6 +1336,87 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
     verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 5)
   }
 
+  @Test
+  fun `should handle interleaved node and relationship operations even if they are provided out of order in terms of their offset values`() {
+    task.put(
+        listOf(
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        emptyList(),
+                        emptyMap(),
+                        null,
+                        NodeState(emptyList(), mapOf("name" to "Alice")),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    RelationshipEvent(
+                        "rel-1",
+                        "FOLLOWS",
+                        Node("node-1", emptyList(), emptyMap()),
+                        Node("node-2", emptyList(), emptyMap()),
+                        emptyList(),
+                        EntityOperation.CREATE,
+                        null,
+                        RelationshipState(emptyMap()),
+                    ),
+                    1,
+                    2,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        emptyList(),
+                        emptyMap(),
+                        NodeState(emptyList(), mapOf("name" to "Alice")),
+                        NodeState(emptyList(), mapOf("name" to "Alice", "age" to 30)),
+                    ),
+                    2,
+                    0,
+                    3,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-2",
+                        EntityOperation.CREATE,
+                        emptyList(),
+                        emptyMap(),
+                        null,
+                        NodeState(emptyList(), mapOf("name" to "Bob")),
+                    ),
+                    1,
+                    1,
+                    1,
+                )
+                .record,
+        )
+    )
+
+    session
+        .run("MATCH (n:SourceEvent {sourceId: 'node-1'}) RETURN n{.*}")
+        .single()
+        .get(0)
+        .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice", "age" to 30L)
+    session
+        .run(
+            "MATCH (:SourceEvent {sourceId: 'node-1'})-[r:FOLLOWS]->(:SourceEvent {sourceId: 'node-2'}) RETURN count(r)"
+        )
+        .single()
+        .get(0)
+        .asInt() shouldBe 1
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
+  }
+
   private fun newTaskContext(): SinkTaskContext {
     return mock<SinkTaskContext> {
       on { errantRecordReporter() } doReturn ErrantRecordReporter { _, error -> throw error }

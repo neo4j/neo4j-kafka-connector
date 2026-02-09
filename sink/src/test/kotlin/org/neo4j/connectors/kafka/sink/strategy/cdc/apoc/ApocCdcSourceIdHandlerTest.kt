@@ -62,6 +62,7 @@ class ApocCdcSourceIdHandlerWithoutEOSTest :
         "",
         """
         |UNWIND ${'$'}events AS e
+        |WITH e ORDER BY e.offset ASC
         |CALL (e) {
         |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
         |}

@@ -134,6 +134,7 @@ abstract class ApocCdcHandler(
         } else {
           buildString {
             appendLine("UNWIND \$events AS $EVENT")
+            appendLine("WITH $EVENT ORDER BY $EVENT.offset ASC")
             if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
                 appendLine("CALL ($EVENT) {")
             else appendLine("CALL { WITH $EVENT")
