@@ -41,7 +41,9 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SCHEMA
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -154,7 +156,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     session.run("MATCH (a:User {userId: 'user1'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user1", "name" to "Alice")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -195,7 +197,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         mapOf("personId" to "p1", "name" to "Alice", "department" to "Engineering")
     result.get(1).asList { it.asString() }.sorted() shouldBe listOf("Employee", "Manager", "Person")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -245,7 +247,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 3
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
@@ -278,7 +280,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() }.sorted() shouldBe listOf("Admin", "User")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -311,7 +313,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() } shouldBe listOf("User")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -340,7 +342,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN n{.*}").single()
     result.get(0).asMap() shouldBe mapOf("userId" to "user1", "name" to "Alice")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -368,7 +370,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -422,7 +424,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
@@ -457,7 +459,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("customerId" to "c1", "orderId" to "o1", "total" to 100.00)
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -502,7 +504,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .asMap() shouldBe
         mapOf("customerId" to "c1", "orderId" to "o1", "total" to 150.00, "status" to "shipped")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -541,7 +543,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -600,7 +602,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
@@ -678,7 +680,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe emptyMap()
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
@@ -716,7 +718,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1), "strength" to 5)
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -754,7 +756,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1))
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -795,7 +797,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     // Nodes should still exist
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 2
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -845,7 +847,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 1)
   }
 
   @Test
@@ -884,7 +886,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 99.99)
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -933,7 +935,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 75.00, "status" to "updated")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -976,7 +978,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -1055,7 +1057,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asDouble() shouldBe 20.00
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
@@ -1109,7 +1111,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asDouble() shouldBe 25.00
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -1160,7 +1162,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .asMap() shouldBe
         mapOf("reviewId" to "r1", "version" to 1L, "rating" to 5L, "comment" to "Great!")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -1229,7 +1231,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
             "verified" to true,
         )
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -1304,7 +1306,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
           it.get(1).isNull shouldBe true
         }
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
@@ -1377,7 +1379,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 1
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1451,7 +1453,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     session.run("MATCH (a:User {userId: 'user2'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user2", "name" to "Bob", "score" to 25)
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1544,7 +1546,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
             "created" to 1770398478246,
         )
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1641,7 +1643,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
             "created" to 1770398478246,
         )
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
 
     // retry, this should fail if the change query gets re-executed due to key changes
     task.put(batch)
@@ -1657,19 +1659,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
             "created" to 1770398478246,
         )
 
-    verifyEOSOffset(3)
-  }
-
-  private fun verifyEOSOffset(expectedOffset: Long) {
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.run("MATCH (n:$eosOffsetLabel) RETURN n{.*}").single().get(0).asMap() shouldBe
-          mapOf(
-              "strategy" to "CDC_SCHEMA",
-              "topic" to "my-topic",
-              "partition" to 0,
-              "offset" to expectedOffset,
-          )
-    }
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
   private fun newTaskContext(): SinkTaskContext {

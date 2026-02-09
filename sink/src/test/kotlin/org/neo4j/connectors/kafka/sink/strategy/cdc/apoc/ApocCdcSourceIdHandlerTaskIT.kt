@@ -41,7 +41,9 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SOURCE_ID
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
@@ -159,7 +161,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 0)
   }
 
   @Test
@@ -197,7 +199,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
     result.get(1).asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "department" to "Engineering")
 
-    verifyEOSOffset(0)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 0)
   }
 
   @Test
@@ -251,7 +253,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
 
     session.run("MATCH (n:SourceEvent) RETURN count(n)").single().get(0).asInt() shouldBe 3
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -301,7 +303,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .asList { it.asString() }
         .sorted() shouldBe listOf("Admin", "Person", "SourceEvent")
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -351,7 +353,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .asList { it.asString() }
         .sorted() shouldBe listOf("Person", "SourceEvent")
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -404,7 +406,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "age" to 31L, "city" to "NYC")
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -453,7 +455,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -502,7 +504,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(1)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -560,7 +562,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -627,7 +629,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -690,7 +692,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
 
-    verifyEOSOffset(2)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -784,7 +786,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 3
 
-    verifyEOSOffset(4)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 4)
   }
 
   @Test
@@ -870,7 +872,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .asMap() shouldBe
         mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1), "strength" to 5L)
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -957,7 +959,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1))
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1041,7 +1043,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1140,7 +1142,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 0
 
-    verifyEOSOffset(4)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 4)
   }
 
   @Test
@@ -1221,7 +1223,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asInt() shouldBe 1
 
-    verifyEOSOffset(3)
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1331,19 +1333,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-2", "name" to "Bob", "score" to 25L)
 
-    verifyEOSOffset(5)
-  }
-
-  private fun verifyEOSOffset(expectedOffset: Long) {
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.run("MATCH (n:$eosOffsetLabel) RETURN n{.*}").single().get(0).asMap() shouldBe
-          mapOf(
-              "strategy" to "CDC_SOURCE_ID",
-              "topic" to "my-topic",
-              "partition" to 0,
-              "offset" to expectedOffset,
-          )
-    }
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 5)
   }
 
   private fun newTaskContext(): SinkTaskContext {

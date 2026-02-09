@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import io.kotest.matchers.shouldBe
 import java.time.ZonedDateTime
 import java.util.UUID
 import kotlin.random.Random
@@ -36,6 +37,8 @@ import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.driver.Session
 
 object TestUtils {
   private val random = Random(System.currentTimeMillis())
@@ -144,4 +147,21 @@ object TestUtils {
           RelationshipState(emptyMap()),
           RelationshipState(emptyMap()),
       )
+
+  fun verifyEosOffsetIfEnabled(
+      session: Session,
+      strategy: SinkStrategy,
+      offsetLabel: String,
+      expectedOffset: Long,
+  ) {
+    if (offsetLabel.isNotEmpty()) {
+      session.run("MATCH (n:$offsetLabel) RETURN n{.*}").single().get(0).asMap() shouldBe
+          mapOf(
+              "strategy" to strategy.name,
+              "topic" to "my-topic",
+              "partition" to 0,
+              "offset" to expectedOffset,
+          )
+    }
+  }
 }

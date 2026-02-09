@@ -112,6 +112,8 @@ abstract class ApocCdcHandler(
 
     val query =
         if (eosOffsetLabel.isNotBlank()) {
+          // eosOffsetLabel is being passed in sanitized from the config, so we can safely use
+          // string interpolation here
           buildString {
             appendLine("UNWIND \$events AS $EVENT")
             appendLine(
