@@ -21,9 +21,11 @@ import java.util.Locale
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.exceptions.Neo4jException
+import org.slf4j.LoggerFactory
 
 object DatabaseSupport {
-
+  private val logger = LoggerFactory.getLogger(DatabaseSupport::class.java)
   private val DEFAULT_TIMEOUT = Duration.ofMinutes(1)
   internal const val DEFAULT_DATABASE = "neo4j"
 
@@ -67,20 +69,28 @@ object DatabaseSupport {
     tailrec fun poll(): Boolean {
       if (System.currentTimeMillis() >= deadline) return false
 
-      val status =
-          this.session(SessionConfig.forDatabase("system")).use { session ->
-            session
-                .run(
-                    "SHOW DATABASES YIELD name, currentStatus WHERE name = \$db_name RETURN currentStatus",
-                    mapOf("db_name" to database),
-                )
-                .single()
-                ?.get("currentStatus")
-                ?.asString()
-                ?.lowercase(Locale.ROOT)
-          }
+      try {
+        val status =
+            this.session(SessionConfig.forDatabase("system")).use { session ->
+              session
+                  .run(
+                      "SHOW DATABASES YIELD name, currentStatus WHERE name = \$db_name RETURN currentStatus",
+                      mapOf("db_name" to database),
+                  )
+                  .single()
+                  ?.get("currentStatus")
+                  ?.asString()
+                  ?.lowercase(Locale.ROOT)
+            }
 
-      if (status == "online") return true
+        if (status == "online") return true
+      } catch (e: Neo4jException) {
+        // There is a known concurrency issue that sometimes causes this statement to fail. Let's
+        // assume that the database is not online yet and try again after a short delay.
+        logger.warn("got an error while checking database status, will retry...", e)
+
+        return false
+      }
 
       Thread.sleep(1000)
       return poll()
