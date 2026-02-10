@@ -23,6 +23,10 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
+import org.junit.jupiter.engine.execution.NamespaceAwareStore
+import org.junit.platform.engine.support.store.Namespace
+import org.junit.platform.engine.support.store.NamespacedHierarchicalStore
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
@@ -45,10 +49,16 @@ internal object JUnitSupport {
     return mock<ParameterContext> { on { parameter } doReturn param }
   }
 
-  fun extensionContextFor(method: KFunction<Unit>) =
-      mock<ExtensionContext> {
-        on { testMethod } doReturn Optional.ofNullable(method.javaMethod)
-        on { requiredTestMethod } doReturn method.javaMethod
-        on { displayName } doReturn method.name
-      }
+  fun extensionContextFor(method: KFunction<Unit>): ExtensionContext {
+    val store = NamespaceAwareStore(NamespacedHierarchicalStore(null), Namespace.GLOBAL)
+
+    return mock<ExtensionContext> {
+      on { testClass } doReturn Optional.ofNullable(method.javaMethod!!.declaringClass)
+      on { requiredTestClass } doReturn method.javaMethod!!.declaringClass
+      on { testMethod } doReturn Optional.ofNullable(method.javaMethod)
+      on { requiredTestMethod } doReturn method.javaMethod
+      on { displayName } doReturn method.name
+      on { getStore(any()) } doReturn store
+    }
+  }
 }

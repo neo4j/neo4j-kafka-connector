@@ -16,11 +16,39 @@
  */
 package org.neo4j.connectors.kafka.testing
 
+import java.time.Duration
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Schema
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.driver.AuthToken
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import org.testcontainers.containers.Neo4jContainer
+import org.testcontainers.containers.wait.strategy.AbstractWaitStrategy
+import org.testcontainers.containers.wait.strategy.WaitAllStrategy
+import org.testcontainers.containers.wait.strategy.WaitStrategy
 import org.testcontainers.utility.DockerImageName
+
+class DatabaseAvailability(
+    private val auth: AuthToken = AuthTokens.none(),
+    private val databases: List<String> = listOf("neo4j"),
+) : AbstractWaitStrategy() {
+  override fun waitUntilReady() {
+    val boltUrl = "bolt://${waitStrategyTarget.host}:${waitStrategyTarget.getMappedPort(7687)}"
+    GraphDatabase.driver(boltUrl, auth).use { driver ->
+      databases.forEach { db -> driver.createDatabase(db, timeout = startupTimeout) }
+    }
+  }
+}
+
+fun neo4jDatabase(auth: AuthToken = AuthTokens.none()): WaitStrategy =
+    WaitAllStrategy()
+        .withStrategy(Neo4jContainer.WAIT_FOR_BOLT)
+        .withStrategy(
+            DatabaseAvailability(auth, listOf("neo4j")).withStartupTimeout(Duration.ofMinutes(2))
+        )
 
 fun neo4jImage(): DockerImageName =
     System.getenv("NEO4J_TEST_IMAGE")

@@ -21,21 +21,21 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 
 internal class ParameterResolvers(
-    private val parameterResolvers: Map<Class<*>, (ParameterContext?, ExtensionContext?) -> Any>
+    private val parameterResolvers: Map<Class<*>, (ParameterContext, ExtensionContext) -> Any>
 ) : ParameterResolver {
 
   override fun supportsParameter(
-      parameterContext: ParameterContext?,
-      ignored: ExtensionContext?,
+      parameterContext: ParameterContext,
+      ignored: ExtensionContext,
   ): Boolean {
-    return parameterResolvers.containsKey(parameterContext!!.parameter.type)
+    return parameterResolvers.containsKey(parameterContext.parameter.type)
   }
 
   override fun resolveParameter(
-      parameterContext: ParameterContext?,
-      extensionContext: ExtensionContext?,
+      parameterContext: ParameterContext,
+      extensionContext: ExtensionContext,
   ): Any {
-    val resolver = parameterResolvers[parameterContext!!.parameter.type]!!
+    val resolver = parameterResolvers[parameterContext.parameter.type]!!
     return resolver(parameterContext, extensionContext)
   }
 

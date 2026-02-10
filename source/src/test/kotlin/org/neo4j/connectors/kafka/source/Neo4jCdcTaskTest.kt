@@ -22,8 +22,6 @@ import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.equals.shouldNotBeEqual
 import io.kotest.matchers.shouldBe
 import java.util.UUID
-import kotlin.collections.get
-import kotlin.run
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 import org.apache.kafka.connect.source.SourceTaskContext
@@ -45,8 +43,11 @@ import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
+import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -66,6 +67,7 @@ class Neo4jCdcTaskTest {
             .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
             .withExposedPorts(7687)
             .withoutAuthentication()
+            .waitingFor(neo4jDatabase())
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j
@@ -90,6 +92,7 @@ class Neo4jCdcTaskTest {
 
   @AfterEach
   fun after() {
+    if (this::db.isInitialized) driver.dropDatabase(db)
     if (this::session.isInitialized) session.close()
     if (this::task.isInitialized) task.stop()
   }
@@ -99,13 +102,7 @@ class Neo4jCdcTaskTest {
     Assumptions.assumeTrue(canIUse(Dbms.changeDataCapture()).withNeo4j(neo4j))
 
     db = "test-${UUID.randomUUID()}"
-    driver.session(SessionConfig.forDatabase("system")).use {
-      it.run(
-              "CREATE OR REPLACE DATABASE \$db OPTIONS { txLogEnrichment: \$mode } WAIT",
-              mapOf("db" to db, "mode" to "FULL"),
-          )
-          .consume()
-    }
+    driver.createDatabase(db, withCdc = true)
     session = driver.session(SessionConfig.forDatabase(db))
 
     task = Neo4jCdcTask()

@@ -34,11 +34,11 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedInvocationConstants.DISPLAY_NAME_PLACEHOLDER
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
@@ -54,6 +54,7 @@ import org.neo4j.driver.Result
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.Values
+import org.neo4j.driver.summary.ResultSummary
 
 class Neo4jSourceExtensionTest {
 
@@ -90,12 +91,7 @@ class Neo4jSourceExtensionTest {
         }
     )
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val session = mock<Session>()
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
+    val (driver, _) = setupDetectableDriver()
     val extension = Neo4jSourceExtension(environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)
     extension.evaluateExecutionCondition(extensionContext)
@@ -217,15 +213,31 @@ class Neo4jSourceExtensionTest {
   }
 
   private fun setupDetectableDriver(): Pair<Driver, Session> {
-    val record =
+    val versionRecord =
         mock<Record> {
           on { get("version") } doReturn Values.value("5.26.0")
           on { get("edition") } doReturn Values.value("enterprise")
         }
-    val result = mock<Result> { on { single() } doReturn record }
+    val versionResult = mock<Result> { on { single() } doReturn versionRecord }
+
+    val statusRecord = mock<Record> { on { get("currentStatus") } doReturn Values.value("online") }
+    val statusResult = mock<Result> { on { single() } doReturn statusRecord }
+
+    val consumableResult = mock<Result> { on { consume() } doReturn mock<ResultSummary>() }
+
     val session =
         mock<Session> {
-          on { run(any(String::class.java), any<Map<String, Any>>()) } doReturn result
+          on { run(ArgumentMatchers.contains("dbms.components"), any<Map<String, Any>>()) } doReturn
+              versionResult
+          on {
+            run(ArgumentMatchers.contains("RETURN currentStatus"), any<Map<String, Any>>())
+          } doReturn statusResult
+          on {
+            run(
+                ArgumentMatchers.matches("^(CREATE OR REPLACE|DROP) DATABASE"),
+                any<Map<String, Any>>(),
+            )
+          } doReturn consumableResult
         }
     val driver =
         mock<Driver> {
@@ -238,14 +250,8 @@ class Neo4jSourceExtensionTest {
   @Test
   fun `closes Driver and Session after each test`() {
     kafkaConnectServer.start()
-    val session = mock<Session>()
     val environment = mapOf("KAFKA_CONNECT_EXTERNAL_URI" to kafkaConnectServer.address())
-    val driver =
-        mock<Driver> {
-          on { session() } doReturn session
-          on { session(any(SessionConfig::class.java)) } doReturn session
-        }
-
+    val (driver, session) = setupDetectableDriver()
     val extension =
         Neo4jSourceExtension(envAccessor = environment::get, driverFactory = { _, _ -> driver })
     val extensionContext = extensionContextFor(::onlyKafkaConnectExternalUriFromEnvMethod)

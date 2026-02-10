@@ -42,6 +42,9 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
+import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -62,6 +65,7 @@ class ApocCdcSourceIdHandlerTaskIT {
             .withPlugins("apoc")
             .withExposedPorts(7687)
             .withoutAuthentication()
+            .waitingFor(neo4jDatabase())
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j
@@ -86,6 +90,7 @@ class ApocCdcSourceIdHandlerTaskIT {
 
   @AfterEach
   fun after() {
+    if (this::db.isInitialized) driver.dropDatabase(db)
     if (this::session.isInitialized) session.close()
     if (this::task.isInitialized) task.stop()
   }
@@ -98,9 +103,7 @@ class ApocCdcSourceIdHandlerTaskIT {
     }
 
     db = "test-${UUID.randomUUID()}"
-    driver.session(SessionConfig.forDatabase("system")).use {
-      it.run("CREATE OR REPLACE DATABASE \$db WAIT", mapOf("db" to db)).consume()
-    }
+    driver.createDatabase(db)
     session = driver.session(SessionConfig.forDatabase(db))
 
     // Create constraint for SourceEvent nodes
