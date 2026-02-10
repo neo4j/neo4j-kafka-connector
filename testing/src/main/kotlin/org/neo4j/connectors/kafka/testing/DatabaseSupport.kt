@@ -88,8 +88,6 @@ object DatabaseSupport {
         // There is a known concurrency issue that sometimes causes this statement to fail. Let's
         // assume that the database is not online yet and try again after a short delay.
         logger.warn("got an error while checking database status, will retry...", e)
-
-        return false
       }
 
       Thread.sleep(1000)
