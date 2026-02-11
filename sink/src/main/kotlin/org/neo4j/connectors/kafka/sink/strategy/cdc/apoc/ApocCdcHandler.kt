@@ -32,6 +32,7 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
+import org.neo4j.connectors.kafka.sink.strategy.cdc.DefaultCdcStatementGenerator
 import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
 import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
@@ -44,6 +45,8 @@ abstract class ApocCdcHandler(
     private val eosOffsetLabel: String,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
+
+  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
   data class MessageToEvent(
       val message: SinkMessage,
@@ -93,11 +96,7 @@ abstract class ApocCdcHandler(
                   null,
                   null,
                   batch.map { data -> data.message },
-                  batchedStatement(
-                      topic,
-                      partition,
-                      batch.map { it.cdcData.toParams(it.message.record) },
-                  ),
+                  batchedStatement(topic, partition, batch),
               )
           )
         }
@@ -105,11 +104,7 @@ abstract class ApocCdcHandler(
         .toList()
   }
 
-  private fun batchedStatement(
-      topic: String,
-      partition: Int,
-      events: List<Map<String, Any>>,
-  ): Query {
+  private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
     val termination = if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN 1"
 
     val query =
@@ -139,7 +134,18 @@ abstract class ApocCdcHandler(
     return Query(
         query,
         buildMap {
-          put("events", events)
+          put(
+              "events",
+              events.map {
+                val query = statementGenerator.buildStatement(it.cdcData)
+
+                mapOf(
+                    "offset" to it.message.record.kafkaOffset(),
+                    "stmt" to query.text(),
+                    "params" to query.parameters(),
+                )
+              },
+          )
           put("topic", topic)
           put("partition", partition)
           put("strategy", strategy().name)

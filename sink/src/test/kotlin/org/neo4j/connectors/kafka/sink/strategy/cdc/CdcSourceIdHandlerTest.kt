@@ -71,7 +71,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -114,7 +114,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -162,7 +162,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -210,7 +210,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -254,7 +254,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -301,7 +301,7 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -447,9 +447,9 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
+                        "MATCH (start:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
                             "[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->" +
-                            "(:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
+                            "(end:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
                             "SET r += ${'$'}e.setProperties",
                         mapOf(
                             "e" to
@@ -500,9 +500,9 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
+                        "MATCH (start:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
                             "[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->" +
-                            "(:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
+                            "(end:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
                             "SET r += ${'$'}e.setProperties",
                         mapOf(
                             "e" to

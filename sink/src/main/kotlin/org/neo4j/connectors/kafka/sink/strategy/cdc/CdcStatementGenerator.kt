@@ -46,27 +46,31 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
     val matchProps = buildMatchProps(data.matchProperties, "matchProperties")
     val setLabels =
         if (setDynamicLabels) {
-          "SET n:\$($EVENT.addLabels)"
-        } else {
-          "SET n" +
+          " SET n:${'$'}(${'$'}$EVENT.addLabels)"
+        } else if (data.addLabels.isNotEmpty()) {
+          " SET n" +
               data.addLabels.sorted().joinToString(":", ":") {
                 SchemaNames.sanitize(it, true).orElseThrow()
               }
+        } else {
+          ""
         }
     val removeLabels =
         if (removeDynamicLabels) {
-          "REMOVE n:\$($EVENT.removeLabels)"
-        } else {
-          "REMOVE n" +
+          " REMOVE n:${'$'}(${'$'}$EVENT.removeLabels)"
+        } else if (data.removeLabels.isNotEmpty()) {
+          " REMOVE n" +
               data.removeLabels.sorted().joinToString(":", ":") {
                 SchemaNames.sanitize(it, true).orElseThrow()
               }
+        } else {
+          ""
         }
     val stmt =
         when (data.operation) {
           EntityOperation.CREATE,
           EntityOperation.UPDATE -> {
-            "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties $setLabels $removeLabels"
+            "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties$setLabels$removeLabels"
           }
           EntityOperation.DELETE -> {
             "MATCH (n$matchLabels$matchProps) DELETE n"
@@ -110,7 +114,7 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
             if (!data.hasKeys) {
               "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH r LIMIT 1 SET r += ${'$'}$EVENT.setProperties"
             } else {
-              "MATCH ($startMatchLabels$startMatchProps)-[r:$matchType$matchProps]->($endMatchLabels$endMatchProps) SET r += ${'$'}$EVENT.setProperties"
+              "MATCH (start$startMatchLabels$startMatchProps)-[r:$matchType$matchProps]->(end$endMatchLabels$endMatchProps) SET r += ${'$'}$EVENT.setProperties"
             }
           }
           EntityOperation.DELETE -> {
@@ -127,10 +131,16 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
         mapOf(
             EVENT to
                 buildMap {
-                  if (data.startMatchProperties.isNotEmpty()) {
+                  if (
+                      data.startMatchProperties.isNotEmpty() &&
+                          (data.operation != EntityOperation.DELETE || !data.hasKeys)
+                  ) {
                     this["start"] = mapOf("matchProperties" to data.startMatchProperties)
                   }
-                  if (data.endMatchProperties.isNotEmpty()) {
+                  if (
+                      data.endMatchProperties.isNotEmpty() &&
+                          (data.operation != EntityOperation.DELETE || !data.hasKeys)
+                  ) {
                     this["end"] = mapOf("matchProperties" to data.endMatchProperties)
                   }
                   if (data.matchProperties.isNotEmpty()) {

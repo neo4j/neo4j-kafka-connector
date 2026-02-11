@@ -161,7 +161,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -209,7 +209,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -260,7 +260,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -307,7 +307,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -361,7 +361,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`Employee`:`Person` {`id`: ${'$'}e.matchProperties.`id`, `name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Employee`:`Person` {`id`: ${'$'}e.matchProperties.`id`, `name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -583,9 +583,9 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (:`Employee`:`Person` {`contractId`: \$e.start.matchProperties.`contractId`, `id`: \$e.start.matchProperties.`id`})-" +
+                        "MATCH (start:`Employee`:`Person` {`contractId`: \$e.start.matchProperties.`contractId`, `id`: \$e.start.matchProperties.`id`})-" +
                             "[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->" +
-                            "(:`Person` {`id`: \$e.end.matchProperties.`id`}) " +
+                            "(end:`Person` {`id`: \$e.end.matchProperties.`id`}) " +
                             "SET r += \$e.setProperties",
                         mapOf(
                             "e" to
@@ -694,18 +694,7 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage1),
                     Query(
                         "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() DELETE r",
-                        mapOf(
-                            "e" to
-                                mapOf(
-                                    "start" to
-                                        mapOf(
-                                            "matchProperties" to
-                                                mapOf("id" to 1L, "contractId" to 5000L)
-                                        ),
-                                    "end" to mapOf("matchProperties" to mapOf("id" to 2L)),
-                                    "matchProperties" to mapOf("id" to 1001L),
-                                )
-                        ),
+                        mapOf("e" to mapOf("matchProperties" to mapOf("id" to 1001L))),
                     ),
                 )
             )
@@ -1009,7 +998,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`}) SET n += ${'$'}e.setProperties SET n:$(${'$'}e.addLabels) REMOVE n:$(${'$'}e.removeLabels)",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -1259,7 +1248,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->(:`Person` {`name`: ${'$'}e.end.matchProperties.`name`}) " +
+                        "MATCH (start)-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->(end:`Person` {`name`: ${'$'}e.end.matchProperties.`name`}) " +
                             "SET r += ${'$'}e.setProperties",
                         mapOf(
                             "e" to
@@ -1312,7 +1301,7 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (:`Person` {`name`: ${'$'}e.start.matchProperties.`name`})-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() SET r += ${'$'}e.setProperties",
+                        "MATCH (start:`Person` {`name`: ${'$'}e.start.matchProperties.`name`})-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->(end) SET r += ${'$'}e.setProperties",
                         mapOf(
                             "e" to
                                 mapOf(
@@ -1486,13 +1475,7 @@ class CdcSchemaHandlerTest {
                     Query(
                         "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() " +
                             "DELETE r",
-                        mapOf(
-                            "e" to
-                                mapOf(
-                                    "end" to mapOf("matchProperties" to mapOf("name" to "john")),
-                                    "matchProperties" to mapOf("id" to 1L),
-                                )
-                        ),
+                        mapOf("e" to mapOf("matchProperties" to mapOf("id" to 1L))),
                     ),
                 )
             )
@@ -1537,13 +1520,7 @@ class CdcSchemaHandlerTest {
                     listOf(sinkMessage),
                     Query(
                         "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() DELETE r",
-                        mapOf(
-                            "e" to
-                                mapOf(
-                                    "start" to mapOf("matchProperties" to mapOf("name" to "john")),
-                                    "matchProperties" to mapOf("id" to 1L),
-                                )
-                        ),
+                        mapOf("e" to mapOf("matchProperties" to mapOf("id" to 1L))),
                     ),
                 )
             )

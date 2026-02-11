@@ -42,7 +42,11 @@ class ApocCdcSourceIdHandler(
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using APOC compatible CDC SOURCE_ID strategy for topic '{}'", topic)
+    logger.info(
+        "using APOC compatible CDC SOURCE_ID strategy (EoS enabled: {}) for topic '{}'",
+        eosOffsetLabel.isNotEmpty(),
+        topic,
+    )
   }
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID
