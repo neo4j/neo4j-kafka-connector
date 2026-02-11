@@ -31,7 +31,9 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.toChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
+import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
+import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -115,20 +117,20 @@ abstract class ApocCdcHandler(
           // eosOffsetLabel is being passed in sanitized from the config, so we can safely use
           // string interpolation here
           buildString {
-            appendLine("UNWIND \$events AS $EVENT")
+            appendLine("UNWIND \$events AS ${EVENT}")
             appendLine(
                 "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
             )
-            appendLine("WITH k, $EVENT WHERE $EVENT.offset > k.offset")
-            appendLine("WITH k, $EVENT ORDER BY $EVENT.offset ASC")
+            appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
+            appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
             appendCallSubquery(termination)
-            appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
+            appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
             append(termination)
           }
         } else {
           buildString {
-            appendLine("UNWIND \$events AS $EVENT")
-            appendLine("WITH $EVENT ORDER BY $EVENT.offset ASC")
+            appendLine("UNWIND \$events AS ${EVENT}")
+            appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
             appendCallSubquery(termination)
             append(termination)
           }
@@ -147,9 +149,9 @@ abstract class ApocCdcHandler(
 
   private fun StringBuilder.appendCallSubquery(termination: String) {
     if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-        appendLine("CALL ($EVENT) {")
-    else appendLine("CALL { WITH $EVENT")
-    appendLine("  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination")
+        appendLine("CALL (${EVENT}) {")
+    else appendLine("CALL { WITH ${EVENT}")
+    appendLine("  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value $termination")
     appendLine("}")
   }
 

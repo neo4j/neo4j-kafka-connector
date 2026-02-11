@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.EntityOperation
@@ -24,25 +24,21 @@ import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcNodeData
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcRelationshipData
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class ApocCdcSourceIdHandler(
+class CdcSourceIdHandler(
     val topic: String,
     neo4j: Neo4j,
-    batchSize: Int,
-    eosOffsetLabel: String = "",
     val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
     val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
-) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel) {
+) : CdcHandler(neo4j) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using APOC compatible CDC SOURCE_ID strategy for topic '{}'", topic)
+    logger.info("using default CDC SOURCE_ID strategy for topic '{}'", topic)
   }
 
   override fun strategy() = SinkStrategy.CDC_SOURCE_ID

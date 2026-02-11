@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.sink.SinkRecord
 import org.neo4j.cdc.client.model.EntityOperation

@@ -14,38 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
-import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcNodeData
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcRelationshipData
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class ApocCdcSourceIdHandler(
-    val topic: String,
-    neo4j: Neo4j,
-    batchSize: Int,
-    eosOffsetLabel: String = "",
-    val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
-    val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
-) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel) {
+class CdcSchemaHandler(val topic: String, neo4j: Neo4j) : CdcHandler(neo4j) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {
-    logger.info("using APOC compatible CDC SOURCE_ID strategy for topic '{}'", topic)
+    logger.info("using default CDC SCHEMA strategy for topic '{}'", topic)
   }
 
-  override fun strategy() = SinkStrategy.CDC_SOURCE_ID
+  override fun strategy() = SinkStrategy.CDC_SCHEMA
 
   override fun transformCreate(event: NodeEvent): CdcNodeData {
     if (event.before != null) {
@@ -58,12 +48,14 @@ class ApocCdcSourceIdHandler(
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
 
+    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
+
     return CdcNodeData(
         EntityOperation.CREATE,
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
+        matchLabels,
+        matchProperties,
         event.after.properties,
-        event.after.labels.minus(labelName).toSet(),
+        event.after.labels.minus(matchLabels).toSet(),
         emptySet(),
     )
   }
@@ -76,10 +68,12 @@ class ApocCdcSourceIdHandler(
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
+    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
+
     return CdcNodeData(
         EntityOperation.UPDATE,
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
+        matchLabels,
+        matchProperties,
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -93,10 +87,12 @@ class ApocCdcSourceIdHandler(
       )
     }
 
+    val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
+
     return CdcNodeData(
         EntityOperation.DELETE,
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
+        matchLabels,
+        matchProperties,
         emptyMap(),
         emptySet(),
         emptySet(),
@@ -114,15 +110,20 @@ class ApocCdcSourceIdHandler(
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
 
+    val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
+    val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
+
     return CdcRelationshipData(
         EntityOperation.CREATE,
-        setOf(labelName),
-        mapOf(propertyName to event.start.elementId),
-        setOf(labelName),
-        mapOf(propertyName to event.end.elementId),
-        event.type,
-        mapOf(propertyName to event.elementId),
-        true,
+        startMatchLabels,
+        startMatchProperties,
+        endMatchLabels,
+        endMatchProperties,
+        relMatchType,
+        relMatchProperties,
+        event.keys.isNotEmpty(),
         event.after.properties,
     )
   }
@@ -135,15 +136,23 @@ class ApocCdcSourceIdHandler(
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
+    val relationshipKeys = event.keys
+    val (startMatchLabels, startMatchProperties) =
+        buildMatchLabelsAndProperties(event.start.keys, relationshipKeys.isEmpty())
+    val (endMatchLabels, endMatchProperties) =
+        buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
+
     return CdcRelationshipData(
         EntityOperation.UPDATE,
-        setOf(labelName),
-        mapOf(propertyName to event.start.elementId),
-        setOf(labelName),
-        mapOf(propertyName to event.end.elementId),
-        event.type,
-        mapOf(propertyName to event.elementId),
-        true,
+        startMatchLabels,
+        startMatchProperties,
+        endMatchLabels,
+        endMatchProperties,
+        relMatchType,
+        relMatchProperties,
+        relationshipKeys.isNotEmpty(),
         event.mutatedProperties(),
     )
   }
@@ -155,16 +164,64 @@ class ApocCdcSourceIdHandler(
       )
     }
 
+    val relationshipKeys = event.keys
+    val (startMatchLabels, startMatchProperties) =
+        buildMatchLabelsAndProperties(event.start.keys, relationshipKeys.isEmpty())
+    val (endMatchLabels, endMatchProperties) =
+        buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
+    val (relMatchType, relMatchProperties) =
+        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
+
     return CdcRelationshipData(
         EntityOperation.DELETE,
-        emptySet(),
+        startMatchLabels,
+        startMatchProperties,
+        endMatchLabels,
+        endMatchProperties,
+        relMatchType,
+        relMatchProperties,
+        relationshipKeys.isNotEmpty(),
         emptyMap(),
-        emptySet(),
-        emptyMap(),
-        event.type,
-        mapOf(propertyName to event.elementId),
-        true,
-        emptyMap(),
+    )
+  }
+
+  private fun buildMatchLabelsAndProperties(
+      keys: Map<String, List<Map<String, Any>>>,
+      forceKeys: Boolean = true,
+  ): Pair<Set<String>, Map<String, Any>> {
+    val validKeys =
+        keys
+            .mapValues { kvp -> kvp.value.filter { it.isNotEmpty() } }
+            .filterValues { it.isNotEmpty() }
+
+    if (forceKeys && validKeys.isEmpty()) {
+      throw InvalidDataException(
+          "schema strategy requires at least one node key with valid properties on nodes."
+      )
+    }
+
+    return Pair(
+        validKeys.keys.toSet(),
+        validKeys
+            .flatMap { it.value }
+            .asSequence()
+            .flatMap { it.asSequence() }
+            .associate { it.key to it.value },
+    )
+  }
+
+  private fun buildMatchLabelsAndProperties(
+      type: String,
+      keys: List<Map<String, Any>>,
+      properties: Map<String, Any>?,
+  ): Pair<String, Map<String, Any>> {
+    return Pair(
+        type,
+        if (keys.isEmpty()) {
+          properties ?: emptyMap()
+        } else {
+          keys.asSequence().flatMap { it.asSequence() }.associate { it.key to it.value }
+        },
     )
   }
 }

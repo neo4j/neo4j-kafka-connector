@@ -23,7 +23,7 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.toChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,10 +45,12 @@ abstract class BatchedCdcHandler(
         messages
             .onEach { logger.trace("received message: {}", it) }
             .map {
+              val changeEvent = it.toChangeEvent()
+
               MessageToEvent(
                   it,
-                  it.toChangeEvent(),
-                  when (val event = it.toChangeEvent().event) {
+                  changeEvent,
+                  when (val event = changeEvent.event) {
                     is NodeEvent ->
                         when (event.operation) {
                           EntityOperation.CREATE -> transformCreate(event)

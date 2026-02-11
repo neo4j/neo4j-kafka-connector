@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldMatchInOrder
@@ -23,6 +23,10 @@ import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -34,11 +38,13 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
-import org.neo4j.cypherdsl.core.renderer.Configuration
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 class CdcSourceIdHandlerTest {
+  companion object {
+    private val NEO4J_2026_1 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+  }
 
   @Test
   fun `should generate correct statement for node creation events`() {
@@ -65,10 +71,16 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to mapOf("name" to "john", "surname" to "doe"),
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to mapOf("name" to "john", "surname" to "doe"),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -102,15 +114,21 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Person`",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "surname" to "doe",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                        ),
+                                    "addLabels" to listOf("Person"),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -144,15 +162,21 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Person`:`Employee`",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "surname" to "doe",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                        ),
+                                    "addLabels" to listOf("Person", "Employee"),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -186,10 +210,17 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)),
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to
+                                        mapOf("name" to "joe", "dob" to LocalDate.of(2000, 1, 1)),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -223,10 +254,17 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to
+                                        mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -263,15 +301,21 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MERGE (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nElementId" to "node-element-id",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null,
-                                ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                            "married" to null,
+                                        ),
+                                    "addLabels" to listOf("Manager"),
+                                    "removeLabels" to listOf("Employee"),
+                                )
                         ),
                     ),
                 )
@@ -305,8 +349,14 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (n:`SourceEvent` {sourceElementId: ${'$'}nElementId}) DETACH DELETE n",
-                        mapOf("nElementId" to "node-element-id"),
+                        "MATCH (n:`SourceEvent` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}) DELETE n",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "node-element-id")
+                                )
+                        ),
                     ),
                 )
             )
@@ -341,15 +391,27 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
-                            "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
-                            "MERGE (start)-[r:`REL` {sourceElementId: ${'$'}rElementId}]->(end) " +
-                            "SET r += ${'$'}rProps",
+                        "MATCH (start:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`}) " +
+                            "MATCH (end:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
+                            "MERGE (start)-[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->(end) " +
+                            "SET r += ${'$'}e.setProperties",
                         mapOf(
-                            "startElementId" to "start-element-id",
-                            "endElementId" to "end-element-id",
-                            "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "john", "surname" to "doe"),
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "start-element-id")
+                                        ),
+                                    "end" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "end-element-id")
+                                        ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "rel-element-id"),
+                                    "setProperties" to mapOf("name" to "john", "surname" to "doe"),
+                                )
                         ),
                     ),
                 )
@@ -385,15 +447,27 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
-                            "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
-                            "MERGE (start)-[r:`REL` {sourceElementId: ${'$'}rElementId}]->(end) " +
-                            "SET r += ${'$'}rProps",
+                        "MATCH (:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
+                            "[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->" +
+                            "(:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
+                            "SET r += ${'$'}e.setProperties",
                         mapOf(
-                            "startElementId" to "start-element-id",
-                            "endElementId" to "end-element-id",
-                            "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "john", "surname" to "doe"),
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "start-element-id")
+                                        ),
+                                    "end" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "end-element-id")
+                                        ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "rel-element-id"),
+                                    "setProperties" to mapOf("name" to "john", "surname" to "doe"),
+                                )
                         ),
                     ),
                 )
@@ -426,15 +500,27 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (start:`SourceEvent` {sourceElementId: ${'$'}startElementId}) " +
-                            "MERGE (end:`SourceEvent` {sourceElementId: ${'$'}endElementId}) " +
-                            "MERGE (start)-[r:`REL` {sourceElementId: ${'$'}rElementId}]->(end) " +
-                            "SET r += ${'$'}rProps",
+                        "MATCH (:`SourceEvent` {`sourceElementId`: ${'$'}e.start.matchProperties.`sourceElementId`})-" +
+                            "[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->" +
+                            "(:`SourceEvent` {`sourceElementId`: ${'$'}e.end.matchProperties.`sourceElementId`}) " +
+                            "SET r += ${'$'}e.setProperties",
                         mapOf(
-                            "startElementId" to "start-element-id",
-                            "endElementId" to "end-element-id",
-                            "rElementId" to "rel-element-id",
-                            "rProps" to mapOf("name" to "joe"),
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "start-element-id")
+                                        ),
+                                    "end" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("sourceElementId" to "end-element-id")
+                                        ),
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "rel-element-id"),
+                                    "setProperties" to mapOf("name" to "joe"),
+                                )
                         ),
                     ),
                 )
@@ -470,8 +556,14 @@ class CdcSourceIdHandlerTest {
                     1,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH ()-[r:`REL` {sourceElementId: ${'$'}rElementId}]->() DELETE r",
-                        mapOf("rElementId" to "rel-element-id"),
+                        "MATCH ()-[r:`REL` {`sourceElementId`: ${'$'}e.matchProperties.`sourceElementId`}]->() DELETE r",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("sourceElementId" to "rel-element-id")
+                                )
+                        ),
                     ),
                 )
             )
@@ -481,13 +573,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should split changes into transactional boundaries`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val result =
         handler.handle(
@@ -549,13 +635,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -579,13 +659,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -619,13 +693,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -649,13 +717,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -689,13 +751,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -719,13 +775,7 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -758,13 +808,7 @@ class CdcSourceIdHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler =
-        CdcSourceIdHandler(
-            "my-topic",
-            Renderer.getRenderer(Configuration.defaultConfig()),
-            "SourceEvent",
-            "sourceElementId",
-        )
+    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
 
     val result = handler.handle(messages)
 

@@ -23,6 +23,8 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcNodeData
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcRelationshipData
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 import org.slf4j.Logger

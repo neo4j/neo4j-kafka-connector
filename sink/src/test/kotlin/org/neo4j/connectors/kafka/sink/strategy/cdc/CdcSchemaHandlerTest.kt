@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
@@ -24,6 +24,10 @@ import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -38,11 +42,13 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.cypherdsl.core.renderer.Configuration
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Query
 
 class CdcSchemaHandlerTest {
+  companion object {
+    private val NEO4J_2026_1 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+  }
 
   @Test
   fun `should fail on empty keys`() {
@@ -116,19 +122,13 @@ class CdcSchemaHandlerTest {
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler =
-                    CdcSchemaHandler(
-                        "my-topic",
-                        Renderer.getRenderer(Configuration.defaultConfig()),
-                    )
+                val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
                 handler.handle(listOf(it))
               }
               .also {
                 it shouldHaveMessage
-                    Regex(
-                        "^schema strategy requires at least one node key with valid properties on node aliased '(n|start|end)'.$"
-                    )
+                    "schema strategy requires at least one node key with valid properties on nodes."
               }
         }
   }
@@ -161,16 +161,21 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nName" to "john",
-                            "nSurname" to "doe",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                ),
+                                    "matchProperties" to
+                                        mapOf("name" to "john", "surname" to "doe"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "surname" to "doe",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                        ),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -204,16 +209,21 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n = ${'$'}nProps SET n:`Employee`",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nName" to "john",
-                            "nSurname" to "doe",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "surname" to "doe",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                ),
+                                    "matchProperties" to
+                                        mapOf("name" to "john", "surname" to "doe"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "surname" to "doe",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                        ),
+                                    "addLabels" to listOf("Employee"),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -250,11 +260,17 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nName" to "john",
-                            "nSurname" to "doe",
-                            "nProps" to mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to
+                                        mapOf("name" to "john", "surname" to "doe"),
+                                    "setProperties" to
+                                        mapOf("name" to "john", "dob" to LocalDate.of(1990, 1, 1)),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
                         ),
                     ),
                 )
@@ -291,16 +307,21 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nName" to "john",
-                            "nSurname" to "doe",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null,
-                                ),
+                                    "matchProperties" to
+                                        mapOf("name" to "john", "surname" to "doe"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                            "married" to null,
+                                        ),
+                                    "addLabels" to listOf("Manager"),
+                                    "removeLabels" to listOf("Employee"),
+                                )
                         ),
                     ),
                 )
@@ -340,17 +361,21 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage2),
                     Query(
-                        "MERGE (n:`Person`:`Employee` {name: ${'$'}nName, surname: ${'$'}nSurname, id: ${'$'}nId}) SET n += ${'$'}nProps SET n:`Manager` REMOVE n:`Employee`",
+                        "MERGE (n:`Employee`:`Person` {`id`: ${'$'}e.matchProperties.`id`, `name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
                         mapOf(
-                            "nId" to 5000L,
-                            "nName" to "john",
-                            "nSurname" to "doe",
-                            "nProps" to
+                            "e" to
                                 mapOf(
-                                    "name" to "john",
-                                    "dob" to LocalDate.of(1990, 1, 1),
-                                    "married" to null,
-                                ),
+                                    "matchProperties" to
+                                        mapOf("id" to 5000L, "name" to "john", "surname" to "doe"),
+                                    "setProperties" to
+                                        mapOf(
+                                            "name" to "john",
+                                            "dob" to LocalDate.of(1990, 1, 1),
+                                            "married" to null,
+                                        ),
+                                    "addLabels" to listOf("Manager"),
+                                    "removeLabels" to listOf("Employee"),
+                                )
                         ),
                     ),
                 )
@@ -387,8 +412,13 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (n:`Person` {name: ${'$'}nName, surname: ${'$'}nSurname}) DETACH DELETE n",
-                        mapOf("nName" to "joe", "nSurname" to "doe"),
+                        "MATCH (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) DELETE n",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to mapOf("name" to "joe", "surname" to "doe")
+                                )
+                        ),
                     ),
                 )
             )
@@ -431,14 +461,15 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`Person` {id: ${'$'}startId}) " +
-                            "MERGE (end:`Person` {id: ${'$'}endId}) " +
-                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
-                            "SET r = ${'$'}rProps",
+                        "MATCH (start:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: ${'$'}e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`since`: ${'$'}e.matchProperties.`since`}]->(end) SET r += ${'$'}e.setProperties",
                         mapOf(
-                            "startId" to 1L,
-                            "endId" to 2L,
-                            "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                            "e" to
+                                mapOf(
+                                    "start" to mapOf("matchProperties" to mapOf("id" to 1L)),
+                                    "end" to mapOf("matchProperties" to mapOf("id" to 2L)),
+                                    "matchProperties" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                                    "setProperties" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                                )
                         ),
                     ),
                 )
@@ -488,16 +519,27 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (start:`Person`:`Employee` {id: ${'$'}startId, contractId: ${'$'}startContractId}) " +
-                            "MERGE (end:`Person`:`Employee` {id: ${'$'}endId, contractId: ${'$'}endContractId}) " +
-                            "MERGE (start)-[r:`KNOWS` {}]->(end) " +
-                            "SET r += ${'$'}rProps",
+                        "MATCH (start:`Employee`:`Person` {`contractId`: ${'$'}e.start.matchProperties.`contractId`, `id`: ${'$'}e.start.matchProperties.`id`}) " +
+                            "MATCH (end:`Employee`:`Person` {`contractId`: ${'$'}e.end.matchProperties.`contractId`, `id`: ${'$'}e.end.matchProperties.`id`}) " +
+                            "MATCH (start)-[r:`KNOWS` {`since`: ${'$'}e.matchProperties.`since`}]->(end) " +
+                            "WITH r LIMIT 1 " +
+                            "SET r += ${'$'}e.setProperties",
                         mapOf(
-                            "startId" to 1L,
-                            "startContractId" to 5000L,
-                            "endId" to 2L,
-                            "endContractId" to 5001L,
-                            "rProps" to mapOf("since" to LocalDate.of(1999, 1, 1)),
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("id" to 1L, "contractId" to 5000L)
+                                        ),
+                                    "end" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("id" to 2L, "contractId" to 5001L)
+                                        ),
+                                    "matchProperties" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                                    "setProperties" to mapOf("since" to LocalDate.of(1999, 1, 1)),
+                                )
                         ),
                     ),
                 )
@@ -541,9 +583,23 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                            "SET r += ${'$'}rProps",
-                        mapOf("rId" to 1001L, "rProps" to mapOf("name" to "joe")),
+                        "MATCH (:`Employee`:`Person` {`contractId`: \$e.start.matchProperties.`contractId`, `id`: \$e.start.matchProperties.`id`})-" +
+                            "[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->" +
+                            "(:`Person` {`id`: \$e.end.matchProperties.`id`}) " +
+                            "SET r += \$e.setProperties",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("id" to 1L, "contractId" to 5000L)
+                                        ),
+                                    "end" to mapOf("matchProperties" to mapOf("id" to 2L)),
+                                    "matchProperties" to mapOf("id" to 1001L),
+                                    "setProperties" to mapOf("name" to "joe"),
+                                )
+                        ),
                     ),
                 )
             )
@@ -586,11 +642,15 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start:`Person` {id: ${'$'}startId}) " +
-                            "MATCH (end:`Person` {id: ${'$'}endId}) " +
-                            "MATCH (start)-[r:`KNOWS` {}]->(end) " +
-                            "DELETE r",
-                        mapOf("startId" to 1L, "endId" to 2L),
+                        "MATCH (start:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: ${'$'}e.end.matchProperties.`id`}) MATCH (start)-[r:`KNOWS` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}]->(end) WITH r LIMIT 1 DELETE r",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "start" to mapOf("matchProperties" to mapOf("id" to 1L)),
+                                    "end" to mapOf("matchProperties" to mapOf("id" to 2L)),
+                                    "matchProperties" to mapOf("name" to "john", "surname" to "doe"),
+                                )
+                        ),
                     ),
                 )
             )
@@ -633,8 +693,19 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage1),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf("rId" to 1001L),
+                        "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() DELETE r",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "start" to
+                                        mapOf(
+                                            "matchProperties" to
+                                                mapOf("id" to 1L, "contractId" to 5000L)
+                                        ),
+                                    "end" to mapOf("matchProperties" to mapOf("id" to 2L)),
+                                    "matchProperties" to mapOf("id" to 1001L),
+                                )
+                        ),
                     ),
                 )
             )
@@ -644,7 +715,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes into transactional boundaries`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val result =
         handler.handle(
@@ -706,7 +777,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -730,7 +801,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -764,7 +835,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -788,7 +859,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -822,7 +893,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -846,7 +917,7 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -903,8 +974,8 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (n:`Person` {name: ${'$'}nName}) DETACH DELETE n",
-                        mapOf("nName" to "john"),
+                        "MATCH (n:`Person` {`name`: ${'$'}e.matchProperties.`name`}) DELETE n",
+                        mapOf("e" to mapOf("matchProperties" to mapOf("name" to "john"))),
                     ),
                 )
             )
@@ -938,8 +1009,16 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MERGE (n:`Person` {name: ${'$'}nName}) SET n = ${'$'}nProps",
-                        mapOf("nName" to "john", "nProps" to mapOf("name" to "john")),
+                        "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`}) SET n += ${'$'}e.setProperties SET n:$(e.addLabels) REMOVE n:$(e.removeLabels)",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "matchProperties" to mapOf("name" to "john"),
+                                    "setProperties" to mapOf("name" to "john"),
+                                    "addLabels" to emptyList<String>(),
+                                    "removeLabels" to emptyList<String>(),
+                                )
+                        ),
                     ),
                 )
             )
@@ -965,7 +1044,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "n")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -995,7 +1074,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1021,7 +1100,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1051,7 +1130,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1081,7 +1160,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1111,7 +1190,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1141,7 +1220,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1180,9 +1259,16 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                            "SET r += ${'$'}rProps",
-                        mapOf("rId" to 1L, "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))),
+                        "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->(:`Person` {`name`: ${'$'}e.end.matchProperties.`name`}) " +
+                            "SET r += ${'$'}e.setProperties",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "end" to mapOf("matchProperties" to mapOf("name" to "john")),
+                                    "matchProperties" to mapOf("id" to 1L),
+                                    "setProperties" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                                )
+                        ),
                     ),
                 )
             )
@@ -1226,9 +1312,15 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " +
-                            "SET r += ${'$'}rProps",
-                        mapOf("rId" to 1L, "rProps" to mapOf("since" to LocalDate.of(2000, 1, 1))),
+                        "MATCH (:`Person` {`name`: ${'$'}e.start.matchProperties.`name`})-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() SET r += ${'$'}e.setProperties",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "start" to mapOf("matchProperties" to mapOf("name" to "john")),
+                                    "matchProperties" to mapOf("id" to 1L),
+                                    "setProperties" to mapOf("since" to LocalDate.of(2000, 1, 1)),
+                                )
+                        ),
                     ),
                 )
             )
@@ -1263,7 +1355,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1293,7 +1385,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1323,7 +1415,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1353,7 +1445,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1392,8 +1484,15 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf("rId" to 1L),
+                        "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() " +
+                            "DELETE r",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "end" to mapOf("matchProperties" to mapOf("name" to "john")),
+                                    "matchProperties" to mapOf("id" to 1L),
+                                )
+                        ),
                     ),
                 )
             )
@@ -1437,8 +1536,14 @@ class CdcSchemaHandlerTest {
                     0,
                     listOf(sinkMessage),
                     Query(
-                        "MATCH (start)-[r:`KNOWS` {id: ${'$'}rId}]->(end) " + "DELETE r",
-                        mapOf("rId" to 1L),
+                        "MATCH ()-[r:`KNOWS` {`id`: ${'$'}e.matchProperties.`id`}]->() DELETE r",
+                        mapOf(
+                            "e" to
+                                mapOf(
+                                    "start" to mapOf("matchProperties" to mapOf("name" to "john")),
+                                    "matchProperties" to mapOf("id" to 1L),
+                                )
+                        ),
                     ),
                 )
             )
@@ -1473,7 +1578,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1503,7 +1608,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1533,7 +1638,7 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
@@ -1563,182 +1668,179 @@ class CdcSchemaHandlerTest {
             0,
         )
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
   fun `should fail when streams node keys is empty`() {
     val streamsMessage =
         """
-      {
-        "meta": {
-          "timestamp": 1728643218066,
-          "username": "neo4j",
-          "txId": 18,
-          "txEventId": 0,
-          "txEventsCount": 1,
-          "operation": "deleted",
-          "source": {
-            "hostname": "neo4j03"
-          }
-        },
-        "payload": {
-          "id": "0",
-          "before": {
-            "properties": {
-              "first_name": "Ali",
-              "last_name": "Ince",
-              "id": 1
+        {
+          "meta": {
+            "timestamp": 1728643218066,
+            "username": "neo4j",
+            "txId": 18,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
+            }
+          },
+          "payload": {
+            "id": "0",
+            "before": {
+              "properties": {
+                "first_name": "Ali",
+                "last_name": "Ince",
+                "id": 1
+              },
+              "labels": [
+                "Person"
+              ]
             },
-            "labels": [
-              "Person"
-            ]
+            "after": null,
+            "type": "node"
           },
-          "after": null,
-          "type": "node"
-        },
-        "schema": {
-          "properties": {
-            "first_name": "String",
-            "last_name": "String",
-            "id": "Long"
-          },
-          "constraints": []
+          "schema": {
+            "properties": {
+              "first_name": "String",
+              "last_name": "String",
+              "id": "Long"
+            },
+            "constraints": []
+          }
         }
-      }
-    """
+        """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
     val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
-    assertInvalidDataException(sinkMessage, "n")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
   fun `should fail when streams relationship start node keys is empty`() {
     val streamsMessage =
         """
-      {
-        "meta": {
-          "timestamp": 1728641686524,
-          "username": "neo4j",
-          "txId": 17,
-          "txEventId": 0,
-          "txEventsCount": 1,
-          "operation": "deleted",
-          "source": {
-            "hostname": "neo4j03"
-          }
-        },
-        "payload": {
-          "id": "0",
-          "start": {
-            "id": "0",
-            "labels": [
-              "Person"
-            ],
-            "ids": {}
-          },
-          "end": {
-            "id": "2",
-            "labels": [
-              "Company"
-            ],
-            "ids": {
-              "name": "Neo4j"
+        {
+          "meta": {
+            "timestamp": 1728641686524,
+            "username": "neo4j",
+            "txId": 17,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
             }
           },
-          "before": {
-            "properties": {}
+          "payload": {
+            "id": "0",
+            "start": {
+              "id": "0",
+              "labels": [
+                "Person"
+              ],
+              "ids": {}
+            },
+            "end": {
+              "id": "2",
+              "labels": [
+                "Company"
+              ],
+              "ids": {
+                "name": "Neo4j"
+              }
+            },
+            "before": {
+              "properties": {}
+            },
+            "after": null,
+            "label": "WORKS_FOR",
+            "type": "relationship"
           },
-          "after": null,
-          "label": "WORKS_FOR",
-          "type": "relationship"
-        },
-        "schema": {
-          "properties": {},
-          "constraints": []
+          "schema": {
+            "properties": {},
+            "constraints": []
+          }
         }
-      }
-    """
+        """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
     val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
-    assertInvalidDataException(sinkMessage, "start")
+    assertInvalidDataException(sinkMessage)
   }
 
   @Test
   fun `should fail when streams relationship end node keys is empty`() {
     val streamsMessage =
         """
-      {
-        "meta": {
-          "timestamp": 1728641686524,
-          "username": "neo4j",
-          "txId": 17,
-          "txEventId": 0,
-          "txEventsCount": 1,
-          "operation": "deleted",
-          "source": {
-            "hostname": "neo4j03"
-          }
-        },
-        "payload": {
-          "id": "0",
-          "start": {
-            "id": "0",
-            "labels": [
-              "Person"
-            ],
-            "ids": {
-              "name": "john"
+        {
+          "meta": {
+            "timestamp": 1728641686524,
+            "username": "neo4j",
+            "txId": 17,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
             }
           },
-          "end": {
-            "id": "2",
-            "labels": [
-              "Company"
-            ],
-            "ids": {}
+          "payload": {
+            "id": "0",
+            "start": {
+              "id": "0",
+              "labels": [
+                "Person"
+              ],
+              "ids": {
+                "name": "john"
+              }
+            },
+            "end": {
+              "id": "2",
+              "labels": [
+                "Company"
+              ],
+              "ids": {}
+            },
+            "before": {
+              "properties": {}
+            },
+            "after": null,
+            "label": "WORKS_FOR",
+            "type": "relationship"
           },
-          "before": {
-            "properties": {}
-          },
-          "after": null,
-          "label": "WORKS_FOR",
-          "type": "relationship"
-        },
-        "schema": {
-          "properties": {},
-          "constraints": []
+          "schema": {
+            "properties": {},
+            "constraints": []
+          }
         }
-      }
-    """
+        """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
     val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
-    assertInvalidDataException(sinkMessage, "end")
+    assertInvalidDataException(sinkMessage)
   }
 
-  private fun assertInvalidDataException(sinkMessage: SinkMessage, alias: String) {
+  private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler =
-              CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+          val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
           handler.handle(listOf(sinkMessage))
         }
         .also {
           it shouldHaveMessage
-              Regex(
-                  "^schema strategy requires at least one node key with valid properties on node aliased '$alias'.$"
-              )
+              "schema strategy requires at least one node key with valid properties on nodes."
         }
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = CdcSchemaHandler("my-topic", Renderer.getRenderer(Configuration.defaultConfig()))
+    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
 
     val result = handler.handle(messages)
 
