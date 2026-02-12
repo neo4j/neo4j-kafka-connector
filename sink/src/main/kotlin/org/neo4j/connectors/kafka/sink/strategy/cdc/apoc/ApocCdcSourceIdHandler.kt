@@ -33,9 +33,10 @@ class ApocCdcSourceIdHandler(
     val topic: String,
     neo4j: Neo4j,
     batchSize: Int,
+    eosOffsetLabel: String = "",
     val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
     val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
-) : ApocCdcHandler(neo4j, batchSize) {
+) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {

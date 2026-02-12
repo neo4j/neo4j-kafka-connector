@@ -59,6 +59,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                0,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -72,6 +73,7 @@ class BatchedCdcSchemaHandlerTest {
                     RelationshipState(emptyMap()),
                 ),
                 1,
+                0,
                 0,
             ),
             newChangeEventMessage(
@@ -91,6 +93,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                0,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -108,6 +111,7 @@ class BatchedCdcSchemaHandlerTest {
                     RelationshipState(emptyMap()),
                 ),
                 1,
+                0,
                 0,
             ),
         )
@@ -142,6 +146,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -198,6 +203,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -258,6 +264,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -315,6 +322,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -377,6 +385,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -441,6 +450,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -499,6 +509,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -568,6 +579,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1001L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -647,6 +659,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -718,6 +731,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -784,6 +798,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -854,6 +869,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -904,13 +920,13 @@ class BatchedCdcSchemaHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
-                newChangeEventMessage(randomChangeEvent(), 3, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
+                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
             )
         )
 
@@ -933,10 +949,10 @@ class BatchedCdcSchemaHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0),
-                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1),
-                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0),
-                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0),
+                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0, 0),
+                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1, 1),
+                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0, 2),
+                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0, 3),
             )
         )
 
@@ -962,6 +978,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -996,6 +1013,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1018,6 +1036,7 @@ class BatchedCdcSchemaHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -1052,6 +1071,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1074,6 +1094,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1108,6 +1129,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -1128,6 +1150,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -1176,6 +1199,7 @@ class BatchedCdcSchemaHandlerTest {
                 ),
             txId = 1,
             seq = 0,
+            offset = 0,
         )
     verify(
         listOf(sinkMessage),
@@ -1227,6 +1251,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1256,6 +1281,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1280,6 +1306,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1310,6 +1337,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1338,6 +1366,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1368,6 +1397,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1397,6 +1427,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1425,6 +1456,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1494,6 +1526,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1562,6 +1595,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1590,6 +1624,7 @@ class BatchedCdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1620,6 +1655,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1649,6 +1685,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1677,6 +1714,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1745,6 +1783,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1812,6 +1851,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1840,6 +1880,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1870,6 +1911,7 @@ class BatchedCdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage)
@@ -1898,6 +1940,7 @@ class BatchedCdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1947,7 +1990,7 @@ class BatchedCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }
@@ -2001,7 +2044,7 @@ class BatchedCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }
@@ -2055,7 +2098,7 @@ class BatchedCdcSchemaHandlerTest {
         """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage)
   }

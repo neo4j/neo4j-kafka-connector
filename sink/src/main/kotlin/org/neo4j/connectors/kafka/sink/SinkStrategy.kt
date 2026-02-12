@@ -206,7 +206,6 @@ interface SinkStrategyHandler {
         handler = patternHandler
       }
 
-      val cdcMaxBatchedStatements = config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES)
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
       if (cdcSourceIdTopics.contains(topic)) {
         if (handler != null) {
@@ -226,6 +225,7 @@ interface SinkStrategyHandler {
                     topic,
                     config.neo4j(),
                     config.batchSize,
+                    config.eosOffsetLabel,
                     labelName,
                     propertyName,
                 )
@@ -244,7 +244,7 @@ interface SinkStrategyHandler {
                     canIUse(Cypher.setDynamicLabels()).withNeo4j(config.neo4j()) &&
                     canIUse(Cypher.removeDynamicLabels()).withNeo4j(config.neo4j())
             )
-                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize)
+                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize, config.eosOffsetLabel)
             else CdcSchemaHandler(topic, config.renderer)
       }
 
