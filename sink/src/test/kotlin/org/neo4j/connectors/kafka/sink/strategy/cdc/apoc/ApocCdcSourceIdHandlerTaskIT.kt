@@ -43,6 +43,7 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
@@ -105,7 +106,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
     session = driver.session(SessionConfig.forDatabase(db))
 
     // Create constraint for SourceEvent nodes
-    session.run("CREATE CONSTRAINT FOR (n:SourceEvent) REQUIRE n.sourceId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "source_event_source_id_key", "SourceEvent", "sourceId")
 
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
