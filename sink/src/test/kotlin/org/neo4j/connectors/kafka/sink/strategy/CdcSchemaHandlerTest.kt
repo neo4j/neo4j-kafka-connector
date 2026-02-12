@@ -58,6 +58,7 @@ class CdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                0,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -72,6 +73,7 @@ class CdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                1,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -90,6 +92,7 @@ class CdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                2,
             ),
             newChangeEventMessage(
                 RelationshipEvent(
@@ -108,6 +111,7 @@ class CdcSchemaHandlerTest {
                 ),
                 1,
                 0,
+                3,
             ),
         )
         .forEach {
@@ -145,6 +149,7 @@ class CdcSchemaHandlerTest {
                 ),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -188,6 +193,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -233,6 +239,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -273,6 +280,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -321,6 +329,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -367,6 +376,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -409,6 +419,7 @@ class CdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -466,6 +477,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -518,6 +530,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -561,6 +574,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -608,6 +622,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -634,12 +649,12 @@ class CdcSchemaHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
             )
         )
 
@@ -705,6 +720,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -738,6 +754,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -760,6 +777,7 @@ class CdcSchemaHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -794,6 +812,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -816,6 +835,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -850,6 +870,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -870,6 +891,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
     verify(
@@ -905,6 +927,7 @@ class CdcSchemaHandlerTest {
                 ),
             txId = 1,
             seq = 0,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -939,6 +962,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "n")
@@ -968,6 +992,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "start")
@@ -992,6 +1017,7 @@ class CdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1022,6 +1048,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "start")
@@ -1050,6 +1077,7 @@ class CdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1080,6 +1108,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "end")
@@ -1109,6 +1138,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "end")
@@ -1137,6 +1167,7 @@ class CdcSchemaHandlerTest {
                 RelationshipState(mapOf("id" to 1L, "since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1183,6 +1214,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1228,6 +1260,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "start")
@@ -1256,6 +1289,7 @@ class CdcSchemaHandlerTest {
                 RelationshipState(mapOf("since" to LocalDate.of(2000, 1, 1))),
             ),
             1,
+            0,
             0,
         )
 
@@ -1286,6 +1320,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "end")
@@ -1315,6 +1350,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "end")
@@ -1343,6 +1379,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1388,6 +1425,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     verify(
@@ -1432,6 +1470,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "start")
@@ -1460,6 +1499,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1490,6 +1530,7 @@ class CdcSchemaHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertInvalidDataException(sinkMessage, "end")
@@ -1518,6 +1559,7 @@ class CdcSchemaHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -1567,7 +1609,7 @@ class CdcSchemaHandlerTest {
     """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage, "n")
   }
@@ -1621,7 +1663,7 @@ class CdcSchemaHandlerTest {
     """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage, "start")
   }
@@ -1675,7 +1717,7 @@ class CdcSchemaHandlerTest {
     """
             .trimIndent()
     val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
-    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0)
+    val sinkMessage = newChangeEventMessage(event.toChangeEvent().event, 1, 0, 0)
 
     assertInvalidDataException(sinkMessage, "end")
   }

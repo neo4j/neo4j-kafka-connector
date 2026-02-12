@@ -40,7 +40,38 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.driver.Query
 
-class ApocCdcSourceIdHandlerTest {
+class ApocCdcSourceIdHandlerWithEOSTest :
+    ApocCdcSourceIdHandlerTest(
+        "__KafkaOffset",
+        """
+        |UNWIND ${'$'}events AS e
+        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |WITH k, e WHERE e.offset > k.offset
+        |WITH k, e ORDER BY e.offset ASC
+        |CALL (e) {
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |}
+        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
+        |FINISH
+        """
+            .trimMargin(),
+    )
+
+class ApocCdcSourceIdHandlerWithoutEOSTest :
+    ApocCdcSourceIdHandlerTest(
+        "",
+        """
+        |UNWIND ${'$'}events AS e
+        |WITH e ORDER BY e.offset ASC
+        |CALL (e) {
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |}
+        |FINISH
+        """
+            .trimMargin(),
+    )
+
+abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expectedQuery: String) {
   private val neo4j =
       Neo4j(Neo4jVersion(2025, 12, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
@@ -58,6 +89,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -68,11 +100,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -94,7 +127,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -117,6 +153,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -127,11 +164,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -154,7 +192,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -177,6 +218,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -187,11 +229,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 2L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -214,7 +257,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -237,6 +283,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -247,11 +294,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -273,7 +321,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -296,6 +347,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -306,11 +358,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -332,7 +385,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -358,6 +414,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -368,11 +425,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 2L,
                                         "stmt" to
                                             "MERGE (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
                                         "params" to
@@ -395,7 +453,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -418,6 +479,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -428,11 +490,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (n:SourceEvent {sourceElementId: \$e.matchProperties.sourceElementId}) DELETE n",
                                         "params" to
@@ -450,7 +513,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -475,6 +541,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -485,11 +552,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (start:SourceEvent {sourceElementId: \$e.start.matchProperties.sourceElementId}) MATCH (end:SourceEvent {sourceElementId: \$e.end.matchProperties.sourceElementId}) MERGE (start)-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->(end) SET r += \$e.setProperties",
                                         "params" to
@@ -525,7 +593,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -550,6 +621,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -560,11 +632,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH (:SourceEvent {sourceElementId: \$e.start.matchProperties.sourceElementId})-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->(:SourceEvent {sourceElementId: \$e.end.matchProperties.sourceElementId}) SET r += \$e.setProperties",
                                         "params" to
@@ -600,7 +673,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -622,6 +698,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            1,
         )
     verify(
         listOf(sinkMessage1),
@@ -632,11 +709,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 1L,
                                         "stmt" to
                                             "MATCH (:SourceEvent {sourceElementId: \$e.start.matchProperties.sourceElementId})-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->(:SourceEvent {sourceElementId: \$e.end.matchProperties.sourceElementId}) SET r += \$e.setProperties",
                                         "params" to
@@ -668,7 +746,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -693,6 +774,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -703,11 +785,12 @@ class ApocCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "UNWIND \$events AS e CALL (e) { CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH } FINISH",
+                        expectedQuery,
                         mapOf(
                             "events" to
                                 listOf(
                                     mapOf(
+                                        "offset" to 0L,
                                         "stmt" to
                                             "MATCH ()-[r:REL {sourceElementId: \$e.matchProperties.sourceElementId}]->() DELETE r",
                                         "params" to
@@ -733,7 +816,10 @@ class ApocCdcSourceIdHandlerTest {
                                                     )
                                             ),
                                     )
-                                )
+                                ),
+                            "topic" to "my-topic",
+                            "partition" to 0,
+                            "strategy" to "CDC_SOURCE_ID",
                         ),
                     ),
                 )
@@ -749,13 +835,13 @@ class ApocCdcSourceIdHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
-                newChangeEventMessage(randomChangeEvent(), 3, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
+                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
             )
         )
 
@@ -798,6 +884,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -831,6 +918,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -853,6 +941,7 @@ class ApocCdcSourceIdHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -887,6 +976,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -909,6 +999,7 @@ class ApocCdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -943,6 +1034,7 @@ class ApocCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -951,11 +1043,27 @@ class ApocCdcSourceIdHandlerTest {
   }
 
   private fun createHandler(batchSize: Int = 1000): ApocCdcSourceIdHandler =
-      ApocCdcSourceIdHandler("my-topic", neo4j, batchSize, "SourceEvent", "sourceElementId")
+      ApocCdcSourceIdHandler(
+          "my-topic",
+          neo4j,
+          batchSize,
+          eosOffsetLabel,
+          "SourceEvent",
+          "sourceElementId",
+      )
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
     val handler = createHandler()
     val result = handler.handle(messages)
+    result.zip(expected).forEach { (res, exp) ->
+      res.zip(exp).forEach { (r, e) ->
+        r.txId shouldBe e.txId
+        r.seq shouldBe e.seq
+        r.messages shouldBe e.messages
+        r.query.text() shouldBe e.query.text()
+        r.query.parameters().asMap() shouldBe e.query.parameters().asMap()
+      }
+    }
     result shouldBe expected
   }
 }

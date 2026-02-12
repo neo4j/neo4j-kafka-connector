@@ -54,6 +54,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -89,6 +90,7 @@ class CdcSourceIdHandlerTest {
                 ),
             ),
             0,
+            1,
             1,
         )
     verify(
@@ -131,6 +133,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -172,6 +175,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -207,6 +211,7 @@ class CdcSourceIdHandlerTest {
                 ),
             ),
             0,
+            1,
             1,
         )
     verify(
@@ -247,6 +252,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            2,
         )
     verify(
         listOf(sinkMessage2),
@@ -288,6 +294,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -323,6 +330,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -366,6 +374,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -405,6 +414,7 @@ class CdcSourceIdHandlerTest {
                 RelationshipState(mapOf("name" to "joe", "surname" to "doe")),
             ),
             0,
+            1,
             1,
         )
     verify(
@@ -449,6 +459,7 @@ class CdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -481,12 +492,12 @@ class CdcSourceIdHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
             )
         )
 
@@ -558,6 +569,7 @@ class CdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -597,6 +609,7 @@ class CdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -625,6 +638,7 @@ class CdcSourceIdHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -665,6 +679,7 @@ class CdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -693,6 +708,7 @@ class CdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -732,6 +748,7 @@ class CdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 

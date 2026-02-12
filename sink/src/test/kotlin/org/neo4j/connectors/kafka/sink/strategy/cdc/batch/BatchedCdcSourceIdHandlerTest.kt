@@ -55,6 +55,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -107,6 +108,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -163,6 +165,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage2),
@@ -219,6 +222,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -274,6 +278,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -332,6 +337,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage2),
@@ -388,6 +394,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -439,6 +446,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -504,6 +512,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -563,6 +572,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage1),
@@ -624,6 +634,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             0,
             1,
+            0,
         )
     verify(
         listOf(sinkMessage),
@@ -674,13 +685,13 @@ class BatchedCdcSourceIdHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0),
-                newChangeEventMessage(randomChangeEvent(), 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 2, 0),
-                newChangeEventMessage(randomChangeEvent(), 3, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
+                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
+                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
+                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
+                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
+                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
             )
         )
 
@@ -703,11 +714,11 @@ class BatchedCdcSourceIdHandlerTest {
     val result =
         handler.handle(
             listOf(
-                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0),
-                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1),
-                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0),
-                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0),
-                newChangeEventMessage(updateKnowsRelationshipEvent(2, 3, 4), 3, 0),
+                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0, 0),
+                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1, 1),
+                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0, 2),
+                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0, 3),
+                newChangeEventMessage(updateKnowsRelationshipEvent(2, 3, 4), 3, 0, 4),
             )
         )
 
@@ -733,6 +744,7 @@ class BatchedCdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -767,6 +779,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -789,6 +802,7 @@ class BatchedCdcSourceIdHandlerTest {
                 NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
             ),
             1,
+            0,
             0,
         )
 
@@ -823,6 +837,7 @@ class BatchedCdcSourceIdHandlerTest {
             ),
             1,
             0,
+            0,
         )
 
     assertThrows<InvalidDataException> {
@@ -845,6 +860,7 @@ class BatchedCdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 
@@ -878,6 +894,7 @@ class BatchedCdcSourceIdHandlerTest {
                 null,
             ),
             1,
+            0,
             0,
         )
 

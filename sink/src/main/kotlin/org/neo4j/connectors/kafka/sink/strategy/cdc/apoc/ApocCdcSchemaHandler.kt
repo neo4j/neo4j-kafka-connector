@@ -28,8 +28,12 @@ import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class ApocCdcSchemaHandler(val topic: String, neo4j: Neo4j, batchSize: Int) :
-    ApocCdcHandler(neo4j, batchSize) {
+class ApocCdcSchemaHandler(
+    val topic: String,
+    neo4j: Neo4j,
+    batchSize: Int,
+    eosOffsetLabel: String = "",
+) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {

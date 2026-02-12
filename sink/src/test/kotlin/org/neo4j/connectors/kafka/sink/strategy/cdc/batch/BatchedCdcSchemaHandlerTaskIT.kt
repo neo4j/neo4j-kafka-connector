@@ -129,6 +129,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -162,6 +163,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -191,6 +193,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -202,6 +205,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -213,6 +217,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -241,6 +246,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         ),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -272,6 +278,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -298,6 +305,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -323,6 +331,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -347,6 +356,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -360,6 +370,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -371,6 +382,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                             mapOf("userId" to "user1", "name" to "Alice", "surname" to "Smith"),
                     ),
                     3,
+                    0,
                     0,
                 )
                 .record,
@@ -402,6 +414,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         ),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -447,6 +460,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -482,6 +496,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -511,6 +526,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -522,6 +538,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -535,6 +552,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -568,6 +586,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -581,6 +600,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -594,6 +614,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -646,6 +667,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -681,6 +703,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -714,6 +737,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         beforeProps = mapOf("since" to LocalDate.of(2023, 1, 1)),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -750,6 +774,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -762,6 +787,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         beforeProps = mapOf("since" to LocalDate.of(2023, 1, 1)),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record,
@@ -800,6 +826,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         RelationshipState(mapOf("orderId" to "order-123", "amount" to 99.99)),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -849,6 +876,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -891,6 +919,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -929,6 +958,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -944,6 +974,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -959,6 +990,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
         )
@@ -1014,6 +1046,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1066,6 +1099,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         ),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -1124,6 +1158,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         ),
                     ),
                     1,
+                    0,
                     0,
                 )
                 .record
@@ -1186,6 +1221,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record
         )
@@ -1229,6 +1265,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1240,6 +1277,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1253,6 +1291,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1264,6 +1303,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         afterProps = mapOf("userId" to "user1", "name" to "Alice", "age" to 30),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record,
@@ -1302,6 +1342,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     0,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1314,6 +1355,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
+                    0,
                 )
                 .record,
             newChangeEventMessage(
@@ -1325,6 +1367,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                         afterProps = mapOf("userId" to "user1", "name" to "Alice", "score" to 15),
                     ),
                     2,
+                    0,
                     0,
                 )
                 .record,
@@ -1338,6 +1381,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     1,
+                    0,
                 )
                 .record,
         )
