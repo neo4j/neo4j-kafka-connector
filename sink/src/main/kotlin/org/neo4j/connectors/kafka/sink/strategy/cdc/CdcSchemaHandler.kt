@@ -113,7 +113,7 @@ class CdcSchemaHandler(val topic: String, neo4j: Neo4j) : CdcHandler(neo4j) {
     val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
     val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
+        buildMatchTypeAndProperties(event.type, event.keys, event.after.properties)
 
     return CdcRelationshipData(
         EntityOperation.CREATE,
@@ -142,7 +142,7 @@ class CdcSchemaHandler(val topic: String, neo4j: Neo4j) : CdcHandler(neo4j) {
     val (endMatchLabels, endMatchProperties) =
         buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
+        buildMatchTypeAndProperties(event.type, relationshipKeys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.UPDATE,
@@ -170,7 +170,7 @@ class CdcSchemaHandler(val topic: String, neo4j: Neo4j) : CdcHandler(neo4j) {
     val (endMatchLabels, endMatchProperties) =
         buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
+        buildMatchTypeAndProperties(event.type, relationshipKeys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.DELETE,
@@ -210,7 +210,7 @@ class CdcSchemaHandler(val topic: String, neo4j: Neo4j) : CdcHandler(neo4j) {
     )
   }
 
-  private fun buildMatchLabelsAndProperties(
+  private fun buildMatchTypeAndProperties(
       type: String,
       keys: List<Map<String, Any>>,
       properties: Map<String, Any>?,
