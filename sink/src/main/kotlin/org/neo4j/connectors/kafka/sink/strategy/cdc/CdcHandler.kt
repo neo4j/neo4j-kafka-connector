@@ -14,9 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.data.Struct
+import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
@@ -28,12 +29,13 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
-import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class CdcHandler : SinkStrategyHandler {
+abstract class CdcHandler(neo4j: Neo4j) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
+
+  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
   data class MessageToEvent(val message: SinkMessage, val changeEvent: ChangeEvent)
 
@@ -49,26 +51,34 @@ abstract class CdcHandler : SinkStrategyHandler {
                   it.changeEvent.txId,
                   it.changeEvent.seq,
                   listOf(it.message),
-                  when (val event = it.changeEvent.event) {
-                    is NodeEvent ->
-                        when (event.operation) {
-                          EntityOperation.CREATE -> transformCreate(event)
-                          EntityOperation.UPDATE -> transformUpdate(event)
-                          EntityOperation.DELETE -> transformDelete(event)
-                          else ->
-                              throw IllegalArgumentException("unknown operation ${event.operation}")
-                        }
-                    is RelationshipEvent ->
-                        when (event.operation) {
-                          EntityOperation.CREATE -> transformCreate(event)
-                          EntityOperation.UPDATE -> transformUpdate(event)
-                          EntityOperation.DELETE -> transformDelete(event)
-                          else ->
-                              throw IllegalArgumentException("unknown operation ${event.operation}")
-                        }
-                    else ->
-                        throw IllegalArgumentException("unsupported event type ${event.eventType}")
-                  },
+                  statementGenerator.buildStatement(
+                      when (val event = it.changeEvent.event) {
+                        is NodeEvent ->
+                            when (event.operation) {
+                              EntityOperation.CREATE -> transformCreate(event)
+                              EntityOperation.UPDATE -> transformUpdate(event)
+                              EntityOperation.DELETE -> transformDelete(event)
+                              else ->
+                                  throw IllegalArgumentException(
+                                      "unknown operation ${event.operation}"
+                                  )
+                            }
+                        is RelationshipEvent ->
+                            when (event.operation) {
+                              EntityOperation.CREATE -> transformCreate(event)
+                              EntityOperation.UPDATE -> transformUpdate(event)
+                              EntityOperation.DELETE -> transformDelete(event)
+                              else ->
+                                  throw IllegalArgumentException(
+                                      "unknown operation ${event.operation}"
+                                  )
+                            }
+                        else ->
+                            throw IllegalArgumentException(
+                                "unsupported event type ${event.eventType}"
+                            )
+                      }
+                  ),
               )
             },
         )
@@ -76,17 +86,17 @@ abstract class CdcHandler : SinkStrategyHandler {
         .values
   }
 
-  protected abstract fun transformCreate(event: NodeEvent): Query
+  protected abstract fun transformCreate(event: NodeEvent): CdcData
 
-  protected abstract fun transformUpdate(event: NodeEvent): Query
+  protected abstract fun transformUpdate(event: NodeEvent): CdcData
 
-  protected abstract fun transformDelete(event: NodeEvent): Query
+  protected abstract fun transformDelete(event: NodeEvent): CdcData
 
-  protected abstract fun transformCreate(event: RelationshipEvent): Query
+  protected abstract fun transformCreate(event: RelationshipEvent): CdcData
 
-  protected abstract fun transformUpdate(event: RelationshipEvent): Query
+  protected abstract fun transformUpdate(event: RelationshipEvent): CdcData
 
-  protected abstract fun transformDelete(event: RelationshipEvent): Query
+  protected abstract fun transformDelete(event: RelationshipEvent): CdcData
 }
 
 internal fun SinkMessage.toChangeEvent(): ChangeEvent =

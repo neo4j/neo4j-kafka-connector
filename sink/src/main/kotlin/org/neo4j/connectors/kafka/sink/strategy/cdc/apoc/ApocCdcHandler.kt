@@ -31,7 +31,10 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.toChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
+import org.neo4j.connectors.kafka.sink.strategy.cdc.DefaultCdcStatementGenerator
+import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
+import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -42,6 +45,8 @@ abstract class ApocCdcHandler(
     private val eosOffsetLabel: String,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
+
+  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
   data class MessageToEvent(
       val message: SinkMessage,
@@ -91,11 +96,7 @@ abstract class ApocCdcHandler(
                   null,
                   null,
                   batch.map { data -> data.message },
-                  batchedStatement(
-                      topic,
-                      partition,
-                      batch.map { it.cdcData.toParams(it.message.record) },
-                  ),
+                  batchedStatement(topic, partition, batch),
               )
           )
         }
@@ -103,33 +104,30 @@ abstract class ApocCdcHandler(
         .toList()
   }
 
-  private fun batchedStatement(
-      topic: String,
-      partition: Int,
-      events: List<Map<String, Any>>,
-  ): Query {
-    val termination = if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN 1"
+  private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
+    val termination =
+        if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
 
     val query =
         if (eosOffsetLabel.isNotBlank()) {
           // eosOffsetLabel is being passed in sanitized from the config, so we can safely use
           // string interpolation here
           buildString {
-            appendLine("UNWIND \$events AS $EVENT")
+            appendLine("UNWIND \$events AS ${EVENT}")
             appendLine(
                 "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
             )
-            appendLine("WITH k, $EVENT WHERE $EVENT.offset > k.offset")
-            appendLine("WITH k, $EVENT ORDER BY $EVENT.offset ASC")
-            appendCallSubquery(termination)
-            appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
+            appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
+            appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
+            appendCallSubquery()
+            appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
             append(termination)
           }
         } else {
           buildString {
-            appendLine("UNWIND \$events AS $EVENT")
-            appendLine("WITH $EVENT ORDER BY $EVENT.offset ASC")
-            appendCallSubquery(termination)
+            appendLine("UNWIND \$events AS ${EVENT}")
+            appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
+            appendCallSubquery()
             append(termination)
           }
         }
@@ -137,7 +135,18 @@ abstract class ApocCdcHandler(
     return Query(
         query,
         buildMap {
-          put("events", events)
+          put(
+              "events",
+              events.map {
+                val query = statementGenerator.buildStatement(it.cdcData)
+
+                mapOf(
+                    "offset" to it.message.record.kafkaOffset(),
+                    "stmt" to query.text(),
+                    "params" to query.parameters(),
+                )
+              },
+          )
           put("topic", topic)
           put("partition", partition)
           put("strategy", strategy().name)
@@ -145,11 +154,13 @@ abstract class ApocCdcHandler(
     )
   }
 
-  private fun StringBuilder.appendCallSubquery(termination: String) {
+  private fun StringBuilder.appendCallSubquery() {
     if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-        appendLine("CALL ($EVENT) {")
-    else appendLine("CALL { WITH $EVENT")
-    appendLine("  CALL apoc.cypher.doIt($EVENT.stmt, $EVENT.params) YIELD value $termination")
+        appendLine("CALL (${EVENT}) {")
+    else appendLine("CALL { WITH ${EVENT}")
+    appendLine(
+        "  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value RETURN COUNT(1) AS total"
+    )
     appendLine("}")
   }
 

@@ -34,12 +34,12 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
@@ -207,31 +207,37 @@ class ConfigPropertiesTest {
     fun cdcSourceIdHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet(
-              "5.26 & APOC DoIT & Dynamic Labels available",
+              "5.26 & APOC DoIT available",
               true,
               neo4j5_26,
               ApocCdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
-              "2026.1 & APOC DoIT & Dynamic Labels available",
+              "2026.01 & APOC DoIT available",
               true,
               neo4j2026_1,
               ApocCdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT availabe & Dynamic Labels not available",
+              "4.4 & APOC DoIT available",
               true,
               neo4j4_4,
-              CdcSourceIdHandler::class,
+              ApocCdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT not availabe & Dynamic Labels available",
+              "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
               CdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT & Dynamic Labels not available",
+              "2026.01 & APOC DoIT not available",
+              false,
+              neo4j2026_1,
+              CdcSourceIdHandler::class,
+          ),
+          Arguments.argumentSet(
+              "4.4 & APOC DoIT not available",
               false,
               neo4j4_4,
               CdcSourceIdHandler::class,
@@ -243,31 +249,37 @@ class ConfigPropertiesTest {
     fun cdcSchemaHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet(
-              "5.26 & APOC DoIT & Dynamic Labels available",
+              "5.26 & APOC DoIT available",
               true,
               neo4j5_26,
               ApocCdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
-              "2026.1 & APOC DoIT & Dynamic Labels available",
+              "2026.1 & APOC DoIT available",
               true,
               neo4j2026_1,
               ApocCdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT availabe & Dynamic Labels not available",
+              "4.4 & APOC DoIT available",
               true,
               neo4j4_4,
-              CdcSchemaHandler::class,
+              ApocCdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT not availabe & Dynamic Labels available",
+              "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
               CdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
-              "APOC DoIT & Dynamic Labels not available",
+              "2026.01 & APOC DoIT not available",
+              false,
+              neo4j2026_1,
+              CdcSchemaHandler::class,
+          ),
+          Arguments.argumentSet(
+              "4.4 & APOC DoIT not available",
               false,
               neo4j4_4,
               CdcSchemaHandler::class,

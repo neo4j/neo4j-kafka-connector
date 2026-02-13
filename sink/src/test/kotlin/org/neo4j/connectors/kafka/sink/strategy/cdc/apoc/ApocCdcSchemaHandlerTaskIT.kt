@@ -30,8 +30,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
@@ -105,11 +103,6 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @BeforeEach
   fun before() {
-    assumeTrue {
-      canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j) &&
-          canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
-    }
-
     db = "test-${UUID.randomUUID()}"
     driver.createDatabase(db)
     session = driver.session(SessionConfig.forDatabase(db))

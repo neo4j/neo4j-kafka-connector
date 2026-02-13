@@ -34,11 +34,11 @@ import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.sink.strategy.CdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
@@ -149,7 +149,12 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.eosOffsetLabel shouldBe ""
   }
@@ -165,7 +170,12 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.eosOffsetLabel shouldBe "`__MyKafkaOffset`"
   }
@@ -184,7 +194,12 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.topicHandlers shouldHaveKey "foo"
     config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
@@ -260,7 +275,12 @@ class SinkConfigurationTest {
             } to "bar",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -329,7 +349,12 @@ class SinkConfigurationTest {
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe
@@ -337,6 +362,8 @@ class SinkConfigurationTest {
   }
 
   companion object {
+    private val neo4j2026_01 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j5_26 =
         Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j4_4 =
@@ -346,34 +373,35 @@ class SinkConfigurationTest {
     fun cdcHandlersTypes() =
         listOf(
             Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels not available",
+                "APOC DoIt not available 4.4",
                 false,
                 neo4j4_4,
                 CdcHandler::class,
             ),
             Arguments.argumentSet(
-                "APOC DoIt available && Dynamic Labels not available",
-                true,
-                neo4j4_4,
-                CdcHandler::class,
-            ),
-            Arguments.argumentSet(
-                "APOC DoIt not available && Dynamic Labels available",
+                "APOC DoIt not available 5.26",
                 false,
                 neo4j5_26,
                 CdcHandler::class,
             ),
             Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels available",
+                "APOC DoIt not available 2026.01",
+                false,
+                neo4j2026_01,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, ApocCdcHandler::class),
+            Arguments.argumentSet(
+                "APOC DoIt available 5.26",
                 true,
                 neo4j5_26,
                 ApocCdcHandler::class,
             ),
             Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels not available",
-                false,
-                null,
-                CdcHandler::class,
+                "APOC DoIt available 2026.01",
+                true,
+                neo4j2026_01,
+                ApocCdcHandler::class,
             ),
         )
   }

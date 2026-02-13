@@ -24,14 +24,11 @@ import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
@@ -46,6 +43,7 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
@@ -103,17 +101,12 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
 
   @BeforeEach
   fun before() {
-    assumeTrue {
-      canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j) &&
-          canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
-    }
-
     db = "test-${UUID.randomUUID()}"
     driver.createDatabase(db)
     session = driver.session(SessionConfig.forDatabase(db))
 
     // Create constraint for SourceEvent nodes
-    session.run("CREATE CONSTRAINT FOR (n:SourceEvent) REQUIRE n.sourceId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "source_event_source_id_key", "SourceEvent", "sourceId")
 
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
