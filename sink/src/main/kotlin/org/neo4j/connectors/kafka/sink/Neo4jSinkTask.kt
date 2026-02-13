@@ -93,21 +93,35 @@ class Neo4jSinkTask : SinkTask() {
           writeDuration.inWholeMilliseconds,
       )
     } catch (e: Throwable) {
-      log.warn("failed to process messages, trying to identify offending message", e)
+      log.warn("failed to process messages with handler {}", handler.strategy(), e)
+      log.warn(
+          "first and last messages in this batch were: {} and {}",
+          messages.firstOrNull()?.record,
+          messages.lastOrNull()?.record,
+      )
+      if (handled.isNotEmpty()) {
+        val handledSorted = handled.sortedBy { it.record.kafkaOffset() }
 
-      val unhandled = messages.minus(handled)
+        log.warn(
+            "successfully processed {} messages before failure. first and last messages processed were: {} and {}",
+            handled.size,
+            handledSorted.first().record.kafkaOffset(),
+            handledSorted.last().record.kafkaOffset(),
+        )
+      }
 
-      if (unhandled.size > 1) {
-        unhandled.forEach { m -> processMessages(handler, listOf(m)) }
-      } else {
-        unhandled.forEach { m ->
-          val reporter = context.errantRecordReporter()
-          if (reporter != null) {
-            reporter.report(m.record, e).get()
-          } else {
-            throw e
-          }
+      val reporter = context.errantRecordReporter()
+      if (reporter != null) {
+        log.warn("DLQ is enabled, will try to identify offending message", e)
+        val unhandled = messages.minus(handled)
+
+        if (unhandled.size > 1) {
+          unhandled.forEach { m -> processMessages(handler, listOf(m)) }
+        } else {
+          unhandled.forEach { m -> reporter.report(m.record, e).get() }
         }
+      } else {
+        throw e
       }
     }
   }
