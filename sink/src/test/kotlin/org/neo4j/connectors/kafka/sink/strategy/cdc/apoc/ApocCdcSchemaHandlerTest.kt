@@ -54,7 +54,7 @@ class ApocCdcSchemaHandlerWithEOSTest :
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
         |FINISH
@@ -69,7 +69,7 @@ class ApocCdcSchemaHandlerWithoutEOSTest :
         |UNWIND ${'$'}events AS e
         |WITH e ORDER BY e.offset ASC
         |CALL (e) {
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value FINISH
+        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
         |FINISH
         """

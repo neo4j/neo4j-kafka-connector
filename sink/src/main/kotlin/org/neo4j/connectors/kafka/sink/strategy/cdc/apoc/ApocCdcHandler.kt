@@ -105,7 +105,8 @@ abstract class ApocCdcHandler(
   }
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
-    val termination = if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN 1"
+    val termination =
+        if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
 
     val query =
         if (eosOffsetLabel.isNotBlank()) {
@@ -118,7 +119,7 @@ abstract class ApocCdcHandler(
             )
             appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
             appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
-            appendCallSubquery(termination)
+            appendCallSubquery()
             appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
             append(termination)
           }
@@ -126,7 +127,7 @@ abstract class ApocCdcHandler(
           buildString {
             appendLine("UNWIND \$events AS ${EVENT}")
             appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
-            appendCallSubquery(termination)
+            appendCallSubquery()
             append(termination)
           }
         }
@@ -153,11 +154,13 @@ abstract class ApocCdcHandler(
     )
   }
 
-  private fun StringBuilder.appendCallSubquery(termination: String) {
+  private fun StringBuilder.appendCallSubquery() {
     if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
         appendLine("CALL (${EVENT}) {")
     else appendLine("CALL { WITH ${EVENT}")
-    appendLine("  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value $termination")
+    appendLine(
+        "  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value RETURN COUNT(1) AS total"
+    )
     appendLine("}")
   }
 
