@@ -96,6 +96,28 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "MERGE (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to emptyList<String>(),
+                      "matchProperties" to mapOf("name" to "john", "surname" to "doe"),
+                      "setProperties" to
+                          mapOf(
+                              "name" to "john",
+                              "surname" to "doe",
+                              "dob" to java.time.LocalDate.of(1990, 1, 1),
+                          ),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -103,8 +125,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -157,6 +180,23 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "MERGE (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -164,8 +204,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -196,6 +237,20 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    private fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+              "DELETE n",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -203,8 +258,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -250,6 +306,32 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(${'$'}e.matchType)]->(end) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "setProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -257,8 +339,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -302,6 +385,33 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -309,8 +419,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -358,6 +469,34 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
+              "WITH r LIMIT 1 " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -365,8 +504,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -410,6 +550,33 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -417,8 +584,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -463,6 +631,27 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -470,8 +659,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -516,6 +706,27 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Employee", "Person"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -523,8 +734,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -567,6 +779,21 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
+              "SET r += ${'$'}e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -574,8 +801,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -622,6 +850,33 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
+              "WITH r LIMIT 1 " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -629,8 +884,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -677,6 +933,14 @@ class CdcStatementGeneratorTest {
       )
     }
 
+    fun dynamicLabelsQuery(): Query {
+      return Query(
+          "MATCH ()-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->() " +
+              "DELETE r",
+          mapOf("e" to mapOf("matchType" to "WORKS_AT", "matchProperties" to mapOf("empId" to 5))),
+      )
+    }
+
     override fun provideArguments(
         parameters: ParameterDeclarations?,
         context: ExtensionContext?,
@@ -684,8 +948,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -695,6 +960,8 @@ class CdcStatementGeneratorTest {
         Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j5_26 =
         Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2025_11 =
+        Neo4j(Neo4jVersion(2025, 11), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j2026_1 =
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4jAura =

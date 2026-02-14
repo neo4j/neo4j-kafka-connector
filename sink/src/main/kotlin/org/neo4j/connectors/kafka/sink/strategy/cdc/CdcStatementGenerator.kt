@@ -30,6 +30,8 @@ interface CdcStatementGenerator {
 }
 
 class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
+  private val supportsDynamicLabelsWithPropertyIndices =
+      canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices()).withNeo4j(neo4j)
   private val setDynamicLabels = canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
   private val removeDynamicLabels = canIUse(Cypher.removeDynamicLabels()).withNeo4j(neo4j)
 
@@ -42,7 +44,10 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
   }
 
   private fun buildNodeStatement(data: CdcNodeData): Query {
-    val matchLabels = buildMatchLabels(data.matchLabels)
+    val matchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices) {
+          ":${'$'}(${'$'}$EVENT.matchLabels)"
+        } else buildMatchLabels(data.matchLabels)
     val matchProps = buildMatchProps(data.matchProperties, "matchProperties")
     val setLabels =
         if (setDynamicLabels) {
@@ -82,6 +87,9 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
         mapOf(
             EVENT to
                 buildMap {
+                  if (supportsDynamicLabelsWithPropertyIndices) {
+                    this["matchLabels"] = data.matchLabels
+                  }
                   this["matchProperties"] = data.matchProperties
                   if (data.operation != EntityOperation.DELETE) {
                     this["setProperties"] = data.setProperties
@@ -98,11 +106,19 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
   }
 
   private fun buildRelationshipStatement(data: CdcRelationshipData): Query {
-    val startMatchLabels = buildMatchLabels(data.startMatchLabels)
+    val startMatchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices && data.startMatchLabels.isNotEmpty())
+            ":${'$'}(${'$'}$EVENT.start.matchLabels)"
+        else buildMatchLabels(data.startMatchLabels)
     val startMatchProps = buildMatchProps(data.startMatchProperties, "start.matchProperties")
-    val endMatchLabels = buildMatchLabels(data.endMatchLabels)
+    val endMatchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices && data.endMatchLabels.isNotEmpty())
+            ":${'$'}(${'$'}$EVENT.end.matchLabels)"
+        else buildMatchLabels(data.endMatchLabels)
     val endMatchProps = buildMatchProps(data.endMatchProperties, "end.matchProperties")
-    val matchType = SchemaNames.sanitize(data.matchType, true).orElseThrow()
+    val matchType =
+        if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(${'$'}$EVENT.matchType)"
+        else SchemaNames.sanitize(data.matchType, true).orElseThrow()
     val matchProps = buildMatchProps(data.matchProperties, "matchProperties")
 
     val stmt =
@@ -135,13 +151,26 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
                       data.startMatchProperties.isNotEmpty() &&
                           (data.operation != EntityOperation.DELETE || !data.hasKeys)
                   ) {
-                    this["start"] = mapOf("matchProperties" to data.startMatchProperties)
+                    this["start"] = buildMap {
+                      if (supportsDynamicLabelsWithPropertyIndices) {
+                        this["matchLabels"] = data.startMatchLabels
+                      }
+                      this["matchProperties"] = data.startMatchProperties
+                    }
                   }
                   if (
                       data.endMatchProperties.isNotEmpty() &&
                           (data.operation != EntityOperation.DELETE || !data.hasKeys)
                   ) {
-                    this["end"] = mapOf("matchProperties" to data.endMatchProperties)
+                    this["end"] = buildMap {
+                      if (supportsDynamicLabelsWithPropertyIndices) {
+                        this["matchLabels"] = data.endMatchLabels
+                      }
+                      this["matchProperties"] = data.endMatchProperties
+                    }
+                  }
+                  if (supportsDynamicLabelsWithPropertyIndices) {
+                    this["matchType"] = data.matchType
                   }
                   if (data.matchProperties.isNotEmpty()) {
                     this["matchProperties"] = data.matchProperties
