@@ -200,7 +200,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MERGE (n:`Person` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -265,7 +265,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MERGE (n:`Person` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -333,7 +333,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MERGE (n:`Person` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -400,7 +400,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MERGE (n:`Person` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -471,7 +471,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 2L,
                                         "stmt" to
-                                            "MERGE (n:`Employee`:`Person` {`id`: \$e.matchProperties.`id`, `name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Employee`:`Person` {`id`: _e.matchProperties.`id`, `name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -540,7 +540,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (n:`Person` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}) DELETE n",
+                                            "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -607,7 +607,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Person` {`id`: \$e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: \$e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`since`: \$e.matchProperties.`since`}]->(end) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`since`: _e.matchProperties.`since`}]->(end) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -687,7 +687,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Person` {`id`: \$e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: \$e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->(end) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -771,7 +771,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Employee`:`Person` {`contractId`: \$e.start.matchProperties.`contractId`, `id`: \$e.start.matchProperties.`id`}) MATCH (end:`Employee`:`Person` {`contractId`: \$e.end.matchProperties.`contractId`, `id`: \$e.end.matchProperties.`id`}) MATCH (start)-[r:`KNOWS` {`since`: \$e.matchProperties.`since`}]->(end) WITH r LIMIT 1 SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`contractId`: _e.start.matchProperties.`contractId`, `id`: _e.start.matchProperties.`id`}) MATCH (end:`Employee`:`Person` {`contractId`: _e.end.matchProperties.`contractId`, `id`: _e.end.matchProperties.`id`}) MATCH (start)-[r:`KNOWS` {`since`: _e.matchProperties.`since`}]->(end) WITH _e, r LIMIT 1 SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -857,7 +857,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Employee`:`Person` {`contractId`: \$e.start.matchProperties.`contractId`, `id`: \$e.start.matchProperties.`id`})-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->(end:`Person` {`id`: \$e.end.matchProperties.`id`}) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`contractId`: _e.start.matchProperties.`contractId`, `id`: _e.start.matchProperties.`id`})-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end:`Person` {`id`: _e.end.matchProperties.`id`}) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -934,7 +934,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Person` {`id`: \$e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: \$e.end.matchProperties.`id`}) MATCH (start)-[r:`KNOWS` {`name`: \$e.matchProperties.`name`, `surname`: \$e.matchProperties.`surname`}]->(end) WITH r LIMIT 1 DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MATCH (start)-[r:`KNOWS` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}]->(end) WITH _e, r LIMIT 1 DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1011,7 +1011,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MATCH ()-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->() DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH ()-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->() DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1276,7 +1276,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (n:`Person` {`name`: \$e.matchProperties.`name`}) DELETE n",
+                                            "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1330,7 +1330,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MERGE (n:`Person` {`name`: \$e.matchProperties.`name`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1595,7 +1595,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start)-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->(end:`Person` {`name`: \$e.end.matchProperties.`name`}) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end:`Person` {`name`: _e.end.matchProperties.`name`}) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1668,7 +1668,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`Person` {`name`: \$e.start.matchProperties.`name`})-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->(end) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`Person` {`name`: _e.start.matchProperties.`name`})-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -1861,7 +1861,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH ()-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->() DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH ()-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->() DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to mapOf("matchProperties" to mapOf("id" to 1L))
@@ -1922,7 +1922,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH ()-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->() DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH ()-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->() DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to mapOf("matchProperties" to mapOf("id" to 1L))
@@ -1983,7 +1983,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH ()-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->() DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH ()-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->() DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to mapOf("matchProperties" to mapOf("id" to 1L))
@@ -2044,7 +2044,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start)-[r:`KNOWS` {`id`: \$e.matchProperties.`id`}]->(end) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to

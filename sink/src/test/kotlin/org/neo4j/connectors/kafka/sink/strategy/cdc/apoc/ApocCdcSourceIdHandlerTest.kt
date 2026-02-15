@@ -107,7 +107,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -171,7 +171,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -236,7 +236,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 2L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -301,7 +301,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -365,7 +365,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -432,7 +432,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 2L,
                                         "stmt" to
-                                            "MERGE (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) SET n += \$e.setProperties SET n:\$(\$e.addLabels) REMOVE n:\$(\$e.removeLabels)",
+                                            "WITH ${'$'}e AS _e MERGE (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels)",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -497,7 +497,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (n:`SourceEvent` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}) DELETE n",
+                                            "WITH ${'$'}e AS _e MATCH (n:`SourceEvent` {`sourceElementId`: _e.matchProperties.`sourceElementId`}) DELETE n",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -556,7 +556,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`SourceEvent` {`sourceElementId`: \$e.start.matchProperties.`sourceElementId`}) MATCH (end:`SourceEvent` {`sourceElementId`: \$e.end.matchProperties.`sourceElementId`}) MERGE (start)-[r:`REL` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}]->(end) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`SourceEvent` {`sourceElementId`: _e.start.matchProperties.`sourceElementId`}) MATCH (end:`SourceEvent` {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) MERGE (start)-[r:`REL` {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -636,7 +636,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH (start:`SourceEvent` {`sourceElementId`: \$e.start.matchProperties.`sourceElementId`})-[r:`REL` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}]->(end:`SourceEvent` {`sourceElementId`: \$e.end.matchProperties.`sourceElementId`}) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`SourceEvent` {`sourceElementId`: _e.start.matchProperties.`sourceElementId`})-[r:`REL` {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end:`SourceEvent` {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -713,7 +713,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 1L,
                                         "stmt" to
-                                            "MATCH (start:`SourceEvent` {`sourceElementId`: \$e.start.matchProperties.`sourceElementId`})-[r:`REL` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}]->(end:`SourceEvent` {`sourceElementId`: \$e.end.matchProperties.`sourceElementId`}) SET r += \$e.setProperties",
+                                            "WITH ${'$'}e AS _e MATCH (start:`SourceEvent` {`sourceElementId`: _e.start.matchProperties.`sourceElementId`})-[r:`REL` {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end:`SourceEvent` {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) SET r += _e.setProperties",
                                         "params" to
                                             mapOf(
                                                 "e" to
@@ -789,7 +789,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
                                     mapOf(
                                         "offset" to 0L,
                                         "stmt" to
-                                            "MATCH ()-[r:`REL` {`sourceElementId`: \$e.matchProperties.`sourceElementId`}]->() DELETE r",
+                                            "WITH ${'$'}e AS _e MATCH ()-[r:`REL` {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->() DELETE r",
                                         "params" to
                                             mapOf(
                                                 "e" to

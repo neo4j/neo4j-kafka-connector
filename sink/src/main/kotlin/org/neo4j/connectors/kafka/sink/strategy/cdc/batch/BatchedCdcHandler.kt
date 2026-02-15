@@ -16,6 +16,10 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
 
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
@@ -23,6 +27,9 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
+import org.neo4j.connectors.kafka.sink.strategy.cdc.DefaultCdcStatementGenerator
+import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
 import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -30,9 +37,12 @@ import org.slf4j.LoggerFactory
 
 abstract class BatchedCdcHandler(
     private val maxBatchedStatements: Int,
+    private val neo4j: Neo4j,
     private val batchSize: Int,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
+
+  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
   data class MessageToEvent(
       val message: SinkMessage,
@@ -86,7 +96,7 @@ abstract class BatchedCdcHandler(
     val result = mutableListOf<ChangeQuery>()
 
     var currentGroupId = 0
-    val queries = mutableMapOf<GroupingKey, Pair<Int, String>>()
+    val queries = mutableMapOf<String, Int>()
     val currentEvents = mutableListOf<Map<String, Any>>()
     val currentMessages = mutableListOf<SinkMessage>()
 
@@ -105,14 +115,14 @@ abstract class BatchedCdcHandler(
     }
 
     events.forEach { event ->
-      val key = event.cdcData.groupingBasedOn()
-      if (!queries.containsKey(key) && (queries.size >= maxBatchedStatements)) {
+      val query = statementGenerator.buildStatement(event.cdcData, "$EVENT.params")
+
+      if (!queries.containsKey(query.text()) && (queries.size >= maxBatchedStatements)) {
         flush()
       }
 
-      val (groupId, _) =
-          queries.getOrPut(key) { currentGroupId++ to event.cdcData.buildStatement() }
-      currentEvents.add(event.cdcData.toParams(groupId))
+      val queryId = queries.getOrPut(query.text()) { currentGroupId++ }
+      currentEvents.add(mapOf("q" to queryId, "params" to query.parameters()))
       currentMessages.add(event.message)
       if (currentEvents.size >= batchSize) {
         flush()
@@ -127,25 +137,42 @@ abstract class BatchedCdcHandler(
     return result
   }
 
-  private fun batchedStatement(
-      queries: Map<GroupingKey, Pair<Int, String>>,
-      events: List<Map<String, Any>>,
-  ): Query {
-    val query = buildString {
-      append("CYPHER 25 ")
-      append("UNWIND \$events AS $EVENT CALL ($EVENT) { ")
-      queries.keys.sorted().forEach { key ->
-        val (index, stmt) = queries[key]!!
+  private fun batchedStatement(queries: Map<String, Int>, events: List<Map<String, Any>>): Query {
+    val cypher25 = canIUse(Cypher.explicitCypher25Selection()).withNeo4j(neo4j)
+    val termination =
+        if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
 
-        append("WHEN $EVENT.q = \$q$index THEN $stmt ")
+    val query = buildString {
+      if (cypher25) {
+        appendLine("CYPHER 25")
       }
-      append("} FINISH")
+      appendLine("UNWIND \$events AS $EVENT")
+      if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
+          appendLine("CALL (${EVENT}) {")
+      else appendLine("CALL { WITH ${EVENT}")
+      queries.keys.sorted().forEachIndexed { index, stmt ->
+        if (cypher25) {
+          appendLine("  WHEN $EVENT.q = \$q$index THEN {")
+          appendLine("    $stmt")
+          appendLine("  }")
+        } else {
+          if (index > 0) appendLine("  UNION ALL")
+
+          val qId = queries[stmt]
+
+          appendLine("  WITH * WHERE $EVENT.q = \$q$qId")
+          appendLine("  $stmt")
+          appendLine("  RETURN $index AS x")
+        }
+      }
+      appendLine("}")
+      append(termination)
     }
 
     return Query(
         query,
         buildMap {
-          queries.values.forEach { (index, _) -> put("q$index", index) }
+          queries.values.forEach { id -> put("q$id", id) }
           put("events", events)
         },
     )

@@ -58,8 +58,8 @@ class CdcStatementGeneratorTest {
   object CreateNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:`Employee`",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:`Employee`",
           mapOf(
               "e" to
                   mapOf(
@@ -77,8 +77,8 @@ class CdcStatementGeneratorTest {
 
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -98,8 +98,8 @@ class CdcStatementGeneratorTest {
 
     private fun dynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -152,8 +152,8 @@ class CdcStatementGeneratorTest {
   object UpdateNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
           mapOf(
               "e" to
                   mapOf(
@@ -166,8 +166,8 @@ class CdcStatementGeneratorTest {
 
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -182,8 +182,8 @@ class CdcStatementGeneratorTest {
 
     private fun dynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -231,7 +231,7 @@ class CdcStatementGeneratorTest {
   object DeleteNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
               "DELETE n",
           mapOf("e" to mapOf("matchProperties" to mapOf("name" to "joe", "surname" to "doe"))),
       )
@@ -239,7 +239,7 @@ class CdcStatementGeneratorTest {
 
     private fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (n:${'$'}(${'$'}e.matchLabels) {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+          "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
               "DELETE n",
           mapOf(
               "e" to
@@ -291,10 +291,10 @@ class CdcStatementGeneratorTest {
   object CreateRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT`]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -308,10 +308,10 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(${'$'}e.matchType)]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType)]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -369,10 +369,10 @@ class CdcStatementGeneratorTest {
   object CreateRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -387,10 +387,10 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -452,11 +452,11 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -471,11 +471,11 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -534,10 +534,10 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -552,10 +552,10 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -617,9 +617,9 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -633,9 +633,9 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -692,9 +692,9 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -708,9 +708,9 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -767,8 +767,8 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -781,8 +781,8 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -834,10 +834,10 @@ class CdcStatementGeneratorTest {
   object DeleteRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
               "DELETE r",
           mapOf(
               "e" to
@@ -852,10 +852,10 @@ class CdcStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "MATCH (start:${'$'}(${'$'}e.start.matchLabels) {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:${'$'}(${'$'}e.end.matchLabels) {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(${'$'}e.matchType) {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
               "DELETE r",
           mapOf(
               "e" to
@@ -928,14 +928,15 @@ class CdcStatementGeneratorTest {
   object DeleteRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH ()-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->() " + "DELETE r",
+          "WITH ${'$'}e AS _e MATCH ()-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->() " +
+              "DELETE r",
           mapOf("e" to mapOf("matchProperties" to mapOf("empId" to 5))),
       )
     }
 
     fun dynamicLabelsQuery(): Query {
       return Query(
-          "MATCH ()-[r:${'$'}(${'$'}e.matchType) {`empId`: ${'$'}e.matchProperties.`empId`}]->() " +
+          "WITH ${'$'}e AS _e MATCH ()-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->() " +
               "DELETE r",
           mapOf("e" to mapOf("matchType" to "WORKS_AT", "matchProperties" to mapOf("empId" to 5))),
       )

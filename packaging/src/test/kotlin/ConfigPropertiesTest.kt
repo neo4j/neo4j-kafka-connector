@@ -38,10 +38,10 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -228,19 +228,19 @@ class ConfigPropertiesTest {
               "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
-              CdcSourceIdHandler::class,
+              BatchedCdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
               "2026.01 & APOC DoIT not available",
               false,
               neo4j2026_1,
-              CdcSourceIdHandler::class,
+              BatchedCdcSourceIdHandler::class,
           ),
           Arguments.argumentSet(
               "4.4 & APOC DoIT not available",
               false,
               neo4j4_4,
-              CdcSourceIdHandler::class,
+              BatchedCdcSourceIdHandler::class,
           ),
       )
     }
@@ -270,19 +270,19 @@ class ConfigPropertiesTest {
               "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
-              CdcSchemaHandler::class,
+              BatchedCdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
               "2026.01 & APOC DoIT not available",
               false,
               neo4j2026_1,
-              CdcSchemaHandler::class,
+              BatchedCdcSchemaHandler::class,
           ),
           Arguments.argumentSet(
               "4.4 & APOC DoIT not available",
               false,
               neo4j4_4,
-              CdcSchemaHandler::class,
+              BatchedCdcSchemaHandler::class,
           ),
       )
     }

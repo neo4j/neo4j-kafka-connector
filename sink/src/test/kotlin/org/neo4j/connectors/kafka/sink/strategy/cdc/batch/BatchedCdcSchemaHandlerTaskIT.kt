@@ -26,7 +26,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -42,6 +41,8 @@ import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
+import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
@@ -54,7 +55,6 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
 @Testcontainers
-@Disabled("not activated yet")
 class BatchedCdcSchemaHandlerTaskIT {
   companion object {
     @Container
@@ -116,7 +116,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create a simple node`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -141,7 +141,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create node with multiple labels`() {
-    session.run("CREATE CONSTRAINT FOR (n:Person) REQUIRE n.personId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "person_key", "Person", "personId")
 
     task.put(
         listOf(
@@ -180,7 +180,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create multiple nodes in a single batch`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -228,7 +228,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should add label to existing node`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -259,7 +259,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should remove label from existing node`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("CREATE (:User:Admin {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -290,7 +290,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should remove property from node`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice', age: 30})").consume()
 
     task.put(
@@ -317,7 +317,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should delete a node`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -343,7 +343,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create, update and delete a node within the same batch`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -395,9 +395,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create node with composite key`() {
-    session
-        .run("CREATE CONSTRAINT FOR (n:Order) REQUIRE (n.customerId, n.orderId) IS NODE KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
 
     task.put(
         listOf(
@@ -429,11 +427,8 @@ class BatchedCdcSchemaHandlerTaskIT {
   }
 
   @Test
-  @Disabled("dynamic labels with composite keys do not seem to work properly")
   fun `should update node with composite key`() {
-    session
-        .run("CREATE CONSTRAINT FOR (n:Order) REQUIRE (n.customerId, n.orderId) IS NODE KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
     session.run("CREATE (:Order {customerId: 'c1', orderId: 'o1', total: 100.00})").consume()
 
     task.put(
@@ -476,7 +471,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create a simple relationship between existing nodes`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"
@@ -513,7 +508,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create relationship between nodes created in same batch`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -570,7 +565,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create multiple relationships between same nodes`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1'}), (:User {userId: 'user2'})").consume()
 
     task.put(
@@ -646,7 +641,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should update a relationship`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01')}]->(:User {userId: 'user2'})"
@@ -682,7 +677,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should remove property from relationship`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01'), strength: 5}]->(:User {userId: 'user2'})"
@@ -718,7 +713,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should delete a relationship`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2023-01-01')}]->(:User {userId: 'user2'})"
@@ -757,7 +752,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should delete relationship after an update event within the same batch`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session.run("MERGE (:User {userId: 'user1'})-[:FOLLOWS]->(:User {userId: 'user2'})").consume()
 
     task.put(
@@ -805,11 +800,9 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create relationship with key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT FOR ()-[r:PURCHASED]-() REQUIRE r.orderId IS RELATIONSHIP KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -844,11 +837,9 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should update relationship with key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT FOR ()-[r:PURCHASED]-() REQUIRE r.orderId IS RELATIONSHIP KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -893,11 +884,9 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should delete relationship with key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT FOR ()-[r:PURCHASED]-() REQUIRE r.orderId IS RELATIONSHIP KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -936,11 +925,9 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should handle multiple relationships with different keys between same nodes`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT FOR ()-[r:PURCHASED]-() REQUIRE r.orderId IS RELATIONSHIP KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -1015,11 +1002,9 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should update specific relationship by key when multiple exist`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run("CREATE CONSTRAINT FOR ()-[r:PURCHASED]-() REQUIRE r.orderId IS RELATIONSHIP KEY")
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             """
@@ -1069,13 +1054,15 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should create relationship with composite key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run(
-            "CREATE CONSTRAINT FOR ()-[r:REVIEWED]-() REQUIRE (r.reviewId, r.version) IS RELATIONSHIP KEY"
-        )
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(
+        neo4j,
+        "reviewed_key",
+        "REVIEWED",
+        "reviewId",
+        "version",
+    )
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -1116,13 +1103,15 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should update relationship with composite key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run(
-            "CREATE CONSTRAINT FOR ()-[r:REVIEWED]-() REQUIRE (r.reviewId, r.version) IS RELATIONSHIP KEY"
-        )
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(
+        neo4j,
+        "reviewed_key",
+        "REVIEWED",
+        "reviewId",
+        "version",
+    )
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:REVIEWED {reviewId: 'r1', version: 1, rating: 4, comment: 'Good'}]->(:Product {productId: 'product1'})"
@@ -1181,13 +1170,15 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should distinguish relationships by composite key`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
-    session.run("CREATE CONSTRAINT FOR (n:Product) REQUIRE n.productId IS KEY").consume()
-    session
-        .run(
-            "CREATE CONSTRAINT FOR ()-[r:REVIEWED]-() REQUIRE (r.reviewId, r.version) IS RELATIONSHIP KEY"
-        )
-        .consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(
+        neo4j,
+        "reviewed_key",
+        "REVIEWED",
+        "reviewId",
+        "version",
+    )
     session
         .run(
             """
@@ -1252,7 +1243,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should handle interleaved node and relationship operations`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -1323,7 +1314,7 @@ class BatchedCdcSchemaHandlerTaskIT {
 
   @Test
   fun `should handle updates to multiple nodes in interleaved fashion`() {
-    session.run("CREATE CONSTRAINT FOR (n:User) REQUIRE n.userId IS KEY").consume()
+    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"

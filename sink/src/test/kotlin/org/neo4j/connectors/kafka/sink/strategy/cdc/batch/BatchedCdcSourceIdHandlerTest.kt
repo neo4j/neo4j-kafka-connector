@@ -23,6 +23,10 @@ import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -40,6 +44,10 @@ import org.neo4j.connectors.kafka.sink.strategy.TestUtils.updateKnowsRelationshi
 import org.neo4j.driver.Query
 
 class BatchedCdcSourceIdHandlerTest {
+  companion object {
+    private val neo4j =
+        Neo4j(Neo4jVersion(2026, 2, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+  }
 
   @Test
   fun `should generate correct statement for node creation events`() {
@@ -66,24 +74,33 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
-                                            mapOf("name" to "john", "surname" to "doe"),
-                                        "addLabels" to emptyList<String>(),
-                                        "removeLabels" to emptyList<String>(),
+                                        "params" to
+                                            mapOf(
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf("name" to "john", "surname" to "doe"),
+                                                "addLabels" to emptyList<String>(),
+                                                "removeLabels" to emptyList<String>(),
+                                            ),
                                     )
                                 ),
                         ),
@@ -119,28 +136,37 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
+                                        "params" to
                                             mapOf(
-                                                "name" to "john",
-                                                "surname" to "doe",
-                                                "dob" to LocalDate.of(1990, 1, 1),
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf(
+                                                        "name" to "john",
+                                                        "surname" to "doe",
+                                                        "dob" to LocalDate.of(1990, 1, 1),
+                                                    ),
+                                                "addLabels" to listOf("Person"),
+                                                "removeLabels" to emptyList<String>(),
                                             ),
-                                        "addLabels" to listOf("Person"),
-                                        "removeLabels" to emptyList<String>(),
                                     )
                                 ),
                         ),
@@ -176,28 +202,37 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
+                                        "params" to
                                             mapOf(
-                                                "name" to "john",
-                                                "surname" to "doe",
-                                                "dob" to LocalDate.of(1990, 1, 1),
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf(
+                                                        "name" to "john",
+                                                        "surname" to "doe",
+                                                        "dob" to LocalDate.of(1990, 1, 1),
+                                                    ),
+                                                "addLabels" to listOf("Person", "Employee"),
+                                                "removeLabels" to emptyList<String>(),
                                             ),
-                                        "addLabels" to listOf("Person", "Employee"),
-                                        "removeLabels" to emptyList<String>(),
                                     )
                                 ),
                         ),
@@ -233,27 +268,36 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
+                                        "params" to
                                             mapOf(
-                                                "name" to "joe",
-                                                "dob" to LocalDate.of(2000, 1, 1),
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf(
+                                                        "name" to "joe",
+                                                        "dob" to LocalDate.of(2000, 1, 1),
+                                                    ),
+                                                "addLabels" to emptyList<String>(),
+                                                "removeLabels" to emptyList<String>(),
                                             ),
-                                        "addLabels" to emptyList<String>(),
-                                        "removeLabels" to emptyList<String>(),
                                     )
                                 ),
                         ),
@@ -289,27 +333,36 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
+                                        "params" to
                                             mapOf(
-                                                "name" to "john",
-                                                "dob" to LocalDate.of(1990, 1, 1),
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf(
+                                                        "name" to "john",
+                                                        "dob" to LocalDate.of(1990, 1, 1),
+                                                    ),
+                                                "addLabels" to emptyList<String>(),
+                                                "removeLabels" to emptyList<String>(),
                                             ),
-                                        "addLabels" to emptyList<String>(),
-                                        "removeLabels" to emptyList<String>(),
                                     )
                                 ),
                         ),
@@ -348,28 +401,37 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage2),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MERGE (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "SET n += e.setProperties " +
-                            "SET n:\$(e.addLabels) " +
-                            "REMOVE n:\$(e.removeLabels) } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MERGE (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to
+                                        "params" to
                                             mapOf(
-                                                "name" to "john",
-                                                "dob" to LocalDate.of(1990, 1, 1),
-                                                "married" to null,
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                                "setProperties" to
+                                                    mapOf(
+                                                        "name" to "john",
+                                                        "dob" to LocalDate.of(1990, 1, 1),
+                                                        "married" to null,
+                                                    ),
+                                                "addLabels" to listOf("Manager"),
+                                                "removeLabels" to listOf("Employee"),
                                             ),
-                                        "addLabels" to listOf("Manager"),
-                                        "removeLabels" to listOf("Employee"),
                                     )
                                 ),
                         ),
@@ -405,21 +467,29 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MATCH (n:\$(e.matchLabels) {sourceElementId: e.matchProperties.sourceElementId}) " +
-                            "DELETE n } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MATCH (n:${'$'}(_e.matchLabels) {`sourceElementId`: _e.matchProperties.`sourceElementId`}) DELETE n
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchLabels" to listOf("SourceEvent"),
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "node-element-id"),
-                                        "setProperties" to emptyMap<String, Any>(),
-                                        "addLabels" to emptyList<String>(),
-                                        "removeLabels" to emptyList<String>(),
+                                        "params" to
+                                            mapOf(
+                                                "matchLabels" to listOf("SourceEvent"),
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "node-element-id"),
+                                            ),
                                     )
                                 ),
                         ),
@@ -457,35 +527,49 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "" +
-                            "MATCH (start:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId}) " +
-                            "MATCH (end:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
-                            "MERGE (start)-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(end) " +
-                            "SET r += e.setProperties } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`sourceElementId`: _e.start.matchProperties.`sourceElementId`}) MATCH (end:${'$'}(_e.end.matchLabels) {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) MERGE (start)-[r:${'$'}(_e.matchType) {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end) SET r += _e.setProperties
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "start" to
+                                        "params" to
                                             mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
+                                                "start" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "start-element-id"
+                                                            ),
+                                                    ),
+                                                "end" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "end-element-id"
+                                                            ),
+                                                    ),
+                                                "matchType" to "REL",
                                                 "matchProperties" to
-                                                    mapOf("sourceElementId" to "start-element-id"),
+                                                    mapOf("sourceElementId" to "rel-element-id"),
+                                                "setProperties" to
+                                                    mapOf("name" to "john", "surname" to "doe"),
                                             ),
-                                        "end" to
-                                            mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
-                                                "matchProperties" to
-                                                    mapOf("sourceElementId" to "end-element-id"),
-                                            ),
-                                        "matchType" to "REL",
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "rel-element-id"),
-                                        "setProperties" to
-                                            mapOf("name" to "john", "surname" to "doe"),
                                     )
                                 ),
                         ),
@@ -523,32 +607,49 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MATCH (:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId})-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
-                            "SET r += e.setProperties } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`sourceElementId`: _e.start.matchProperties.`sourceElementId`})-[r:${'$'}(_e.matchType) {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end:${'$'}(_e.end.matchLabels) {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) SET r += _e.setProperties
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "start" to
+                                        "params" to
                                             mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
+                                                "start" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "start-element-id"
+                                                            ),
+                                                    ),
+                                                "end" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "end-element-id"
+                                                            ),
+                                                    ),
+                                                "matchType" to "REL",
                                                 "matchProperties" to
-                                                    mapOf("sourceElementId" to "start-element-id"),
+                                                    mapOf("sourceElementId" to "rel-element-id"),
+                                                "setProperties" to
+                                                    mapOf("name" to "john", "surname" to "doe"),
                                             ),
-                                        "end" to
-                                            mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
-                                                "matchProperties" to
-                                                    mapOf("sourceElementId" to "end-element-id"),
-                                            ),
-                                        "matchType" to "REL",
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "rel-element-id"),
-                                        "setProperties" to
-                                            mapOf("name" to "john", "surname" to "doe"),
                                     )
                                 ),
                         ),
@@ -583,31 +684,48 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage1),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MATCH (:\$(e.start.matchLabels) {sourceElementId: e.start.matchProperties.sourceElementId})-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->(:\$(e.end.matchLabels) {sourceElementId: e.end.matchProperties.sourceElementId}) " +
-                            "SET r += e.setProperties } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`sourceElementId`: _e.start.matchProperties.`sourceElementId`})-[r:${'$'}(_e.matchType) {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->(end:${'$'}(_e.end.matchLabels) {`sourceElementId`: _e.end.matchProperties.`sourceElementId`}) SET r += _e.setProperties
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "start" to
+                                        "params" to
                                             mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
+                                                "start" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "start-element-id"
+                                                            ),
+                                                    ),
+                                                "end" to
+                                                    mapOf(
+                                                        "matchLabels" to listOf("SourceEvent"),
+                                                        "matchProperties" to
+                                                            mapOf(
+                                                                "sourceElementId" to
+                                                                    "end-element-id"
+                                                            ),
+                                                    ),
+                                                "matchType" to "REL",
                                                 "matchProperties" to
-                                                    mapOf("sourceElementId" to "start-element-id"),
+                                                    mapOf("sourceElementId" to "rel-element-id"),
+                                                "setProperties" to mapOf("name" to "joe"),
                                             ),
-                                        "end" to
-                                            mapOf(
-                                                "matchLabels" to listOf("SourceEvent"),
-                                                "matchProperties" to
-                                                    mapOf("sourceElementId" to "end-element-id"),
-                                            ),
-                                        "matchType" to "REL",
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "rel-element-id"),
-                                        "setProperties" to mapOf("name" to "joe"),
                                     )
                                 ),
                         ),
@@ -645,29 +763,29 @@ class BatchedCdcSourceIdHandlerTest {
                     null,
                     listOf(sinkMessage),
                     Query(
-                        "CYPHER 25 UNWIND \$events AS e CALL (e) { WHEN e.q = \$q0 THEN " +
-                            "MATCH ()-[r:\$(e.matchType) {sourceElementId: e.matchProperties.sourceElementId}]->() " +
-                            "DELETE r } FINISH",
+                        """
+                            CYPHER 25
+                            UNWIND ${'$'}events AS e
+                            CALL (e) {
+                              WHEN e.q = ${'$'}q0 THEN {
+                                WITH e.params AS _e MATCH ()-[r:${'$'}(_e.matchType) {`sourceElementId`: _e.matchProperties.`sourceElementId`}]->() DELETE r
+                              }
+                            }
+                            FINISH
+                        """
+                            .trimIndent(),
                         mapOf(
                             "q0" to 0,
                             "events" to
                                 listOf(
                                     mapOf(
                                         "q" to 0,
-                                        "matchType" to "REL",
-                                        "matchProperties" to
-                                            mapOf("sourceElementId" to "rel-element-id"),
-                                        "start" to
+                                        "params" to
                                             mapOf(
-                                                "matchLabels" to listOf<String>(),
-                                                "matchProperties" to emptyMap<String, Any>(),
+                                                "matchType" to "REL",
+                                                "matchProperties" to
+                                                    mapOf("sourceElementId" to "rel-element-id"),
                                             ),
-                                        "end" to
-                                            mapOf(
-                                                "matchLabels" to listOf<String>(),
-                                                "matchProperties" to emptyMap<String, Any>(),
-                                            ),
-                                        "setProperties" to emptyMap<String, Any>(),
                                     )
                                 ),
                         ),
@@ -909,6 +1027,7 @@ class BatchedCdcSourceIdHandlerTest {
   ): BatchedCdcSourceIdHandler =
       BatchedCdcSourceIdHandler(
           "my-topic",
+          neo4j,
           maxBatchedStatements,
           batchSize,
           "SourceEvent",

@@ -38,8 +38,9 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -202,14 +203,14 @@ class SinkConfigurationTest {
         )
 
     config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (config.topicHandlers["foo"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (config.topicHandlers["foo"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers["foo"] shouldBe instanceOf<BatchedCdcSourceIdHandler>()
+    (config.topicHandlers["foo"] as BatchedCdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
+    (config.topicHandlers["foo"] as BatchedCdcSourceIdHandler).propertyName shouldBe "test_id"
 
     config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (config.topicHandlers["bar"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (config.topicHandlers["bar"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers["bar"] shouldBe instanceOf<BatchedCdcSourceIdHandler>()
+    (config.topicHandlers["bar"] as BatchedCdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
+    (config.topicHandlers["bar"] as BatchedCdcSourceIdHandler).propertyName shouldBe "test_id"
   }
 
   @ParameterizedTest
@@ -376,19 +377,19 @@ class SinkConfigurationTest {
                 "APOC DoIt not available 4.4",
                 false,
                 neo4j4_4,
-                CdcHandler::class,
+                BatchedCdcHandler::class,
             ),
             Arguments.argumentSet(
                 "APOC DoIt not available 5.26",
                 false,
                 neo4j5_26,
-                CdcHandler::class,
+                BatchedCdcHandler::class,
             ),
             Arguments.argumentSet(
                 "APOC DoIt not available 2026.01",
                 false,
                 neo4j2026_01,
-                CdcHandler::class,
+                BatchedCdcHandler::class,
             ),
             Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, ApocCdcHandler::class),
             Arguments.argumentSet(

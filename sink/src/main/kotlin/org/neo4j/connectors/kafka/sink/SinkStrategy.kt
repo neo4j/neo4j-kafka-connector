@@ -30,10 +30,10 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -223,7 +223,15 @@ interface SinkStrategyHandler {
                     labelName,
                     propertyName,
                 )
-            else CdcSourceIdHandler(topic, config.neo4j(), labelName, propertyName)
+            else
+                BatchedCdcSourceIdHandler(
+                    topic,
+                    config.neo4j(),
+                    config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                    config.batchSize,
+                    labelName,
+                    propertyName,
+                )
       }
 
       val cdcSchemaTopics = config.getList(SinkConfiguration.CDC_SCHEMA_TOPICS)
@@ -235,7 +243,13 @@ interface SinkStrategyHandler {
         handler =
             if (config.isApocCypherDoItAvailable())
                 ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize, config.eosOffsetLabel)
-            else CdcSchemaHandler(topic, config.neo4j())
+            else
+                BatchedCdcSchemaHandler(
+                    topic,
+                    config.neo4j(),
+                    config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                    config.batchSize,
+                )
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
