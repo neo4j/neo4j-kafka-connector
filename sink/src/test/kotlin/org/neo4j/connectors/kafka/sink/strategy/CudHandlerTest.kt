@@ -857,6 +857,57 @@ class CudHandlerTest : HandlerTest() {
         )
   }
 
+  @Test
+  fun `should delete relationship without constraint on 'from' or 'to'`() {
+    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
+
+    val sinkMessage =
+        newMessage(
+            Schema.STRING_SCHEMA,
+            """
+                {
+                  "type": "relationship",
+                  "op": "DELETE",
+                  "rel_type": "RELATED_TO",
+                  "from": {
+                    "labels": ["Foo"],
+                    "ids": {}
+                  },
+                  "to": {
+                    "labels": ["Bar"],
+                    "ids": {}
+                  }
+                }
+                """,
+        )
+    handler.handle(listOf(sinkMessage)) shouldBe
+        listOf(
+            listOf(
+                ChangeQuery(
+                    null,
+                    null,
+                    listOf(sinkMessage),
+                    Query(
+                        CypherParser.parse(
+                            """
+                              MATCH (start:`Foo` {}) WITH start
+                              MATCH (end:`Bar` {}) WITH start, end
+                              MATCH (start)-[r:`RELATED_TO` {}]->(end)
+                              DELETE r
+                            """
+                        )
+                            .cypher,
+                        mapOf(
+                            "start" to mapOf("keys" to emptyMap<String, Any?>()),
+                            "end" to mapOf("keys" to emptyMap()),
+                            "keys" to emptyMap()
+                        ),
+                    ),
+                )
+            )
+        )
+  }
+
   @ParameterizedTest
   @ValueSource(ints = [1, 6, 25, 100])
   fun `should support mixed operations with different batch sizes`(batchSize: Int) {
