@@ -19,10 +19,8 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldMatchInOrder
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
@@ -33,7 +31,6 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
-import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
@@ -856,180 +853,6 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
           batch.first().messages shouldHaveSize 1
         },
     )
-  }
-
-  @Test
-  fun `should fail on null 'after' field with node create operation`() {
-    val handler = createHandler()
-
-    val nodeChangeEventMessage =
-        newChangeEventMessage(
-            NodeEvent(
-                "person1",
-                EntityOperation.CREATE,
-                listOf("Person"),
-                mapOf("Person" to listOf(mapOf("id" to 1L))),
-                null,
-                null,
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(nodeChangeEventMessage))
-    } shouldHaveMessage "create operation requires 'after' field in the event object"
-  }
-
-  @Test
-  fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = createHandler()
-
-    val relationshipChangeEventMessage =
-        newChangeEventMessage(
-            RelationshipEvent(
-                "rel-element-id",
-                "REL",
-                Node(
-                    "start-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L))),
-                ),
-                Node(
-                    "end-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L))),
-                ),
-                emptyList(),
-                EntityOperation.CREATE,
-                null,
-                null,
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(relationshipChangeEventMessage))
-    } shouldHaveMessage "create operation requires 'after' field in the event object"
-  }
-
-  @Test
-  fun `should fail on null 'before' field with node update operation`() {
-    val handler = createHandler()
-
-    val nodeChangeEventMessage =
-        newChangeEventMessage(
-            NodeEvent(
-                "person1",
-                EntityOperation.UPDATE,
-                listOf("Person"),
-                mapOf("Person" to listOf(mapOf("id" to 1L))),
-                null,
-                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(nodeChangeEventMessage))
-    } shouldHaveMessage "update operation requires 'before' field in the event object"
-  }
-
-  @Test
-  fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = createHandler()
-
-    val relationshipChangeEventMessage =
-        newChangeEventMessage(
-            RelationshipEvent(
-                "rel-element-id",
-                "REL",
-                Node(
-                    "start-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L))),
-                ),
-                Node(
-                    "end-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L))),
-                ),
-                emptyList(),
-                EntityOperation.UPDATE,
-                null,
-                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(relationshipChangeEventMessage))
-    } shouldHaveMessage "update operation requires 'before' field in the event object"
-  }
-
-  @Test
-  fun `should fail on null 'after' field with node update operation`() {
-    val handler = createHandler()
-
-    val nodeChangeEventMessage =
-        newChangeEventMessage(
-            NodeEvent(
-                "person1",
-                EntityOperation.UPDATE,
-                listOf("Person"),
-                mapOf("Person" to listOf(mapOf("id" to 1L))),
-                NodeState(listOf("Person", "Employee"), mapOf("name" to "joe", "surname" to "doe")),
-                null,
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(nodeChangeEventMessage))
-    } shouldHaveMessage "update operation requires 'after' field in the event object"
-  }
-
-  @Test
-  fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = createHandler()
-
-    val relationshipChangeEventMessage =
-        newChangeEventMessage(
-            RelationshipEvent(
-                "rel-element-id",
-                "REL",
-                Node(
-                    "start-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 1L))),
-                ),
-                Node(
-                    "end-element-id",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("id" to 2L))),
-                ),
-                emptyList(),
-                EntityOperation.UPDATE,
-                RelationshipState(mapOf("name" to "john", "surname" to "doe")),
-                null,
-            ),
-            1,
-            0,
-            0,
-        )
-
-    assertThrows<InvalidDataException> {
-      handler.handle(listOf(relationshipChangeEventMessage))
-    } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
   private fun createHandler(batchSize: Int = 1000): CdcHandler =

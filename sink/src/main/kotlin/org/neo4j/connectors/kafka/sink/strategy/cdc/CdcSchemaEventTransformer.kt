@@ -29,12 +29,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
   override fun transformCreate(event: NodeEvent): CdcNodeData {
     if (event.before != null) {
       throw InvalidDataException(
-          "create operation requires 'before' field to be unset in the event object"
+          "create operation requires 'before' field to be unset in the event object."
       )
     }
 
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
@@ -51,10 +51,10 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
   override fun transformUpdate(event: NodeEvent): CdcNodeData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
@@ -70,9 +70,13 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
     if (event.after != null) {
       throw InvalidDataException(
-          "delete operation requires 'after' field to be unset in the event object"
+          "delete operation requires 'after' field to be unset in the event object."
       )
     }
 
@@ -91,12 +95,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
   override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
     if (event.before != null) {
       throw InvalidDataException(
-          "create operation requires 'before' field to be unset in the event object"
+          "create operation requires 'before' field to be unset in the event object."
       )
     }
 
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
@@ -119,10 +123,10 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
   override fun transformUpdate(event: RelationshipEvent): CdcRelationshipData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     val relationshipKeys = event.keys
@@ -147,9 +151,13 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
     if (event.after != null) {
       throw InvalidDataException(
-          "delete operation requires 'after' field to be unset in the event object"
+          "delete operation requires 'after' field to be unset in the event object."
       )
     }
 

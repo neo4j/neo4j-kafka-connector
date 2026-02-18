@@ -34,12 +34,12 @@ class CdcSourceIdEventTransformer(
   override fun transformCreate(event: NodeEvent): CdcNodeData {
     if (event.before != null) {
       throw InvalidDataException(
-          "create operation requires 'before' field to be unset in the event object"
+          "create operation requires 'before' field to be unset in the event object."
       )
     }
 
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     return CdcNodeData(
@@ -54,10 +54,10 @@ class CdcSourceIdEventTransformer(
 
   override fun transformUpdate(event: NodeEvent): CdcNodeData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     return CdcNodeData(
@@ -71,9 +71,13 @@ class CdcSourceIdEventTransformer(
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
     if (event.after != null) {
       throw InvalidDataException(
-          "delete operation requires 'after' field to be unset in the event object"
+          "delete operation requires 'after' field to be unset in the event object."
       )
     }
 
@@ -90,12 +94,12 @@ class CdcSourceIdEventTransformer(
   override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
     if (event.before != null) {
       throw InvalidDataException(
-          "create operation requires 'before' field to be unset in the event object"
+          "create operation requires 'before' field to be unset in the event object."
       )
     }
 
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     return CdcRelationshipData(
@@ -113,10 +117,10 @@ class CdcSourceIdEventTransformer(
 
   override fun transformUpdate(event: RelationshipEvent): CdcRelationshipData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     return CdcRelationshipData(
@@ -133,9 +137,13 @@ class CdcSourceIdEventTransformer(
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
     if (event.after != null) {
       throw InvalidDataException(
-          "delete operation requires 'after' field to be unset in the event object"
+          "delete operation requires 'after' field to be unset in the event object."
       )
     }
 
