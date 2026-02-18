@@ -14,77 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.NodeEvent
-import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
-import org.neo4j.connectors.kafka.sink.strategy.cdc.DefaultCdcStatementGenerator
-import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
-import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class BatchedCdcHandler(
-    private val maxBatchedStatements: Int,
+class NativeBatchStrategy(
     private val neo4j: Neo4j,
+    private val maxBatchedStatements: Int,
     private val batchSize: Int,
-) : SinkStrategyHandler {
+) : CdcBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-
   private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
-  data class MessageToEvent(
-      val message: SinkMessage,
-      val changeEvent: ChangeEvent,
-      val cdcData: CdcData,
-  )
-
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
-    val changeEvents =
+  override fun handle(
+      messages: Iterable<SinkMessage>,
+      eventTransformer: (ChangeEvent) -> CdcData,
+  ): Iterable<Iterable<ChangeQuery>> {
+    val events =
         messages
             .onEach { logger.trace("received message: {}", it) }
             .map {
               val changeEvent = it.toChangeEvent()
-
-              MessageToEvent(
-                  it,
-                  changeEvent,
-                  when (val event = changeEvent.event) {
-                    is NodeEvent ->
-                        when (event.operation) {
-                          EntityOperation.CREATE -> transformCreate(event)
-                          EntityOperation.UPDATE -> transformUpdate(event)
-                          EntityOperation.DELETE -> transformDelete(event)
-                          else ->
-                              throw IllegalArgumentException("unknown operation ${event.operation}")
-                        }
-
-                    is RelationshipEvent ->
-                        when (event.operation) {
-                          EntityOperation.CREATE -> transformCreate(event)
-                          EntityOperation.UPDATE -> transformUpdate(event)
-                          EntityOperation.DELETE -> transformDelete(event)
-                          else ->
-                              throw IllegalArgumentException("unknown operation ${event.operation}")
-                        }
-
-                    else ->
-                        throw IllegalArgumentException("unsupported event type ${event.eventType}")
-                  },
-              )
+              MessageToEvent(it, changeEvent, eventTransformer(changeEvent))
             }
-    return listOf(splitEventsIntoBatches(changeEvents, maxBatchedStatements)).onEach {
+
+    return listOf(splitEventsIntoBatches(events, maxBatchedStatements)).onEach {
       logger.trace("messages: {} ", it)
     }
   }
@@ -177,16 +140,4 @@ abstract class BatchedCdcHandler(
         },
     )
   }
-
-  protected abstract fun transformCreate(event: NodeEvent): CdcData
-
-  protected abstract fun transformUpdate(event: NodeEvent): CdcData
-
-  protected abstract fun transformDelete(event: NodeEvent): CdcData
-
-  protected abstract fun transformCreate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformUpdate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformDelete(event: RelationshipEvent): CdcData
 }

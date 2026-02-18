@@ -40,8 +40,12 @@ import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.ApocBatchStrategy
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
@@ -152,7 +156,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+                val handler =
+                    CdcHandler(
+                        SinkStrategy.CDC_SCHEMA,
+                        ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+                        CdcSchemaEventTransformer("my-topic"),
+                    )
 
                 handler.handle(listOf(it))
               }
@@ -1032,7 +1041,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should split changes over batch size`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 2, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 2, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result =
         handler.handle(
@@ -1072,7 +1086,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1096,7 +1115,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1130,7 +1154,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1154,7 +1183,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1188,7 +1222,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1212,7 +1251,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -2347,7 +2391,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+          val handler =
+              CdcHandler(
+                  SinkStrategy.CDC_SCHEMA,
+                  ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+                  CdcSchemaEventTransformer("my-topic"),
+              )
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2360,7 +2409,12 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            ApocBatchStrategy(neo4j, 1000, eosOffsetLabel, SinkStrategy.CDC_SCHEMA),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result = handler.handle(messages)
 

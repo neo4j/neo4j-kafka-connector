@@ -39,6 +39,7 @@ import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -111,7 +112,7 @@ class BatchedCdcSchemaHandlerTaskIT {
         )
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(BatchedCdcSchemaHandler::class)
+    task.config.topicHandlers["my-topic"] shouldBe instanceOf(CdcHandler::class)
   }
 
   @Test

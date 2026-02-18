@@ -41,6 +41,7 @@ import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SOURCE_ID
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -124,7 +125,7 @@ abstract class ApocCdcSourceIdHandlerTaskIT(val eosOffsetLabel: String) {
         }
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSourceIdHandler::class)
+    task.config.topicHandlers["my-topic"] shouldBe instanceOf(CdcHandler::class)
   }
 
   @Test

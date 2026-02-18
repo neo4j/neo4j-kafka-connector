@@ -36,6 +36,7 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.driver.Query
@@ -590,7 +591,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should split changes into transactional boundaries`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val result =
         handler.handle(
@@ -652,7 +658,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -676,7 +687,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -710,7 +726,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -734,7 +755,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -768,7 +794,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -792,7 +823,12 @@ class CdcSourceIdHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -825,7 +861,12 @@ class CdcSourceIdHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = CdcSourceIdHandler("my-topic", NEO4J_2026_1, "SourceEvent", "sourceElementId")
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SOURCE_ID,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
+        )
 
     val result = handler.handle(messages)
 

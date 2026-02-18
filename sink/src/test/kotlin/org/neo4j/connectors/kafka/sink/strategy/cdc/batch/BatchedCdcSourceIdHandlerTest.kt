@@ -36,11 +36,15 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createKnowsRelationshipEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.updateKnowsRelationshipEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cdc.NativeBatchStrategy
 import org.neo4j.driver.Query
 
 class BatchedCdcSourceIdHandlerTest {
@@ -1021,17 +1025,11 @@ class BatchedCdcSourceIdHandlerTest {
     } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
-  private fun createHandler(
-      maxBatchedStatements: Int = 1000,
-      batchSize: Int = 1000,
-  ): BatchedCdcSourceIdHandler =
-      BatchedCdcSourceIdHandler(
-          "my-topic",
-          neo4j,
-          maxBatchedStatements,
-          batchSize,
-          "SourceEvent",
-          "sourceElementId",
+  private fun createHandler(maxBatchedStatements: Int = 1000, batchSize: Int = 1000): CdcHandler =
+      CdcHandler(
+          SinkStrategy.CDC_SOURCE_ID,
+          NativeBatchStrategy(neo4j, maxBatchedStatements, batchSize),
+          CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
       )
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {

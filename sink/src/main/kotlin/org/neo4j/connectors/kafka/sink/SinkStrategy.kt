@@ -30,10 +30,11 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.batch.BatchedCdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.ApocBatchStrategy
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cdc.NativeBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -213,25 +214,28 @@ interface SinkStrategyHandler {
         val labelName = config.getString(SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME)
         val propertyName = config.getString(SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME)
 
+        val batchStrategy =
+            if (config.isApocCypherDoItAvailable()) {
+              ApocBatchStrategy(
+                  config.neo4j(),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SOURCE_ID,
+              )
+            } else {
+              NativeBatchStrategy(
+                  config.neo4j(),
+                  config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                  config.batchSize,
+              )
+            }
+
         handler =
-            if (config.isApocCypherDoItAvailable())
-                ApocCdcSourceIdHandler(
-                    topic,
-                    config.neo4j(),
-                    config.batchSize,
-                    config.eosOffsetLabel,
-                    labelName,
-                    propertyName,
-                )
-            else
-                BatchedCdcSourceIdHandler(
-                    topic,
-                    config.neo4j(),
-                    config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
-                    config.batchSize,
-                    labelName,
-                    propertyName,
-                )
+            CdcHandler(
+                SinkStrategy.CDC_SOURCE_ID,
+                batchStrategy,
+                CdcSourceIdEventTransformer(topic, labelName, propertyName),
+            )
       }
 
       val cdcSchemaTopics = config.getList(SinkConfiguration.CDC_SCHEMA_TOPICS)
@@ -240,16 +244,24 @@ interface SinkStrategyHandler {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
+        val batchStrategy =
+            if (config.isApocCypherDoItAvailable()) {
+              ApocBatchStrategy(
+                  config.neo4j(),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SCHEMA,
+              )
+            } else {
+              NativeBatchStrategy(
+                  config.neo4j(),
+                  config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                  config.batchSize,
+              )
+            }
+
         handler =
-            if (config.isApocCypherDoItAvailable())
-                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize, config.eosOffsetLabel)
-            else
-                BatchedCdcSchemaHandler(
-                    topic,
-                    config.neo4j(),
-                    config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
-                    config.batchSize,
-                )
+            CdcHandler(SinkStrategy.CDC_SCHEMA, batchStrategy, CdcSchemaEventTransformer(topic))
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)

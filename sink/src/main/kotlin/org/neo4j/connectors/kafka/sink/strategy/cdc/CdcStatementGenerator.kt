@@ -173,6 +173,7 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
   }
 
   companion object {
+    @Suppress("SameParameterValue")
     private fun buildMatchProps(
         matchProperties: Map<String, Any?>,
         eventVariable: String,

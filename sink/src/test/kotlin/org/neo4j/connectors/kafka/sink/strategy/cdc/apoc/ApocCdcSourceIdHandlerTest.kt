@@ -36,8 +36,12 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.ApocBatchStrategy
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
 import org.neo4j.driver.Query
 
 class ApocCdcSourceIdHandlerWithEOSTest :
@@ -1028,14 +1032,11 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
     } shouldHaveMessage "update operation requires 'after' field in the event object"
   }
 
-  private fun createHandler(batchSize: Int = 1000): ApocCdcSourceIdHandler =
-      ApocCdcSourceIdHandler(
-          "my-topic",
-          neo4j,
-          batchSize,
-          eosOffsetLabel,
-          "SourceEvent",
-          "sourceElementId",
+  private fun createHandler(batchSize: Int = 1000): CdcHandler =
+      CdcHandler(
+          SinkStrategy.CDC_SOURCE_ID,
+          ApocBatchStrategy(neo4j, batchSize, eosOffsetLabel, SinkStrategy.CDC_SOURCE_ID),
+          CdcSourceIdEventTransformer("my-topic", "SourceEvent", "sourceElementId"),
       )
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {

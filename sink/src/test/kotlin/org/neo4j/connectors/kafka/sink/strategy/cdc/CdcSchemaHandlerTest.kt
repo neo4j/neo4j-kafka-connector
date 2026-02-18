@@ -39,6 +39,7 @@ import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
@@ -122,7 +123,12 @@ class CdcSchemaHandlerTest {
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+                val handler =
+                    CdcHandler(
+                        SinkStrategy.CDC_SCHEMA,
+                        TransactionalBatchStrategy(NEO4J_2026_1),
+                        CdcSchemaEventTransformer("my-topic"),
+                    )
 
                 handler.handle(listOf(it))
               }
@@ -743,7 +749,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should split changes into transactional boundaries`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result =
         handler.handle(
@@ -805,7 +816,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -829,7 +845,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -863,7 +884,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -887,7 +913,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -921,7 +952,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -945,7 +981,12 @@ class CdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1874,7 +1915,12 @@ class CdcSchemaHandlerTest {
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+          val handler =
+              CdcHandler(
+                  SinkStrategy.CDC_SCHEMA,
+                  TransactionalBatchStrategy(NEO4J_2026_1),
+                  CdcSchemaEventTransformer("my-topic"),
+              )
 
           handler.handle(listOf(sinkMessage))
         }
@@ -1885,7 +1931,12 @@ class CdcSchemaHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = CdcSchemaHandler("my-topic", NEO4J_2026_1)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            TransactionalBatchStrategy(NEO4J_2026_1),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result = handler.handle(messages)
 

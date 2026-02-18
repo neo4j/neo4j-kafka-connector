@@ -41,10 +41,14 @@ import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createKnowsRelationshipEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cdc.NativeBatchStrategy
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
@@ -126,7 +130,12 @@ class BatchedCdcSchemaHandlerTest {
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+                val handler =
+                    CdcHandler(
+                        SinkStrategy.CDC_SCHEMA,
+                        NativeBatchStrategy(neo4j, 50, 1000),
+                        CdcSchemaEventTransformer("my-topic"),
+                    )
 
                 handler.handle(listOf(it))
               }
@@ -588,7 +597,7 @@ class BatchedCdcSchemaHandlerTest {
                             UNWIND ${'$'}events AS e
                             CALL (e) {
                               WHEN e.q = ${'$'}q0 THEN {
-                                WITH e.params AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:${'$'}(_e.matchType)]->(end) SET r += _e.setProperties
+                                WITH e.params AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:${'$'}(_e.matchType) {`since`: _e.matchProperties.`since`}]->(end) SET r += _e.setProperties
                               }
                             }
                             FINISH
@@ -613,6 +622,8 @@ class BatchedCdcSchemaHandlerTest {
                                                         "matchProperties" to mapOf("id" to 2L),
                                                     ),
                                                 "matchType" to "KNOWS",
+                                                "matchProperties" to
+                                                    mapOf("since" to LocalDate.of(2000, 1, 1)),
                                                 "setProperties" to
                                                     mapOf("since" to LocalDate.of(2000, 1, 1)),
                                             ),
@@ -1025,7 +1036,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over batch size`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 2)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 2),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result =
         handler.handle(
@@ -1054,7 +1070,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should split changes over max batched statement count`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 2, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 2, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result =
         handler.handle(
@@ -1075,7 +1096,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1099,7 +1125,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1133,7 +1164,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1157,7 +1193,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1191,7 +1232,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1215,7 +1261,12 @@ class BatchedCdcSchemaHandlerTest {
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -2246,7 +2297,12 @@ class BatchedCdcSchemaHandlerTest {
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+          val handler =
+              CdcHandler(
+                  SinkStrategy.CDC_SCHEMA,
+                  NativeBatchStrategy(neo4j, 50, 1000),
+                  CdcSchemaEventTransformer("my-topic"),
+              )
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2259,7 +2315,12 @@ class BatchedCdcSchemaHandlerTest {
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = BatchedCdcSchemaHandler("my-topic", neo4j, 50, 1000)
+    val handler =
+        CdcHandler(
+            SinkStrategy.CDC_SCHEMA,
+            NativeBatchStrategy(neo4j, 50, 1000),
+            CdcSchemaEventTransformer("my-topic"),
+        )
 
     val result = handler.handle(messages)
 

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import kotlin.sequences.chunked
 import kotlin.sequences.map
@@ -25,36 +25,26 @@ import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.NodeEvent
-import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcData
-import org.neo4j.connectors.kafka.sink.strategy.cdc.DefaultCdcStatementGenerator
-import org.neo4j.connectors.kafka.sink.strategy.cdc.EVENT
-import org.neo4j.connectors.kafka.sink.strategy.cdc.toChangeEvent
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-abstract class ApocCdcHandler(
+class ApocBatchStrategy(
     private val neo4j: Neo4j,
     private val batchSize: Int,
     private val eosOffsetLabel: String,
-) : SinkStrategyHandler {
+    private val strategy: SinkStrategy,
+) : CdcBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-
   private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
 
-  data class MessageToEvent(
-      val message: SinkMessage,
-      val changeEvent: ChangeEvent,
-      val cdcData: CdcData,
-  )
-
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
+  override fun handle(
+      messages: Iterable<SinkMessage>,
+      eventTransformer: (ChangeEvent) -> CdcData,
+  ): Iterable<Iterable<ChangeQuery>> {
     val (topic, partition) =
         messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
             ?: return emptyList()
@@ -64,30 +54,7 @@ abstract class ApocCdcHandler(
         .onEach { logger.trace("received message: {}", it) }
         .map {
           val changeEvent = it.toChangeEvent()
-
-          MessageToEvent(
-              it,
-              changeEvent,
-              when (val event = changeEvent.event) {
-                is NodeEvent ->
-                    when (event.operation) {
-                      EntityOperation.CREATE -> transformCreate(event)
-                      EntityOperation.UPDATE -> transformUpdate(event)
-                      EntityOperation.DELETE -> transformDelete(event)
-                      else -> throw IllegalArgumentException("unknown operation ${event.operation}")
-                    }
-
-                is RelationshipEvent ->
-                    when (event.operation) {
-                      EntityOperation.CREATE -> transformCreate(event)
-                      EntityOperation.UPDATE -> transformUpdate(event)
-                      EntityOperation.DELETE -> transformDelete(event)
-                      else -> throw IllegalArgumentException("unknown operation ${event.operation}")
-                    }
-
-                else -> throw IllegalArgumentException("unsupported event type ${event.eventType}")
-              },
-          )
+          MessageToEvent(it, changeEvent, eventTransformer(changeEvent))
         }
         .chunked(batchSize)
         .map { batch ->
@@ -110,8 +77,6 @@ abstract class ApocCdcHandler(
 
     val query =
         if (eosOffsetLabel.isNotBlank()) {
-          // eosOffsetLabel is being passed in sanitized from the config, so we can safely use
-          // string interpolation here
           buildString {
             appendLine("UNWIND \$events AS ${EVENT}")
             appendLine(
@@ -149,7 +114,7 @@ abstract class ApocCdcHandler(
           )
           put("topic", topic)
           put("partition", partition)
-          put("strategy", strategy().name)
+          put("strategy", strategy.name)
         },
     )
   }
@@ -163,16 +128,4 @@ abstract class ApocCdcHandler(
     )
     appendLine("}")
   }
-
-  protected abstract fun transformCreate(event: NodeEvent): CdcData
-
-  protected abstract fun transformUpdate(event: NodeEvent): CdcData
-
-  protected abstract fun transformDelete(event: NodeEvent): CdcData
-
-  protected abstract fun transformCreate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformUpdate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformDelete(event: RelationshipEvent): CdcData
 }

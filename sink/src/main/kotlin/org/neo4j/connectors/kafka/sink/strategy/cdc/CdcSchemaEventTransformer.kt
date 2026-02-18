@@ -14,37 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
-import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
-import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcNodeData
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcRelationshipData
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
-class BatchedCdcSchemaHandler(
-    val topic: String,
-    neo4j: Neo4j,
-    maxBatchedStatements: Int,
-    batchSize: Int,
-) : BatchedCdcHandler(maxBatchedStatements, neo4j, batchSize) {
-  private val logger: Logger = LoggerFactory.getLogger(javaClass)
-
-  init {
-    logger.info("using CYPHER 25 compatible CDC SCHEMA strategy for topic '{}'", topic)
-  }
-
-  override fun strategy() = SinkStrategy.CDC_SCHEMA
+class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
   override fun transformCreate(event: NodeEvent): CdcNodeData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object"
+      )
+    }
+
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
@@ -82,6 +70,12 @@ class BatchedCdcSchemaHandler(
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object"
+      )
+    }
+
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
     return CdcNodeData(
@@ -95,6 +89,12 @@ class BatchedCdcSchemaHandler(
   }
 
   override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object"
+      )
+    }
+
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object")
     }
@@ -102,7 +102,7 @@ class BatchedCdcSchemaHandler(
     val (startMatchLabels, startMatchProperties) = buildMatchLabelsAndProperties(event.start.keys)
     val (endMatchLabels, endMatchProperties) = buildMatchLabelsAndProperties(event.end.keys)
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, event.keys, null)
+        buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
     return CdcRelationshipData(
         EntityOperation.CREATE,
@@ -125,12 +125,13 @@ class BatchedCdcSchemaHandler(
       throw InvalidDataException("update operation requires 'after' field in the event object")
     }
 
+    val relationshipKeys = event.keys
     val (startMatchLabels, startMatchProperties) =
-        buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
+        buildMatchLabelsAndProperties(event.start.keys, relationshipKeys.isEmpty())
     val (endMatchLabels, endMatchProperties) =
-        buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
+        buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, event.keys, event.before.properties)
+        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.UPDATE,
@@ -140,18 +141,25 @@ class BatchedCdcSchemaHandler(
         endMatchProperties,
         relMatchType,
         relMatchProperties,
-        event.keys.isNotEmpty(),
+        relationshipKeys.isNotEmpty(),
         event.mutatedProperties(),
     )
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object"
+      )
+    }
+
+    val relationshipKeys = event.keys
     val (startMatchLabels, startMatchProperties) =
-        buildMatchLabelsAndProperties(event.start.keys, event.keys.isEmpty())
+        buildMatchLabelsAndProperties(event.start.keys, relationshipKeys.isEmpty())
     val (endMatchLabels, endMatchProperties) =
-        buildMatchLabelsAndProperties(event.end.keys, event.keys.isEmpty())
+        buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
     val (relMatchType, relMatchProperties) =
-        buildMatchLabelsAndProperties(event.type, event.keys, event.before.properties)
+        buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
     return CdcRelationshipData(
         EntityOperation.DELETE,
@@ -161,7 +169,7 @@ class BatchedCdcSchemaHandler(
         endMatchProperties,
         relMatchType,
         relMatchProperties,
-        event.keys.isNotEmpty(),
+        relationshipKeys.isNotEmpty(),
         emptyMap(),
     )
   }
