@@ -151,8 +151,6 @@ class NativeBatchStrategy(
         } else {
           if (index > 0) appendLine("  UNION ALL")
 
-          val qId = queries[stmt]
-
           appendLine("  WITH * WHERE $EVENT.q = \$q$index")
           appendLine("  $stmt")
           appendLine("  RETURN $index AS x")
