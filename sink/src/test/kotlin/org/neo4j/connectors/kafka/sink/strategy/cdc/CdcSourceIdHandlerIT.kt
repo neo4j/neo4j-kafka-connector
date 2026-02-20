@@ -14,24 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.reflect.KClass
 import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -39,49 +37,26 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SOURCE_ID
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
-import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
-import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.testcontainers.containers.Neo4jContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
-@Disabled("not activated yet")
-class BatchedCdcSourceIdHandlerTaskIT {
-  companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+abstract class CdcSourceIdHandlerIT(
+    val eosOffsetLabel: String,
+    val expectedBatchStrategy: KClass<out CdcBatchStrategy>,
+) {
+  abstract fun container(): Neo4jContainer<*>
 
-    private lateinit var driver: Driver
-    private lateinit var neo4j: Neo4j
+  abstract fun neo4j(): Neo4j
 
-    @BeforeAll
-    @JvmStatic
-    fun setUpContainer() {
-      driver = GraphDatabase.driver(container.boltUrl, AuthTokens.none())
-      neo4j = Neo4jDetector.detect(driver)
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun tearDownContainer() {
-      driver.close()
-    }
-  }
+  abstract fun driver(): Driver
 
   private lateinit var task: Neo4jSinkTask
   private lateinit var db: String
@@ -89,7 +64,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
 
   @AfterEach
   fun after() {
-    if (this::db.isInitialized) driver.dropDatabase(db)
+    if (this::db.isInitialized) driver().dropDatabase(db)
     if (this::session.isInitialized) session.close()
     if (this::task.isInitialized) task.stop()
   }
@@ -97,25 +72,50 @@ class BatchedCdcSourceIdHandlerTaskIT {
   @BeforeEach
   fun before() {
     db = "test-${UUID.randomUUID()}"
-    driver.createDatabase(db)
-    session = driver.session(SessionConfig.forDatabase(db))
+    driver().createDatabase(db)
+    session = driver().session(SessionConfig.forDatabase(db))
 
     // Create constraint for SourceEvent nodes
-    session.createNodeKeyConstraint(neo4j, "source_event_source_id_key", "SourceEvent", "sourceId")
+    session.createNodeKeyConstraint(
+        neo4j(),
+        "source_event_source_id_key",
+        "SourceEvent",
+        "sourceId",
+    )
+
+    if (eosOffsetLabel.isNotEmpty()) {
+      session.createNodeKeyConstraint(
+          neo4j(),
+          "eos_offset_key",
+          eosOffsetLabel,
+          "strategy",
+          "topic",
+          "partition",
+      )
+    }
 
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
-        mapOf(
-            "topics" to "my-topic",
-            "neo4j.database" to db,
-            "neo4j.uri" to container.boltUrl,
-            "neo4j.authentication.type" to "NONE",
-            "neo4j.cdc.source-id.topics" to "my-topic",
-        )
+        buildMap {
+          this["topics"] = "my-topic"
+          this["neo4j.database"] = db
+          this["neo4j.uri"] = container().boltUrl
+          this["neo4j.authentication.type"] = "NONE"
+          this["neo4j.cdc.source-id.topics"] = "my-topic"
+
+          if (eosOffsetLabel.isNotEmpty()) {
+            this["neo4j.eos-offset-label"] = eosOffsetLabel
+          }
+        }
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(BatchedCdcSourceIdHandler::class)
+    val handler = task.config.topicHandlers["my-topic"]
+    handler shouldBe instanceOf<CdcHandler>()
+
+    val cdcHandler = handler as CdcHandler
+    cdcHandler.eventTransformer shouldBe instanceOf<CdcSourceIdEventTransformer>()
+    cdcHandler.batchStrategy shouldBe instanceOf(expectedBatchStrategy)
   }
 
   @Test
@@ -144,6 +144,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 0)
   }
 
   @Test
@@ -180,6 +182,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         listOf("Employee", "Person", "SourceEvent")
     result.get(1).asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "department" to "Engineering")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 0)
   }
 
   @Test
@@ -211,7 +215,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -225,13 +229,15 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
     )
 
     session.run("MATCH (n:SourceEvent) RETURN count(n)").single().get(0).asInt() shouldBe 3
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -268,7 +274,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record
         )
@@ -280,6 +286,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .get(0)
         .asList { it.asString() }
         .sorted() shouldBe listOf("Admin", "Person", "SourceEvent")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -316,7 +324,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record
         )
@@ -328,6 +336,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .get(0)
         .asList { it.asString() }
         .sorted() shouldBe listOf("Person", "SourceEvent")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -367,7 +377,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record
         )
@@ -379,6 +389,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("sourceId" to "node-1", "name" to "Alice", "age" to 31L, "city" to "NYC")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -415,7 +427,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record
         )
@@ -426,6 +438,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice")
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -462,7 +476,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record
         )
@@ -473,6 +487,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 1)
   }
 
   @Test
@@ -504,7 +520,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -518,7 +534,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -529,6 +545,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -560,7 +578,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
         )
@@ -581,7 +599,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    2,
                 )
                 .record
         )
@@ -594,6 +612,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -625,7 +645,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -641,7 +661,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -655,6 +675,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2023, 6, 15))
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 2)
   }
 
   @Test
@@ -686,7 +708,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -702,7 +724,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -718,7 +740,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     3,
-                    0,
+                    3,
                 )
                 .record,
             newChangeEventMessage(
@@ -734,7 +756,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     4,
-                    0,
+                    4,
                 )
                 .record,
         )
@@ -747,6 +769,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 3
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 4)
   }
 
   @Test
@@ -778,7 +802,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -794,7 +818,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -817,7 +841,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record
         )
@@ -831,6 +855,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1), "strength" to 5L)
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -862,7 +888,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -880,7 +906,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -903,7 +929,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record
         )
@@ -916,6 +942,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "rel-1", "since" to LocalDate.of(2020, 1, 1))
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -947,7 +975,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -963,7 +991,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -984,7 +1012,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record
         )
@@ -998,6 +1026,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1029,7 +1059,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -1045,7 +1075,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -1066,7 +1096,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record,
             newChangeEventMessage(
@@ -1082,7 +1112,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
-                    0,
+                    4,
                 )
                 .record,
         )
@@ -1095,6 +1125,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 4)
   }
 
   @Test
@@ -1126,7 +1158,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -1142,7 +1174,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1156,7 +1188,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record,
         )
@@ -1174,6 +1206,8 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 1
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   @Test
@@ -1205,7 +1239,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
         )
@@ -1224,7 +1258,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1238,7 +1272,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     2,
                     1,
-                    0,
+                    3,
                 )
                 .record,
             newChangeEventMessage(
@@ -1252,7 +1286,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     0,
-                    0,
+                    4,
                 )
                 .record,
             newChangeEventMessage(
@@ -1266,7 +1300,7 @@ class BatchedCdcSourceIdHandlerTaskIT {
                     ),
                     3,
                     1,
-                    0,
+                    5,
                 )
                 .record,
         )
@@ -1282,6 +1316,212 @@ class BatchedCdcSourceIdHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("sourceId" to "node-2", "name" to "Bob", "score" to 25L)
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 5)
+  }
+
+  @Test
+  fun `should handle interleaved node and relationship operations even if they are provided out of order in terms of their offset values`() {
+    task.put(
+        listOf(
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        emptyList(),
+                        emptyMap(),
+                        null,
+                        NodeState(emptyList(), mapOf("name" to "Alice")),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    RelationshipEvent(
+                        "rel-1",
+                        "FOLLOWS",
+                        Node("node-1", emptyList(), emptyMap()),
+                        Node("node-2", emptyList(), emptyMap()),
+                        emptyList(),
+                        EntityOperation.CREATE,
+                        null,
+                        RelationshipState(emptyMap()),
+                    ),
+                    1,
+                    2,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        emptyList(),
+                        emptyMap(),
+                        NodeState(emptyList(), mapOf("name" to "Alice")),
+                        NodeState(emptyList(), mapOf("name" to "Alice", "age" to 30)),
+                    ),
+                    2,
+                    0,
+                    3,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-2",
+                        EntityOperation.CREATE,
+                        emptyList(),
+                        emptyMap(),
+                        null,
+                        NodeState(emptyList(), mapOf("name" to "Bob")),
+                    ),
+                    1,
+                    1,
+                    1,
+                )
+                .record,
+        )
+    )
+
+    session
+        .run("MATCH (n:SourceEvent {sourceId: 'node-1'}) RETURN n{.*}")
+        .single()
+        .get(0)
+        .asMap() shouldBe mapOf("sourceId" to "node-1", "name" to "Alice", "age" to 30L)
+    session
+        .run(
+            "MATCH (:SourceEvent {sourceId: 'node-1'})-[r:FOLLOWS]->(:SourceEvent {sourceId: 'node-2'}) RETURN count(r)"
+        )
+        .single()
+        .get(0)
+        .asInt() shouldBe 1
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
+  }
+
+  @Test
+  fun `should be able to handle the same batch without any errors`() {
+    // This cannot work when not using EOS offset tracking, as the change queries would be
+    // re-executed and fail due to key changes
+    assumeTrue { eosOffsetLabel.isNotEmpty() }
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        listOf("User"),
+                        mapOf("User" to listOf(mapOf("id" to "tmp-id"))),
+                        null,
+                        NodeState(
+                            listOf("User"),
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                        ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        listOf("User"),
+                        mapOf("User" to listOf(mapOf("id" to "tmp-id"))),
+                        NodeState(
+                            listOf("User"),
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        ),
+                        NodeState(
+                            listOf("User"),
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                        ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        listOf("User"),
+                        mapOf("User" to listOf(mapOf("id" to "tmp-id"))),
+                        NodeState(listOf("User"), mapOf("userId" to "tmp-id")),
+                        NodeState(listOf("User"), mapOf("userId" to "user-1")),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    NodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        listOf("User"),
+                        mapOf("User" to listOf(mapOf("id" to "user-1"))),
+                        NodeState(listOf("User"), mapOf("updated" to 1770398478994)),
+                        NodeState(listOf("User"), mapOf("updated" to 1770398480167)),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User:SourceEvent) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "sourceId" to "node-1",
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
+
+    // retry, this should fail if the change query gets re-executed due to key changes
+    task.put(batch)
+
+    session.run("MATCH (a:User:SourceEvent) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "sourceId" to "node-1",
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SOURCE_ID, eosOffsetLabel, 3)
   }
 
   private fun newTaskContext(): SinkTaskContext {

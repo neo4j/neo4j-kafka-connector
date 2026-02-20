@@ -20,7 +20,7 @@ import org.neo4j.cdc.client.model.EntityOperation
 
 const val EVENT = "e"
 
-interface CdcData {}
+interface CdcData
 
 data class CdcNodeData(
     val operation: EntityOperation,

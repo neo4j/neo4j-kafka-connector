@@ -1,7 +1,6 @@
 package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildType
-import jetbrains.buildServer.configs.kotlin.buildFeatures.dockerSupport
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
@@ -28,12 +27,10 @@ class PRCheck(id: String, name: String) :
             """
                   .trimIndent()
 
-          dockerImage = "node:18.4"
+          dockerImage = NODE_DOCKER_IMAGE
           dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
         }
       }
-
-      features { dockerSupport {} }
 
       requirements { runOnLinux(LinuxSize.SMALL) }
     })

@@ -17,86 +17,27 @@
 package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.data.Struct
-import org.neo4j.caniuse.Neo4j
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.cdc.client.model.EntityOperation
-import org.neo4j.cdc.client.model.NodeEvent
-import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
-abstract class CdcHandler(neo4j: Neo4j) : SinkStrategyHandler {
-  private val logger: Logger = LoggerFactory.getLogger(javaClass)
+class CdcHandler(
+    private val strategy: SinkStrategy,
+    internal val batchStrategy: CdcBatchStrategy,
+    internal val eventTransformer: CdcEventTransformer,
+) : SinkStrategyHandler {
 
-  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
-
-  data class MessageToEvent(val message: SinkMessage, val changeEvent: ChangeEvent)
+  override fun strategy(): SinkStrategy = strategy
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
-    return messages
-        .onEach { logger.trace("received message: {}", it) }
-        .map { MessageToEvent(it, it.toChangeEvent()) }
-        .onEach { logger.trace("converted message: {} to {}", it.changeEvent.txId, it.changeEvent) }
-        .groupBy(
-            { it.changeEvent.txId },
-            {
-              ChangeQuery(
-                  it.changeEvent.txId,
-                  it.changeEvent.seq,
-                  listOf(it.message),
-                  statementGenerator.buildStatement(
-                      when (val event = it.changeEvent.event) {
-                        is NodeEvent ->
-                            when (event.operation) {
-                              EntityOperation.CREATE -> transformCreate(event)
-                              EntityOperation.UPDATE -> transformUpdate(event)
-                              EntityOperation.DELETE -> transformDelete(event)
-                              else ->
-                                  throw IllegalArgumentException(
-                                      "unknown operation ${event.operation}"
-                                  )
-                            }
-                        is RelationshipEvent ->
-                            when (event.operation) {
-                              EntityOperation.CREATE -> transformCreate(event)
-                              EntityOperation.UPDATE -> transformUpdate(event)
-                              EntityOperation.DELETE -> transformDelete(event)
-                              else ->
-                                  throw IllegalArgumentException(
-                                      "unknown operation ${event.operation}"
-                                  )
-                            }
-                        else ->
-                            throw IllegalArgumentException(
-                                "unsupported event type ${event.eventType}"
-                            )
-                      }
-                  ),
-              )
-            },
-        )
-        .onEach { logger.trace("mapped messages: {} to {}", it.key, it.value) }
-        .values
+    return batchStrategy.handle(messages) { eventTransformer.transform(it) }
   }
-
-  protected abstract fun transformCreate(event: NodeEvent): CdcData
-
-  protected abstract fun transformUpdate(event: NodeEvent): CdcData
-
-  protected abstract fun transformDelete(event: NodeEvent): CdcData
-
-  protected abstract fun transformCreate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformUpdate(event: RelationshipEvent): CdcData
-
-  protected abstract fun transformDelete(event: RelationshipEvent): CdcData
 }
 
 internal fun SinkMessage.toChangeEvent(): ChangeEvent =

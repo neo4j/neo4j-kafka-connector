@@ -58,8 +58,8 @@ class CdcStatementGeneratorTest {
   object CreateNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:`Employee`",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:`Employee`",
           mapOf(
               "e" to
                   mapOf(
@@ -77,11 +77,33 @@ class CdcStatementGeneratorTest {
 
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to emptyList<String>(),
+                      "matchProperties" to mapOf("name" to "john", "surname" to "doe"),
+                      "setProperties" to
+                          mapOf(
+                              "name" to "john",
+                              "surname" to "doe",
+                              "dob" to java.time.LocalDate.of(1990, 1, 1),
+                          ),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to emptyList<String>(),
                       "matchProperties" to mapOf("name" to "john", "surname" to "doe"),
@@ -103,8 +125,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -129,8 +152,8 @@ class CdcStatementGeneratorTest {
   object UpdateNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
           mapOf(
               "e" to
                   mapOf(
@@ -143,11 +166,28 @@ class CdcStatementGeneratorTest {
 
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
-          "MERGE (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
-              "SET n += ${'$'}e.setProperties SET n:${'$'}(${'$'}e.addLabels) REMOVE n:${'$'}(${'$'}e.removeLabels)",
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
@@ -164,8 +204,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -190,9 +231,23 @@ class CdcStatementGeneratorTest {
   object DeleteNodeParams : ArgumentsProvider {
     private fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (n:`Person` {`name`: ${'$'}e.matchProperties.`name`, `surname`: ${'$'}e.matchProperties.`surname`}) " +
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
               "DELETE n",
           mapOf("e" to mapOf("matchProperties" to mapOf("name" to "joe", "surname" to "doe"))),
+      )
+    }
+
+    private fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "DELETE n",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
       )
     }
 
@@ -203,8 +258,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -235,15 +291,41 @@ class CdcStatementGeneratorTest {
   object CreateRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT`]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "setProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType)]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "setProperties" to mapOf("role" to "dev"),
                   )
           ),
@@ -257,8 +339,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -286,15 +369,42 @@ class CdcStatementGeneratorTest {
   object CreateRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("role" to "dev"),
                   )
@@ -309,8 +419,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -341,16 +452,44 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -365,8 +504,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -394,15 +534,42 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -417,15 +584,16 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship update statements with keys without start node keys`(
+  fun `should build relationship update statements with keys and without start node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -449,13 +617,34 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->" +
-              "(end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->" +
+              "(end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -470,15 +659,16 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship update statements with keys without end node keys`(
+  fun `should build relationship update statements with keys and without end node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -502,13 +692,34 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`})-" +
-              "[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`})-" +
+              "[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Employee", "Person"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -523,15 +734,16 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship update statements with keys without node keys`(
+  fun `should build relationship update statements with keys and without node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -555,11 +767,26 @@ class CdcStatementGeneratorTest {
   object UpdateRelationshipWithKeysWithoutNodeKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start)-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->(end) " +
-              "SET r += ${'$'}e.setProperties",
+          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -574,8 +801,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -606,16 +834,43 @@ class CdcStatementGeneratorTest {
   object DeleteRelationshipWithoutKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH (start:`Employee`:`Person` {`id`: ${'$'}e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: ${'$'}e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: ${'$'}e.matchProperties.`role`}]->(end) " +
-              "WITH r LIMIT 1 " +
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
               "DELETE r",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "WITH _e, r LIMIT 1 " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
                   )
           ),
@@ -629,8 +884,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
@@ -669,11 +925,131 @@ class CdcStatementGeneratorTest {
     ) shouldBe expectedQuery
   }
 
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without start node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = setOf("Company", "Corporation"),
+            endMatchProperties = mapOf("id" to 7),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without end node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = setOf("Person", "Employee"),
+            startMatchProperties = mapOf("id" to 5),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = setOf("Person", "Employee"),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = setOf("Company", "Corporation"),
+            endMatchProperties = emptyMap(),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
   object DeleteRelationshipWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "MATCH ()-[r:`WORKS_AT` {`empId`: ${'$'}e.matchProperties.`empId`}]->() " + "DELETE r",
+          "WITH ${'$'}e AS _e MATCH ()-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->() " +
+              "DELETE r",
           mapOf("e" to mapOf("matchProperties" to mapOf("empId" to 5))),
+      )
+    }
+
+    fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH ()-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->() " +
+              "DELETE r",
+          mapOf("e" to mapOf("matchType" to "WORKS_AT", "matchProperties" to mapOf("empId" to 5))),
       )
     }
 
@@ -684,8 +1060,9 @@ class CdcStatementGeneratorTest {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, standardCypherQuery()),
-          Arguments.of(neo4jAura, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
       )
     }
   }
@@ -695,6 +1072,8 @@ class CdcStatementGeneratorTest {
         Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j5_26 =
         Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2025_11 =
+        Neo4j(Neo4jVersion(2025, 11), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j2026_1 =
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4jAura =

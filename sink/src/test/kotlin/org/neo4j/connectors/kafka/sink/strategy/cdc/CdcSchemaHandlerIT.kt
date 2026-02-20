@@ -14,24 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.apoc
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.reflect.KClass
 import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -46,66 +44,41 @@ import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
-import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
-import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.testcontainers.containers.Neo4jContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
-class ApocCdcSchemaHandlerWithEosOffsetIT : ApocCdcSchemaHandlerTaskIT("__KafkaOffset")
+abstract class CdcSchemaHandlerIT(
+    val eosOffsetLabel: String,
+    val expectedBatchStrategy: KClass<out CdcBatchStrategy>,
+) {
+  abstract fun container(): Neo4jContainer<*>
 
-class ApocCdcSchemaHandlerWithoutEosOffsetIT : ApocCdcSchemaHandlerTaskIT("")
+  abstract fun neo4j(): Neo4j
 
-@Testcontainers
-abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
-  companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withPlugins("apoc")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
-
-    private lateinit var driver: Driver
-    private lateinit var neo4j: Neo4j
-
-    @BeforeAll
-    @JvmStatic
-    fun setUpContainer() {
-      driver = GraphDatabase.driver(container.boltUrl, AuthTokens.none())
-      neo4j = Neo4jDetector.detect(driver)
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun tearDownContainer() {
-      driver.close()
-    }
-  }
+  abstract fun driver(): Driver
 
   private lateinit var task: Neo4jSinkTask
-  private lateinit var db: String
+  protected lateinit var db: String
   private lateinit var session: Session
 
-  @AfterEach
-  fun after() {
-    if (this::db.isInitialized) driver.dropDatabase(db)
-    if (this::session.isInitialized) session.close()
-    if (this::task.isInitialized) task.stop()
-  }
-
   @BeforeEach
-  fun before() {
+  fun setupTask() {
     db = "test-${UUID.randomUUID()}"
-    driver.createDatabase(db)
-    session = driver.session(SessionConfig.forDatabase(db))
+    driver().createDatabase(db)
+    session = driver().session(SessionConfig.forDatabase(db))
+
+    if (eosOffsetLabel.isNotEmpty()) {
+      session.createNodeKeyConstraint(
+          neo4j(),
+          "eos_offset_key",
+          eosOffsetLabel,
+          "strategy",
+          "topic",
+          "partition",
+      )
+    }
 
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
@@ -113,7 +86,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         buildMap {
           this["topics"] = "my-topic"
           this["neo4j.database"] = db
-          this["neo4j.uri"] = container.boltUrl
+          this["neo4j.uri"] = container().boltUrl
           this["neo4j.authentication.type"] = "NONE"
           this["neo4j.cdc.schema.topics"] = "my-topic"
           if (eosOffsetLabel.isNotEmpty()) {
@@ -122,12 +95,24 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
         }
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(ApocCdcSchemaHandler::class)
+    val handler = task.config.topicHandlers["my-topic"]
+    handler shouldBe instanceOf<CdcHandler>()
+
+    val cdcHandler = handler as CdcHandler
+    cdcHandler.eventTransformer shouldBe instanceOf<CdcSchemaEventTransformer>()
+    cdcHandler.batchStrategy shouldBe instanceOf(expectedBatchStrategy)
+  }
+
+  @AfterEach
+  fun stopTask() {
+    if (this::task.isInitialized) task.stop()
+    if (this::db.isInitialized) driver().dropDatabase(db)
+    if (this::session.isInitialized) session.close()
   }
 
   @Test
   fun `should create a simple node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -154,7 +139,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create node with multiple labels`() {
-    session.createNodeKeyConstraint(neo4j, "person_key", "Person", "personId")
+    session.createNodeKeyConstraint(neo4j(), "person_key", "Person", "personId")
 
     task.put(
         listOf(
@@ -195,7 +180,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create multiple nodes in a single batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -245,7 +230,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should add label to existing node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -278,7 +263,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should remove label from existing node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User:Admin {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -311,7 +296,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should remove property from node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice', age: 30})").consume()
 
     task.put(
@@ -340,7 +325,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should delete a node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -368,7 +353,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create, update and delete a node within the same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -422,7 +407,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create node with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "order_key", "Order", "customerId", "orderId")
 
     task.put(
         listOf(
@@ -457,7 +442,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should update node with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "order_key", "Order", "customerId", "orderId")
     session.run("CREATE (:Order {customerId: 'c1', orderId: 'o1', total: 100.00})").consume()
 
     task.put(
@@ -502,7 +487,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create a simple relationship between existing nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"
@@ -541,7 +526,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create relationship between nodes created in same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -600,7 +585,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create multiple relationships between same nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1'}), (:User {userId: 'user2'})").consume()
 
     task.put(
@@ -678,7 +663,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should update a relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01')}]->(:User {userId: 'user2'})"
@@ -716,7 +701,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should remove property from relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01'), strength: 5}]->(:User {userId: 'user2'})"
@@ -754,7 +739,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should delete a relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2023-01-01')}]->(:User {userId: 'user2'})"
@@ -795,7 +780,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should delete relationship after an update event within the same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("MERGE (:User {userId: 'user1'})-[:FOLLOWS]->(:User {userId: 'user2'})").consume()
 
     task.put(
@@ -845,9 +830,9 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -884,9 +869,9 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should update relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -933,9 +918,9 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should delete relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -976,9 +961,9 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should handle multiple relationships with different keys between same nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -1055,9 +1040,9 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should update specific relationship by key when multiple exist`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             """
@@ -1109,10 +1094,10 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should create relationship with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1160,10 +1145,10 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should update relationship with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1229,10 +1214,10 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should distinguish relationships by composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1304,7 +1289,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should handle interleaved node and relationship operations`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -1377,7 +1362,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should handle updates to multiple nodes in interleaved fashion`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"
@@ -1451,7 +1436,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should be able to handle node key updates`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     val batch =
         listOf(
@@ -1544,7 +1529,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
 
   @Test
   fun `should be able to handle events even if they are provided out of order in terms of their offset values`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     val batch =
         listOf(
@@ -1641,7 +1626,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     // re-executed and fail due to key changes
     assumeTrue { eosOffsetLabel.isNotEmpty() }
 
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     val batch =
         listOf(
@@ -1748,7 +1733,7 @@ abstract class ApocCdcSchemaHandlerTaskIT(val eosOffsetLabel: String) {
     verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
-  private fun newTaskContext(): SinkTaskContext {
+  protected fun newTaskContext(): SinkTaskContext {
     return mock<SinkTaskContext> {
       on { errantRecordReporter() } doReturn ErrantRecordReporter { _, error -> throw error }
     }

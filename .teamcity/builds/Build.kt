@@ -9,13 +9,13 @@ import jetbrains.buildServer.configs.kotlin.toId
 
 enum class JavaPlatform(
     val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
-    val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION)
+    val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION),
 ) {
   JDK_11(
       JavaVersion.V_11,
       platformITVersions = listOf("7.2.9", "7.7.0"),
   ),
-  JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0"))
+  JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0")),
 }
 
 class Build(
@@ -23,7 +23,7 @@ class Build(
     forPullRequests: Boolean,
     neo4jVersions: Set<Neo4jVersion>,
     forCompatibility: Boolean = false,
-    customizeCompletion: BuildType.() -> Unit = {}
+    customizeCompletion: BuildType.() -> Unit = {},
 ) :
     Project(
         {
@@ -91,9 +91,9 @@ class Build(
                                     artifacts(packaging) {
                                       artifactRules =
                                           """
-                                    +:packages/*.jar => docker/plugins
-                                    -:packages/*-kc-oss.jar
-                                    """
+                                          +:packages/*.jar => docker/plugins
+                                          -:packages/*-kc-oss.jar
+                                          """
                                               .trimIndent()
                                     }
                                   }
@@ -109,7 +109,9 @@ class Build(
             }
 
             dependentBuildType(
-                complete, reuse = if (forCompatibility) ReuseBuilds.NO else ReuseBuilds.SUCCESSFUL)
+                complete,
+                reuse = if (forCompatibility) ReuseBuilds.NO else ReuseBuilds.SUCCESSFUL,
+            )
             if (!forPullRequests && !forCompatibility)
                 dependentBuildType(Release("${name}-release", "release", DEFAULT_JAVA_VERSION))
           }

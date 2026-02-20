@@ -38,8 +38,6 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -202,14 +200,10 @@ class SinkConfigurationTest {
         )
 
     config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (config.topicHandlers["foo"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (config.topicHandlers["foo"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers["foo"] shouldBe instanceOf<CdcHandler>()
 
     config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (config.topicHandlers["bar"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (config.topicHandlers["bar"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers["bar"] shouldBe instanceOf<CdcHandler>()
   }
 
   @ParameterizedTest
@@ -390,18 +384,13 @@ class SinkConfigurationTest {
                 neo4j2026_01,
                 CdcHandler::class,
             ),
-            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, ApocCdcHandler::class),
-            Arguments.argumentSet(
-                "APOC DoIt available 5.26",
-                true,
-                neo4j5_26,
-                ApocCdcHandler::class,
-            ),
+            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, CdcHandler::class),
+            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26, CdcHandler::class),
             Arguments.argumentSet(
                 "APOC DoIt available 2026.01",
                 true,
                 neo4j2026_01,
-                ApocCdcHandler::class,
+                CdcHandler::class,
             ),
         )
   }

@@ -26,27 +26,32 @@ import org.neo4j.driver.Query
 
 interface CdcStatementGenerator {
 
-  fun buildStatement(data: CdcData): Query
+  fun buildStatement(data: CdcData, eventVariable: String = "${'$'}$EVENT"): Query
 }
 
 class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
+  private val supportsDynamicLabelsWithPropertyIndices =
+      canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices()).withNeo4j(neo4j)
   private val setDynamicLabels = canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
   private val removeDynamicLabels = canIUse(Cypher.removeDynamicLabels()).withNeo4j(neo4j)
 
-  override fun buildStatement(data: CdcData): Query {
+  override fun buildStatement(data: CdcData, eventVariable: String): Query {
     return when (data) {
-      is CdcNodeData -> buildNodeStatement(data)
-      is CdcRelationshipData -> buildRelationshipStatement(data)
+      is CdcNodeData -> buildNodeStatement(data, eventVariable)
+      is CdcRelationshipData -> buildRelationshipStatement(data, eventVariable)
       else -> throw IllegalArgumentException("unknown cdc data type ${data::class}")
     }
   }
 
-  private fun buildNodeStatement(data: CdcNodeData): Query {
-    val matchLabels = buildMatchLabels(data.matchLabels)
-    val matchProps = buildMatchProps(data.matchProperties, "matchProperties")
+  private fun buildNodeStatement(data: CdcNodeData, eventVariable: String): Query {
+    val matchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices) {
+          ":${'$'}(_e.matchLabels)"
+        } else buildMatchLabels(data.matchLabels)
+    val matchProps = buildMatchProps(data.matchProperties, "_e", "matchProperties")
     val setLabels =
         if (setDynamicLabels) {
-          " SET n:${'$'}(${'$'}$EVENT.addLabels)"
+          " SET n:${'$'}(_e.addLabels)"
         } else if (data.addLabels.isNotEmpty()) {
           " SET n" +
               data.addLabels.sorted().joinToString(":", ":") {
@@ -57,7 +62,7 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
         }
     val removeLabels =
         if (removeDynamicLabels) {
-          " REMOVE n:${'$'}(${'$'}$EVENT.removeLabels)"
+          " REMOVE n:${'$'}(_e.removeLabels)"
         } else if (data.removeLabels.isNotEmpty()) {
           " REMOVE n" +
               data.removeLabels.sorted().joinToString(":", ":") {
@@ -70,98 +75,116 @@ class DefaultCdcStatementGenerator(neo4j: Neo4j) : CdcStatementGenerator {
         when (data.operation) {
           EntityOperation.CREATE,
           EntityOperation.UPDATE -> {
-            "MERGE (n$matchLabels$matchProps) SET n += ${'$'}$EVENT.setProperties$setLabels$removeLabels"
+            "WITH $eventVariable AS _e MERGE (n$matchLabels$matchProps) SET n += _e.setProperties$setLabels$removeLabels"
           }
           EntityOperation.DELETE -> {
-            "MATCH (n$matchLabels$matchProps) DELETE n"
+            "WITH $eventVariable AS _e MATCH (n$matchLabels$matchProps) DELETE n"
           }
         }
+    val params = buildMap {
+      if (supportsDynamicLabelsWithPropertyIndices) {
+        this["matchLabels"] = data.matchLabels
+      }
+      this["matchProperties"] = data.matchProperties
+      if (data.operation != EntityOperation.DELETE) {
+        this["setProperties"] = data.setProperties
+      }
+      if (setDynamicLabels && data.operation != EntityOperation.DELETE) {
+        this["addLabels"] = data.addLabels
+      }
+      if (removeDynamicLabels && data.operation != EntityOperation.DELETE) {
+        this["removeLabels"] = data.removeLabels
+      }
+    }
 
-    return Query(
-        stmt,
-        mapOf(
-            EVENT to
-                buildMap {
-                  this["matchProperties"] = data.matchProperties
-                  if (data.operation != EntityOperation.DELETE) {
-                    this["setProperties"] = data.setProperties
-                  }
-                  if (setDynamicLabels && data.operation != EntityOperation.DELETE) {
-                    this["addLabels"] = data.addLabels
-                  }
-                  if (removeDynamicLabels && data.operation != EntityOperation.DELETE) {
-                    this["removeLabels"] = data.removeLabels
-                  }
-                }
-        ),
-    )
+    return Query(stmt, if (eventVariable == "${'$'}$EVENT") mapOf(EVENT to params) else params)
   }
 
-  private fun buildRelationshipStatement(data: CdcRelationshipData): Query {
-    val startMatchLabels = buildMatchLabels(data.startMatchLabels)
-    val startMatchProps = buildMatchProps(data.startMatchProperties, "start.matchProperties")
-    val endMatchLabels = buildMatchLabels(data.endMatchLabels)
-    val endMatchProps = buildMatchProps(data.endMatchProperties, "end.matchProperties")
-    val matchType = SchemaNames.sanitize(data.matchType, true).orElseThrow()
-    val matchProps = buildMatchProps(data.matchProperties, "matchProperties")
+  private fun buildRelationshipStatement(data: CdcRelationshipData, eventVariable: String): Query {
+    val startMatchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices && data.startMatchLabels.isNotEmpty())
+            ":${'$'}(_e.start.matchLabels)"
+        else buildMatchLabels(data.startMatchLabels)
+    val startMatchProps = buildMatchProps(data.startMatchProperties, "_e", "start.matchProperties")
+    val endMatchLabels =
+        if (supportsDynamicLabelsWithPropertyIndices && data.endMatchLabels.isNotEmpty())
+            ":${'$'}(_e.end.matchLabels)"
+        else buildMatchLabels(data.endMatchLabels)
+    val endMatchProps = buildMatchProps(data.endMatchProperties, "_e", "end.matchProperties")
+    val matchType =
+        if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.matchType)"
+        else SchemaNames.sanitize(data.matchType, true).orElseThrow()
+    val matchProps = buildMatchProps(data.matchProperties, "_e", "matchProperties")
 
     val stmt =
         when (data.operation) {
           EntityOperation.CREATE -> {
-            "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MERGE (start)-[r:$matchType$matchProps]->(end) SET r += ${'$'}$EVENT.setProperties"
+            "WITH $eventVariable AS _e MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MERGE (start)-[r:$matchType$matchProps]->(end) SET r += _e.setProperties"
           }
           EntityOperation.UPDATE -> {
             if (!data.hasKeys) {
-              "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH r LIMIT 1 SET r += ${'$'}$EVENT.setProperties"
+              "WITH $eventVariable AS _e MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH _e, r LIMIT 1 SET r += _e.setProperties"
             } else {
-              "MATCH (start$startMatchLabels$startMatchProps)-[r:$matchType$matchProps]->(end$endMatchLabels$endMatchProps) SET r += ${'$'}$EVENT.setProperties"
+              "WITH $eventVariable AS _e MATCH (start$startMatchLabels$startMatchProps)-[r:$matchType$matchProps]->(end$endMatchLabels$endMatchProps) SET r += _e.setProperties"
             }
           }
           EntityOperation.DELETE -> {
             if (!data.hasKeys) {
-              "MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH r LIMIT 1 DELETE r"
+              "WITH $eventVariable AS _e MATCH (start$startMatchLabels$startMatchProps) MATCH (end$endMatchLabels$endMatchProps) MATCH (start)-[r:$matchType$matchProps]->(end) WITH _e, r LIMIT 1 DELETE r"
             } else {
-              "MATCH ()-[r:$matchType$matchProps]->() DELETE r"
+              "WITH $eventVariable AS _e MATCH ()-[r:$matchType$matchProps]->() DELETE r"
             }
           }
         }
-
-    return Query(
-        stmt,
-        mapOf(
-            EVENT to
-                buildMap {
-                  if (
-                      data.startMatchProperties.isNotEmpty() &&
-                          (data.operation != EntityOperation.DELETE || !data.hasKeys)
-                  ) {
-                    this["start"] = mapOf("matchProperties" to data.startMatchProperties)
-                  }
-                  if (
-                      data.endMatchProperties.isNotEmpty() &&
-                          (data.operation != EntityOperation.DELETE || !data.hasKeys)
-                  ) {
-                    this["end"] = mapOf("matchProperties" to data.endMatchProperties)
-                  }
-                  if (data.matchProperties.isNotEmpty()) {
-                    this["matchProperties"] = data.matchProperties
-                  }
-                  if (data.operation != EntityOperation.DELETE) {
-                    this["setProperties"] = data.setProperties
-                  }
-                }
-        ),
-    )
+    val params = buildMap {
+      if (
+          data.startMatchProperties.isNotEmpty() &&
+              (data.operation != EntityOperation.DELETE || !data.hasKeys)
+      ) {
+        this["start"] = buildMap {
+          if (supportsDynamicLabelsWithPropertyIndices) {
+            this["matchLabels"] = data.startMatchLabels
+          }
+          this["matchProperties"] = data.startMatchProperties
+        }
+      }
+      if (
+          data.endMatchProperties.isNotEmpty() &&
+              (data.operation != EntityOperation.DELETE || !data.hasKeys)
+      ) {
+        this["end"] = buildMap {
+          if (supportsDynamicLabelsWithPropertyIndices) {
+            this["matchLabels"] = data.endMatchLabels
+          }
+          this["matchProperties"] = data.endMatchProperties
+        }
+      }
+      if (supportsDynamicLabelsWithPropertyIndices) {
+        this["matchType"] = data.matchType
+      }
+      if (data.matchProperties.isNotEmpty()) {
+        this["matchProperties"] = data.matchProperties
+      }
+      if (data.operation != EntityOperation.DELETE) {
+        this["setProperties"] = data.setProperties
+      }
+    }
+    return Query(stmt, if (eventVariable == "${'$'}$EVENT") mapOf(EVENT to params) else params)
   }
 
   companion object {
-    private fun buildMatchProps(matchProperties: Map<String, Any?>, paramsPath: String): String =
+    @Suppress("SameParameterValue")
+    private fun buildMatchProps(
+        matchProperties: Map<String, Any?>,
+        eventVariable: String,
+        paramsPath: String,
+    ): String =
         if (matchProperties.isEmpty()) ""
         else
             matchProperties
                 .map { SchemaNames.sanitize(it.key, true).orElseThrow() }
                 .sorted()
-                .joinToString(", ", " {", "}") { "$it: ${'$'}$EVENT.${paramsPath}.$it" }
+                .joinToString(", ", " {", "}") { "$it: $eventVariable.${paramsPath}.$it" }
 
     private fun buildMatchLabels(labels: Set<String>): String =
         if (labels.isEmpty()) ""

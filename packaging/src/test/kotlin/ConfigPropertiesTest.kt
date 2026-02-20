@@ -38,10 +38,7 @@ import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSchemaHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcSourceIdHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -206,84 +203,54 @@ class ConfigPropertiesTest {
     @JvmStatic
     fun cdcSourceIdHandlers(): List<Arguments> {
       return listOf(
-          Arguments.argumentSet(
-              "5.26 & APOC DoIT available",
-              true,
-              neo4j5_26,
-              ApocCdcSourceIdHandler::class,
-          ),
+          Arguments.argumentSet("5.26 & APOC DoIT available", true, neo4j5_26, CdcHandler::class),
           Arguments.argumentSet(
               "2026.01 & APOC DoIT available",
               true,
               neo4j2026_1,
-              ApocCdcSourceIdHandler::class,
+              CdcHandler::class,
           ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT available",
-              true,
-              neo4j4_4,
-              ApocCdcSourceIdHandler::class,
-          ),
+          Arguments.argumentSet("4.4 & APOC DoIT available", true, neo4j4_4, CdcHandler::class),
           Arguments.argumentSet(
               "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
-              CdcSourceIdHandler::class,
+              CdcHandler::class,
           ),
           Arguments.argumentSet(
               "2026.01 & APOC DoIT not available",
               false,
               neo4j2026_1,
-              CdcSourceIdHandler::class,
+              CdcHandler::class,
           ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT not available",
-              false,
-              neo4j4_4,
-              CdcSourceIdHandler::class,
-          ),
+          Arguments.argumentSet("4.4 & APOC DoIT not available", false, neo4j4_4, CdcHandler::class),
       )
     }
 
     @JvmStatic
     fun cdcSchemaHandlers(): List<Arguments> {
       return listOf(
-          Arguments.argumentSet(
-              "5.26 & APOC DoIT available",
-              true,
-              neo4j5_26,
-              ApocCdcSchemaHandler::class,
-          ),
+          Arguments.argumentSet("5.26 & APOC DoIT available", true, neo4j5_26, CdcHandler::class),
           Arguments.argumentSet(
               "2026.1 & APOC DoIT available",
               true,
               neo4j2026_1,
-              ApocCdcSchemaHandler::class,
+              CdcHandler::class,
           ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT available",
-              true,
-              neo4j4_4,
-              ApocCdcSchemaHandler::class,
-          ),
+          Arguments.argumentSet("4.4 & APOC DoIT available", true, neo4j4_4, CdcHandler::class),
           Arguments.argumentSet(
               "5.26 & APOC DoIT not available",
               false,
               neo4j5_26,
-              CdcSchemaHandler::class,
+              CdcHandler::class,
           ),
           Arguments.argumentSet(
               "2026.01 & APOC DoIT not available",
               false,
               neo4j2026_1,
-              CdcSchemaHandler::class,
+              CdcHandler::class,
           ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT not available",
-              false,
-              neo4j4_4,
-              CdcSchemaHandler::class,
-          ),
+          Arguments.argumentSet("4.4 & APOC DoIT not available", false, neo4j4_4, CdcHandler::class),
       )
     }
 
