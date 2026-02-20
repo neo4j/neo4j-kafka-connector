@@ -85,12 +85,14 @@ class NativeBatchStrategyTest {
         """
         |UNWIND ${'$'}events AS e
         |WITH e ORDER BY e.offset ASC
-        |CALL { WITH e
-        |  WITH * WHERE e.q = ${'$'}q0
+        |CALL {
+        |  WITH e
+        |  WITH e WHERE e.q = ${'$'}q0
         |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
         |  RETURN 0 AS x
         |  UNION ALL
-        |  WITH * WHERE e.q = ${'$'}q1
+        |  WITH e
+        |  WITH e WHERE e.q = ${'$'}q1
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties
         |  RETURN 1 AS x
         |}
@@ -103,11 +105,11 @@ class NativeBatchStrategyTest {
         |UNWIND ${'$'}events AS e
         |WITH e ORDER BY e.offset ASC
         |CALL (e) {
-        |  WITH * WHERE e.q = ${'$'}q0
+        |  WITH e WHERE e.q = ${'$'}q0
         |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
         |  RETURN 0 AS x
         |  UNION ALL
-        |  WITH * WHERE e.q = ${'$'}q1
+        |  WITH e WHERE e.q = ${'$'}q1
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  RETURN 1 AS x
         |}
@@ -196,12 +198,14 @@ class NativeBatchStrategyTest {
         |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
-        |CALL { WITH e
-        |  WITH * WHERE e.q = ${'$'}q0
+        |CALL {
+        |  WITH e
+        |  WITH e WHERE e.q = ${'$'}q0
         |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
         |  RETURN 0 AS x
         |  UNION ALL
-        |  WITH * WHERE e.q = ${'$'}q1
+        |  WITH e
+        |  WITH e WHERE e.q = ${'$'}q1
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties
         |  RETURN 1 AS x
         |}
@@ -217,11 +221,11 @@ class NativeBatchStrategyTest {
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
-        |  WITH * WHERE e.q = ${'$'}q0
+        |  WITH e WHERE e.q = ${'$'}q0
         |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
         |  RETURN 0 AS x
         |  UNION ALL
-        |  WITH * WHERE e.q = ${'$'}q1
+        |  WITH e WHERE e.q = ${'$'}q1
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  RETURN 1 AS x
         |}

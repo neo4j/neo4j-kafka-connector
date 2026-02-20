@@ -125,6 +125,7 @@ class NativeBatchStrategy(
         if (canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
         else "RETURN COUNT(1) AS total"
     val sortedQueries = queries.keys.sorted()
+    val withVariableScope = canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
 
     val query = buildString {
       if (cypher25) {
@@ -140,9 +141,11 @@ class NativeBatchStrategy(
       } else {
         appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
       }
-      if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-          appendLine("CALL (${EVENT}) {")
-      else appendLine("CALL { WITH ${EVENT}")
+      if (withVariableScope) {
+        appendLine("CALL (${EVENT}) {")
+      } else {
+        appendLine("CALL {")
+      }
       sortedQueries.forEachIndexed { index, stmt ->
         if (cypher25) {
           appendLine("  WHEN $EVENT.q = \$q$index THEN {")
@@ -150,8 +153,11 @@ class NativeBatchStrategy(
           appendLine("  }")
         } else {
           if (index > 0) appendLine("  UNION ALL")
+          if (!withVariableScope) {
+            appendLine("  WITH ${EVENT}")
+          }
 
-          appendLine("  WITH * WHERE $EVENT.q = \$q$index")
+          appendLine("  WITH ${EVENT} WHERE $EVENT.q = \$q$index")
           appendLine("  $stmt")
           appendLine("  RETURN $index AS x")
         }
