@@ -74,7 +74,7 @@ class Build(
                                 "test",
                                 java.javaVersion,
                                 neo4jVersion,
-                            ),
+                                "-T1C"),
                         )
 
                         parallel {
