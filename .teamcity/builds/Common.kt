@@ -37,7 +37,9 @@ const val DEFAULT_BRANCH = "main"
 const val FULL_GITHUB_REPOSITORY = "$GITHUB_OWNER/$GITHUB_REPOSITORY"
 const val GITHUB_URL = "https://github.com/$FULL_GITHUB_REPOSITORY"
 
-const val SEMGREP_DOCKER_IMAGE = "semgrep/semgrep:1.146.0"
+const val NODE_DOCKER_IMAGE = "%ecr-registry-connectors%:node-24-latest"
+
+const val SEMGREP_DOCKER_IMAGE = "%ecr-registry-connectors%:semgrep-latest"
 
 val DEFAULT_JAVA_VERSION = JavaVersion.V_11
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
@@ -55,8 +57,8 @@ enum class LinuxSize(val value: String) {
 }
 
 enum class JavaVersion(val version: String, val dockerImage: String) {
-  V_11(version = "11", dockerImage = "eclipse-temurin:11-jdk"),
-  V_17(version = "17", dockerImage = "eclipse-temurin:17-jdk"),
+  V_11(version = "11", dockerImage = "%ecr-registry-connectors%:jdk-11-latest"),
+  V_17(version = "17", dockerImage = "%ecr-registry-connectors%:jdk-17-latest"),
 }
 
 enum class Neo4jVersion(val version: String, val dockerImage: String) {
