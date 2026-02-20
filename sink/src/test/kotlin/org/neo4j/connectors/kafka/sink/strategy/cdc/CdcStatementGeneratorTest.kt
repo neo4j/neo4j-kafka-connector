@@ -593,7 +593,7 @@ class CdcStatementGeneratorTest {
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship update statements with keys without start node keys`(
+  fun `should build relationship update statements with keys and without start node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -668,7 +668,7 @@ class CdcStatementGeneratorTest {
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship update statements with keys without end node keys`(
+  fun `should build relationship update statements with keys and without end node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -743,7 +743,7 @@ class CdcStatementGeneratorTest {
 
   @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship update statements with keys without node keys`(
+  fun `should build relationship update statements with keys and without node keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -902,6 +902,117 @@ class CdcStatementGeneratorTest {
             startMatchProperties = mapOf("id" to 1),
             endMatchLabels = setOf("Company", "Corporation"),
             endMatchProperties = mapOf("id" to 7),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without start node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = setOf("Company", "Corporation"),
+            endMatchProperties = mapOf("id" to 7),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without end node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = setOf("Person", "Employee"),
+            startMatchProperties = mapOf("id" to 5),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+            matchType = "WORKS_AT",
+            matchProperties = mapOf("empId" to 5),
+            hasKeys = true,
+            setProperties = emptyMap(),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(startMatchLabels = emptySet(), startMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(endMatchLabels = emptySet(), endMatchProperties = emptyMap())
+    ) shouldBe expectedQuery
+    generator.buildStatement(
+        withKeys.copy(
+            startMatchLabels = emptySet(),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = emptySet(),
+            endMatchProperties = emptyMap(),
+        )
+    ) shouldBe expectedQuery
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipWithKeysParams::class)
+  fun `should build relationship delete statements with keys and without node keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultCdcStatementGenerator(neo4j)
+    val withKeys =
+        CdcRelationshipData(
+            operation = EntityOperation.DELETE,
+            startMatchLabels = setOf("Person", "Employee"),
+            startMatchProperties = emptyMap(),
+            endMatchLabels = setOf("Company", "Corporation"),
+            endMatchProperties = emptyMap(),
             matchType = "WORKS_AT",
             matchProperties = mapOf("empId" to 5),
             hasKeys = true,

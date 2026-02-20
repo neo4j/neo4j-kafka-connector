@@ -75,27 +75,23 @@ class ApocBatchStrategy(
     val termination =
         if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
 
-    val query =
-        if (eosOffsetLabel.isNotBlank()) {
-          buildString {
-            appendLine("UNWIND \$events AS ${EVENT}")
-            appendLine(
-                "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
-            )
-            appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
-            appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
-            appendCallSubquery()
-            appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
-            append(termination)
-          }
-        } else {
-          buildString {
-            appendLine("UNWIND \$events AS ${EVENT}")
-            appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
-            appendCallSubquery()
-            append(termination)
-          }
-        }
+    val query = buildString {
+      appendLine("UNWIND \$events AS ${EVENT}")
+      if (eosOffsetLabel.isNotBlank()) {
+        appendLine(
+            "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
+        )
+        appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
+        appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
+      } else {
+        appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
+      }
+      appendCallSubquery()
+      if (eosOffsetLabel.isNotBlank()) {
+        appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
+      }
+      append(termination)
+    }
 
     return Query(
         query,

@@ -29,8 +29,8 @@ import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
 
 class CdcHandler(
     private val strategy: SinkStrategy,
-    private val batchStrategy: CdcBatchStrategy,
-    private val eventTransformer: CdcEventTransformer,
+    internal val batchStrategy: CdcBatchStrategy,
+    internal val eventTransformer: CdcEventTransformer,
 ) : SinkStrategyHandler {
 
   override fun strategy(): SinkStrategy = strategy

@@ -14,23 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
 import java.time.LocalDate
 import java.util.UUID
+import kotlin.reflect.KClass
 import org.apache.kafka.connect.sink.ErrantRecordReporter
 import org.apache.kafka.connect.sink.SinkTaskContext
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
@@ -38,86 +37,82 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SCHEMA
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
-import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
-import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.testcontainers.containers.Neo4jContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
-class BatchedCdcSchemaHandlerTaskIT {
-  companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+abstract class CdcSchemaHandlerIT(
+    val eosOffsetLabel: String,
+    val expectedBatchStrategy: KClass<out CdcBatchStrategy>,
+) {
+  abstract fun container(): Neo4jContainer<*>
 
-    private lateinit var driver: Driver
-    private lateinit var neo4j: Neo4j
+  abstract fun neo4j(): Neo4j
 
-    @BeforeAll
-    @JvmStatic
-    fun setUpContainer() {
-      driver = GraphDatabase.driver(container.boltUrl, AuthTokens.none())
-      neo4j = Neo4jDetector.detect(driver)
-    }
-
-    @AfterAll
-    @JvmStatic
-    fun tearDownContainer() {
-      driver.close()
-    }
-  }
+  abstract fun driver(): Driver
 
   private lateinit var task: Neo4jSinkTask
-  private lateinit var db: String
+  protected lateinit var db: String
   private lateinit var session: Session
 
-  @AfterEach
-  fun after() {
-    if (this::db.isInitialized) driver.dropDatabase(db)
-    if (this::session.isInitialized) session.close()
-    if (this::task.isInitialized) task.stop()
-  }
-
   @BeforeEach
-  fun before() {
+  fun setupTask() {
     db = "test-${UUID.randomUUID()}"
-    driver.createDatabase(db)
-    session = driver.session(SessionConfig.forDatabase(db))
+    driver().createDatabase(db)
+    session = driver().session(SessionConfig.forDatabase(db))
+
+    if (eosOffsetLabel.isNotEmpty()) {
+      session.createNodeKeyConstraint(
+          neo4j(),
+          "eos_offset_key",
+          eosOffsetLabel,
+          "strategy",
+          "topic",
+          "partition",
+      )
+    }
 
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
-        mapOf(
-            "topics" to "my-topic",
-            "neo4j.database" to db,
-            "neo4j.uri" to container.boltUrl,
-            "neo4j.authentication.type" to "NONE",
-            "neo4j.cdc.schema.topics" to "my-topic",
-        )
+        buildMap {
+          this["topics"] = "my-topic"
+          this["neo4j.database"] = db
+          this["neo4j.uri"] = container().boltUrl
+          this["neo4j.authentication.type"] = "NONE"
+          this["neo4j.cdc.schema.topics"] = "my-topic"
+          if (eosOffsetLabel.isNotEmpty()) {
+            this["neo4j.eos-offset-label"] = eosOffsetLabel
+          }
+        }
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(CdcHandler::class)
+    val handler = task.config.topicHandlers["my-topic"]
+    handler shouldBe instanceOf<CdcHandler>()
+
+    val cdcHandler = handler as CdcHandler
+    cdcHandler.eventTransformer shouldBe instanceOf<CdcSchemaEventTransformer>()
+    cdcHandler.batchStrategy shouldBe instanceOf(expectedBatchStrategy)
+  }
+
+  @AfterEach
+  fun stopTask() {
+    if (this::task.isInitialized) task.stop()
+    if (this::db.isInitialized) driver().dropDatabase(db)
+    if (this::session.isInitialized) session.close()
   }
 
   @Test
   fun `should create a simple node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -138,11 +133,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user1", "name" to "Alice")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create node with multiple labels`() {
-    session.createNodeKeyConstraint(neo4j, "person_key", "Person", "personId")
+    session.createNodeKeyConstraint(neo4j(), "person_key", "Person", "personId")
 
     task.put(
         listOf(
@@ -177,11 +174,13 @@ class BatchedCdcSchemaHandlerTaskIT {
     result.get(0).asMap() shouldBe
         mapOf("personId" to "p1", "name" to "Alice", "department" to "Engineering")
     result.get(1).asList { it.asString() }.sorted() shouldBe listOf("Employee", "Manager", "Person")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create multiple nodes in a single batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -206,7 +205,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -218,18 +217,20 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
     )
 
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 3
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
   fun `should add label to existing node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -256,11 +257,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() }.sorted() shouldBe listOf("Admin", "User")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should remove label from existing node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User:Admin {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -287,11 +290,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN labels(n)").single()
     result.get(0).asList { it.asString() } shouldBe listOf("User")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should remove property from node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice', age: 30})").consume()
 
     task.put(
@@ -314,11 +319,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     val result = session.run("MATCH (n:User {userId: 'user1'}) RETURN n{.*}").single()
     result.get(0).asMap() shouldBe mapOf("userId" to "user1", "name" to "Alice")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should delete a node`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1', name: 'Alice'})").consume()
 
     task.put(
@@ -340,11 +347,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create, update and delete a node within the same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -371,7 +380,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -384,7 +393,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     3,
                     0,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -392,11 +401,13 @@ class BatchedCdcSchemaHandlerTaskIT {
 
     session.run("MATCH (a:User {userId: 'user1'}) RETURN count(a)").single().get(0).asInt() shouldBe
         0
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
   fun `should create node with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "order_key", "Order", "customerId", "orderId")
 
     task.put(
         listOf(
@@ -425,11 +436,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("customerId" to "c1", "orderId" to "o1", "total" to 100.00)
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should update node with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "order_key", "Order", "customerId", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "order_key", "Order", "customerId", "orderId")
     session.run("CREATE (:Order {customerId: 'c1', orderId: 'o1', total: 100.00})").consume()
 
     task.put(
@@ -468,11 +481,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("customerId" to "c1", "orderId" to "o1", "total" to 150.00, "status" to "shipped")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create a simple relationship between existing nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"
@@ -505,11 +520,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create relationship between nodes created in same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -534,7 +551,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -548,7 +565,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -562,11 +579,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2023, 6, 15))
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
   fun `should create multiple relationships between same nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("CREATE (:User {userId: 'user1'}), (:User {userId: 'user2'})").consume()
 
     task.put(
@@ -596,7 +615,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -610,7 +629,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -638,11 +657,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe emptyMap()
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
   fun `should update a relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01')}]->(:User {userId: 'user2'})"
@@ -674,11 +695,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1), "strength" to 5)
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should remove property from relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2020-01-01'), strength: 5}]->(:User {userId: 'user2'})"
@@ -710,11 +733,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("since" to LocalDate.of(2020, 1, 1))
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should delete a relationship`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:FOLLOWS {since: date('2023-01-01')}]->(:User {userId: 'user2'})"
@@ -749,11 +774,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .asInt() shouldBe 0
     // Nodes should still exist
     session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 2
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should delete relationship after an update event within the same batch`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.run("MERGE (:User {userId: 'user1'})-[:FOLLOWS]->(:User {userId: 'user2'})").consume()
 
     task.put(
@@ -784,7 +811,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    1,
                 )
                 .record,
         )
@@ -797,13 +824,15 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 1)
   }
 
   @Test
   fun `should create relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -834,13 +863,15 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 99.99)
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should update relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -881,13 +912,15 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 75.00, "status" to "updated")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should delete relationship with key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
@@ -922,13 +955,15 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should handle multiple relationships with different keys between same nodes`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session.run("CREATE (:User {userId: 'user1'}), (:Product {productId: 'product1'})").consume()
 
     task.put(
@@ -962,7 +997,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -978,7 +1013,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
         )
@@ -999,13 +1034,15 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asDouble() shouldBe 20.00
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 2)
   }
 
   @Test
   fun `should update specific relationship by key when multiple exist`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
-    session.createRelationshipKeyConstraint(neo4j, "purchased_key", "PURCHASED", "orderId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
     session
         .run(
             """
@@ -1051,14 +1088,16 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asDouble() shouldBe 25.00
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should create relationship with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1100,14 +1139,16 @@ class BatchedCdcSchemaHandlerTaskIT {
         .get(0)
         .asMap() shouldBe
         mapOf("reviewId" to "r1", "version" to 1L, "rating" to 5L, "comment" to "Great!")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should update relationship with composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1167,14 +1208,16 @@ class BatchedCdcSchemaHandlerTaskIT {
             "comment" to "Great!",
             "verified" to true,
         )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should distinguish relationships by composite key`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
-    session.createNodeKeyConstraint(neo4j, "product_key", "Product", "productId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
     session.createRelationshipKeyConstraint(
-        neo4j,
+        neo4j(),
         "reviewed_key",
         "REVIEWED",
         "reviewId",
@@ -1240,11 +1283,13 @@ class BatchedCdcSchemaHandlerTaskIT {
           it.get(0).asInt() shouldBe 5
           it.get(1).isNull shouldBe true
         }
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
   }
 
   @Test
   fun `should handle interleaved node and relationship operations`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
 
     task.put(
         listOf(
@@ -1269,7 +1314,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -1283,7 +1328,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     2,
-                    0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1296,7 +1341,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    3,
                 )
                 .record,
         )
@@ -1311,11 +1356,13 @@ class BatchedCdcSchemaHandlerTaskIT {
         .single()
         .get(0)
         .asInt() shouldBe 1
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
   @Test
   fun `should handle updates to multiple nodes in interleaved fashion`() {
-    session.createNodeKeyConstraint(neo4j, "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session
         .run(
             "CREATE (:User {userId: 'user1', name: 'Alice'}), (:User {userId: 'user2', name: 'Bob'})"
@@ -1347,7 +1394,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     1,
                     1,
-                    0,
+                    1,
                 )
                 .record,
             newChangeEventMessage(
@@ -1360,7 +1407,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     0,
-                    0,
+                    2,
                 )
                 .record,
             newChangeEventMessage(
@@ -1373,7 +1420,7 @@ class BatchedCdcSchemaHandlerTaskIT {
                     ),
                     2,
                     1,
-                    0,
+                    3,
                 )
                 .record,
         )
@@ -1383,9 +1430,310 @@ class BatchedCdcSchemaHandlerTaskIT {
         mapOf("userId" to "user1", "name" to "Alice", "score" to 15)
     session.run("MATCH (a:User {userId: 'user2'}) RETURN a{.*}").single().get(0).asMap() shouldBe
         mapOf("userId" to "user2", "name" to "Bob", "score" to 25)
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
   }
 
-  private fun newTaskContext(): SinkTaskContext {
+  @Test
+  fun `should be able to handle node key updates`() {
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
+  }
+
+  @Test
+  fun `should be able to handle events even if they are provided out of order in terms of their offset values`() {
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
+  }
+
+  @Test
+  fun `should be able to handle the same batch without any errors`() {
+    // This cannot work when not using EOS offset tracking, as the change queries would be
+    // re-executed and fail due to key changes
+    assumeTrue { eosOffsetLabel.isNotEmpty() }
+
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+
+    val batch =
+        listOf(
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.CREATE,
+                        "tmp-id",
+                        beforeProps = null,
+                        afterProps =
+                            mapOf(
+                                "userId" to "tmp-id",
+                                "name" to "John",
+                                "surname" to "Doe",
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                                "created" to 1770398478246,
+                            ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps =
+                            mapOf(
+                                "bio" to "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+                                "updated" to 1770398478246,
+                            ),
+                        afterProps =
+                            mapOf(
+                                "bio" to
+                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                                "updated" to 1770398478994,
+                            ),
+                    ),
+                    2,
+                    0,
+                    1,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "tmp-id",
+                        beforeProps = mapOf("userId" to "tmp-id"),
+                        afterProps = mapOf("userId" to "user-1"),
+                    ),
+                    3,
+                    0,
+                    2,
+                )
+                .record,
+            newChangeEventMessage(
+                    userNodeEvent(
+                        "node-1",
+                        EntityOperation.UPDATE,
+                        "user-1",
+                        beforeProps = mapOf("updated" to 1770398478994),
+                        afterProps = mapOf("updated" to 1770398480167),
+                    ),
+                    4,
+                    0,
+                    3,
+                )
+                .record,
+        )
+
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
+
+    // retry, this should fail if the change query gets re-executed due to key changes
+    task.put(batch)
+
+    session.run("MATCH (a:User) RETURN a{.*}").single().get(0).asMap() shouldBe
+        mapOf(
+            "userId" to "user-1",
+            "name" to "John",
+            "surname" to "Doe",
+            "bio" to
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "updated" to 1770398480167,
+            "created" to 1770398478246,
+        )
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 3)
+  }
+
+  protected fun newTaskContext(): SinkTaskContext {
     return mock<SinkTaskContext> {
       on { errantRecordReporter() } doReturn ErrantRecordReporter { _, error -> throw error }
     }

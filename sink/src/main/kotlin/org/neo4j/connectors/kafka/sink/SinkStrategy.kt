@@ -227,6 +227,8 @@ interface SinkStrategyHandler {
                   config.neo4j(),
                   config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
                   config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SOURCE_ID,
               )
             }
 
@@ -257,6 +259,8 @@ interface SinkStrategyHandler {
                   config.neo4j(),
                   config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
                   config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SCHEMA,
               )
             }
 
