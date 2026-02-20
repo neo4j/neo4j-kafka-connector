@@ -49,11 +49,12 @@ const val SLACK_CONNECTION_ID = "PROJECT_EXT_83"
 const val SLACK_CHANNEL = "#team-connectors-feed"
 
 // Look into Root Project's settings -> Connections
-const val ECR_CONNECTION_ID = "PROJECT_EXT_124"
+const val ECR_CONNECTION_ID_ENG = "PROJECT_EXT_124"
+const val ECR_CONNECTION_ID_BUILD = "PROJECT_EXT_107"
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
-  LARGE("large")
+  LARGE("large"),
 }
 
 enum class JavaVersion(val version: String, val dockerImage: String) {
@@ -66,15 +67,18 @@ enum class Neo4jVersion(val version: String, val dockerImage: String) {
   V_4_4("4.4", "neo4j:4.4-enterprise"),
   V_4_4_DEV(
       "4.4-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-debian-nightly"),
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-debian-nightly",
+  ),
   V_5("5", "neo4j:5-enterprise"),
   V_5_DEV(
       "5-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:5-enterprise-debian-nightly-bundle"),
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:5-enterprise-debian-nightly-bundle",
+  ),
   V_CALVER("2026", "neo4j:2026-enterprise"),
   V_CALVER_DEV(
       "2026-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2026-enterprise-debian-nightly-bundle"),
+      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:2026-enterprise-debian-nightly-bundle",
+  ),
 }
 
 object Neo4jKafkaConnectorVcs :
@@ -124,7 +128,8 @@ fun BuildFeatures.requireDiskSpace(size: String = "3gb") = freeDiskSpace {
 
 fun BuildFeatures.loginToECR() = dockerRegistryConnections {
   cleanupPushedImages = true
-  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID }
+  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID_ENG }
+  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID_BUILD }
 }
 
 fun BuildFeatures.buildCache(javaVersion: JavaVersion) = buildCache {
@@ -145,9 +150,9 @@ fun CompoundStage.dependentBuildType(bt: BuildType, reuse: ReuseBuilds = ReuseBu
 fun collectArtifacts(buildType: BuildType): BuildType {
   buildType.artifactRules =
       """
-        +:packaging/target/*.jar => packages
-        +:packaging/target/*.zip => packages
-    """
+      +:packaging/target/*.jar => packages
+      +:packaging/target/*.zip => packages
+      """
           .trimIndent()
 
   return buildType
@@ -155,7 +160,7 @@ fun collectArtifacts(buildType: BuildType): BuildType {
 
 fun BuildSteps.commonMaven(
     javaVersion: JavaVersion,
-    init: MavenBuildStep.() -> Unit
+    init: MavenBuildStep.() -> Unit,
 ): MavenBuildStep {
   val maven =
       this.maven {
