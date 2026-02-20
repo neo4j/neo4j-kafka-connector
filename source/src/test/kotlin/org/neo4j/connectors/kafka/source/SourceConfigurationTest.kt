@@ -35,6 +35,7 @@ import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
+import org.neo4j.driver.AccessMode
 import org.neo4j.driver.TransactionConfig
 
 class SourceConfigurationTest {
@@ -213,6 +214,36 @@ class SourceConfigurationTest {
             NodeSelector.builder().build() to listOf("topic-1"),
             RelationshipSelector.builder().build() to listOf("topic-1"),
         )
+
+    config.sessionConfig().defaultAccessMode() shouldBe AccessMode.READ
+  }
+
+  @Test
+  fun `valid config with cdc to use leader`() {
+    val config =
+        SourceConfiguration(
+            mapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                SourceConfiguration.STRATEGY to "CDC",
+                SourceConfiguration.START_FROM to "EARLIEST",
+                SourceConfiguration.BATCH_SIZE to "10000",
+                SourceConfiguration.CDC_USE_LEADER to "true",
+                SourceConfiguration.CDC_POLL_INTERVAL to "5s",
+                "neo4j.cdc.topic.topic-1.patterns" to "(),()-[]-()",
+            )
+        )
+
+    config.strategy shouldBe SourceType.CDC
+    config.startFrom shouldBe StartFrom.EARLIEST
+    config.batchSize shouldBe 10000
+    config.cdcPollingInterval shouldBe 5.seconds
+    config.cdcSelectorsToTopics shouldContainExactly
+        mapOf(
+            NodeSelector.builder().build() to listOf("topic-1"),
+            RelationshipSelector.builder().build() to listOf("topic-1"),
+        )
+
+    config.sessionConfig().defaultAccessMode() shouldBe AccessMode.WRITE
   }
 
   @Test
