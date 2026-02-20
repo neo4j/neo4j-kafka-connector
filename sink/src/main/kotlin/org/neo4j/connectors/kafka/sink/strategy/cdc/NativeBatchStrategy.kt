@@ -19,7 +19,6 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -123,7 +122,8 @@ class NativeBatchStrategy(
   ): Query {
     val cypher25 = canIUse(Cypher.explicitCypher25Selection()).withNeo4j(neo4j)
     val termination =
-        if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
+        if (canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
+        else "RETURN COUNT(1) AS total"
     val sortedQueries = queries.keys.sorted()
 
     val query = buildString {

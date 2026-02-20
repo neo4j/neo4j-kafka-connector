@@ -23,7 +23,6 @@ import kotlin.sequences.toList
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -73,7 +72,8 @@ class ApocBatchStrategy(
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
     val termination =
-        if (neo4j.version >= Neo4jVersion(5, 19, 0)) "FINISH" else "RETURN COUNT(1) AS total"
+        if (canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
+        else "RETURN COUNT(1) AS total"
 
     val query = buildString {
       appendLine("UNWIND \$events AS ${EVENT}")
