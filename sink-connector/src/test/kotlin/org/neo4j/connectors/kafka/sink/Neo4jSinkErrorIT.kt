@@ -807,7 +807,7 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "update operation requires 'before' field in the event object"
+              "update operation requires 'before' field in the event object."
 
           it.value shouldBe event1ToFail
         }
@@ -817,7 +817,7 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "update operation requires 'before' field in the event object"
+              "update operation requires 'before' field in the event object."
 
           it.value shouldBe event3ToFail
         }
@@ -952,7 +952,7 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "update operation requires 'before' field in the event object"
+              "update operation requires 'before' field in the event object."
 
           it.value shouldBe event2ToFail
         }
@@ -962,7 +962,7 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
-              "update operation requires 'before' field in the event object"
+              "update operation requires 'before' field in the event object."
 
           it.value shouldBe event5ToFail
         }
