@@ -28,6 +28,7 @@ import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
 import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
@@ -41,6 +42,7 @@ import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
+import org.slf4j.LoggerFactory
 
 data class SinkMessage(val record: SinkRecord) {
   val topic
@@ -134,13 +136,21 @@ interface SinkStrategyHandler {
    */
   fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>>
 
+  fun postProcessLastMessageBatch(batch: Iterable<ChangeQuery>) {}
+
   companion object {
 
-    fun createFrom(config: SinkConfiguration): Map<String, SinkStrategyHandler> {
-      return config.topicNames.associateWith { topic -> createForTopic(topic, config) }
+    private val logger = LoggerFactory.getLogger(SinkStrategyHandler::class.java)
+
+    fun createFrom(config: SinkConfiguration, metrics: Metrics): Map<String, SinkStrategyHandler> {
+      return config.topicNames.associateWith { topic -> createForTopic(topic, config, metrics) }
     }
 
-    private fun createForTopic(topic: String, config: SinkConfiguration): SinkStrategyHandler {
+    private fun createForTopic(
+        topic: String,
+        config: SinkConfiguration,
+        metrics: Metrics,
+    ): SinkStrategyHandler {
       var handler: SinkStrategyHandler? = null
       val originals = config.originalsStrings()
 
@@ -226,6 +236,7 @@ interface SinkStrategyHandler {
                     config.neo4j(),
                     config.batchSize,
                     config.eosOffsetLabel,
+                    metrics,
                     labelName,
                     propertyName,
                 )
@@ -244,9 +255,16 @@ interface SinkStrategyHandler {
                     canIUse(Cypher.setDynamicLabels()).withNeo4j(config.neo4j()) &&
                     canIUse(Cypher.removeDynamicLabels()).withNeo4j(config.neo4j())
             )
-                ApocCdcSchemaHandler(topic, config.neo4j(), config.batchSize, config.eosOffsetLabel)
+                ApocCdcSchemaHandler(
+                    topic,
+                    config.neo4j(),
+                    config.batchSize,
+                    config.eosOffsetLabel,
+                    metrics,
+                )
             else CdcSchemaHandler(topic, config.renderer)
       }
+      logger
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)
       if (cudTopics.contains(topic)) {

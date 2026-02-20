@@ -239,6 +239,12 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     }
   }
 
+  val connectorName
+    get(): String = getString(CONNECTOR_NAME)
+
+  val taskId
+    get(): Int = getInt(TASK_ID)
+
   companion object {
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
 
@@ -270,6 +276,10 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         "neo4j.security.hostname-verification-enabled"
     const val SECURITY_TRUST_STRATEGY = "neo4j.security.trust-strategy"
     const val SECURITY_CERT_FILES = "neo4j.security.cert-files"
+
+    // internal properties
+    const val CONNECTOR_NAME = "name"
+    const val TASK_ID = "neo4j.task.id"
 
     /** Perform validation on dependent configuration items */
     fun validate(config: org.apache.kafka.common.config.Config) {

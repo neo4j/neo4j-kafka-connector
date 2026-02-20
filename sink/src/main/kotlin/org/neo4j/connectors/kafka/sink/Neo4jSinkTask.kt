@@ -22,14 +22,18 @@ import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.VisibleForTesting
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.metrics.Metrics
+import org.neo4j.connectors.kafka.metrics.MetricsFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jSinkTask : SinkTask() {
+class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory()) : SinkTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jSinkTask::class.java)
 
   private lateinit var settings: Map<String, String>
   @VisibleForTesting lateinit var config: SinkConfiguration
+  private lateinit var metrics: Metrics
+  private lateinit var topicHandlers: Map<String, SinkStrategyHandler>
 
   override fun version(): String = VersionUtil.version(Neo4jSinkTask::class.java)
 
@@ -38,6 +42,10 @@ class Neo4jSinkTask : SinkTask() {
 
     settings = props!!
     config = SinkConfiguration(settings)
+
+    metrics = metricsFactory.createMetrics(context, config)
+    topicHandlers = SinkStrategyHandler.createFrom(config, metrics)
+    log.error("TTT handlers: {}", topicHandlers.mapValues { it.value.javaClass.name })
   }
 
   override fun stop() {
@@ -53,7 +61,7 @@ class Neo4jSinkTask : SinkTask() {
       records
           ?.map { SinkMessage(it) }
           ?.groupBy { it.topic }
-          ?.mapKeys { config.topicHandlers.getValue(it.key) }
+          ?.mapKeys { topicHandlers.getValue(it.key) }
           ?.forEach { (handler, messages) -> processMessages(handler, messages) }
     }
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
@@ -83,6 +91,7 @@ class Neo4jSinkTask : SinkTask() {
             )
             log.trace("after write transaction for group {}", index)
           }
+          handler.postProcessLastMessageBatch(group)
 
           handled.addAll(group.flatMap { it.messages })
         }

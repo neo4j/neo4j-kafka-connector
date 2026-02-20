@@ -26,12 +26,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.Mockito.mock
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.CdcSchemaHandler
@@ -47,6 +49,8 @@ import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class ConfigPropertiesTest {
+
+  private val metricsMock: Metrics = mock()
 
   // This test checks that the number of config files is fixed.
   // If a new file is added, the test will fail, reminding the developer to update this test and add
@@ -72,10 +76,11 @@ class ConfigPropertiesTest {
       SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
     }
 
-    config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
-    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
-    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
+    topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
   @ParameterizedTest
@@ -93,10 +98,11 @@ class ConfigPropertiesTest {
       SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
     }
 
-    config.topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    config.topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
-    config.topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
-    config.topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
+    topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
+    topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
+    topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
   }
 
   @Test
@@ -107,8 +113,9 @@ class ConfigPropertiesTest {
 
     val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    config.topicHandlers.keys shouldBe setOf("people")
-    config.topicHandlers["people"].shouldBeInstanceOf<CudHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("people")
+    topicHandlers["people"].shouldBeInstanceOf<CudHandler>()
   }
 
   @Test
@@ -119,8 +126,9 @@ class ConfigPropertiesTest {
 
     val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    config.topicHandlers.keys shouldBe setOf("people")
-    config.topicHandlers["people"].shouldBeInstanceOf<CypherHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("people")
+    topicHandlers["people"].shouldBeInstanceOf<CypherHandler>()
   }
 
   @Test
@@ -131,8 +139,9 @@ class ConfigPropertiesTest {
 
     val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    config.topicHandlers.keys shouldBe setOf("people")
-    config.topicHandlers["people"].shouldBeInstanceOf<NodePatternHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("people")
+    topicHandlers["people"].shouldBeInstanceOf<NodePatternHandler>()
   }
 
   @Test
@@ -143,8 +152,9 @@ class ConfigPropertiesTest {
 
     val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
 
-    config.topicHandlers.keys shouldBe setOf("knows")
-    config.topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers.keys shouldBe setOf("knows")
+    topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternHandler>()
   }
 
   @Test

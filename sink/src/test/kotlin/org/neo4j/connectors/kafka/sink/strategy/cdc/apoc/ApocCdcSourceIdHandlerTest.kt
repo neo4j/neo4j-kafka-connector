@@ -23,6 +23,7 @@ import io.kotest.matchers.throwable.shouldHaveMessage
 import java.time.LocalDate
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
@@ -34,6 +35,7 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
@@ -74,6 +76,8 @@ class ApocCdcSourceIdHandlerWithoutEOSTest :
 abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expectedQuery: String) {
   private val neo4j =
       Neo4j(Neo4jVersion(2025, 12, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+
+  private val metricsMock: Metrics = mock()
 
   @Test
   fun `should generate correct statement for node creation events`() {
@@ -1048,6 +1052,7 @@ abstract class ApocCdcSourceIdHandlerTest(val eosOffsetLabel: String, val expect
           neo4j,
           batchSize,
           eosOffsetLabel,
+          metricsMock,
           "SourceEvent",
           "sourceElementId",
       )

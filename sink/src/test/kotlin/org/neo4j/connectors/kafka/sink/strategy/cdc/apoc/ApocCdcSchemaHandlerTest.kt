@@ -25,6 +25,7 @@ import java.time.LocalDate
 import kotlin.collections.emptyList
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito.mock
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
@@ -38,6 +39,7 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
@@ -79,6 +81,8 @@ class ApocCdcSchemaHandlerWithoutEOSTest :
 abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expectedQuery: String) {
   private val neo4j =
       Neo4j(Neo4jVersion(2025, 12, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+
+  private val metricsMock: Metrics = mock()
 
   @Test
   fun `should fail on empty keys`() {
@@ -152,7 +156,8 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
         )
         .forEach {
           shouldThrow<InvalidDataException> {
-                val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+                val handler =
+                    ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
                 handler.handle(listOf(it))
               }
@@ -1052,7 +1057,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should split changes over batch size`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 2, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 2, eosOffsetLabel, metricsMock)
 
     val result =
         handler.handle(
@@ -1092,7 +1097,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with node create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1116,7 +1121,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with relationship create operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1150,7 +1155,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'before' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1174,7 +1179,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'before' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -1208,7 +1213,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with node update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val nodeChangeEventMessage =
         newChangeEventMessage(
@@ -1232,7 +1237,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   @Test
   fun `should fail on null 'after' field with relationship update operation`() {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val relationshipChangeEventMessage =
         newChangeEventMessage(
@@ -2433,7 +2438,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
 
   private fun assertInvalidDataException(sinkMessage: SinkMessage) {
     shouldThrow<InvalidDataException> {
-          val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+          val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
           handler.handle(listOf(sinkMessage))
         }
@@ -2446,7 +2451,7 @@ abstract class ApocCdcSchemaHandlerTest(val eosOffsetLabel: String, val expected
   }
 
   private fun verify(messages: Iterable<SinkMessage>, expected: Iterable<Iterable<ChangeQuery>>) {
-    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel)
+    val handler = ApocCdcSchemaHandler("my-topic", neo4j, 1000, eosOffsetLabel, metricsMock)
 
     val result = handler.handle(messages)
 

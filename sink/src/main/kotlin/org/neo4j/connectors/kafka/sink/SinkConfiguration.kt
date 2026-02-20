@@ -51,7 +51,6 @@ class SinkConfiguration : Neo4jConfiguration {
     fixedRenderer = renderer
     _neo4j = neo4j
     this.apocCypherDoItAvailable = apocCypherDoItAvailable
-    validateAllTopics()
   }
 
   val batchSize
@@ -125,14 +124,10 @@ class SinkConfiguration : Neo4jConfiguration {
         originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
             ?: emptyList()
 
-  val topicHandlers: Map<String, SinkStrategyHandler> by lazy {
-    SinkStrategyHandler.createFrom(this)
-  }
-
   override fun userAgentComment(): String =
       SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 
-  private fun validateAllTopics() {
+  fun validateAllTopics(topicHandlers: Map<String, SinkStrategyHandler>) { // todo what is this for
     val sourceTopics = topicNames.toSet()
     val configuredTopics = topicHandlers.keys
 

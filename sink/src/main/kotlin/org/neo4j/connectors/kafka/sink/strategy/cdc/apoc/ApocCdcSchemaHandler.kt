@@ -21,6 +21,7 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
@@ -33,7 +34,8 @@ class ApocCdcSchemaHandler(
     neo4j: Neo4j,
     batchSize: Int,
     eosOffsetLabel: String = "",
-) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel) {
+    metrics: Metrics,
+) : ApocCdcHandler(neo4j, batchSize, eosOffsetLabel, metrics) {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
   init {

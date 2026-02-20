@@ -28,6 +28,7 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
@@ -40,14 +41,35 @@ abstract class ApocCdcHandler(
     private val neo4j: Neo4j,
     private val batchSize: Int,
     private val eosOffsetLabel: String,
+    private val metrics: Metrics,
 ) : SinkStrategyHandler {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
+
+  private var lastTxCommitTs: Long? = null
+  private var lastTxStartTs: Long? = null
 
   data class MessageToEvent(
       val message: SinkMessage,
       val changeEvent: ChangeEvent,
       val cdcData: CdcData,
   )
+
+  init {
+    metrics.addGauge(
+        "last_tx_commit_timestamp",
+        "The transaction commit timestamp of the last written CDC message",
+        linkedMapOf(),
+    ) {
+      lastTxCommitTs
+    }
+    metrics.addGauge(
+        "last_tx_start_timestamp",
+        "The transaction start timestamp of the last written CDC message",
+        linkedMapOf(),
+    ) {
+      lastTxStartTs
+    }
+  }
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     val (topic, partition) =
@@ -164,4 +186,11 @@ abstract class ApocCdcHandler(
   protected abstract fun transformUpdate(event: RelationshipEvent): CdcData
 
   protected abstract fun transformDelete(event: RelationshipEvent): CdcData
+
+  override fun postProcessLastMessageBatch(batch: Iterable<ChangeQuery>) {
+    batch.lastOrNull()?.messages?.lastOrNull()?.toChangeEvent()?.metadata?.let {
+      lastTxCommitTs = it.txCommitTime.toEpochSecond()
+      lastTxStartTs = it.txStartTime.toEpochSecond()
+    }
+  }
 }

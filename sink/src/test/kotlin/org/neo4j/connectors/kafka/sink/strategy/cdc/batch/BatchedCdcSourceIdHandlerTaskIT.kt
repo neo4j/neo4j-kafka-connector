@@ -38,7 +38,9 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
+import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
@@ -114,7 +116,9 @@ class BatchedCdcSourceIdHandlerTaskIT {
         )
     )
 
-    task.config.topicHandlers["my-topic"] shouldBe instanceOf(BatchedCdcSourceIdHandler::class)
+    val metricsMock: Metrics = mock()
+    SinkStrategyHandler.createFrom(task.config, metricsMock)["my-topic"] shouldBe
+        instanceOf(BatchedCdcSourceIdHandler::class)
   }
 
   @Test
