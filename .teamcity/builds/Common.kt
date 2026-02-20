@@ -24,6 +24,7 @@ const val GITHUB_REPOSITORY = "neo4j-kafka-connector"
 val MAVEN_DEFAULT_ARGS = buildString {
   append("--no-transfer-progress ")
   append("--batch-mode ")
+  append("--threads 1C ")
   append("-Dmaven.repo.local=%teamcity.build.checkoutDir%/.m2/repository ")
   append("-Dmaven.wagon.http.retryHandler.class=standard ")
   append("-Dmaven.wagon.http.retryHandler.timeout=60 ")
