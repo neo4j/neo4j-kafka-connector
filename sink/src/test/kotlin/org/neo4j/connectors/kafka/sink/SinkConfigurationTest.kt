@@ -29,27 +29,21 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.neo4j.connectors.kafka.metrics.Metrics
-import org.neo4j.connectors.kafka.sink.strategy.CdcHandler
-import org.neo4j.connectors.kafka.sink.strategy.CdcSourceIdHandler
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.apoc.ApocCdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
 
 class SinkConfigurationTest {
-
-  private val metricsMock: Metrics = mock()
 
   @Test
   fun `should throw a ConfigException because of mismatch`() {
@@ -100,10 +94,9 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
-    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CypherHandler>()
-    (topicHandlers["foo"] as CypherHandler).query shouldBe
+    config.topicHandlers shouldHaveKey "foo"
+    config.topicHandlers["foo"] shouldBe instanceOf<CypherHandler>()
+    (config.topicHandlers["foo"] as CypherHandler).query shouldBe
         "CREATE (p:Person{name: event.firstName})"
   }
 
@@ -121,10 +114,9 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
-    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<NodePatternHandler>()
-    (topicHandlers["foo"] as NodePatternHandler).pattern shouldBe
+    config.topicHandlers shouldHaveKey "foo"
+    config.topicHandlers["foo"] shouldBe instanceOf<NodePatternHandler>()
+    (config.topicHandlers["foo"] as NodePatternHandler).pattern shouldBe
         NodePattern(
             setOf("Foo"),
             false,
@@ -133,9 +125,9 @@ class SinkConfigurationTest {
             emptySet(),
         )
 
-    topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
-    (topicHandlers["bar"] as NodePatternHandler).pattern shouldBe
+    config.topicHandlers shouldHaveKey "bar"
+    config.topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
+    (config.topicHandlers["bar"] as NodePatternHandler).pattern shouldBe
         NodePattern(
             setOf("Bar"),
             false,
@@ -155,7 +147,12 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.eosOffsetLabel shouldBe ""
   }
@@ -171,7 +168,12 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.eosOffsetLabel shouldBe "`__MyKafkaOffset`"
   }
@@ -190,18 +192,18 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
-    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (topicHandlers["foo"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (topicHandlers["foo"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers shouldHaveKey "foo"
+    config.topicHandlers["foo"] shouldBe instanceOf<CdcHandler>()
 
-    topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<CdcSourceIdHandler>()
-    (topicHandlers["bar"] as CdcSourceIdHandler).labelName shouldBe "TestCdcLabel"
-    (topicHandlers["bar"] as CdcSourceIdHandler).propertyName shouldBe "test_id"
+    config.topicHandlers shouldHaveKey "bar"
+    config.topicHandlers["bar"] shouldBe instanceOf<CdcHandler>()
   }
 
   @ParameterizedTest
@@ -226,12 +228,11 @@ class SinkConfigurationTest {
             apocCypherDoItAvailable = apocDoItAvailable,
         )
 
-    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf(clazz)
+    config.topicHandlers shouldHaveKey "foo"
+    config.topicHandlers["foo"] shouldBe instanceOf(clazz)
 
-    topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf(clazz)
+    config.topicHandlers shouldHaveKey "bar"
+    config.topicHandlers["bar"] shouldBe instanceOf(clazz)
   }
 
   @Test
@@ -245,12 +246,11 @@ class SinkConfigurationTest {
         )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
-    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CudHandler>()
+    config.topicHandlers shouldHaveKey "foo"
+    config.topicHandlers["foo"] shouldBe instanceOf<CudHandler>()
 
-    topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<CudHandler>()
+    config.topicHandlers shouldHaveKey "bar"
+    config.topicHandlers["bar"] shouldBe instanceOf<CudHandler>()
   }
 
   @ParameterizedTest
@@ -269,7 +269,12 @@ class SinkConfigurationTest {
             } to "bar",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -338,7 +343,12 @@ class SinkConfigurationTest {
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
     val config =
-        SinkConfiguration(originals, Renderer.getDefaultRenderer(), apocCypherDoItAvailable = false)
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe
@@ -346,6 +356,8 @@ class SinkConfigurationTest {
   }
 
   companion object {
+    private val neo4j2026_01 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j5_26 =
         Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j4_4 =
@@ -355,33 +367,29 @@ class SinkConfigurationTest {
     fun cdcHandlersTypes() =
         listOf(
             Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels not available",
+                "APOC DoIt not available 4.4",
                 false,
                 neo4j4_4,
                 CdcHandler::class,
             ),
             Arguments.argumentSet(
-                "APOC DoIt available && Dynamic Labels not available",
-                true,
-                neo4j4_4,
-                CdcHandler::class,
-            ),
-            Arguments.argumentSet(
-                "APOC DoIt not available && Dynamic Labels available",
+                "APOC DoIt not available 5.26",
                 false,
                 neo4j5_26,
                 CdcHandler::class,
             ),
             Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels available",
-                true,
-                neo4j5_26,
-                ApocCdcHandler::class,
-            ),
-            Arguments.argumentSet(
-                "APOC DoIt && Dynamic Labels not available",
+                "APOC DoIt not available 2026.01",
                 false,
-                null,
+                neo4j2026_01,
+                CdcHandler::class,
+            ),
+            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, CdcHandler::class),
+            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26, CdcHandler::class),
+            Arguments.argumentSet(
+                "APOC DoIt available 2026.01",
+                true,
+                neo4j2026_01,
                 CdcHandler::class,
             ),
         )

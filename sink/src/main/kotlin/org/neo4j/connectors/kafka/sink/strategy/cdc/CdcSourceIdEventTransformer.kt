@@ -14,38 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc.batch
+package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
-import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
-class BatchedCdcSourceIdHandler(
+class CdcSourceIdEventTransformer(
     val topic: String,
-    maxBatchedStatements: Int,
-    batchSize: Int,
     val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
     val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
-) : BatchedCdcHandler(maxBatchedStatements, batchSize) {
-  private val logger: Logger = LoggerFactory.getLogger(javaClass)
-
-  init {
-    logger.info("using CYPHER 25 compatible CDC SOURCE_ID strategy for topic '{}'", topic)
-  }
-
-  override fun strategy() = SinkStrategy.CDC_SOURCE_ID
+) : CdcEventTransformer {
 
   override fun transformCreate(event: NodeEvent): CdcNodeData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object."
+      )
+    }
+
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     return CdcNodeData(
@@ -60,10 +54,10 @@ class BatchedCdcSourceIdHandler(
 
   override fun transformUpdate(event: NodeEvent): CdcNodeData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     return CdcNodeData(
@@ -77,6 +71,16 @@ class BatchedCdcSourceIdHandler(
   }
 
   override fun transformDelete(event: NodeEvent): CdcNodeData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object."
+      )
+    }
+
     return CdcNodeData(
         EntityOperation.DELETE,
         setOf(labelName),
@@ -88,8 +92,14 @@ class BatchedCdcSourceIdHandler(
   }
 
   override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before != null) {
+      throw InvalidDataException(
+          "create operation requires 'before' field to be unset in the event object."
+      )
+    }
+
     if (event.after == null) {
-      throw InvalidDataException("create operation requires 'after' field in the event object")
+      throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
     return CdcRelationshipData(
@@ -107,10 +117,10 @@ class BatchedCdcSourceIdHandler(
 
   override fun transformUpdate(event: RelationshipEvent): CdcRelationshipData {
     if (event.before == null) {
-      throw InvalidDataException("update operation requires 'before' field in the event object")
+      throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
     if (event.after == null) {
-      throw InvalidDataException("update operation requires 'after' field in the event object")
+      throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
     return CdcRelationshipData(
@@ -127,6 +137,16 @@ class BatchedCdcSourceIdHandler(
   }
 
   override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+    if (event.before == null) {
+      throw InvalidDataException("delete operation requires 'before' field in the event object.")
+    }
+
+    if (event.after != null) {
+      throw InvalidDataException(
+          "delete operation requires 'after' field to be unset in the event object."
+      )
+    }
+
     return CdcRelationshipData(
         EntityOperation.DELETE,
         emptySet(),

@@ -1,0 +1,810 @@
+/*
+ * Copyright (c) "Neo4j"
+ * Neo4j Sweden AB [https://neo4j.com]
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.neo4j.connectors.kafka.sink.strategy.cdc
+
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.throwable.shouldHaveMessage
+import java.time.ZonedDateTime
+import org.junit.jupiter.api.Test
+import org.neo4j.cdc.client.model.CaptureMode
+import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.Event
+import org.neo4j.cdc.client.model.Metadata
+import org.neo4j.cdc.client.model.Node
+import org.neo4j.cdc.client.model.NodeEvent
+import org.neo4j.cdc.client.model.NodeState
+import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
+import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.utils.JSONUtils
+
+class CdcSchemaEventTransformerTest {
+  private val transformer = CdcSchemaEventTransformer("my-topic")
+
+  @Test
+  fun `should transform node creation event`() {
+    val event =
+        NodeEvent(
+            "node-id",
+            EntityOperation.CREATE,
+            listOf("Person"),
+            mapOf("Person" to listOf(mapOf("id" to 1))),
+            null,
+            NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcNodeData
+
+    result.operation shouldBe EntityOperation.CREATE
+    result.matchLabels shouldBe setOf("Person")
+    result.matchProperties shouldBe mapOf("id" to 1)
+    result.setProperties shouldBe mapOf("id" to 1, "name" to "John")
+    result.addLabels shouldBe emptySet()
+    result.removeLabels shouldBe emptySet()
+  }
+
+  @Test
+  fun `should transform node update event`() {
+    val event =
+        NodeEvent(
+            "node-id",
+            EntityOperation.UPDATE,
+            listOf("Person"),
+            mapOf("Person" to listOf(mapOf("id" to 1))),
+            NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
+            NodeState(
+                listOf("Person", "Employee"),
+                mapOf("id" to 1, "name" to "John", "salary" to 1000),
+            ),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcNodeData
+
+    result.operation shouldBe EntityOperation.UPDATE
+    result.matchLabels shouldBe setOf("Person")
+    result.matchProperties shouldBe mapOf("id" to 1)
+    result.setProperties shouldBe mapOf("salary" to 1000)
+    result.addLabels shouldBe setOf("Employee")
+    result.removeLabels shouldBe emptySet()
+  }
+
+  @Test
+  fun `should transform node deletion event`() {
+    val event =
+        NodeEvent(
+            "node-id",
+            EntityOperation.DELETE,
+            listOf("Person"),
+            mapOf("Person" to listOf(mapOf("id" to 1))),
+            NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
+            null,
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcNodeData
+
+    result.operation shouldBe EntityOperation.DELETE
+    result.matchLabels shouldBe setOf("Person")
+    result.matchProperties shouldBe mapOf("id" to 1)
+    result.setProperties shouldBe emptyMap()
+    result.addLabels shouldBe emptySet()
+    result.removeLabels shouldBe emptySet()
+  }
+
+  @Test
+  fun `should transform relationship creation event`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            emptyList(),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("since" to 2020)),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.CREATE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("since" to 2020)
+    result.hasKeys shouldBe false
+    result.setProperties shouldBe mapOf("since" to 2020)
+  }
+
+  @Test
+  fun `should transform relationship creation event with keys`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            listOf(mapOf("relId" to "R1")),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("relId" to "R1", "since" to 2020)),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.CREATE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("relId" to "R1")
+    result.hasKeys shouldBe true
+    result.setProperties shouldBe mapOf("relId" to "R1", "since" to 2020)
+  }
+
+  @Test
+  fun `should transform relationship update event`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            emptyList(),
+            EntityOperation.UPDATE,
+            RelationshipState(mapOf("since" to 2020)),
+            RelationshipState(mapOf("since" to 2021, "rating" to 5)),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.UPDATE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("since" to 2020)
+    result.hasKeys shouldBe false
+    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+  }
+
+  @Test
+  fun `should transform relationship update event with keys`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            listOf(mapOf("relId" to "R1")),
+            EntityOperation.UPDATE,
+            RelationshipState(mapOf("since" to 2020)),
+            RelationshipState(mapOf("since" to 2021, "rating" to 5)),
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.UPDATE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("relId" to "R1")
+    result.hasKeys shouldBe true
+    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+  }
+
+  @Test
+  fun `should transform relationship deletion event`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            emptyList(),
+            EntityOperation.DELETE,
+            RelationshipState(mapOf("since" to 2020)),
+            null,
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.DELETE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("since" to 2020)
+    result.hasKeys shouldBe false
+    result.setProperties shouldBe emptyMap()
+  }
+
+  @Test
+  fun `should transform relationship deletion event with keys`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+            Node("e-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+            listOf(mapOf("relId" to "R1")),
+            EntityOperation.DELETE,
+            RelationshipState(mapOf("since" to 2020)),
+            null,
+        )
+
+    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
+
+    result.operation shouldBe EntityOperation.DELETE
+    result.startMatchLabels shouldBe setOf("Person")
+    result.startMatchProperties shouldBe mapOf("id" to 1)
+    result.endMatchLabels shouldBe setOf("Person")
+    result.endMatchProperties shouldBe mapOf("id" to 2)
+    result.matchType shouldBe "KNOWS"
+    result.matchProperties shouldBe mapOf("relId" to "R1")
+    result.hasKeys shouldBe true
+    result.setProperties shouldBe emptyMap()
+  }
+
+  @Test
+  fun `should fail on null after field with node create operation`() {
+    val event = NodeEvent("id", EntityOperation.CREATE, emptyList(), emptyMap(), null, null)
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "create operation requires 'after' field in the event object."
+  }
+
+  @Test
+  fun `should fail on non-null before field with node create operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.CREATE,
+            emptyList(),
+            emptyMap(),
+            NodeState(emptyList(), emptyMap()),
+            NodeState(emptyList(), emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "create operation requires 'before' field to be unset in the event object."
+  }
+
+  @Test
+  fun `should fail on null before field with node update operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.UPDATE,
+            emptyList(),
+            emptyMap(),
+            null,
+            NodeState(emptyList(), emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "update operation requires 'before' field in the event object."
+  }
+
+  @Test
+  fun `should fail on null after field with node update operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.UPDATE,
+            emptyList(),
+            emptyMap(),
+            NodeState(emptyList(), emptyMap()),
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "update operation requires 'after' field in the event object."
+  }
+
+  @Test
+  fun `should fail on null before field with node delete operation`() {
+    val event = NodeEvent("id", EntityOperation.DELETE, emptyList(), emptyMap(), null, null)
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "delete operation requires 'before' field in the event object."
+  }
+
+  @Test
+  fun `should fail on non-null after field with node delete operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.DELETE,
+            emptyList(),
+            emptyMap(),
+            NodeState(emptyList(), emptyMap()),
+            NodeState(emptyList(), emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "delete operation requires 'after' field to be unset in the event object."
+  }
+
+  @Test
+  fun `should fail on empty keys with node create operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.CREATE,
+            listOf("Person"),
+            emptyMap(),
+            null,
+            NodeState(listOf("Person"), emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty keys with node update operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.UPDATE,
+            listOf("Person"),
+            emptyMap(),
+            NodeState(listOf("Person"), emptyMap()),
+            NodeState(listOf("Person", "Employee"), emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty keys with node delete operation`() {
+    val event =
+        NodeEvent(
+            "id",
+            EntityOperation.DELETE,
+            listOf("Person"),
+            emptyMap(),
+            NodeState(listOf("Person"), emptyMap()),
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on null after field with relationship create operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.CREATE,
+            null,
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "create operation requires 'after' field in the event object."
+  }
+
+  @Test
+  fun `should fail on non-null before field with relationship create operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.CREATE,
+            RelationshipState(emptyMap()),
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "create operation requires 'before' field to be unset in the event object."
+  }
+
+  @Test
+  fun `should fail on null before field with relationship update operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.UPDATE,
+            null,
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "update operation requires 'before' field in the event object."
+  }
+
+  @Test
+  fun `should fail on null after field with relationship update operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.UPDATE,
+            RelationshipState(emptyMap()),
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "update operation requires 'after' field in the event object."
+  }
+
+  @Test
+  fun `should fail on null before field with relationship delete operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.DELETE,
+            null,
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "delete operation requires 'before' field in the event object."
+  }
+
+  @Test
+  fun `should fail on non-null after field with relationship delete operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.DELETE,
+            RelationshipState(emptyMap()),
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage "delete operation requires 'after' field to be unset in the event object."
+  }
+
+  @Test
+  fun `should fail on empty start node keys with relationship create operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to emptyList())),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty end node keys with relationship create operation`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to emptyList())),
+            emptyList(),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty start node keys with relationship update operation if no keys on relationship`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to emptyList())),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.UPDATE,
+            RelationshipState(emptyMap()),
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty end node keys with relationship update operation if no keys on relationship`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to emptyList())),
+            emptyList(),
+            EntityOperation.UPDATE,
+            RelationshipState(emptyMap()),
+            RelationshipState(emptyMap()),
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty start node keys with relationship delete operation if no keys on relationship`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to emptyList())),
+            Node("end-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+            emptyList(),
+            EntityOperation.DELETE,
+            RelationshipState(emptyMap()),
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail on empty end node keys with relationship delete operation if no keys on relationship`() {
+    val event =
+        RelationshipEvent(
+            "id",
+            "KNOWS",
+            Node("start-id", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+            Node("end-id", listOf("Person"), mapOf("Person" to emptyList())),
+            emptyList(),
+            EntityOperation.DELETE,
+            RelationshipState(emptyMap()),
+            null,
+        )
+    shouldThrow<InvalidDataException> {
+      transformer.transform(changeEvent(event))
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail when streams node keys is empty`() {
+    val streamsMessage =
+        """
+        {
+          "meta": {
+            "timestamp": 1728643218066,
+            "username": "neo4j",
+            "txId": 18,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
+            }
+          },
+          "payload": {
+            "id": "0",
+            "before": {
+              "properties": {
+                "first_name": "Ali",
+                "last_name": "Ince",
+                "id": 1
+              },
+              "labels": [
+                "Person"
+              ]
+            },
+            "after": null,
+            "type": "node"
+          },
+          "schema": {
+            "properties": {
+              "first_name": "String",
+              "last_name": "String",
+              "id": "Long"
+            },
+            "constraints": []
+          }
+        }
+        """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+
+    shouldThrow<InvalidDataException> {
+      transformer.transform(event.toChangeEvent())
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail when streams relationship start node keys is empty`() {
+    val streamsMessage =
+        """
+        {
+          "meta": {
+            "timestamp": 1728641686524,
+            "username": "neo4j",
+            "txId": 17,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
+            }
+          },
+          "payload": {
+            "id": "0",
+            "start": {
+              "id": "0",
+              "labels": [
+                "Person"
+              ],
+              "ids": {}
+            },
+            "end": {
+              "id": "2",
+              "labels": [
+                "Company"
+              ],
+              "ids": {
+                "name": "Neo4j"
+              }
+            },
+            "before": {
+              "properties": {}
+            },
+            "after": null,
+            "label": "WORKS_FOR",
+            "type": "relationship"
+          },
+          "schema": {
+            "properties": {},
+            "constraints": []
+          }
+        }
+        """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+
+    shouldThrow<InvalidDataException> {
+      transformer.transform(event.toChangeEvent())
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  @Test
+  fun `should fail when streams relationship end node keys is empty`() {
+    val streamsMessage =
+        """
+        {
+          "meta": {
+            "timestamp": 1728641686524,
+            "username": "neo4j",
+            "txId": 17,
+            "txEventId": 0,
+            "txEventsCount": 1,
+            "operation": "deleted",
+            "source": {
+              "hostname": "neo4j03"
+            }
+          },
+          "payload": {
+            "id": "0",
+            "start": {
+              "id": "0",
+              "labels": [
+                "Person"
+              ],
+              "ids": {
+                "name": "john"
+              }
+            },
+            "end": {
+              "id": "2",
+              "labels": [
+                "Company"
+              ],
+              "ids": {}
+            },
+            "before": {
+              "properties": {}
+            },
+            "after": null,
+            "label": "WORKS_FOR",
+            "type": "relationship"
+          },
+          "schema": {
+            "properties": {},
+            "constraints": []
+          }
+        }
+        """
+            .trimIndent()
+    val event: StreamsTransactionEvent = JSONUtils.asStreamsTransactionEvent(streamsMessage)
+
+    shouldThrow<InvalidDataException> {
+      transformer.transform(event.toChangeEvent())
+    } shouldHaveMessage
+        "schema strategy requires at least one node key with valid properties on nodes."
+  }
+
+  private fun changeEvent(event: Event): ChangeEvent =
+      ChangeEvent(
+          ChangeIdentifier("change-id"),
+          1,
+          1,
+          Metadata(
+              "service",
+              "neo4j",
+              "server-1",
+              "neo4j",
+              CaptureMode.DIFF,
+              "bolt",
+              "127.0.0.1:32000",
+              "127.0.0.1:7687",
+              ZonedDateTime.now().minusSeconds(1),
+              ZonedDateTime.now(),
+              mapOf("user" to "app_user", "app" to "hr"),
+              emptyMap(),
+          ),
+          event,
+      )
+}

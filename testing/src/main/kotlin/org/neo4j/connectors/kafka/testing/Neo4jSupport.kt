@@ -105,7 +105,7 @@ fun Session.createRelationshipKeyConstraint(
   } else {
     if (canIUse(Schema.relationshipPropertyUniquenessConstraints()).withNeo4j(neo4j)) {
       this.run(
-              "CREATE CONSTRAINT $name FOR ()-[r:$type]->() REQUIRE ${
+              "CREATE CONSTRAINT ${name}_uq FOR ()-[r:$type]->() REQUIRE ${
             properties.joinToString(
                 ", ",
                 "(",
@@ -117,8 +117,10 @@ fun Session.createRelationshipKeyConstraint(
     }
 
     if (canIUse(Schema.relationshipPropertyExistenceConstraints()).withNeo4j(neo4j)) {
-      properties.forEach { prop ->
-        this.run("CREATE CONSTRAINT $name FOR ()-[r:$type]->() REQUIRE r.$prop IS NOT NULL")
+      properties.forEachIndexed { index, prop ->
+        this.run(
+                "CREATE CONSTRAINT ${name}_ex_${index} FOR ()-[r:$type]->() REQUIRE r.$prop IS NOT NULL"
+            )
             .consume()
       }
     }
