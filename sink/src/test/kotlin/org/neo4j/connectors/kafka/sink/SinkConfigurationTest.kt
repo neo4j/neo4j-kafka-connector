@@ -29,11 +29,13 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.mock
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
@@ -44,6 +46,8 @@ import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
 
 class SinkConfigurationTest {
+
+  val metricsMock: Metrics = mock()
 
   @Test
   fun `should throw a ConfigException because of mismatch`() {
@@ -94,9 +98,11 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
-    config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CypherHandler>()
-    (config.topicHandlers["foo"] as CypherHandler).query shouldBe
+
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers shouldHaveKey "foo"
+    topicHandlers["foo"] shouldBe instanceOf<CypherHandler>()
+    (topicHandlers["foo"] as CypherHandler).query shouldBe
         "CREATE (p:Person{name: event.firstName})"
   }
 
@@ -114,9 +120,11 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
     config.batchSize shouldBe 10
-    config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<NodePatternHandler>()
-    (config.topicHandlers["foo"] as NodePatternHandler).pattern shouldBe
+
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers shouldHaveKey "foo"
+    topicHandlers["foo"] shouldBe instanceOf<NodePatternHandler>()
+    (topicHandlers["foo"] as NodePatternHandler).pattern shouldBe
         NodePattern(
             setOf("Foo"),
             false,
@@ -125,9 +133,9 @@ class SinkConfigurationTest {
             emptySet(),
         )
 
-    config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
-    (config.topicHandlers["bar"] as NodePatternHandler).pattern shouldBe
+    topicHandlers shouldHaveKey "bar"
+    topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
+    (topicHandlers["bar"] as NodePatternHandler).pattern shouldBe
         NodePattern(
             setOf("Bar"),
             false,
@@ -199,11 +207,12 @@ class SinkConfigurationTest {
             neo4j = neo4j5_26,
         )
 
-    config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CdcHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers shouldHaveKey "foo"
+    topicHandlers["foo"] shouldBe instanceOf<CdcHandler>()
 
-    config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CdcHandler>()
+    topicHandlers shouldHaveKey "bar"
+    topicHandlers["bar"] shouldBe instanceOf<CdcHandler>()
   }
 
   @ParameterizedTest
@@ -228,11 +237,12 @@ class SinkConfigurationTest {
             apocCypherDoItAvailable = apocDoItAvailable,
         )
 
-    config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf(clazz)
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers shouldHaveKey "foo"
+    topicHandlers["foo"] shouldBe instanceOf(clazz)
 
-    config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf(clazz)
+    topicHandlers shouldHaveKey "bar"
+    topicHandlers["bar"] shouldBe instanceOf(clazz)
   }
 
   @Test
@@ -246,11 +256,12 @@ class SinkConfigurationTest {
         )
     val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
 
-    config.topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<CudHandler>()
+    val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+    topicHandlers shouldHaveKey "foo"
+    topicHandlers["foo"] shouldBe instanceOf<CudHandler>()
 
-    config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<CudHandler>()
+    topicHandlers shouldHaveKey "bar"
+    topicHandlers["bar"] shouldBe instanceOf<CudHandler>()
   }
 
   @ParameterizedTest
