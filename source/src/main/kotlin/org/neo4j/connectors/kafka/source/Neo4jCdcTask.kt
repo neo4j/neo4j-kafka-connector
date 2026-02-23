@@ -17,6 +17,8 @@
 package org.neo4j.connectors.kafka.source
 
 import java.util.concurrent.atomic.AtomicReference
+import jdk.internal.platform.Container.metrics
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
@@ -37,12 +40,15 @@ import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.data.ValueConverter
+import org.neo4j.connectors.kafka.metrics.CdcMetricsData
+import org.neo4j.connectors.kafka.metrics.DbTransactionMetricsData
+import org.neo4j.connectors.kafka.metrics.MetricsFactory
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class Neo4jCdcTask : SourceTask() {
+class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()) : SourceTask() {
   private val log: Logger = LoggerFactory.getLogger(Neo4jCdcTask::class.java)
 
   private lateinit var settings: Map<String, String>
@@ -55,6 +61,9 @@ class Neo4jCdcTask : SourceTask() {
   private lateinit var changeEventConverter: ChangeEventConverter
 
   internal fun latestOffset(): String = offset.get()
+
+  private lateinit var metricsData: CdcMetricsData
+  private lateinit var dbTransactionMetricsData: DbTransactionMetricsData
 
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
 
@@ -70,6 +79,8 @@ class Neo4jCdcTask : SourceTask() {
     sessionConfig = configBuilder.build()
     transactionConfig = config.txConfig()
 
+    val metrics = metricsFactory.createMetrics(context, config)
+
     cdc =
         CDCClient(
             config.driver,
@@ -84,17 +95,32 @@ class Neo4jCdcTask : SourceTask() {
     log.info("resuming from offset: ${offset.get()}")
 
     changeEventConverter = ChangeEventConverter(config.payloadMode)
+
+    metricsData = CdcMetricsData(metrics)
+    // todo enable in config
+    dbTransactionMetricsData =
+        DbTransactionMetricsData(
+            metrics = metrics,
+            neo4jDriver = config.driver,
+            sessionConfig = sessionConfig,
+            transactionConfig = transactionConfig,
+            refreshTimeout = 30.seconds, // todo configure this
+        )
   }
 
   override fun stop() {
     log.info("stopping")
     config.close()
+    if (this::dbTransactionMetricsData.isInitialized) {
+      dbTransactionMetricsData.stop()
+    }
   }
 
   @OptIn(ExperimentalCoroutinesApi::class)
   override fun poll(): MutableList<SourceRecord> {
     log.info("polling from offset: ${offset.get()}")
     val list = mutableListOf<SourceRecord>()
+    var lastChangeEvent: ChangeEvent? = null
 
     runBlocking {
       val timeSource = TimeSource.Monotonic
@@ -105,6 +131,10 @@ class Neo4jCdcTask : SourceTask() {
         cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
             .take(config.batchSize.toLong(), true)
             .asFlow()
+            .onEach {
+              lastChangeEvent = it
+              offset.set(it.id.id)
+            }
             .flatMapConcat { build(it) }
             .toList(list)
         if (list.isNotEmpty()) {
@@ -114,8 +144,8 @@ class Neo4jCdcTask : SourceTask() {
         delay(config.cdcPollingInterval)
       }
 
-      if (list.isNotEmpty()) {
-        offset.set(list.last().sourceOffset()["value"] as String)
+      if (lastChangeEvent != null) {
+        metricsData.update(lastChangeEvent)
       }
     }
 

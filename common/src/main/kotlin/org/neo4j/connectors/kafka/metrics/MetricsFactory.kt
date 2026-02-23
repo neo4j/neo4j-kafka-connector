@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.metrics
 
 import org.apache.kafka.connect.sink.SinkTaskContext
+import org.apache.kafka.connect.source.SourceTaskContext
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,6 +26,22 @@ class MetricsFactory {
 
   fun createMetrics(context: SinkTaskContext, config: Neo4jConfiguration): Metrics {
     return createKafkaMetrics(context) ?: createJmxMetrics(config)
+  }
+
+  fun createMetrics(context: SourceTaskContext, config: Neo4jConfiguration): Metrics {
+    return createKafkaMetrics(context) ?: createJmxMetrics(config)
+  }
+
+  private fun createKafkaMetrics(context: SourceTaskContext): KafkaMetrics? {
+    return try {
+      val metrics = KafkaMetrics(context.pluginMetrics())
+      log.info("Plugin metrics support detected")
+      metrics
+    } catch (_: NoSuchMethodError) {
+      null
+    } catch (_: NoClassDefFoundError) {
+      null
+    }
   }
 
   private fun createKafkaMetrics(context: SinkTaskContext): KafkaMetrics? {
@@ -40,7 +57,7 @@ class MetricsFactory {
   }
 
   private fun createJmxMetrics(config: Neo4jConfiguration): JmxMetrics {
-    log.error("TTT No plugin metrics support detected. Using JMX only metrics")
+    log.error("No plugin metrics support detected. Using JMX only metrics")
     return JmxMetrics(config)
   }
 

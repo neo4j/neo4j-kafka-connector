@@ -20,6 +20,7 @@ import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
+import org.neo4j.connectors.kafka.metrics.CdcMetricsData
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -44,7 +45,7 @@ class CdcHandler(
   }
 
   override fun postProcessLastMessageBatch(group: Iterable<ChangeQuery>) {
-    group.lastOrNull()?.messages?.lastOrNull()?.toChangeEvent()
+    group.lastOrNull()?.messages?.lastOrNull()?.toChangeEvent()?.let { metricsData.update(it) }
   }
 }
 

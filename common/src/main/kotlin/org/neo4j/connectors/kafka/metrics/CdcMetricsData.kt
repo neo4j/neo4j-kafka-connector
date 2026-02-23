@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
+package org.neo4j.connectors.kafka.metrics
 
 import org.neo4j.cdc.client.model.ChangeEvent
-import org.neo4j.connectors.kafka.metrics.Metrics
 
 class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = linkedMapOf()) {
 
@@ -28,19 +27,23 @@ class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = lin
   init {
     metrics.addGauge(
         "last_cdc_tx_commit_timestamp",
-        "The transaction commit timestamp of the last written CDC message",
+        "The transaction commit timestamp of the last processed CDC message",
         tags,
     ) {
       lastTxCommitTs
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
-        "The transaction start timestamp of the last written CDC message",
+        "The transaction start timestamp of the last processed CDC message",
         tags,
     ) {
       lastTxStartTs
     }
-    metrics.addGauge("last_cdc_tx_id", "The transaction id of the last written CDC message", tags) {
+    metrics.addGauge(
+        "last_cdc_tx_id",
+        "The transaction id of the last processed CDC message",
+        tags,
+    ) {
       lastTxId
     }
   }
