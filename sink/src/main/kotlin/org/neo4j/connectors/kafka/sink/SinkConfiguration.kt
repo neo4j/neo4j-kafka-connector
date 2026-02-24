@@ -127,9 +127,7 @@ class SinkConfiguration : Neo4jConfiguration {
   override fun userAgentComment(): String =
       SinkStrategyHandler.configuredStrategies(this).sorted().joinToString("; ")
 
-  private fun validateAllTopics(
-      topicHandlers: Map<String, SinkStrategyHandler>
-  ) { // todo is it used in production
+  fun validateAllTopics(topicHandlers: Map<String, SinkStrategyHandler>) {
     val sourceTopics = topicNames.toSet()
     val configuredTopics = topicHandlers.keys
 

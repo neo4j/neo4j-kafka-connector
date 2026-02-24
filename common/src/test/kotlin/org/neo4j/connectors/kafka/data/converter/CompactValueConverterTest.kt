@@ -608,8 +608,6 @@ class DynamicTypesCompactTest {
     val schema = converter.schema(map, false)
     val converted = converter.value(schema, map)
 
-    println(schema)
-    println(converted)
     converted shouldBe
         Struct(schema)
             .put("name", "john")

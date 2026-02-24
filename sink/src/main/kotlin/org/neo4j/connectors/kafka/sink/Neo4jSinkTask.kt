@@ -45,6 +45,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
 
     metrics = metricsFactory.createMetrics(context, config)
     topicHandlers = SinkStrategyHandler.createFrom(config, metrics)
+    config.validateAllTopics(topicHandlers)
   }
 
   override fun stop() {

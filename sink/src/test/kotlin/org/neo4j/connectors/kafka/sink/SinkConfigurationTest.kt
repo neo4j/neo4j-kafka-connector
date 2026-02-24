@@ -60,7 +60,9 @@ class SinkConfigurationTest {
               "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                   "CREATE (p:Person{name: event.firstName})",
           )
-      SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+      config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'bar' is not assigned a sink strategy"
   }
 
@@ -79,7 +81,9 @@ class SinkConfigurationTest {
               SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
           )
 
-      SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
+      config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'foo' has multiple strategies defined"
   }
 

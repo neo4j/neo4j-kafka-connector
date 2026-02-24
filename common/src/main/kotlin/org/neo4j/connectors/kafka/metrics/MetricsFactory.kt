@@ -35,7 +35,7 @@ class MetricsFactory {
 
   private fun createKafkaMetrics(context: SourceTaskContext): KafkaMetrics? {
     return try {
-      val metrics = KafkaMetrics(context.pluginMetrics())
+      val metrics = KafkaMetrics(context.pluginMetrics() ?: return null)
       log.info("Plugin metrics support detected")
       metrics
     } catch (_: NoSuchMethodError) {
@@ -47,7 +47,7 @@ class MetricsFactory {
 
   private fun createKafkaMetrics(context: SinkTaskContext): KafkaMetrics? {
     return try {
-      val metrics = KafkaMetrics(context.pluginMetrics())
+      val metrics = KafkaMetrics(context.pluginMetrics() ?: return null)
       log.info("Plugin metrics support detected")
       metrics
     } catch (_: NoSuchMethodError) {

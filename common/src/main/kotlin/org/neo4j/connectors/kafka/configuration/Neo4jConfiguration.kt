@@ -20,6 +20,7 @@ import java.io.Closeable
 import java.io.File
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
@@ -45,7 +46,6 @@ import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.net.ServerAddress
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.time.Duration
 
 enum class ConnectorType(val description: String) {
   SINK("sink"),
@@ -71,19 +71,16 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     get(): List<URI> = getList(URI).map { URI(it) }
 
   internal val connectionTimeout
-    get(): Duration =
-        Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
 
   internal val maxRetryTime
-    get(): Duration =
-        Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
 
   internal val maxConnectionPoolSize
     get(): Int = getInt(POOL_MAX_CONNECTION_POOL_SIZE)
 
   internal val connectionAcquisitionTimeout
-    get(): Duration =
-        Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
 
   internal val idleTimeBeforeTest
     get(): Duration =
@@ -96,8 +93,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         }
 
   internal val maxConnectionLifetime
-    get(): Duration =
-        Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
+    get(): Duration = Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
 
   internal val encrypted
     get(): Boolean = getString(SECURITY_ENCRYPTED).toBoolean()
@@ -316,5 +312,5 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
             .definePoolSettings()
             .defineRetrySettings()
             .defineMetricSettings()
-      }
+  }
 }

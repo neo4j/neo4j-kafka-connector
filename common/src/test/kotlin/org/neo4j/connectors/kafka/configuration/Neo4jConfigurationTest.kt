@@ -382,9 +382,7 @@ class Neo4jConfigurationTest {
   fun `metric settings`() {
     Neo4jConfiguration(
             Neo4jConfiguration.config(),
-            mapOf(
-                Neo4jConfiguration.URI to "bolt://localhost",
-            ),
+            mapOf(Neo4jConfiguration.URI to "bolt://localhost"),
             ConnectorType.SINK,
         )
         .run {
