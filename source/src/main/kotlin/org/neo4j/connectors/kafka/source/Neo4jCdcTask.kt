@@ -17,7 +17,6 @@
 package org.neo4j.connectors.kafka.source
 
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -98,15 +97,16 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
     changeEventConverter = ChangeEventConverter(config.payloadMode)
 
     metricsData = CdcMetricsData(metrics)
-    // todo enable in config
-    dbTransactionMetricsData =
-        DbTransactionMetricsData(
-            metrics = metrics,
-            neo4jDriver = config.driver,
-            sessionConfig = sessionConfig,
-            transactionConfig = transactionConfig,
-            refreshTimeout = 30.seconds, // todo configure this
-        )
+    if (config.lastDbTxIdEnabled) {
+      dbTransactionMetricsData =
+          DbTransactionMetricsData(
+              metrics = metrics,
+              neo4jDriver = config.driver,
+              sessionConfig = sessionConfig,
+              transactionConfig = transactionConfig,
+              refreshTimeout = config.lastDbTxIdRefreshInterval,
+          )
+    }
   }
 
   override fun stop() {

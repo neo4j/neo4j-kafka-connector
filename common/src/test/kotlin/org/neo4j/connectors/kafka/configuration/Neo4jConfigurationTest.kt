@@ -378,6 +378,35 @@ class Neo4jConfigurationTest {
         }
   }
 
+  @Test
+  fun `metric settings`() {
+    Neo4jConfiguration(
+            Neo4jConfiguration.config(),
+            mapOf(
+                Neo4jConfiguration.URI to "bolt://localhost",
+            ),
+            ConnectorType.SINK,
+        )
+        .run {
+          assertFalse(this.lastDbTxIdEnabled)
+          assertEquals(30.seconds, this.lastDbTxIdRefreshInterval)
+        }
+
+    Neo4jConfiguration(
+            Neo4jConfiguration.config(),
+            mapOf(
+                Neo4jConfiguration.URI to "bolt://localhost",
+                Neo4jConfiguration.METRIC_LAST_TX_ID_ENABLED to "true",
+                Neo4jConfiguration.METRIC_LAST_TX_ID_REFRESH_INTERVAL to "1m",
+            ),
+            ConnectorType.SINK,
+        )
+        .run {
+          assertTrue(this.lastDbTxIdEnabled)
+          assertEquals(1.minutes, this.lastDbTxIdRefreshInterval)
+        }
+  }
+
   companion object {
     fun newTempFile(prefix: String = "test", suffix: String = ".tmp"): File {
       val f = File.createTempFile(prefix, suffix)

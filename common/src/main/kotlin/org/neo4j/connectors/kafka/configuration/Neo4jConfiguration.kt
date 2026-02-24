@@ -45,6 +45,7 @@ import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.net.ServerAddress
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import kotlin.time.Duration
 
 enum class ConnectorType(val description: String) {
   SINK("sink"),
@@ -70,33 +71,33 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     get(): List<URI> = getList(URI).map { URI(it) }
 
   internal val connectionTimeout
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
+    get(): Duration =
+        Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
 
   internal val maxRetryTime
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
+    get(): Duration =
+        Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
 
   internal val maxConnectionPoolSize
     get(): Int = getInt(POOL_MAX_CONNECTION_POOL_SIZE)
 
   internal val connectionAcquisitionTimeout
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
+    get(): Duration =
+        Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
 
   internal val idleTimeBeforeTest
-    get(): kotlin.time.Duration =
+    get(): Duration =
         getString(POOL_IDLE_TIME_BEFORE_TEST).orEmpty().run {
           if (this.isEmpty()) {
             (-1).milliseconds
           } else {
-            kotlin.time.Duration.parseSimpleString(this)
+            Duration.parseSimpleString(this)
           }
         }
 
   internal val maxConnectionLifetime
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
+    get(): Duration =
+        Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
 
   internal val encrypted
     get(): Boolean = getString(SECURITY_ENCRYPTED).toBoolean()
@@ -145,6 +146,12 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         strategy.withoutHostnameVerification()
       }
     }
+
+  val lastDbTxIdEnabled
+    get(): Boolean = getString(METRIC_LAST_TX_ID_ENABLED).toBoolean()
+
+  val lastDbTxIdRefreshInterval
+    get(): Duration = Duration.parseSimpleString(getString(METRIC_LAST_TX_ID_REFRESH_INTERVAL))
 
   val driver: Driver by lazy {
     val config = Config.builder()
@@ -277,6 +284,9 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     const val SECURITY_TRUST_STRATEGY = "neo4j.security.trust-strategy"
     const val SECURITY_CERT_FILES = "neo4j.security.cert-files"
 
+    const val METRIC_LAST_TX_ID_ENABLED = "neo4j.metric.last-tx-id.enabled"
+    const val METRIC_LAST_TX_ID_REFRESH_INTERVAL = "neo4j.metric.last-tx-id.refresh-interval"
+
     // internal properties
     const val CONNECTOR_NAME = "name"
     const val TASK_ID = "neo4j.task.id"
@@ -305,5 +315,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
             .defineEncryptionSettings()
             .definePoolSettings()
             .defineRetrySettings()
-  }
+            .defineMetricSettings()
+      }
 }
