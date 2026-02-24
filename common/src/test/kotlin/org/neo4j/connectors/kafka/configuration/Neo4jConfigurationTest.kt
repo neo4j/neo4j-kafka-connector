@@ -361,6 +361,23 @@ class Neo4jConfigurationTest {
         }
   }
 
+  @Test
+  fun `internal variables`() {
+    Neo4jConfiguration(
+            Neo4jConfiguration.config(),
+            mapOf(
+                Neo4jConfiguration.URI to "bolt://localhost",
+                Neo4jConfiguration.TASK_ID to "1",
+                Neo4jConfiguration.CONNECTOR_NAME to "neo4j-connector",
+            ),
+            ConnectorType.SINK,
+        )
+        .run {
+          assertEquals("1", this.taskId)
+          assertEquals("neo4j-connector", this.connectorName)
+        }
+  }
+
   companion object {
     fun newTempFile(prefix: String = "test", suffix: String = ".tmp"): File {
       val f = File.createTempFile(prefix, suffix)

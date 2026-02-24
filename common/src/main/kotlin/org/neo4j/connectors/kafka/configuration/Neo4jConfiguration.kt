@@ -240,10 +240,10 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
   }
 
   val connectorName
-    get(): String = getString(CONNECTOR_NAME)
+    get(): String = originals()[CONNECTOR_NAME].toString()
 
   val taskId
-    get(): Int = getInt(TASK_ID)
+    get(): String = originals()[TASK_ID].toString()
 
   companion object {
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds

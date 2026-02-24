@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.metrics
 
+import java.io.Closeable
 import org.apache.kafka.connect.sink.SinkTaskContext
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
@@ -57,7 +58,7 @@ class MetricsFactory {
   }
 
   private fun createJmxMetrics(config: Neo4jConfiguration): JmxMetrics {
-    log.error("No plugin metrics support detected. Using JMX only metrics")
+    log.info("No plugin metrics support detected. Using JMX only metrics")
     return JmxMetrics(config)
   }
 
@@ -66,7 +67,7 @@ class MetricsFactory {
   }
 }
 
-interface Metrics {
+interface Metrics : Closeable {
   fun <T : Number> addGauge(
       name: String,
       description: String,

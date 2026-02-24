@@ -17,7 +17,6 @@
 package org.neo4j.connectors.kafka.source
 
 import java.util.concurrent.atomic.AtomicReference
-import jdk.internal.platform.Container.metrics
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
@@ -42,6 +41,7 @@ import org.neo4j.connectors.kafka.data.Headers
 import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.metrics.CdcMetricsData
 import org.neo4j.connectors.kafka.metrics.DbTransactionMetricsData
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.metrics.MetricsFactory
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
@@ -62,6 +62,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
 
   internal fun latestOffset(): String = offset.get()
 
+  private lateinit var metrics: Metrics
   private lateinit var metricsData: CdcMetricsData
   private lateinit var dbTransactionMetricsData: DbTransactionMetricsData
 
@@ -79,7 +80,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
     sessionConfig = configBuilder.build()
     transactionConfig = config.txConfig()
 
-    val metrics = metricsFactory.createMetrics(context, config)
+    metrics = metricsFactory.createMetrics(context, config)
 
     cdc =
         CDCClient(
@@ -113,6 +114,9 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
     config.close()
     if (this::dbTransactionMetricsData.isInitialized) {
       dbTransactionMetricsData.stop()
+    }
+    if (this::metrics.isInitialized) {
+      metrics.close()
     }
   }
 

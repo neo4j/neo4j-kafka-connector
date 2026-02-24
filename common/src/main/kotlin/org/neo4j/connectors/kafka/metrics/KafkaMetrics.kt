@@ -16,11 +16,17 @@
  */
 package org.neo4j.connectors.kafka.metrics
 
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+import org.apache.kafka.common.MetricName
 import org.apache.kafka.common.metrics.Gauge
 import org.apache.kafka.common.metrics.MetricConfig
 import org.apache.kafka.common.metrics.PluginMetrics
 
 class KafkaMetrics(private val pluginMetrics: PluginMetrics) : Metrics {
+
+  private val lock = ReentrantLock()
+  private val registeredMetrics: MutableSet<MetricName> = mutableSetOf()
 
   override fun <T : Number> addGauge(
       name: String,
@@ -28,14 +34,21 @@ class KafkaMetrics(private val pluginMetrics: PluginMetrics) : Metrics {
       tags: LinkedHashMap<String, String>,
       valueProvider: () -> T?,
   ) {
-    val metricName = pluginMetrics.metricName(name, description, tags)
-    pluginMetrics.addMetric(
-        metricName,
-        object : Gauge<T> {
-          override fun value(config: MetricConfig?, now: Long): T? {
-            return valueProvider()
-          }
-        },
-    )
+    lock.withLock {
+      val metricName = pluginMetrics.metricName(name, description, tags)
+      registeredMetrics.add(metricName)
+      pluginMetrics.addMetric(
+          metricName,
+          object : Gauge<T> {
+            override fun value(config: MetricConfig?, now: Long): T? {
+              return valueProvider()
+            }
+          },
+      )
+    }
+  }
+
+  override fun close() {
+    lock.withLock { registeredMetrics.forEach(pluginMetrics::removeMetric) }
   }
 }

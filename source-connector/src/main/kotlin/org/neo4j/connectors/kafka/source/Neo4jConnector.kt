@@ -21,6 +21,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.source.ExactlyOnceSupport
 import org.apache.kafka.connect.source.SourceConnector
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration.Companion.TASK_ID
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.source.SourceConfiguration.Companion.STRATEGY
 
@@ -44,7 +45,13 @@ class Neo4jConnector : SourceConnector() {
         SourceType.QUERY -> Neo4jQueryTask::class.java
       }
 
-  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> = listOf(props)
+  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> =
+      (0 until maxTasks).toList().map {
+        buildMap {
+          putAll(props)
+          put(TASK_ID, it.toString())
+        }
+      }
 
   override fun stop() {}
 

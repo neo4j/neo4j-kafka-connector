@@ -20,6 +20,7 @@ import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.connect.connector.Task
 import org.apache.kafka.connect.sink.SinkConnector
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration.Companion.TASK_ID
 import org.neo4j.connectors.kafka.utils.PropertiesUtil
 
 class Neo4jConnector : SinkConnector() {
@@ -27,13 +28,19 @@ class Neo4jConnector : SinkConnector() {
 
   override fun version(): String = PropertiesUtil.getVersion()
 
-  override fun start(props: MutableMap<String, String>?) {
-    this.props = props!!.toMap()
+  override fun start(props: MutableMap<String, String>) {
+    this.props = props.toMap()
   }
 
   override fun taskClass(): Class<out Task> = Neo4jSinkTask::class.java
 
-  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> = List(maxTasks) { props }
+  override fun taskConfigs(maxTasks: Int): List<Map<String, String>> =
+      (0 until maxTasks).toList().map {
+        buildMap {
+          putAll(props)
+          put(TASK_ID, it.toString())
+        }
+      }
 
   override fun stop() {}
 

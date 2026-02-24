@@ -45,13 +45,15 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
 
     metrics = metricsFactory.createMetrics(context, config)
     topicHandlers = SinkStrategyHandler.createFrom(config, metrics)
-    log.error("TTT handlers: {}", topicHandlers.mapValues { it.value.javaClass.name })
   }
 
   override fun stop() {
     // SinkConfiguration could have thrown, leaving config uninitialized
     if (this::config.isInitialized) {
       config.close()
+    }
+    if (this::metrics.isInitialized) {
+      metrics.close()
     }
   }
 
