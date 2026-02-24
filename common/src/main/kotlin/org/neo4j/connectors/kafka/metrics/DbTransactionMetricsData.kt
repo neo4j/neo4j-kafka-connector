@@ -25,6 +25,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.neo4j.driver.AccessMode
 import org.neo4j.driver.Driver
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
@@ -37,6 +38,18 @@ class DbTransactionMetricsData(
     sessionConfig: SessionConfig,
     transactionConfig: TransactionConfig,
 ) {
+
+  private val writeAccessModeSessionConfig: SessionConfig by lazy {
+    val builder = SessionConfig.builder()
+
+    sessionConfig.database().ifPresent { builder.withDatabase(it) }
+    sessionConfig.fetchSize().ifPresent { builder.withFetchSize(it) }
+    sessionConfig.impersonatedUser().ifPresent { builder.withImpersonatedUser(it) }
+    sessionConfig.bookmarks()?.let { builder.withBookmarks(it) }
+
+    builder.withDefaultAccessMode(AccessMode.WRITE)
+    builder.build()
+  }
 
   private val lastTransactionId = AtomicLong(0)
 
@@ -52,10 +65,10 @@ class DbTransactionMetricsData(
     }
 
     scope.launch {
-      val databaseName = sessionConfig.database().orElse("neo4j")
+      val databaseName = writeAccessModeSessionConfig.database().orElse("neo4j")
       while (isActive) {
         val txId =
-            neo4jDriver.session(sessionConfig).use { session ->
+            neo4jDriver.session(writeAccessModeSessionConfig).use { session ->
               session
                   .run(
                       "SHOW DATABASE $databaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId",
