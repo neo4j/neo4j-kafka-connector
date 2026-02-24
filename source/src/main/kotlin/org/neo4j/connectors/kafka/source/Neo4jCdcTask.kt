@@ -137,7 +137,6 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
             .asFlow()
             .onEach {
               lastChangeEvent = it
-              offset.set(it.id.id)
             }
             .flatMapConcat { build(it) }
             .toList(list)
@@ -149,6 +148,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
       }
 
       if (lastChangeEvent != null) {
+        offset.set(lastChangeEvent.id.id)
         metricsData.update(lastChangeEvent)
       }
     }

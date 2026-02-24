@@ -17,12 +17,13 @@
 package org.neo4j.connectors.kafka.metrics
 
 import org.neo4j.cdc.client.model.ChangeEvent
+import java.util.concurrent.atomic.AtomicLong
 
 class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = linkedMapOf()) {
 
-  private var lastTxCommitTs: Long? = null
-  private var lastTxStartTs: Long? = null
-  private var lastTxId: Long? = null
+  private var lastTxCommitTs: AtomicLong = AtomicLong(0L)
+  private var lastTxStartTs: AtomicLong = AtomicLong(0L)
+  private var lastTxId: AtomicLong = AtomicLong(0L)
 
   init {
     metrics.addGauge(
@@ -30,29 +31,29 @@ class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = lin
         "The transaction commit timestamp of the last processed CDC message",
         tags,
     ) {
-      lastTxCommitTs
+      lastTxCommitTs.get()
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
         "The transaction start timestamp of the last processed CDC message",
         tags,
     ) {
-      lastTxStartTs
+      lastTxStartTs.get()
     }
     metrics.addGauge(
         "last_cdc_tx_id",
         "The transaction id of the last processed CDC message",
         tags,
     ) {
-      lastTxId
+      lastTxId.get()
     }
   }
 
   fun update(event: ChangeEvent) {
     event.metadata?.let {
-      lastTxCommitTs = it.txCommitTime.toEpochSecond()
-      lastTxStartTs = it.txStartTime.toEpochSecond()
+      lastTxCommitTs.set(it.txCommitTime.toEpochSecond())
+      lastTxStartTs.set(it.txStartTime.toEpochSecond())
     }
-    lastTxId = event.txId
+    lastTxId.set(event.txId)
   }
 }
