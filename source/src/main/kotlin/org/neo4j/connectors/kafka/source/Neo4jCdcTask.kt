@@ -135,9 +135,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
         cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
             .take(config.batchSize.toLong(), true)
             .asFlow()
-            .onEach {
-              lastChangeEvent = it
-            }
+            .onEach { lastChangeEvent = it }
             .flatMapConcat { build(it) }
             .toList(list)
         if (list.isNotEmpty()) {

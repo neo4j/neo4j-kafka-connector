@@ -16,8 +16,8 @@
  */
 package org.neo4j.connectors.kafka.metrics
 
-import org.neo4j.cdc.client.model.ChangeEvent
 import java.util.concurrent.atomic.AtomicLong
+import org.neo4j.cdc.client.model.ChangeEvent
 
 class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = linkedMapOf()) {
 
