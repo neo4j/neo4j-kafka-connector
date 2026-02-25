@@ -111,6 +111,8 @@ class JmxMetrics(config: Neo4jConfiguration) : Metrics, DynamicMBean {
   )
 
   override fun close() {
-    mbs.unregisterMBean(objectName)
+    if (mbs.isRegistered(objectName)) {
+      mbs.unregisterMBean(objectName)
+    }
   }
 }

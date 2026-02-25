@@ -104,7 +104,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
               neo4jDriver = config.driver,
               sessionConfig = sessionConfig,
               transactionConfig = transactionConfig,
-              refreshTimeout = config.lastDbTxIdRefreshInterval,
+              refreshInterval = config.lastDbTxIdRefreshInterval,
           )
     }
   }
@@ -113,7 +113,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
     log.info("stopping")
     config.close()
     if (this::dbTransactionMetricsData.isInitialized) {
-      dbTransactionMetricsData.stop()
+      dbTransactionMetricsData.close()
     }
     if (this::metrics.isInitialized) {
       metrics.close()
