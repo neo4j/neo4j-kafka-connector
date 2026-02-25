@@ -42,6 +42,8 @@ import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
+import org.neo4j.driver.Bookmark
+import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 
 enum class SourceType(val description: String) {
@@ -396,6 +398,23 @@ class SourceConfiguration(originals: Map<*, *>) :
         .toSet()
   }
 
+  override fun sessionConfig(vararg bookmarks: Bookmark): SessionConfig {
+    val original = super.sessionConfig(*bookmarks)
+    val new = SessionConfig.builder()
+
+    original.database().ifPresent { new.withDatabase(it) }
+    original.fetchSize().ifPresent { new.withFetchSize(it) }
+    original.impersonatedUser().ifPresent { new.withImpersonatedUser(it) }
+    original.bookmarks()?.let { new.withBookmarks(it) }
+
+    new.withDefaultAccessMode(original.defaultAccessMode())
+    if (getBoolean(CDC_USE_LEADER)) {
+      new.withDefaultAccessMode(org.neo4j.driver.AccessMode.WRITE)
+    }
+
+    return new.build()
+  }
+
   override fun txConfig(
       applyCustomMetadata: MutableMap<String, Any>.() -> Unit
   ): TransactionConfig {
@@ -466,6 +485,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
     const val QUERY_TOPIC = "neo4j.query.topic"
     const val QUERY_FORCE_MAPS_AS_STRUCT = "neo4j.query.force-maps-as-struct"
+    const val CDC_USE_LEADER = "neo4j.cdc.use-leader"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
     const val PAYLOAD_MODE = "neo4j.payload-mode"
@@ -501,6 +521,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_QUERY_TIMEOUT = 0.seconds
     private const val DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT = true
 
+    private val DEFAULT_CDC_USE_LEADER = false
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
     private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
@@ -692,6 +713,15 @@ class SourceConfiguration(originals: Map<*, *>) :
                   recommender =
                       Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
                   validator = Range.atLeast(1)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(CDC_USE_LEADER, ConfigDef.Type.BOOLEAN) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CDC_USE_LEADER
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  recommender =
+                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.CDC.name))
                 }
             )
             .define(
