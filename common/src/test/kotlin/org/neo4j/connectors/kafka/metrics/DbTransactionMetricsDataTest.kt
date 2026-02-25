@@ -88,7 +88,7 @@ class DbTransactionMetricsDataTest {
       runCurrent()
 
       val secondIncrement = gaugeCaptor.firstValue()
-      assertNotNull(secondIncrement, "the first increment of transaction id should not be null")
+      assertNotNull(secondIncrement, "the second increment of transaction id should not be null")
       assertEquals(firstIncrement + 1, secondIncrement, "transaction id should increment")
     }
   }
@@ -137,8 +137,8 @@ class DbTransactionMetricsDataTest {
       runCurrent()
 
       val secondIncrement = gaugeCaptor.firstValue()
-      assertNotNull(secondIncrement, "the first increment of transaction id should not be null")
-      assertEquals(firstIncrement, secondIncrement, "transaction id should increment")
+      assertNotNull(secondIncrement, "the second increment of transaction id should not be null")
+      assertEquals(firstIncrement, secondIncrement, "transaction id should not increment")
     }
   }
 
