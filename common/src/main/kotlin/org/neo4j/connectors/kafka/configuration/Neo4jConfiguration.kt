@@ -191,7 +191,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     GraphDatabase.driver(mainUri, authenticationToken, config.build())
   }
 
-  fun sessionConfig(vararg bookmarks: Bookmark): SessionConfig {
+  open fun sessionConfig(vararg bookmarks: Bookmark): SessionConfig {
     val config = SessionConfig.builder()
 
     if (database.isNotBlank()) {
