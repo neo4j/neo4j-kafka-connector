@@ -17,53 +17,12 @@
 package org.neo4j.connectors.kafka.metrics
 
 import java.io.Closeable
-import org.apache.kafka.connect.sink.SinkTaskContext
-import org.apache.kafka.connect.source.SourceTaskContext
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 class MetricsFactory {
 
-  fun createMetrics(context: SinkTaskContext, config: Neo4jConfiguration): Metrics {
-    return createKafkaMetrics(context) ?: createJmxMetrics(config)
-  }
-
-  fun createMetrics(context: SourceTaskContext, config: Neo4jConfiguration): Metrics {
-    return createKafkaMetrics(context) ?: createJmxMetrics(config)
-  }
-
-  private fun createKafkaMetrics(context: SourceTaskContext): KafkaMetrics? {
-    return try {
-      val metrics = KafkaMetrics(context.pluginMetrics() ?: return null)
-      log.info("Plugin metrics support detected")
-      metrics
-    } catch (_: NoSuchMethodError) {
-      null
-    } catch (_: NoClassDefFoundError) {
-      null
-    }
-  }
-
-  private fun createKafkaMetrics(context: SinkTaskContext): KafkaMetrics? {
-    return try {
-      val metrics = KafkaMetrics(context.pluginMetrics() ?: return null)
-      log.info("Plugin metrics support detected")
-      metrics
-    } catch (_: NoSuchMethodError) {
-      null
-    } catch (_: NoClassDefFoundError) {
-      null
-    }
-  }
-
-  private fun createJmxMetrics(config: Neo4jConfiguration): JmxMetrics {
-    log.info("No plugin metrics support detected. Using JMX only metrics")
+  fun createMetrics(config: Neo4jConfiguration): Metrics {
     return JmxMetrics(config)
-  }
-
-  companion object {
-    private val log: Logger = LoggerFactory.getLogger(MetricsFactory::class.java)
   }
 }
 

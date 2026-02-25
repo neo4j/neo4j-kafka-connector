@@ -79,7 +79,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
     sessionConfig = configBuilder.build()
     transactionConfig = config.txConfig()
 
-    metrics = metricsFactory.createMetrics(context, config)
+    metrics = metricsFactory.createMetrics(config)
 
     cdc =
         CDCClient(

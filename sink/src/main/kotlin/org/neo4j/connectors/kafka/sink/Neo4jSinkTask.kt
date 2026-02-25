@@ -43,7 +43,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     settings = props!!
     config = SinkConfiguration(settings)
 
-    metrics = metricsFactory.createMetrics(context, config)
+    metrics = metricsFactory.createMetrics(config)
     topicHandlers = SinkStrategyHandler.createFrom(config, metrics)
     config.validateAllTopics(topicHandlers)
   }
