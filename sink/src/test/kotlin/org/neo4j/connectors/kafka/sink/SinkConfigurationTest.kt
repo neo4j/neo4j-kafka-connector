@@ -39,7 +39,7 @@ import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
+import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -213,10 +213,10 @@ class SinkConfigurationTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CdcHandler>()
+    config.topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
 
-    topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<CdcHandler>()
+    config.topicHandlers shouldHaveKey "bar"
+    config.topicHandlers["bar"] shouldBe instanceOf<SinkHandler>()
   }
 
   @ParameterizedTest
@@ -224,7 +224,7 @@ class SinkConfigurationTest {
   fun `should return multiple CDC schema topics`(
       apocDoItAvailable: Boolean,
       neo4jTarget: Neo4j?,
-      clazz: KClass<CdcHandler>,
+      clazz: KClass<SinkHandler>,
   ) {
     val originals =
         mapOf(
@@ -385,27 +385,27 @@ class SinkConfigurationTest {
                 "APOC DoIt not available 4.4",
                 false,
                 neo4j4_4,
-                CdcHandler::class,
+                SinkHandler::class,
             ),
             Arguments.argumentSet(
                 "APOC DoIt not available 5.26",
                 false,
                 neo4j5_26,
-                CdcHandler::class,
+                SinkHandler::class,
             ),
             Arguments.argumentSet(
                 "APOC DoIt not available 2026.01",
                 false,
                 neo4j2026_01,
-                CdcHandler::class,
+                SinkHandler::class,
             ),
-            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, CdcHandler::class),
-            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26, CdcHandler::class),
+            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, SinkHandler::class),
+            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26, SinkHandler::class),
             Arguments.argumentSet(
                 "APOC DoIt available 2026.01",
                 true,
                 neo4j2026_01,
-                CdcHandler::class,
+                SinkHandler::class,
             ),
         )
   }

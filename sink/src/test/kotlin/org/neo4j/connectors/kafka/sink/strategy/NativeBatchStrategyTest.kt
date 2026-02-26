@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
+package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldMatchInOrder
@@ -22,6 +22,7 @@ import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
 import java.util.stream.Stream
+import kotlin.text.get
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -33,10 +34,7 @@ import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.sink.SinkStrategy
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createKnowsRelationshipEvent
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.createNodePersonEvent
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 
 @Suppress("UNCHECKED_CAST")
 class NativeBatchStrategyTest {
@@ -50,8 +48,13 @@ class NativeBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(createNodePersonEvent("id", 1), 0, 0, 0),
-                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 1), 0, 0, 0),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createKnowsRelationshipEvent(1, 2, 3),
+                    0,
+                    1,
+                    1,
+                ),
             )
         ) {
           transformer.transform(it)
@@ -161,8 +164,13 @@ class NativeBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(createNodePersonEvent("id", 1), 0, 0, 0),
-                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 1), 0, 0, 0),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createKnowsRelationshipEvent(1, 2, 3),
+                    0,
+                    1,
+                    1,
+                ),
             )
         ) {
           transformer.transform(it)
@@ -285,13 +293,13 @@ class NativeBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
-                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
-                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
-                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 0, 0),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 2, 2),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 1, 0, 3),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 1, 1, 4),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 2, 0, 5),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 3, 0, 6),
             )
         ) {
           transformer.transform(it)
@@ -325,10 +333,20 @@ class NativeBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(createNodePersonEvent("id", 42), 0, 0, 0),
-                newChangeEventMessage(createNodePersonEvent("name", "John"), 0, 1, 1),
-                newChangeEventMessage(createNodePersonEvent("id", 23), 1, 0, 2),
-                newChangeEventMessage(createKnowsRelationshipEvent(1, 2, 3), 2, 0, 3),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 42), 0, 0, 0),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createNodePersonEvent("name", "John"),
+                    0,
+                    1,
+                    1,
+                ),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 23), 1, 0, 2),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createKnowsRelationshipEvent(1, 2, 3),
+                    2,
+                    0,
+                    3,
+                ),
             )
         ) {
           transformer.transform(it)

@@ -40,6 +40,8 @@ import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.Neo4jSinkTask
 import org.neo4j.connectors.kafka.sink.SinkStrategy.CDC_SOURCE_ID
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.connectors.kafka.sink.strategy.SinkBatchStrategy
+import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
@@ -52,7 +54,7 @@ import org.testcontainers.containers.Neo4jContainer
 
 abstract class CdcSourceIdHandlerIT(
     val eosOffsetLabel: String,
-    val expectedBatchStrategy: KClass<out CdcBatchStrategy>,
+    val expectedBatchStrategy: KClass<out SinkBatchStrategy>,
 ) {
   abstract fun container(): Neo4jContainer<*>
 
@@ -114,11 +116,11 @@ abstract class CdcSourceIdHandlerIT(
 
     val metricsMock: Metrics = mock()
     val handler = SinkStrategyHandler.createFrom(task.config, metricsMock)["my-topic"]
-    handler shouldBe instanceOf<CdcHandler>()
+    handler shouldBe instanceOf<SinkHandler>()
 
-    val cdcHandler = handler as CdcHandler
-    cdcHandler.eventTransformer shouldBe instanceOf<CdcSourceIdEventTransformer>()
-    cdcHandler.batchStrategy shouldBe instanceOf(expectedBatchStrategy)
+    val sinkHandler = handler as SinkHandler
+    sinkHandler.eventTransformer shouldBe instanceOf<CdcSourceIdEventTransformer>()
+    sinkHandler.batchStrategy shouldBe instanceOf(expectedBatchStrategy)
   }
 
   @Test

@@ -18,6 +18,9 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.cdc.client.model.EntityOperation
+import org.neo4j.cdc.client.model.NodeEvent
+import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.configuration.ConnectorType.SINK
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
@@ -25,29 +28,48 @@ import org.neo4j.connectors.kafka.metrics.CdcMetricsData
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategy
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.connectors.kafka.sink.strategy.SinkData
+import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
 
-class CdcHandler(
-    private val strategy: SinkStrategy,
-    internal val batchStrategy: CdcBatchStrategy,
-    internal val eventTransformer: CdcEventTransformer,
-    metrics: Metrics,
-) : SinkStrategyHandler {
-
-  private val metricsData = CdcMetricsData(metrics, SINK)
-
-  override fun strategy(): SinkStrategy = strategy
-
-  override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
-    return batchStrategy.handle(messages) { eventTransformer.transform(it) }
+interface CdcEventTransformer : SinkEventTransformer {
+  override fun transform(message: SinkMessage): SinkData {
+    val changeEvent = message.toChangeEvent()
+    return transform(changeEvent)
   }
 
-  override fun postProcessLastMessageBatch(group: Iterable<ChangeQuery>) {
-    group.lastOrNull()?.messages?.lastOrNull()?.toChangeEvent()?.let { metricsData.update(it) }
+  fun transform(event: ChangeEvent): SinkData {
+    return when (val e = event.event) {
+      is NodeEvent ->
+          when (e.operation) {
+            EntityOperation.CREATE -> transformCreate(e)
+            EntityOperation.UPDATE -> transformUpdate(e)
+            EntityOperation.DELETE -> transformDelete(e)
+            else -> throw IllegalArgumentException("unknown operation ${e.operation}")
+          }
+      is RelationshipEvent ->
+          when (e.operation) {
+            EntityOperation.CREATE -> transformCreate(e)
+            EntityOperation.UPDATE -> transformUpdate(e)
+            EntityOperation.DELETE -> transformDelete(e)
+            else -> throw IllegalArgumentException("unknown operation ${e.operation}")
+          }
+      else -> throw IllegalArgumentException("unsupported event type ${e.eventType}")
+    }
   }
+
+  fun transformCreate(event: NodeEvent): SinkData
+
+  fun transformUpdate(event: NodeEvent): SinkData
+
+  fun transformDelete(event: NodeEvent): SinkData
+
+  fun transformCreate(event: RelationshipEvent): SinkData
+
+  fun transformUpdate(event: RelationshipEvent): SinkData
+
+  fun transformDelete(event: RelationshipEvent): SinkData
 }
 
 internal fun SinkMessage.toChangeEvent(): ChangeEvent =

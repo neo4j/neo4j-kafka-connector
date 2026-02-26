@@ -14,31 +14,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
-
-import org.neo4j.cdc.client.model.EntityOperation
+package org.neo4j.connectors.kafka.sink.strategy
 
 const val EVENT = "e"
 
-interface CdcData
+interface SinkData
 
-data class CdcNodeData(
-    val operation: EntityOperation,
+enum class OperationType {
+  CREATE,
+  UPDATE,
+  MERGE,
+  DELETE,
+}
+
+data class SinkNodeData(
+    val operation: OperationType,
     val matchLabels: Set<String>,
     val matchProperties: Map<String, Any?>,
     val setProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
-) : CdcData
+) : SinkData
 
-data class CdcRelationshipData(
-    val operation: EntityOperation,
-    val startMatchLabels: Set<String>,
-    val startMatchProperties: Map<String, Any?>,
-    val endMatchLabels: Set<String>,
-    val endMatchProperties: Map<String, Any?>,
+enum class LookupMode {
+  MATCH,
+  MERGE,
+}
+
+data class SinkNodeReference(
+    val labels: Set<String>,
+    val properties: Map<String, Any?>,
+    val lookupMode: LookupMode,
+) {
+  companion object {
+    val EMPTY = SinkNodeReference(emptySet(), emptyMap(), LookupMode.MATCH)
+  }
+}
+
+data class SinkRelationshipData(
+    val operation: OperationType,
+    val startNode: SinkNodeReference,
+    val endNode: SinkNodeReference,
     val matchType: String,
     val matchProperties: Map<String, Any?>,
     val hasKeys: Boolean,
     val setProperties: Map<String, Any?>,
-) : CdcData
+) : SinkData

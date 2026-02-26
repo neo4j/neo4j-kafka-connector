@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.connectors.kafka.sink.strategy.ApocBatchStrategy
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
 import org.neo4j.connectors.kafka.testing.neo4jImage
 import org.neo4j.driver.AuthTokens
