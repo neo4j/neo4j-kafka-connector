@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.metrics
 
+import java.io.Closeable
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,17 +31,16 @@ import org.neo4j.driver.AccessMode
 import org.neo4j.driver.Driver
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
-import java.io.Closeable
 
 class DbTransactionMetricsData(
-  metrics: Metrics,
-  tags: LinkedHashMap<String, String> = linkedMapOf(),
-  refreshInterval: Duration,
-  neo4jDriver: Driver,
-  sessionConfig: SessionConfig,
-  transactionConfig: TransactionConfig,
-  dispatcher: CoroutineDispatcher = Dispatchers.Default,
-): Closeable {
+    metrics: Metrics,
+    tags: LinkedHashMap<String, String> = linkedMapOf(),
+    refreshInterval: Duration,
+    neo4jDriver: Driver,
+    sessionConfig: SessionConfig,
+    transactionConfig: TransactionConfig,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+) : Closeable {
 
   private val writeAccessModeSessionConfig: SessionConfig by lazy {
     val builder = SessionConfig.builder()

@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.metrics
 
 import java.lang.management.ManagementFactory
+import javax.management.MBeanServer
 import javax.management.ObjectName
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,7 +28,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
-import javax.management.MBeanServer
 
 class JmxMetricsTest {
 
@@ -119,13 +119,14 @@ class JmxMetricsTest {
 
     metrics2.close()
     assertFalse(mbs.isRegistered(objectName))
-    
+
     // original metrics close should not fail even if already unregistered
     metrics.close()
   }
 
   companion object {
     val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
-    val objectName: ObjectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+    val objectName: ObjectName =
+        ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
   }
 }

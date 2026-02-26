@@ -16,6 +16,9 @@
  */
 package org.neo4j.connectors.kafka.metrics
 
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
@@ -37,9 +40,6 @@ import org.neo4j.driver.TransactionConfig
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Testcontainers
@@ -57,40 +57,44 @@ class DbTransactionMetricsDataTest {
     val dispatcher = this.coroutineContext[kotlinx.coroutines.CoroutineDispatcher]!!
 
     DbTransactionMetricsData(
-        metrics = metrics,
-        refreshInterval = refreshInterval,
-        neo4jDriver = driver,
-        sessionConfig = sessionConfig,
-        transactionConfig = transactionConfig,
-        dispatcher = dispatcher
-    ).use {
-      val gaugeCaptor = argumentCaptor<() -> Long?>()
-      verify(metrics)
-          .addGauge(
-              eq("last_db_tx_id"),
-              eq("The transaction commit timestamp of the last processed CDC message"),
-              any(),
-              gaugeCaptor.capture(),
+            metrics = metrics,
+            refreshInterval = refreshInterval,
+            neo4jDriver = driver,
+            sessionConfig = sessionConfig,
+            transactionConfig = transactionConfig,
+            dispatcher = dispatcher,
+        )
+        .use {
+          val gaugeCaptor = argumentCaptor<() -> Long?>()
+          verify(metrics)
+              .addGauge(
+                  eq("last_db_tx_id"),
+                  eq("The transaction commit timestamp of the last processed CDC message"),
+                  any(),
+                  gaugeCaptor.capture(),
+              )
+
+          val initialValue = gaugeCaptor.firstValue()
+          assertNotNull(initialValue, "captured transaction id should not be null")
+
+          commitTransaction(driver)
+          runCurrent()
+
+          val firstIncrement = gaugeCaptor.firstValue()
+          assertNotNull(firstIncrement, "the first increment of transaction id should not be null")
+          assertTrue("transaction id should increment") { initialValue < firstIncrement }
+
+          commitTransaction(driver)
+          advanceTimeBy(refreshInterval)
+          runCurrent()
+
+          val secondIncrement = gaugeCaptor.firstValue()
+          assertNotNull(
+              secondIncrement,
+              "the second increment of transaction id should not be null",
           )
-
-      val initialValue = gaugeCaptor.firstValue()
-      assertNotNull(initialValue, "captured transaction id should not be null")
-
-      commitTransaction(driver)
-      runCurrent()
-
-      val firstIncrement = gaugeCaptor.firstValue()
-      assertNotNull(firstIncrement, "the first increment of transaction id should not be null")
-      assertTrue("transaction id should increment") { initialValue < firstIncrement }
-
-      commitTransaction(driver)
-      advanceTimeBy(refreshInterval)
-      runCurrent()
-
-      val secondIncrement = gaugeCaptor.firstValue()
-      assertNotNull(secondIncrement, "the second increment of transaction id should not be null")
-      assertEquals(firstIncrement + 1, secondIncrement, "transaction id should increment")
-    }
+          assertEquals(firstIncrement + 1, secondIncrement, "transaction id should increment")
+        }
   }
 
   @Test
@@ -105,41 +109,45 @@ class DbTransactionMetricsDataTest {
     val dispatcher = this.coroutineContext[kotlinx.coroutines.CoroutineDispatcher]!!
 
     DbTransactionMetricsData(
-        metrics = metrics,
-        refreshInterval = refreshInterval,
-        neo4jDriver = driver,
-        sessionConfig = sessionConfig,
-        transactionConfig = transactionConfig,
-        dispatcher = dispatcher
-    ).use { data ->
-      val gaugeCaptor = argumentCaptor<() -> Long?>()
-      verify(metrics)
-          .addGauge(
-              eq("last_db_tx_id"),
-              eq("The transaction commit timestamp of the last processed CDC message"),
-              any(),
-              gaugeCaptor.capture(),
+            metrics = metrics,
+            refreshInterval = refreshInterval,
+            neo4jDriver = driver,
+            sessionConfig = sessionConfig,
+            transactionConfig = transactionConfig,
+            dispatcher = dispatcher,
+        )
+        .use { data ->
+          val gaugeCaptor = argumentCaptor<() -> Long?>()
+          verify(metrics)
+              .addGauge(
+                  eq("last_db_tx_id"),
+                  eq("The transaction commit timestamp of the last processed CDC message"),
+                  any(),
+                  gaugeCaptor.capture(),
+              )
+
+          val initialValue = gaugeCaptor.firstValue()
+          assertNotNull(initialValue, "captured transaction id should not be null")
+
+          commitTransaction(driver)
+          runCurrent()
+
+          val firstIncrement = gaugeCaptor.firstValue()
+          assertNotNull(firstIncrement, "the first increment of transaction id should not be null")
+          assertTrue("transaction id should increment") { initialValue < firstIncrement }
+
+          data.close()
+          commitTransaction(driver)
+          advanceTimeBy(refreshInterval)
+          runCurrent()
+
+          val secondIncrement = gaugeCaptor.firstValue()
+          assertNotNull(
+              secondIncrement,
+              "the second increment of transaction id should not be null",
           )
-
-      val initialValue = gaugeCaptor.firstValue()
-      assertNotNull(initialValue, "captured transaction id should not be null")
-
-      commitTransaction(driver)
-      runCurrent()
-
-      val firstIncrement = gaugeCaptor.firstValue()
-      assertNotNull(firstIncrement, "the first increment of transaction id should not be null")
-      assertTrue("transaction id should increment") { initialValue < firstIncrement }
-
-      data.close()
-      commitTransaction(driver)
-      advanceTimeBy(refreshInterval)
-      runCurrent()
-
-      val secondIncrement = gaugeCaptor.firstValue()
-      assertNotNull(secondIncrement, "the second increment of transaction id should not be null")
-      assertEquals(firstIncrement, secondIncrement, "transaction id should not increment")
-    }
+          assertEquals(firstIncrement, secondIncrement, "transaction id should not increment")
+        }
   }
 
   companion object {
@@ -151,13 +159,12 @@ class DbTransactionMetricsDataTest {
             .withExposedPorts(7687)
             .withoutAuthentication()
 
-
     private fun commitTransaction(driver: Driver) {
       driver.session().use { session ->
-        session.run($$"CREATE (n: TestNode {id: $id})", mapOf("id" to UUID.randomUUID().toString()))
+        session
+            .run("CREATE (n: TestNode {id: ${'$'}id})", mapOf("id" to UUID.randomUUID().toString()))
             .consume()
       }
     }
   }
-
 }
