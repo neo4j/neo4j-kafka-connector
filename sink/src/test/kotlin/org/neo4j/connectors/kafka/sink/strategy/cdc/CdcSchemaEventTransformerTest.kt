@@ -35,6 +35,7 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.OperationType
 import org.neo4j.connectors.kafka.sink.strategy.SinkNodeData
 import org.neo4j.connectors.kafka.sink.strategy.SinkRelationshipData
 import org.neo4j.connectors.kafka.utils.JSONUtils
@@ -56,7 +57,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkNodeData
 
-    result.operation shouldBe EntityOperation.CREATE
+    result.operation shouldBe OperationType.MERGE
     result.matchLabels shouldBe setOf("Person")
     result.matchProperties shouldBe mapOf("id" to 1)
     result.setProperties shouldBe mapOf("id" to 1, "name" to "John")
@@ -81,7 +82,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkNodeData
 
-    result.operation shouldBe EntityOperation.UPDATE
+    result.operation shouldBe OperationType.MERGE
     result.matchLabels shouldBe setOf("Person")
     result.matchProperties shouldBe mapOf("id" to 1)
     result.setProperties shouldBe mapOf("salary" to 1000)
@@ -103,7 +104,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkNodeData
 
-    result.operation shouldBe EntityOperation.DELETE
+    result.operation shouldBe OperationType.DELETE
     result.matchLabels shouldBe setOf("Person")
     result.matchProperties shouldBe mapOf("id" to 1)
     result.setProperties shouldBe emptyMap()
@@ -127,7 +128,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.CREATE
+    result.operation shouldBe OperationType.MERGE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
@@ -154,7 +155,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.CREATE
+    result.operation shouldBe OperationType.MERGE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
@@ -181,7 +182,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.UPDATE
+    result.operation shouldBe OperationType.UPDATE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
@@ -208,7 +209,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.UPDATE
+    result.operation shouldBe OperationType.UPDATE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
@@ -235,7 +236,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.DELETE
+    result.operation shouldBe OperationType.DELETE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
@@ -262,7 +263,7 @@ class CdcSchemaEventTransformerTest {
 
     val result = transformer.transform(changeEvent(event)) as SinkRelationshipData
 
-    result.operation shouldBe EntityOperation.DELETE
+    result.operation shouldBe OperationType.DELETE
     result.startNode.labels shouldBe setOf("Person")
     result.startNode.properties shouldBe mapOf("id" to 1)
     result.endNode.labels shouldBe setOf("Person")
