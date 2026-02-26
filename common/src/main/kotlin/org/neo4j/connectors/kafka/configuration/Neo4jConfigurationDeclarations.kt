@@ -19,7 +19,6 @@ package org.neo4j.connectors.kafka.configuration
 import java.net.URI
 import java.util.function.Predicate
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
@@ -387,30 +386,3 @@ fun ConfigDef.defineRetrySettings(): ConfigDef =
           validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
         }
     )
-
-fun ConfigDef.defineMetricSettings(): ConfigDef =
-    this.define(
-            ConfigKeyBuilder.of(
-                Neo4jConfiguration.METRIC_LAST_TX_ID_ENABLED,
-                ConfigDef.Type.STRING,
-            ) {
-              importance = Importance.LOW
-              defaultValue = "false"
-              group = Groups.CONNECTOR_ADVANCED.title
-              validator = Validators.bool()
-              recommender = Recommenders.bool()
-              documentation = "Whether the last transaction ID metric is enabled."
-            }
-        )
-        .define(
-            ConfigKeyBuilder.of(
-                Neo4jConfiguration.METRIC_LAST_TX_ID_REFRESH_INTERVAL,
-                ConfigDef.Type.STRING,
-            ) {
-              importance = Importance.LOW
-              defaultValue = 30.seconds.toSimpleString()
-              group = Groups.CONNECTOR_ADVANCED.title
-              validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-              documentation = "The refresh interval for the last transaction ID metric."
-            }
-        )

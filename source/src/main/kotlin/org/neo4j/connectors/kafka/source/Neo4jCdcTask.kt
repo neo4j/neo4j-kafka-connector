@@ -37,7 +37,6 @@ import org.neo4j.cdc.client.model.ChangeIdentifier
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
-import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.metrics.CdcMetricsData
 import org.neo4j.connectors.kafka.metrics.DbTransactionMetricsData
 import org.neo4j.connectors.kafka.metrics.Metrics
@@ -56,7 +55,6 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
   private lateinit var transactionConfig: TransactionConfig
   private lateinit var cdc: CDCService
   private lateinit var offset: AtomicReference<String>
-  private lateinit var converter: ValueConverter
   private lateinit var changeEventConverter: ChangeEventConverter
 
   internal fun latestOffset(): String = offset.get()

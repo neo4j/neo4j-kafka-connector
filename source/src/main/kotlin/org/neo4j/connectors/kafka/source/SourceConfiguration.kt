@@ -22,6 +22,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
+import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
 import org.apache.kafka.common.config.ConfigException
 import org.neo4j.cdc.client.model.EntityOperation
@@ -118,6 +119,12 @@ class SourceConfiguration(originals: Map<*, *>) :
 
   val cdcPollingDuration
     get(): Duration = Duration.parseSimpleString(getString(CDC_POLL_DURATION))
+
+  val lastDbTxIdEnabled
+    get(): Boolean = getString(CDC_METRIC_LAST_TX_ID_ENABLED).toBoolean()
+
+  val lastDbTxIdRefreshInterval
+    get(): Duration = Duration.parseSimpleString(getString(CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL))
 
   val cdcSelectorsToTopics: Map<Selector, List<String>> by lazy {
     when (strategy) {
@@ -515,6 +522,10 @@ class SourceConfiguration(originals: Map<*, *>) :
             "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$"
         )
 
+    const val CDC_METRIC_LAST_TX_ID_ENABLED = "neo4j.cdc.metric.last-tx-id.enabled"
+    const val CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL =
+        "neo4j.cdc.metric.last-tx-id.refresh-interval"
+
     private val DEFAULT_QUERY_POLL_INTERVAL = 1.seconds
     private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
     private const val DEFAULT_BATCH_SIZE = 1000
@@ -751,6 +762,25 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.enum(PayloadMode::class.java)
                   recommender = Recommenders.enum(PayloadMode::class.java)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(CDC_METRIC_LAST_TX_ID_ENABLED, ConfigDef.Type.STRING) {
+                  importance = Importance.LOW
+                  defaultValue = "false"
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
+                  documentation = "Whether the last transaction ID metric is enabled."
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL, ConfigDef.Type.STRING) {
+                  importance = Importance.LOW
+                  defaultValue = 30.seconds.toSimpleString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
+                  documentation = "The refresh interval for the last transaction ID metric."
                 }
             )
   }
