@@ -67,7 +67,7 @@ class DbTransactionMetricsDataTest {
           verify(metrics)
               .addGauge(
                   eq("last_db_tx_id"),
-                  eq("The transaction commit timestamp of the last processed CDC message"),
+                  eq("The last committed transaction id in the database"),
                   any(),
                   gaugeCaptor.capture(),
               )
@@ -118,7 +118,7 @@ class DbTransactionMetricsDataTest {
           verify(metrics)
               .addGauge(
                   eq("last_db_tx_id"),
-                  eq("The transaction commit timestamp of the last processed CDC message"),
+                  eq("The last committed transaction id in the database"),
                   any(),
                   gaugeCaptor.capture(),
               )
