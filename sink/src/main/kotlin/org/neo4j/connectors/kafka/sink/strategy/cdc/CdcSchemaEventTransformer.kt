@@ -19,18 +19,20 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
-import org.neo4j.connectors.kafka.sink.strategy.OperationType
-import org.neo4j.connectors.kafka.sink.strategy.SinkNodeData
-import org.neo4j.connectors.kafka.sink.strategy.SinkNodeReference
-import org.neo4j.connectors.kafka.sink.strategy.SinkRelationshipData
+import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 
 class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
-  override fun transformCreate(event: NodeEvent): SinkNodeData {
+  override fun transformCreate(event: NodeEvent): SinkAction {
     if (event.before != null) {
       throw InvalidDataException(
           "create operation requires 'before' field to be unset in the event object."
@@ -43,8 +45,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
-    return SinkNodeData(
-        OperationType.MERGE,
+    return MergeNodeSinkAction(
         matchLabels,
         matchProperties,
         event.after.properties,
@@ -53,7 +54,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     )
   }
 
-  override fun transformUpdate(event: NodeEvent): SinkNodeData {
+  override fun transformUpdate(event: NodeEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
@@ -63,8 +64,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
-    return SinkNodeData(
-        OperationType.MERGE,
+    return MergeNodeSinkAction(
         matchLabels,
         matchProperties,
         event.mutatedProperties(),
@@ -73,7 +73,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     )
   }
 
-  override fun transformDelete(event: NodeEvent): SinkNodeData {
+  override fun transformDelete(event: NodeEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("delete operation requires 'before' field in the event object.")
     }
@@ -86,17 +86,10 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
-    return SinkNodeData(
-        OperationType.DELETE,
-        matchLabels,
-        matchProperties,
-        emptyMap(),
-        emptySet(),
-        emptySet(),
-    )
+    return DeleteNodeSinkAction(matchLabels, matchProperties)
   }
 
-  override fun transformCreate(event: RelationshipEvent): SinkRelationshipData {
+  override fun transformCreate(event: RelationshipEvent): SinkAction {
     if (event.before != null) {
       throw InvalidDataException(
           "create operation requires 'before' field to be unset in the event object."
@@ -112,18 +105,17 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
-    return SinkRelationshipData(
-        OperationType.MERGE,
-        SinkNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
+    return MergeRelationshipSinkAction(
+        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
+        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
         relMatchType,
         relMatchProperties,
-        event.keys.isNotEmpty(),
         event.after.properties,
+        event.keys.isNotEmpty(),
     )
   }
 
-  override fun transformUpdate(event: RelationshipEvent): SinkRelationshipData {
+  override fun transformUpdate(event: RelationshipEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
@@ -139,18 +131,17 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
-    return SinkRelationshipData(
-        OperationType.UPDATE,
-        SinkNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
+    return MergeRelationshipSinkAction(
+        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
+        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
         relMatchType,
         relMatchProperties,
-        relationshipKeys.isNotEmpty(),
         event.mutatedProperties(),
+        relationshipKeys.isNotEmpty(),
     )
   }
 
-  override fun transformDelete(event: RelationshipEvent): SinkRelationshipData {
+  override fun transformDelete(event: RelationshipEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("delete operation requires 'before' field in the event object.")
     }
@@ -169,14 +160,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
-    return SinkRelationshipData(
-        OperationType.DELETE,
-        SinkNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
+    return DeleteRelationshipSinkAction(
+        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
+        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
         relMatchType,
         relMatchProperties,
         relationshipKeys.isNotEmpty(),
-        emptyMap(),
     )
   }
 

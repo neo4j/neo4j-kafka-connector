@@ -34,11 +34,11 @@ class NativeBatchStrategy(
     private val strategy: SinkStrategy,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultSinkDataStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
 
   override fun handle(
       messages: Iterable<SinkMessage>,
-      eventTransformer: (SinkMessage) -> SinkData,
+      eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>> {
     val (topic, partition) =
         messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
@@ -82,7 +82,7 @@ class NativeBatchStrategy(
     }
 
     events.forEach { event ->
-      val query = statementGenerator.buildStatement(event.sinkData, "${EVENT}.params")
+      val query = statementGenerator.buildStatement(event.sinkAction, "${EVENT}.params")
 
       if (!queries.containsKey(query.text()) && (queries.size >= maxBatchedStatements)) {
         flush()

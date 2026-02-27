@@ -37,12 +37,12 @@ class SinkHandler(
 interface SinkBatchStrategy {
   fun handle(
       messages: Iterable<SinkMessage>,
-      eventTransformer: (SinkMessage) -> SinkData,
+      eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>>
 }
 
 interface SinkEventTransformer {
-  fun transform(message: SinkMessage): SinkData
+  fun transform(message: SinkMessage): SinkAction
 }
 
-data class MessageToEvent(val message: SinkMessage, val sinkData: SinkData)
+data class MessageToEvent(val message: SinkMessage, val sinkAction: SinkAction)

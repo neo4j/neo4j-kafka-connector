@@ -28,18 +28,18 @@ import org.neo4j.connectors.kafka.metrics.CdcMetricsData
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.strategy.SinkData
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsSinkEntity
 import org.neo4j.connectors.kafka.sink.strategy.legacy.toStreamsTransactionEvent
 
 interface CdcEventTransformer : SinkEventTransformer {
-  override fun transform(message: SinkMessage): SinkData {
+  override fun transform(message: SinkMessage): SinkAction {
     val changeEvent = message.toChangeEvent()
     return transform(changeEvent)
   }
 
-  fun transform(event: ChangeEvent): SinkData {
+  fun transform(event: ChangeEvent): SinkAction {
     return when (val e = event.event) {
       is NodeEvent ->
           when (e.operation) {
@@ -59,17 +59,17 @@ interface CdcEventTransformer : SinkEventTransformer {
     }
   }
 
-  fun transformCreate(event: NodeEvent): SinkData
+  fun transformCreate(event: NodeEvent): SinkAction
 
-  fun transformUpdate(event: NodeEvent): SinkData
+  fun transformUpdate(event: NodeEvent): SinkAction
 
-  fun transformDelete(event: NodeEvent): SinkData
+  fun transformDelete(event: NodeEvent): SinkAction
 
-  fun transformCreate(event: RelationshipEvent): SinkData
+  fun transformCreate(event: RelationshipEvent): SinkAction
 
-  fun transformUpdate(event: RelationshipEvent): SinkData
+  fun transformUpdate(event: RelationshipEvent): SinkAction
 
-  fun transformDelete(event: RelationshipEvent): SinkData
+  fun transformDelete(event: RelationshipEvent): SinkAction
 }
 
 internal fun SinkMessage.toChangeEvent(): ChangeEvent =
