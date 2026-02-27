@@ -28,7 +28,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.neo4j.driver.Driver
-import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -38,8 +37,8 @@ class DbTransactionMetricsData(
     tags: LinkedHashMap<String, String> = linkedMapOf(),
     refreshInterval: Duration,
     neo4jDriver: Driver,
-    sessionConfig: SessionConfig,
     transactionConfig: TransactionConfig,
+    databaseName: String,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : Closeable {
 
@@ -52,15 +51,15 @@ class DbTransactionMetricsData(
     }
 
     scope.launch {
-      val databaseName = sessionConfig.database().orElse("neo4j")
       while (isActive) {
         try {
+          val explicitDatabaseName = databaseName.ifBlank { "neo4j" }
           val txId: Long =
-              neo4jDriver.session(sessionConfig).use { session ->
+              neo4jDriver.session().use { session ->
                 session.writeTransaction(
                     { tx ->
                       tx.run(
-                              "SHOW DATABASE $databaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId"
+                              "SHOW DATABASE $explicitDatabaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId"
                           )
                           .single()
                           .get("txId")

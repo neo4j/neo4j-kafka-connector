@@ -35,7 +35,6 @@ import org.neo4j.connectors.kafka.data.TypesTest.Companion.neo4jImage
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
@@ -50,7 +49,6 @@ class DbTransactionMetricsDataTest {
     val metrics = mock<Metrics>()
 
     val refreshInterval = 100.milliseconds
-    val sessionConfig = SessionConfig.builder().build()
     val transactionConfig = TransactionConfig.builder().build()
 
     val driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
@@ -60,7 +58,7 @@ class DbTransactionMetricsDataTest {
             metrics = metrics,
             refreshInterval = refreshInterval,
             neo4jDriver = driver,
-            sessionConfig = sessionConfig,
+            databaseName = "",
             transactionConfig = transactionConfig,
             dispatcher = dispatcher,
         )
@@ -102,7 +100,6 @@ class DbTransactionMetricsDataTest {
     val metrics = mock<Metrics>()
 
     val refreshInterval = 100.milliseconds
-    val sessionConfig = SessionConfig.builder().build()
     val transactionConfig = TransactionConfig.builder().build()
 
     val driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
@@ -112,7 +109,7 @@ class DbTransactionMetricsDataTest {
             metrics = metrics,
             refreshInterval = refreshInterval,
             neo4jDriver = driver,
-            sessionConfig = sessionConfig,
+            databaseName = "",
             transactionConfig = transactionConfig,
             dispatcher = dispatcher,
         )

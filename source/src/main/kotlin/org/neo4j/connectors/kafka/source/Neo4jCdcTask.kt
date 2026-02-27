@@ -100,7 +100,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
           DbTransactionMetricsData(
               metrics = metrics,
               neo4jDriver = config.driver,
-              sessionConfig = sessionConfig,
+              databaseName = config.database,
               transactionConfig = transactionConfig,
               refreshInterval = config.lastDbTxIdRefreshInterval,
           )
