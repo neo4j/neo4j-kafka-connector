@@ -18,8 +18,13 @@ package org.neo4j.connectors.kafka.metrics
 
 import java.util.concurrent.atomic.AtomicLong
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.configuration.ConnectorType
 
-class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = linkedMapOf()) {
+class CdcMetricsData(
+    metrics: Metrics,
+    connectorType: ConnectorType,
+    tags: LinkedHashMap<String, String> = linkedMapOf(),
+) {
 
   private var lastTxCommitTs: AtomicLong = AtomicLong(0L)
   private var lastTxStartTs: AtomicLong = AtomicLong(0L)
@@ -28,21 +33,21 @@ class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = lin
   init {
     metrics.addGauge(
         "last_cdc_tx_commit_timestamp",
-        "The transaction commit timestamp of the last processed CDC message",
+        "The transaction commit timestamp of the last ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
       lastTxCommitTs.get()
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
-        "The transaction start timestamp of the last processed CDC message",
+        "The transaction start timestamp of the last ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
       lastTxStartTs.get()
     }
     metrics.addGauge(
         "last_cdc_tx_id",
-        "The transaction id of the last processed CDC message",
+        "The transaction id of the last ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
       lastTxId.get()
@@ -55,5 +60,13 @@ class CdcMetricsData(metrics: Metrics, tags: LinkedHashMap<String, String> = lin
       lastTxStartTs.set(it.txStartTime.toEpochSecond())
     }
     lastTxId.set(event.txId)
+  }
+
+  companion object {
+    private fun ConnectorType.descriptionActionVerb(): String =
+        when (this) {
+          ConnectorType.SOURCE -> "polled"
+          ConnectorType.SINK -> "pushed"
+        }
   }
 }

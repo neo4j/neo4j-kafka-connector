@@ -59,7 +59,8 @@ class DbTransactionMetricsData(
                 session.writeTransaction(
                     { tx ->
                       tx.run(
-                              "SHOW DATABASE $explicitDatabaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId"
+                              "SHOW DATABASE ${"$"}dbName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId",
+                              mapOf("dbName" to explicitDatabaseName),
                           )
                           .single()
                           .get("txId")

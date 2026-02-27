@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.configuration.ConnectorType.SINK
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
 import org.neo4j.connectors.kafka.metrics.CdcMetricsData
@@ -36,7 +37,7 @@ class CdcHandler(
     metrics: Metrics,
 ) : SinkStrategyHandler {
 
-  private val metricsData = CdcMetricsData(metrics)
+  private val metricsData = CdcMetricsData(metrics, SINK)
 
   override fun strategy(): SinkStrategy = strategy
 

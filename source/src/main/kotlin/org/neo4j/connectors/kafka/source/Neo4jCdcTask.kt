@@ -34,6 +34,7 @@ import org.neo4j.cdc.client.CDCClient
 import org.neo4j.cdc.client.CDCService
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.connectors.kafka.configuration.ConnectorType.SOURCE
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
@@ -94,7 +95,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
 
     changeEventConverter = ChangeEventConverter(config.payloadMode)
 
-    metricsData = CdcMetricsData(metrics)
+    metricsData = CdcMetricsData(metrics, SOURCE)
     if (config.lastDbTxIdEnabled) {
       dbTransactionMetricsData =
           DbTransactionMetricsData(
