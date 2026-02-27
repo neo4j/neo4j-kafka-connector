@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.instanceOf
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -35,8 +36,8 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
@@ -112,7 +113,9 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<CudHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.CUD
+    }
   }
 
   @Test

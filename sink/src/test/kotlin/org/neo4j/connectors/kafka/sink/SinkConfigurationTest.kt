@@ -36,10 +36,10 @@ import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.metrics.Metrics
-import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
+import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -262,10 +262,14 @@ class SinkConfigurationTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CudHandler>()
+    topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
+    val fooHandler = topicHandlers["foo"] as SinkHandler
+    fooHandler.eventTransformer shouldBe instanceOf<CudEventTransformer>()
 
     topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<CudHandler>()
+    topicHandlers["bar"] shouldBe instanceOf<SinkHandler>()
+    val barHandler = topicHandlers["bar"] as SinkHandler
+    barHandler.eventTransformer shouldBe instanceOf<CudEventTransformer>()
   }
 
   @ParameterizedTest

@@ -17,11 +17,11 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.CreateRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class CreateRelationship(
     val type: String,
@@ -29,7 +29,7 @@ data class CreateRelationship(
     val end: NodeReference,
     val properties: Map<String, Any?>,
 ) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
+  override fun toAction(): SinkAction {
     if (type.isEmpty()) {
       throw InvalidDataException("'${Keys.RELATION_TYPE}' must be specified.")
     }
@@ -40,22 +40,11 @@ data class CreateRelationship(
       )
     }
 
-    val startParam = Cypher.parameter("start")
-    val endParam = Cypher.parameter("end")
-    val propertiesParam = Cypher.parameter("properties")
-    val (startNode, endNode, lookup) = lookupNodes(start, end, startParam, endParam)
-    val relationship = startNode.relationshipTo(endNode, type).named("r")
-
-    val stmt =
-        renderer.render(lookup.create(relationship).set(relationship, propertiesParam).build())
-
-    return Query(
-        stmt,
-        mapOf(
-            "start" to mapOf("keys" to start.ids),
-            "end" to mapOf("keys" to end.ids),
-            "properties" to properties,
-        ),
+    return CreateRelationshipSinkAction(
+        startNode = SinkActionNodeReference(buildNodeMatcher(start.labels, start.ids), start.op),
+        endNode = SinkActionNodeReference(buildNodeMatcher(end.labels, end.ids), end.op),
+        type = type,
+        properties = properties,
     )
   }
 

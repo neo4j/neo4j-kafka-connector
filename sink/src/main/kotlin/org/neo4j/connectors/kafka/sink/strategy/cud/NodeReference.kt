@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
 import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.connectors.kafka.utils.MapUtils.getTyped

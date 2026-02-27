@@ -28,14 +28,15 @@ import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.ApocBatchStrategy
-import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
+import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -287,7 +288,25 @@ interface SinkStrategyHandler {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
-        handler = CudHandler(topic, config.renderer, config.batchSize)
+        val batchStrategy =
+            if (config.isApocCypherDoItAvailable()) {
+              ApocBatchStrategy(
+                  config.neo4j(),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SCHEMA,
+              )
+            } else {
+              NativeBatchStrategy(
+                  config.neo4j(),
+                  config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CDC_SCHEMA,
+              )
+            }
+
+        handler = SinkHandler(SinkStrategy.CUD, batchStrategy, CudEventTransformer())
       }
 
       return handler ?: throw ConfigException("Topic '$topic' is not assigned a sink strategy")

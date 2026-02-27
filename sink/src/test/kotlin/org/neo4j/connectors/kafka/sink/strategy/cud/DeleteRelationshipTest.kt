@@ -21,8 +21,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
-import org.neo4j.cypherdsl.parser.CypherParser
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 
 class DeleteRelationshipTest {
   @Test
@@ -35,25 +38,17 @@ class DeleteRelationshipTest {
             emptyMap(),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            CypherParser.parse(
-                    """
-                      MATCH (start:`LabelA` {id: ${'$'}start.keys.id})
-                      WITH start 
-                      MATCH (end:`LabelB` {id: ${'$'}end.keys.id}) 
-                      WITH start, end 
-                      MATCH (start)-[r:`RELATED` {}]->(end)
-                      DELETE r
-                    """
-                        .trimIndent()
-                )
-                .cypher,
-            mapOf(
-                "start" to mapOf("keys" to mapOf("id" to 1)),
-                "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to emptyMap(),
+    operation.toAction() shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelA"), mapOf("id" to 1)),
+                LookupMode.MATCH,
             ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelB"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
         )
   }
 
@@ -67,25 +62,17 @@ class DeleteRelationshipTest {
             mapOf("id" to 3),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            CypherParser.parse(
-                    """
-                      MATCH (start:`LabelA` {id: ${'$'}start.keys.id})
-                      WITH start 
-                      MATCH (end:`LabelB` {id: ${'$'}end.keys.id}) 
-                      WITH start, end 
-                      MATCH (start)-[r:`RELATED` {id: ${'$'}keys.id}]->(end)
-                      DELETE r
-                    """
-                        .trimIndent()
-                )
-                .cypher,
-            mapOf(
-                "start" to mapOf("keys" to mapOf("id" to 1)),
-                "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to mapOf("id" to 3),
+    operation.toAction() shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelA"), mapOf("id" to 1)),
+                LookupMode.MATCH,
             ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelB"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("RELATED", mapOf("id" to 3), true),
         )
   }
 
@@ -99,25 +86,11 @@ class DeleteRelationshipTest {
             emptyMap(),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            CypherParser.parse(
-                    """
-                      MATCH (start) WHERE id(start) = ${'$'}start.keys._id
-                      WITH start 
-                      MATCH (end) WHERE id(end) = ${'$'}end.keys._id 
-                      WITH start, end 
-                      MATCH (start)-[r:`RELATED` {}]->(end) 
-                      DELETE r
-                    """
-                        .trimIndent()
-                )
-                .cypher,
-            mapOf(
-                "start" to mapOf("keys" to mapOf("_id" to 1)),
-                "end" to mapOf("keys" to mapOf("_id" to 2)),
-                "keys" to emptyMap(),
-            ),
+    operation.toAction() shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ById(2), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
         )
   }
 
@@ -131,23 +104,11 @@ class DeleteRelationshipTest {
             emptyMap(),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            """
-            MATCH (start) WHERE elementId(start) = ${'$'}start.keys._elementId 
-            WITH start 
-            MATCH (end) WHERE elementId(end) = ${'$'}end.keys._elementId 
-            WITH start, end 
-            MATCH (start)-[r:`RELATED` {}]->(end) 
-            DELETE r
-            """
-                .trimIndent()
-                .replace(System.lineSeparator(), ""),
-            mapOf(
-                "start" to mapOf("keys" to mapOf("_elementId" to "db:1")),
-                "end" to mapOf("keys" to mapOf("_elementId" to "db:2")),
-                "keys" to emptyMap(),
-            ),
+    operation.toAction() shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId("db:1"), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId("db:2"), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
         )
   }
 
@@ -161,24 +122,17 @@ class DeleteRelationshipTest {
             emptyMap(),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            CypherParser.parse(
-                    """
-                      MATCH (start:`LabelA`:`LabelC` {id: ${'$'}start.keys.id})
-                      WITH start 
-                      MATCH (end:`LabelB`:`LabelD` {id: ${'$'}end.keys.id}) 
-                      WITH start, end 
-                      MATCH (start)-[r:`RELATED` {}]->(end) DELETE r
-                    """
-                        .trimIndent()
-                )
-                .cypher,
-            mapOf(
-                "start" to mapOf("keys" to mapOf("id" to 1)),
-                "end" to mapOf("keys" to mapOf("id" to 2)),
-                "keys" to emptyMap(),
+    operation.toAction() shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelA", "LabelC"), mapOf("id" to 1)),
+                LookupMode.MATCH,
             ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("LabelB", "LabelD"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
         )
   }
 
@@ -192,7 +146,7 @@ class DeleteRelationshipTest {
         val operation = DeleteRelationship("RELATED", from, to, emptyMap())
 
         org.junit.jupiter.api.assertThrows<InvalidDataException> {
-          operation.toQuery()
+          operation.toAction()
         } shouldHaveMessage "'from' and 'to' must contain at least one ID property."
       }
     }
@@ -209,7 +163,7 @@ class DeleteRelationshipTest {
         )
 
     org.junit.jupiter.api.assertThrows<InvalidDataException> {
-      operation.toQuery()
+      operation.toAction()
     } shouldHaveMessage "'rel_type' must be specified."
   }
 
@@ -223,7 +177,7 @@ class DeleteRelationshipTest {
         val operation = DeleteRelationship("RELATED", from, to, emptyMap())
 
         org.junit.jupiter.api.assertThrows<InvalidDataException> {
-          operation.toQuery()
+          operation.toAction()
         } shouldHaveMessage
             "'from' and 'to' must have 'op' as 'MATCH' for relationship deletion operations."
       }

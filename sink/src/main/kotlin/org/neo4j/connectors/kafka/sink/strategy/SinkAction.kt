@@ -16,6 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import com.fasterxml.jackson.annotation.JsonCreator
+
 const val EVENT = "e"
 
 sealed class SinkAction
@@ -75,7 +77,20 @@ data class DeleteNodeSinkAction(val matcher: NodeMatcher, val detach: Boolean = 
 
 enum class LookupMode {
   MATCH,
-  MERGE,
+  MERGE;
+
+  companion object {
+    @JvmStatic
+    @JsonCreator
+    fun fromString(key: String?): LookupMode? {
+      for (mode in LookupMode.entries) {
+        if (mode.name.equals(key, true)) {
+          return mode
+        }
+      }
+      return null
+    }
+  }
 }
 
 data class SinkActionNodeReference(val matcher: NodeMatcher, val lookupMode: LookupMode) {

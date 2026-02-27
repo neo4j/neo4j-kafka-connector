@@ -18,21 +18,36 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.shouldBe
 import org.apache.kafka.connect.data.Schema
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.sink.ChangeQuery
+import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.cypherdsl.parser.CypherParser
 import org.neo4j.driver.Query
 
 class CudHandlerTest : HandlerTest() {
+  lateinit var handler: SinkHandler
+
+  @BeforeEach
+  fun setUp() {
+    handler =
+        SinkHandler(
+            SinkStrategy.CUD,
+            NativeBatchStrategy(neo4j2026_1, 20, 1000, "", SinkStrategy.CUD),
+            CudEventTransformer(),
+        )
+  }
 
   @Test
   fun `should create node`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -67,8 +82,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should create node without labels`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -101,8 +114,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should update node`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -145,8 +156,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should update node without labels`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -188,8 +197,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should merge node`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -232,8 +239,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should merge node without labels`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -275,8 +280,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should delete node`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -313,8 +316,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should delete node without labels`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -347,8 +348,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should delete node without detach`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -382,8 +381,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should create relationship`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -440,8 +437,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should create relationship by merging nodes`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -500,8 +495,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should update relationship`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -560,8 +553,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should update relationship with ids`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -623,8 +614,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should merge relationship`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -683,8 +672,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should merge relationship with ids`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -746,8 +733,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should delete relationship`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -801,8 +786,6 @@ class CudHandlerTest : HandlerTest() {
 
   @Test
   fun `should delete relationship with ids`() {
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), 100)
-
     val sinkMessage =
         newMessage(
             Schema.STRING_SCHEMA,
@@ -861,7 +844,6 @@ class CudHandlerTest : HandlerTest() {
   @ValueSource(ints = [1, 6, 25, 100])
   fun `should support mixed operations with different batch sizes`(batchSize: Int) {
     val modulo = 4
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), batchSize)
 
     val messages =
         (0..<100)
@@ -954,7 +936,6 @@ class CudHandlerTest : HandlerTest() {
   @ValueSource(ints = [1, 6, 25, 100])
   fun `should support mixed relationship operations`(batchSize: Int) {
     val modulo = 4
-    val handler = CudHandler("my-topic", Renderer.getDefaultRenderer(), batchSize)
 
     val messages =
         (0..<100)
@@ -1058,5 +1039,10 @@ class CudHandlerTest : HandlerTest() {
               )
             }
             .chunked(batchSize)
+  }
+
+  companion object {
+    private val neo4j2026_1 =
+        Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
   }
 }

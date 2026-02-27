@@ -17,11 +17,12 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class DeleteRelationship(
     val type: String,
@@ -29,7 +30,7 @@ data class DeleteRelationship(
     val end: NodeReference,
     val ids: Map<String, Any?> = emptyMap(),
 ) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
+  override fun toAction(): SinkAction {
     if (type.isEmpty()) {
       throw InvalidDataException("'${Keys.RELATION_TYPE}' must be specified.")
     }
@@ -46,25 +47,10 @@ data class DeleteRelationship(
       )
     }
 
-    val startParam = Cypher.parameter("start")
-    val endParam = Cypher.parameter("end")
-    val keysParam = Cypher.parameter("keys")
-    val (startNode, endNode, lookup) = lookupNodes(start, end, startParam, endParam)
-    val relationship =
-        startNode
-            .relationshipTo(endNode, type)
-            .withProperties(ids.entries.associate { it.key to keysParam.property(it.key) })
-            .named("r")
-
-    val stmt = renderer.render(lookup.match(relationship).delete(relationship).build())
-
-    return Query(
-        stmt,
-        mapOf(
-            "start" to mapOf("keys" to start.ids),
-            "end" to mapOf("keys" to end.ids),
-            "keys" to ids,
-        ),
+    return DeleteRelationshipSinkAction(
+        startNode = SinkActionNodeReference(buildNodeMatcher(start.labels, start.ids), start.op),
+        endNode = SinkActionNodeReference(buildNodeMatcher(end.labels, end.ids), end.op),
+        matcher = buildRelationshipMatcher(type, ids),
     )
   }
 
