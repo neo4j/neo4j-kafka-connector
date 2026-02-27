@@ -522,9 +522,9 @@ class SourceConfiguration(originals: Map<*, *>) :
             "^neo4j\\.cdc\\.topic\\.(?<$GROUP_NAME_TOPIC>[a-zA-Z0-9._-]+)(\\.patterns)\\.(?<$GROUP_NAME_INDEX>[0-9]+)(\\.metadata)\\.(?<$GROUP_NAME_METADATA>[a-zA-Z0-9._-]+)$"
         )
 
-    const val CDC_METRIC_LAST_TX_ID_ENABLED = "neo4j.cdc.metric.last-tx-id.enabled"
+    const val CDC_METRIC_LAST_TX_ID_ENABLED = "neo4j.cdc.metric.last-db-tx-id.enabled"
     const val CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL =
-        "neo4j.cdc.metric.last-tx-id.refresh-interval"
+        "neo4j.cdc.metric.last-db-tx-id.refresh-interval"
 
     private val DEFAULT_QUERY_POLL_INTERVAL = 1.seconds
     private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
@@ -532,7 +532,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_QUERY_TIMEOUT = 0.seconds
     private const val DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT = true
 
-    private val DEFAULT_CDC_USE_LEADER = false
+    private const val DEFAULT_CDC_USE_LEADER = false
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
     private val DEFAULT_CDC_POLL_DURATION = 5.seconds
     private const val DEFAULT_STREAMING_PROPERTY = "timestamp"
@@ -771,7 +771,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
                   recommender = Recommenders.bool()
-                  documentation = "Whether the last transaction ID metric is enabled."
+                  documentation = "Whether to enable the `last_db_tx_id` metric."
                 }
             )
             .define(
@@ -780,7 +780,7 @@ class SourceConfiguration(originals: Map<*, *>) :
                   defaultValue = 30.seconds.toSimpleString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.pattern(SIMPLE_DURATION_PATTERN)
-                  documentation = "The refresh interval for the last transaction ID metric."
+                  documentation = "The refresh interval of the `last_db_tx_id` metric."
                 }
             )
   }

@@ -27,10 +27,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.neo4j.driver.AccessMode
 import org.neo4j.driver.Driver
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class DbTransactionMetricsData(
     metrics: Metrics,
@@ -42,45 +43,36 @@ class DbTransactionMetricsData(
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : Closeable {
 
-  private val writeAccessModeSessionConfig: SessionConfig by lazy {
-    val builder = SessionConfig.builder()
-
-    sessionConfig.database().ifPresent { builder.withDatabase(it) }
-    sessionConfig.fetchSize().ifPresent { builder.withFetchSize(it) }
-    sessionConfig.impersonatedUser().ifPresent { builder.withImpersonatedUser(it) }
-    sessionConfig.bookmarks()?.let { builder.withBookmarks(it) }
-
-    builder.withDefaultAccessMode(AccessMode.WRITE)
-    builder.build()
-  }
-
   private val lastTransactionId = AtomicLong(0)
   private val scope = CoroutineScope(dispatcher + Job())
 
   init {
-    metrics.addGauge(
-        "last_db_tx_id",
-        "The transaction commit timestamp of the last processed CDC message",
-        tags,
-    ) {
+    metrics.addGauge("last_db_tx_id", "The last committed transaction id in the database", tags) {
       lastTransactionId.get()
     }
 
     scope.launch {
-      val databaseName = writeAccessModeSessionConfig.database().orElse("neo4j")
+      val databaseName = sessionConfig.database().orElse("neo4j")
       while (isActive) {
-        val txId =
-            neo4jDriver.session(writeAccessModeSessionConfig).use { session ->
-              session
-                  .run(
-                      "SHOW DATABASE $databaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId",
-                      transactionConfig,
-                  )
-                  .single()
-                  .get("txId")
-                  .asLong()
-            }
-        lastTransactionId.set(txId)
+        try {
+          val txId: Long =
+              neo4jDriver.session(sessionConfig).use { session ->
+                session.writeTransaction(
+                    { tx ->
+                      tx.run(
+                              "SHOW DATABASE $databaseName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId"
+                          )
+                          .single()
+                          .get("txId")
+                          .asLong()
+                    },
+                    transactionConfig,
+                )
+              }
+          lastTransactionId.set(txId)
+        } catch (e: Throwable) {
+          log.warn("Unexpected error occurred while fetching last committed transaction id", e)
+        }
 
         delay(refreshInterval)
       }
@@ -89,5 +81,9 @@ class DbTransactionMetricsData(
 
   override fun close() {
     scope.cancel()
+  }
+
+  companion object {
+    private val log: Logger = LoggerFactory.getLogger(DbTransactionMetricsData::class.java)
   }
 }
