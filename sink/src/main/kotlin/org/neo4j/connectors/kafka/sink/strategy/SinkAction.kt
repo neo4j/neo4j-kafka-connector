@@ -20,42 +20,62 @@ const val EVENT = "e"
 
 sealed class SinkAction
 
+sealed class Matcher
+
+sealed class NodeMatcher : Matcher() {
+  data class ByLabelsAndProperties(val labels: Set<String>, val properties: Map<String, Any?>) :
+      NodeMatcher()
+
+  data class ById(val id: Long) : NodeMatcher()
+
+  data class ByElementId(val elementId: String) : NodeMatcher()
+}
+
+sealed class RelationshipMatcher : Matcher() {
+  data class ByTypeAndProperties(val type: String, val properties: Map<String, Any?>) :
+      RelationshipMatcher()
+
+  data class ById(val id: Long) : RelationshipMatcher()
+
+  data class ByElementId(val elementId: String) : RelationshipMatcher()
+}
+
 data class CreateNodeSinkAction(val labels: Set<String>, val properties: Map<String, Any?>) :
     SinkAction()
 
 data class UpdateNodeSinkAction(
-    val matchLabels: Set<String>,
-    val matchProperties: Map<String, Any?>,
+    val matcher: NodeMatcher,
     val setProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
 ) : SinkAction()
 
 data class MergeNodeSinkAction(
-    val matchLabels: Set<String>,
-    val matchProperties: Map<String, Any?>,
+    val matcher: NodeMatcher,
     val setProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
 ) : SinkAction()
 
-data class DeleteNodeSinkAction(
-    val matchLabels: Set<String>,
-    val matchProperties: Map<String, Any?>,
-) : SinkAction()
+data class DeleteNodeSinkAction(val matcher: Matcher) : SinkAction()
 
 enum class LookupMode {
   MATCH,
   MERGE,
 }
 
-data class SinkActionNodeReference(
-    val labels: Set<String>,
-    val properties: Map<String, Any?>,
-    val lookupMode: LookupMode,
-) {
+data class SinkActionNodeReference(val matcher: NodeMatcher, val lookupMode: LookupMode) {
   companion object {
-    val EMPTY = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH)
+    val MATCH_ANY =
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+            LookupMode.MATCH,
+        )
+    val MERGE_ANY =
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+            LookupMode.MERGE,
+        )
   }
 }
 
@@ -69,8 +89,7 @@ data class CreateRelationshipSinkAction(
 data class UpdateRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
-    val matchType: String,
-    val matchProperties: Map<String, Any?>,
+    val matcher: RelationshipMatcher,
     val setProperties: Map<String, Any?>,
     val hasKeys: Boolean,
 ) : SinkAction()
@@ -78,8 +97,7 @@ data class UpdateRelationshipSinkAction(
 data class MergeRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
-    val matchType: String,
-    val matchProperties: Map<String, Any?>,
+    val matcher: RelationshipMatcher,
     val setProperties: Map<String, Any?>,
     val hasKeys: Boolean,
 ) : SinkAction()
@@ -87,7 +105,6 @@ data class MergeRelationshipSinkAction(
 data class DeleteRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
-    val matchType: String,
-    val matchProperties: Map<String, Any?>,
+    val matcher: RelationshipMatcher,
     val hasKeys: Boolean,
 ) : SinkAction()

@@ -40,6 +40,8 @@ import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
 import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.utils.JSONUtils
 
@@ -60,8 +62,7 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("Person"),
-            mapOf("id" to 1),
+            NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
             mapOf("id" to 1, "name" to "John"),
             emptySet(),
             emptySet(),
@@ -85,8 +86,7 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("Person"),
-            mapOf("id" to 1),
+            NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -106,7 +106,7 @@ class CdcSchemaEventTransformerTest {
         )
 
     transformer.transform(changeEvent(event)) shouldBe
-        DeleteNodeSinkAction(setOf("Person"), mapOf("id" to 1))
+        DeleteNodeSinkAction(NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)))
   }
 
   @Test
@@ -125,10 +125,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("since" to 2020),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
             mapOf("since" to 2020),
             false,
         )
@@ -150,10 +155,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("relId" to "R1"),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
             mapOf("relId" to "R1", "since" to 2020),
             true,
         )
@@ -175,10 +185,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("since" to 2020),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
             mapOf("since" to 2021, "rating" to 5),
             false,
         )
@@ -200,10 +215,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("relId" to "R1"),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
             mapOf("since" to 2021, "rating" to 5),
             true,
         )
@@ -225,10 +245,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         DeleteRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("since" to 2020),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
             false,
         )
   }
@@ -249,10 +274,15 @@ class CdcSchemaEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         DeleteRelationshipSinkAction(
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
-            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
-            "KNOWS",
-            mapOf("relId" to "R1"),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
             true,
         )
   }

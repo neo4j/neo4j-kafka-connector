@@ -119,8 +119,11 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         UpdateNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
             setProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
@@ -197,8 +200,11 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         MergeNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
             setProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
@@ -275,8 +281,11 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         DeleteNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                )
         )
 
     generator.buildStatement(data) shouldBe expectedQuery
@@ -329,13 +338,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
             "WORKS_AT",
@@ -413,13 +423,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
             "WORKS_AT",
@@ -497,13 +508,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
             "WORKS_AT",
@@ -581,13 +593,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
             "WORKS_AT",
@@ -665,17 +678,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
             setProperties = mapOf("senior" to true),
         )
@@ -755,17 +768,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
             setProperties = mapOf("senior" to true),
         )
@@ -845,17 +858,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -933,17 +946,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1020,14 +1033,15 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            SinkActionNodeReference.MATCH_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1098,14 +1112,15 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
+            SinkActionNodeReference.MERGE_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1177,13 +1192,11 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(setOf("Employee", "Person"), mapOf("id" to 7)),
                 LookupMode.MATCH,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MATCH_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1253,13 +1266,11 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(setOf("Employee", "Person"), mapOf("id" to 7)),
                 LookupMode.MERGE,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MERGE_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1328,10 +1339,9 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MATCH_ANY,
+            SinkActionNodeReference.MATCH_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1392,10 +1402,9 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MERGE_ANY,
+            SinkActionNodeReference.MERGE_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1457,17 +1466,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
             setProperties = mapOf("senior" to true),
         )
@@ -1547,17 +1556,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
             setProperties = mapOf("senior" to true),
         )
@@ -1637,17 +1646,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1725,17 +1734,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1812,14 +1821,15 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            SinkActionNodeReference.MATCH_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1890,14 +1900,15 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
+            SinkActionNodeReference.MERGE_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -1969,13 +1980,11 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(setOf("Employee", "Person"), mapOf("id" to 7)),
                 LookupMode.MATCH,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MATCH_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -2045,13 +2054,11 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(setOf("Employee", "Person"), mapOf("id" to 7)),
                 LookupMode.MERGE,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MERGE_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -2120,10 +2127,9 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MATCH_ANY,
+            SinkActionNodeReference.MATCH_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -2184,10 +2190,9 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MERGE_ANY,
+            SinkActionNodeReference.MERGE_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
             setProperties = mapOf("senior" to true),
         )
@@ -2249,17 +2254,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
         )
 
@@ -2336,17 +2341,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev")),
             hasKeys = false,
         )
 
@@ -2423,31 +2428,29 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2461,28 +2464,27 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         DeleteRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            SinkActionNodeReference.MATCH_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2497,27 +2499,23 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 5),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 5)),
                 LookupMode.MATCH,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MATCH_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2532,29 +2530,28 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             startNode =
-                SinkActionNodeReference(setOf("Person", "Employee"), emptyMap(), LookupMode.MATCH),
-            endNode =
                 SinkActionNodeReference(
-                    setOf("Company", "Corporation"),
-                    emptyMap(),
+                    NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), emptyMap()),
                     LookupMode.MATCH,
                 ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            endNode =
+                SinkActionNodeReference(
+                    NodeMatcher.ByLabelsAndProperties(setOf("Company", "Corporation"), emptyMap()),
+                    LookupMode.MATCH,
+                ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2600,31 +2597,29 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2638,28 +2633,27 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val withKeys =
         DeleteRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
+            SinkActionNodeReference.MERGE_ANY,
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2674,27 +2668,23 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 5),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 5)),
                 LookupMode.MERGE,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            SinkActionNodeReference.MERGE_ANY,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }
@@ -2709,29 +2699,28 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             startNode =
-                SinkActionNodeReference(setOf("Person", "Employee"), emptyMap(), LookupMode.MERGE),
-            endNode =
                 SinkActionNodeReference(
-                    setOf("Company", "Corporation"),
-                    emptyMap(),
+                    NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), emptyMap()),
                     LookupMode.MERGE,
                 ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
+            endNode =
+                SinkActionNodeReference(
+                    NodeMatcher.ByLabelsAndProperties(setOf("Company", "Corporation"), emptyMap()),
+                    LookupMode.MERGE,
+                ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5)),
             hasKeys = true,
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
+    generator.buildStatement(withKeys.copy(startNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
+    generator.buildStatement(withKeys.copy(endNode = SinkActionNodeReference.MATCH_ANY)) shouldBe
+        expectedQuery
     generator.buildStatement(
         withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
+            startNode = SinkActionNodeReference.MATCH_ANY,
+            endNode = SinkActionNodeReference.MATCH_ANY,
         )
     ) shouldBe expectedQuery
   }

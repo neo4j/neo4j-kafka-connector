@@ -38,6 +38,8 @@ import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
 import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 
 class CdcSourceIdEventTransformerTest {
@@ -57,8 +59,10 @@ class CdcSourceIdEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("SourceLabel"),
-            mapOf("sourceId" to "node-element-id"),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            ),
             mapOf("id" to 1, "name" to "John"),
             setOf("Person"),
             emptySet(),
@@ -79,8 +83,10 @@ class CdcSourceIdEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("SourceLabel"),
-            mapOf("sourceId" to "node-element-id"),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            ),
             mapOf("id" to 1, "name" to "John"),
             setOf("Person"),
             emptySet(),
@@ -104,8 +110,10 @@ class CdcSourceIdEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("SourceLabel"),
-            mapOf("sourceId" to "node-element-id"),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            ),
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -129,8 +137,10 @@ class CdcSourceIdEventTransformerTest {
 
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
-            setOf("SourceLabel"),
-            mapOf("sourceId" to "node-element-id"),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            ),
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -150,7 +160,12 @@ class CdcSourceIdEventTransformerTest {
         )
 
     transformer.transform(changeEvent(event)) shouldBe
-        DeleteNodeSinkAction(setOf("SourceLabel"), mapOf("sourceId" to "node-element-id"))
+        DeleteNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            )
+        )
   }
 
   @Test
@@ -166,7 +181,12 @@ class CdcSourceIdEventTransformerTest {
         )
 
     transformer.transform(changeEvent(event)) shouldBe
-        DeleteNodeSinkAction(setOf("SourceLabel"), mapOf("sourceId" to "node-element-id"))
+        DeleteNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "node-element-id"),
+            )
+        )
   }
 
   @Test
@@ -186,17 +206,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2020),
             true,
         )
@@ -219,17 +242,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2020),
             true,
         )
@@ -252,17 +278,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2020),
             true,
         )
@@ -285,17 +314,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2021, "rating" to 5),
             true,
         )
@@ -318,17 +350,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2021, "rating" to 5),
             true,
         )
@@ -351,17 +386,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MERGE,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             mapOf("since" to 2021, "rating" to 5),
             true,
         )
@@ -384,17 +422,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             true,
         )
   }
@@ -416,17 +457,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             true,
         )
   }
@@ -448,17 +492,20 @@ class CdcSourceIdEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "s-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "s-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("SourceLabel"),
-                mapOf("sourceId" to "e-element-id"),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("SourceLabel"),
+                    mapOf("sourceId" to "e-element-id"),
+                ),
                 LookupMode.MATCH,
             ),
-            "KNOWS",
-            mapOf("sourceId" to "rel-element-id"),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
             true,
         )
   }

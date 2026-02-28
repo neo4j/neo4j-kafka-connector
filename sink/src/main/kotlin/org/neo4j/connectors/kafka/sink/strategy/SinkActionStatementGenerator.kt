@@ -67,8 +67,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildNodeStatement(action: UpdateNodeSinkAction, eventVariable: String): Query {
     return buildNodeUpdateStatement(
         "MATCH",
-        action.matchLabels,
-        action.matchProperties,
+        action.matcher,
         action.setProperties,
         action.addLabels,
         action.removeLabels,
@@ -79,8 +78,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildNodeStatement(action: MergeNodeSinkAction, eventVariable: String): Query {
     return buildNodeUpdateStatement(
         "MERGE",
-        action.matchLabels,
-        action.matchProperties,
+        action.matcher,
         action.setProperties,
         action.addLabels,
         action.removeLabels,
@@ -90,18 +88,21 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
 
   private fun buildNodeUpdateStatement(
       action: String,
-      matchLabels: Set<String>,
-      matchProperties: Map<String, Any?>,
+      matcher: Matcher,
       setProperties: Map<String, Any?>,
       addLabels: Set<String>,
       removeLabels: Set<String>,
       eventVariable: String,
   ): Query {
+    when (matcher) {
+      is NodeMatcher.ByLabelsAndProperties -> matcher
+      else -> TODO()
+    }
     val matchLabelsPattern =
         if (supportsDynamicLabelsWithPropertyIndices) {
           ":${'$'}(_e.matchLabels)"
-        } else buildLabels(matchLabels)
-    val matchPropsPattern = buildMatchProps(matchProperties, "_e", "matchProperties")
+        } else buildLabels(matcher.labels)
+    val matchPropsPattern = buildMatchProps(matcher.properties, "_e", "matchProperties")
     val setLabelsClause =
         if (setDynamicLabels) {
           " SET n:${'$'}(_e.addLabels)"
@@ -122,9 +123,9 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         "WITH $eventVariable AS _e $action (n$matchLabelsPattern$matchPropsPattern) SET n += _e.setProperties$setLabelsClause$removeLabelsClause"
     val params = buildMap {
       if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchLabels"] = matchLabels
+        this["matchLabels"] = matcher.labels
       }
-      this["matchProperties"] = matchProperties
+      this["matchProperties"] = matcher.properties
       this["setProperties"] = setProperties
       if (setDynamicLabels) {
         this["addLabels"] = addLabels
@@ -138,17 +139,21 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildNodeStatement(action: DeleteNodeSinkAction, eventVariable: String): Query {
+    when (action.matcher) {
+      is NodeMatcher.ByLabelsAndProperties -> action.matcher
+      else -> TODO()
+    }
     val matchLabels =
         if (supportsDynamicLabelsWithPropertyIndices) {
           ":${'$'}(_e.matchLabels)"
-        } else buildLabels(action.matchLabels)
-    val matchProps = buildMatchProps(action.matchProperties, "_e", "matchProperties")
+        } else buildLabels(action.matcher.labels)
+    val matchProps = buildMatchProps(action.matcher.properties, "_e", "matchProperties")
     val stmt = "WITH $eventVariable AS _e MATCH (n$matchLabels$matchProps) DELETE n"
     val params = buildMap {
       if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchLabels"] = action.matchLabels
+        this["matchLabels"] = action.matcher.labels
       }
-      this["matchProperties"] = action.matchProperties
+      this["matchProperties"] = action.matcher.properties
     }
 
     return Query(stmt, if (eventVariable == "${'$'}$EVENT") mapOf(EVENT to params) else params)
@@ -168,20 +173,26 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val stmt =
         "WITH $eventVariable AS _e$startClause$endClause CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
     val params = buildMap {
-      if (action.startNode.properties.isNotEmpty()) {
+      if (
+          action.startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              action.startNode.matcher.properties.isNotEmpty()
+      ) {
         this["start"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.startNode.labels
+            this["matchLabels"] = action.startNode.matcher.labels
           }
-          this["matchProperties"] = action.startNode.properties
+          this["matchProperties"] = action.startNode.matcher.properties
         }
       }
-      if (action.endNode.properties.isNotEmpty()) {
+      if (
+          action.endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              action.endNode.matcher.properties.isNotEmpty()
+      ) {
         this["end"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.endNode.labels
+            this["matchLabels"] = action.endNode.matcher.labels
           }
-          this["matchProperties"] = action.endNode.properties
+          this["matchProperties"] = action.endNode.matcher.properties
         }
       }
       if (supportsDynamicLabelsWithPropertyIndices) {
@@ -200,8 +211,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         "MATCH",
         action.startNode,
         action.endNode,
-        action.matchType,
-        action.matchProperties,
+        action.matcher,
         action.setProperties,
         action.hasKeys,
         eventVariable,
@@ -216,8 +226,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         "MERGE",
         action.startNode,
         action.endNode,
-        action.matchType,
-        action.matchProperties,
+        action.matcher,
         action.setProperties,
         action.hasKeys,
         eventVariable,
@@ -228,19 +237,22 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       action: String,
       startNode: SinkActionNodeReference,
       endNode: SinkActionNodeReference,
-      matchType: String,
-      matchProperties: Map<String, Any?>,
+      matcher: Matcher,
       setProperties: Map<String, Any?>,
       hasKeys: Boolean,
       eventVariable: String,
   ): Query {
+    when (matcher) {
+      is RelationshipMatcher.ByTypeAndProperties -> matcher
+      else -> TODO()
+    }
     val startClause = startNode.buildClause("start")
     val endClause = endNode.buildClause("end")
 
     val matchTypePattern =
         if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.matchType)"
-        else SchemaNames.sanitize(matchType, true).orElseThrow()
-    val matchPropsPattern = buildMatchProps(matchProperties, "_e", "matchProperties")
+        else SchemaNames.sanitize(matcher.type, true).orElseThrow()
+    val matchPropsPattern = buildMatchProps(matcher.properties, "_e", "matchProperties")
 
     val stmt =
         if (!hasKeys)
@@ -248,27 +260,33 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         else
             "WITH $eventVariable AS _e$startClause$endClause $action (start)-[r:$matchTypePattern$matchPropsPattern]->(end) SET r += _e.setProperties"
     val params = buildMap {
-      if (startNode.properties.isNotEmpty() || !hasKeys) {
+      if (
+          startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              (startNode.matcher.properties.isNotEmpty() || !hasKeys)
+      ) {
         this["start"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = startNode.labels
+            this["matchLabels"] = startNode.matcher.labels
           }
-          this["matchProperties"] = startNode.properties
+          this["matchProperties"] = startNode.matcher.properties
         }
       }
-      if (endNode.properties.isNotEmpty() || !hasKeys) {
+      if (
+          endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              (endNode.matcher.properties.isNotEmpty() || !hasKeys)
+      ) {
         this["end"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = endNode.labels
+            this["matchLabels"] = endNode.matcher.labels
           }
-          this["matchProperties"] = endNode.properties
+          this["matchProperties"] = endNode.matcher.properties
         }
       }
       if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = matchType
+        this["matchType"] = matcher.type
       }
-      if (matchProperties.isNotEmpty()) {
-        this["matchProperties"] = matchProperties
+      if (matcher.properties.isNotEmpty()) {
+        this["matchProperties"] = matcher.properties
       }
       this["setProperties"] = setProperties
     }
@@ -280,13 +298,18 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       action: DeleteRelationshipSinkAction,
       eventVariable: String,
   ): Query {
+    when (action.matcher) {
+      is RelationshipMatcher.ByTypeAndProperties -> action.matcher
+      else -> TODO()
+    }
+
     val startClause = action.startNode.buildClause("start")
     val endClause = action.endNode.buildClause("end")
 
     val matchTypePattern =
         if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.matchType)"
-        else SchemaNames.sanitize(action.matchType, true).orElseThrow()
-    val matchPropsPattern = buildMatchProps(action.matchProperties, "_e", "matchProperties")
+        else SchemaNames.sanitize(action.matcher.type, true).orElseThrow()
+    val matchPropsPattern = buildMatchProps(action.matcher.properties, "_e", "matchProperties")
 
     val stmt =
         if (!action.hasKeys)
@@ -294,27 +317,34 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         else
             "WITH $eventVariable AS _e MATCH ()-[r:$matchTypePattern$matchPropsPattern]->() DELETE r"
     val params = buildMap {
-      if (action.startNode.properties.isNotEmpty() && !action.hasKeys) {
+      if (
+          action.startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              (action.startNode.matcher.properties.isNotEmpty() && !action.hasKeys)
+      ) {
         this["start"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.startNode.labels
+            this["matchLabels"] = action.startNode.matcher.labels
           }
-          this["matchProperties"] = action.startNode.properties
+          this["matchProperties"] = action.startNode.matcher.properties
         }
       }
-      if (action.endNode.properties.isNotEmpty() && !action.hasKeys) {
+      if (
+          action.endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
+              action.endNode.matcher.properties.isNotEmpty() &&
+              !action.hasKeys
+      ) {
         this["end"] = buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.endNode.labels
+            this["matchLabels"] = action.endNode.matcher.labels
           }
-          this["matchProperties"] = action.endNode.properties
+          this["matchProperties"] = action.endNode.matcher.properties
         }
       }
       if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = action.matchType
+        this["matchType"] = action.matcher.type
       }
-      if (action.matchProperties.isNotEmpty()) {
-        this["matchProperties"] = action.matchProperties
+      if (action.matcher.properties.isNotEmpty()) {
+        this["matchProperties"] = action.matcher.properties
       }
     }
 
@@ -322,11 +352,15 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun SinkActionNodeReference.buildClause(alias: String): String {
+    when (this.matcher) {
+      is NodeMatcher.ByLabelsAndProperties -> this.matcher
+      else -> TODO()
+    }
     val matchLabels =
-        if (supportsDynamicLabelsWithPropertyIndices && this.labels.isNotEmpty())
+        if (supportsDynamicLabelsWithPropertyIndices && this.matcher.labels.isNotEmpty())
             ":${'$'}(_e.$alias.matchLabels)"
-        else buildLabels(this.labels)
-    val matchProps = buildMatchProps(this.properties, "_e", "$alias.matchProperties")
+        else buildLabels(this.matcher.labels)
+    val matchProps = buildMatchProps(this.matcher.properties, "_e", "$alias.matchProperties")
     val op = this.lookupMode.name
 
     return if (matchLabels.isEmpty() && matchProps.isEmpty()) ""
