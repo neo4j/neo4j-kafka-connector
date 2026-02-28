@@ -18,8 +18,11 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 
 import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
+import org.neo4j.connectors.kafka.configuration.ConnectorType.SINK
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
+import org.neo4j.connectors.kafka.metrics.CdcMetricsData
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
@@ -31,12 +34,19 @@ class CdcHandler(
     private val strategy: SinkStrategy,
     internal val batchStrategy: CdcBatchStrategy,
     internal val eventTransformer: CdcEventTransformer,
+    metrics: Metrics,
 ) : SinkStrategyHandler {
+
+  private val metricsData = CdcMetricsData(metrics, SINK)
 
   override fun strategy(): SinkStrategy = strategy
 
   override fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>> {
     return batchStrategy.handle(messages) { eventTransformer.transform(it) }
+  }
+
+  override fun postProcessLastMessageBatch(group: Iterable<ChangeQuery>) {
+    group.lastOrNull()?.messages?.lastOrNull()?.toChangeEvent()?.let { metricsData.update(it) }
   }
 }
 

@@ -26,6 +26,7 @@ import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
 import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
+import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
@@ -133,13 +134,19 @@ interface SinkStrategyHandler {
    */
   fun handle(messages: Iterable<SinkMessage>): Iterable<Iterable<ChangeQuery>>
 
+  fun postProcessLastMessageBatch(group: Iterable<ChangeQuery>) {}
+
   companion object {
 
-    fun createFrom(config: SinkConfiguration): Map<String, SinkStrategyHandler> {
-      return config.topicNames.associateWith { topic -> createForTopic(topic, config) }
+    fun createFrom(config: SinkConfiguration, metrics: Metrics): Map<String, SinkStrategyHandler> {
+      return config.topicNames.associateWith { topic -> createForTopic(topic, config, metrics) }
     }
 
-    private fun createForTopic(topic: String, config: SinkConfiguration): SinkStrategyHandler {
+    private fun createForTopic(
+        topic: String,
+        config: SinkConfiguration,
+        metrics: Metrics,
+    ): SinkStrategyHandler {
       var handler: SinkStrategyHandler? = null
       val originals = config.originalsStrings()
 
@@ -237,6 +244,7 @@ interface SinkStrategyHandler {
                 SinkStrategy.CDC_SOURCE_ID,
                 batchStrategy,
                 CdcSourceIdEventTransformer(topic, labelName, propertyName),
+                metrics,
             )
       }
 
@@ -265,7 +273,12 @@ interface SinkStrategyHandler {
             }
 
         handler =
-            CdcHandler(SinkStrategy.CDC_SCHEMA, batchStrategy, CdcSchemaEventTransformer(topic))
+            CdcHandler(
+                SinkStrategy.CDC_SCHEMA,
+                batchStrategy,
+                CdcSchemaEventTransformer(topic),
+                metrics,
+            )
       }
 
       val cudTopics = config.getList(SinkConfiguration.CUD_TOPICS)

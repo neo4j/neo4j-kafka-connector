@@ -23,6 +23,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.ConfigException
@@ -35,6 +37,8 @@ import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
+import org.neo4j.connectors.kafka.source.SourceConfiguration.Companion.CDC_METRIC_LAST_TX_ID_ENABLED
+import org.neo4j.connectors.kafka.source.SourceConfiguration.Companion.CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL
 import org.neo4j.driver.AccessMode
 import org.neo4j.driver.TransactionConfig
 
@@ -795,5 +799,25 @@ class SourceConfigurationTest {
     config.userAgentComment() shouldBe "query"
     config.txConfig() shouldBe
         TransactionConfig.builder().withMetadata(mapOf("app" to "kafka-source")).build()
+  }
+
+  @Test
+  fun `metric settings`() {
+    SourceConfiguration(mapOf(Neo4jConfiguration.URI to "bolt://localhost")).run {
+      assertFalse(this.lastDbTxIdEnabled)
+      assertEquals(30.seconds, this.lastDbTxIdRefreshInterval)
+    }
+
+    SourceConfiguration(
+            mapOf(
+                Neo4jConfiguration.URI to "bolt://localhost",
+                CDC_METRIC_LAST_TX_ID_ENABLED to "true",
+                CDC_METRIC_LAST_TX_ID_REFRESH_INTERVAL to "1m",
+            )
+        )
+        .run {
+          assertTrue(this.lastDbTxIdEnabled)
+          assertEquals(1.minutes, this.lastDbTxIdRefreshInterval)
+        }
   }
 }

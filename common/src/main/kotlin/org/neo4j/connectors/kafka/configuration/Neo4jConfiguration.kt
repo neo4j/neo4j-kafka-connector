@@ -20,6 +20,7 @@ import java.io.Closeable
 import java.io.File
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
@@ -70,33 +71,29 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     get(): List<URI> = getList(URI).map { URI(it) }
 
   internal val connectionTimeout
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(CONNECTION_TIMEOUT))
 
   internal val maxRetryTime
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(MAX_TRANSACTION_RETRY_TIMEOUT))
 
   internal val maxConnectionPoolSize
     get(): Int = getInt(POOL_MAX_CONNECTION_POOL_SIZE)
 
   internal val connectionAcquisitionTimeout
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
+    get(): Duration = Duration.parseSimpleString(getString(POOL_CONNECTION_ACQUISITION_TIMEOUT))
 
   internal val idleTimeBeforeTest
-    get(): kotlin.time.Duration =
+    get(): Duration =
         getString(POOL_IDLE_TIME_BEFORE_TEST).orEmpty().run {
           if (this.isEmpty()) {
             (-1).milliseconds
           } else {
-            kotlin.time.Duration.parseSimpleString(this)
+            Duration.parseSimpleString(this)
           }
         }
 
   internal val maxConnectionLifetime
-    get(): kotlin.time.Duration =
-        kotlin.time.Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
+    get(): Duration = Duration.parseSimpleString(getString(POOL_MAX_CONNECTION_LIFETIME))
 
   internal val encrypted
     get(): Boolean = getString(SECURITY_ENCRYPTED).toBoolean()
@@ -239,6 +236,12 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     }
   }
 
+  val connectorName
+    get(): String = originals()[CONNECTOR_NAME].toString()
+
+  val taskId
+    get(): String = originals()[TASK_ID].toString()
+
   companion object {
     val DEFAULT_MAX_RETRY_DURATION = 30.seconds
 
@@ -270,6 +273,10 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         "neo4j.security.hostname-verification-enabled"
     const val SECURITY_TRUST_STRATEGY = "neo4j.security.trust-strategy"
     const val SECURITY_CERT_FILES = "neo4j.security.cert-files"
+
+    // internal properties
+    const val CONNECTOR_NAME = "name"
+    const val TASK_ID = "neo4j.task.id"
 
     /** Perform validation on dependent configuration items */
     fun validate(config: org.apache.kafka.common.config.Config) {
