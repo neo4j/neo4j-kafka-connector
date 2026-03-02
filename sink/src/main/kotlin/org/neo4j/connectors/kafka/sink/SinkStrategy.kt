@@ -27,15 +27,15 @@ import org.neo4j.connectors.kafka.data.cdcTxSeq
 import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
 import org.neo4j.connectors.kafka.metrics.Metrics
+import org.neo4j.connectors.kafka.sink.strategy.ApocBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
+import org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.cdc.ApocBatchStrategy
-import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
-import org.neo4j.connectors.kafka.sink.strategy.cdc.NativeBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPattern
@@ -240,7 +240,7 @@ interface SinkStrategyHandler {
             }
 
         handler =
-            CdcHandler(
+            CdcSinkHandler(
                 SinkStrategy.CDC_SOURCE_ID,
                 batchStrategy,
                 CdcSourceIdEventTransformer(topic, labelName, propertyName),
@@ -273,7 +273,7 @@ interface SinkStrategyHandler {
             }
 
         handler =
-            CdcHandler(
+            CdcSinkHandler(
                 SinkStrategy.CDC_SCHEMA,
                 batchStrategy,
                 CdcSchemaEventTransformer(topic),

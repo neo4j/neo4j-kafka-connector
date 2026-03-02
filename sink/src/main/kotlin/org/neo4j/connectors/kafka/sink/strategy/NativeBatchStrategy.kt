@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
+package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.CanIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
@@ -33,13 +32,13 @@ class NativeBatchStrategy(
     private val batchSize: Int,
     private val eosOffsetLabel: String,
     private val strategy: SinkStrategy,
-) : CdcBatchStrategy {
+) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
 
   override fun handle(
       messages: Iterable<SinkMessage>,
-      eventTransformer: (ChangeEvent) -> CdcData,
+      eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>> {
     val (topic, partition) =
         messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
@@ -48,10 +47,7 @@ class NativeBatchStrategy(
     val events =
         messages
             .onEach { logger.trace("received message: {}", it) }
-            .map {
-              val changeEvent = it.toChangeEvent()
-              MessageToEvent(it, changeEvent, eventTransformer(changeEvent))
-            }
+            .map { MessageToEvent(it, eventTransformer(it)) }
 
     return listOf(splitEventsIntoBatches(events, maxBatchedStatements, topic, partition)).onEach {
       logger.trace("messages: {} ", it)
@@ -86,7 +82,7 @@ class NativeBatchStrategy(
     }
 
     events.forEach { event ->
-      val query = statementGenerator.buildStatement(event.cdcData, "$EVENT.params")
+      val query = statementGenerator.buildStatement(event.sinkAction, "${EVENT}.params")
 
       if (!queries.containsKey(query.text()) && (queries.size >= maxBatchedStatements)) {
         flush()
@@ -120,18 +116,19 @@ class NativeBatchStrategy(
       topic: String,
       partition: Int,
   ): Query {
-    val cypher25 = canIUse(Cypher.explicitCypher25Selection()).withNeo4j(neo4j)
+    val cypher25 = CanIUse.canIUse(Cypher.explicitCypher25Selection()).withNeo4j(neo4j)
     val termination =
-        if (canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
+        if (CanIUse.canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
         else "RETURN COUNT(1) AS total"
     val sortedQueries = queries.keys.sorted()
-    val withVariableScope = canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
+    val withVariableScope =
+        CanIUse.canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
 
     val query = buildString {
       if (cypher25) {
         appendLine("CYPHER 25")
       }
-      appendLine("UNWIND \$events AS $EVENT")
+      appendLine("UNWIND \$events AS ${EVENT}")
       if (eosOffsetLabel.isNotBlank()) {
         appendLine(
             "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
@@ -148,7 +145,7 @@ class NativeBatchStrategy(
       }
       sortedQueries.forEachIndexed { index, stmt ->
         if (cypher25) {
-          appendLine("  WHEN $EVENT.q = \$q$index THEN {")
+          appendLine("  WHEN ${EVENT}.q = \$q$index THEN {")
           appendLine("    $stmt")
           appendLine("  }")
         } else {
@@ -157,7 +154,7 @@ class NativeBatchStrategy(
             appendLine("  WITH ${EVENT}")
           }
 
-          appendLine("  WITH ${EVENT} WHERE $EVENT.q = \$q$index")
+          appendLine("  WITH ${EVENT} WHERE ${EVENT}.q = \$q$index")
           appendLine("  $stmt")
           appendLine("  RETURN $index AS x")
         }

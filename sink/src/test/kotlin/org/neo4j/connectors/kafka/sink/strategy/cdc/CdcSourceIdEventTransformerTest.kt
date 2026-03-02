@@ -33,6 +33,12 @@ import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
+import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 
 class CdcSourceIdEventTransformerTest {
   private val transformer = CdcSourceIdEventTransformer("my-topic", "SourceLabel", "sourceId")
@@ -49,14 +55,14 @@ class CdcSourceIdEventTransformerTest {
             NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe mapOf("id" to 1, "name" to "John")
-    result.addLabels shouldBe setOf("Person")
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("SourceLabel"),
+            mapOf("sourceId" to "node-element-id"),
+            mapOf("id" to 1, "name" to "John"),
+            setOf("Person"),
+            emptySet(),
+        )
   }
 
   @Test
@@ -71,14 +77,14 @@ class CdcSourceIdEventTransformerTest {
             NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe mapOf("id" to 1, "name" to "John")
-    result.addLabels shouldBe setOf("Person")
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("SourceLabel"),
+            mapOf("sourceId" to "node-element-id"),
+            mapOf("id" to 1, "name" to "John"),
+            setOf("Person"),
+            emptySet(),
+        )
   }
 
   @Test
@@ -96,14 +102,14 @@ class CdcSourceIdEventTransformerTest {
             ),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe mapOf("salary" to 1000)
-    result.addLabels shouldBe setOf("Employee")
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("SourceLabel"),
+            mapOf("sourceId" to "node-element-id"),
+            mapOf("salary" to 1000),
+            setOf("Employee"),
+            emptySet(),
+        )
   }
 
   @Test
@@ -121,14 +127,14 @@ class CdcSourceIdEventTransformerTest {
             ),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe mapOf("salary" to 1000)
-    result.addLabels shouldBe setOf("Employee")
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("SourceLabel"),
+            mapOf("sourceId" to "node-element-id"),
+            mapOf("salary" to 1000),
+            setOf("Employee"),
+            emptySet(),
+        )
   }
 
   @Test
@@ -143,14 +149,8 @@ class CdcSourceIdEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe emptyMap()
-    result.addLabels shouldBe emptySet()
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteNodeSinkAction(setOf("SourceLabel"), mapOf("sourceId" to "node-element-id"))
   }
 
   @Test
@@ -165,14 +165,8 @@ class CdcSourceIdEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.matchLabels shouldBe setOf("SourceLabel")
-    result.matchProperties shouldBe mapOf("sourceId" to "node-element-id")
-    result.setProperties shouldBe emptyMap()
-    result.addLabels shouldBe emptySet()
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteNodeSinkAction(setOf("SourceLabel"), mapOf("sourceId" to "node-element-id"))
   }
 
   @Test
@@ -189,17 +183,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2020)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2020)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2020),
+            true,
+        )
   }
 
   @Test
@@ -216,17 +216,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2020)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2020)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2020),
+            true,
+        )
   }
 
   @Test
@@ -243,17 +249,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2020)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2020)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2020),
+            true,
+        )
   }
 
   @Test
@@ -270,17 +282,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2021, "rating" to 5)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2021, "rating" to 5),
+            true,
+        )
   }
 
   @Test
@@ -297,17 +315,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2021, "rating" to 5)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2021, "rating" to 5),
+            true,
+        )
   }
 
   @Test
@@ -324,17 +348,23 @@ class CdcSourceIdEventTransformerTest {
             RelationshipState(mapOf("since" to 2021, "rating" to 5)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.startMatchLabels shouldBe setOf("SourceLabel")
-    result.startMatchProperties shouldBe mapOf("sourceId" to "s-element-id")
-    result.endMatchLabels shouldBe setOf("SourceLabel")
-    result.endMatchProperties shouldBe mapOf("sourceId" to "e-element-id")
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MERGE,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            mapOf("since" to 2021, "rating" to 5),
+            true,
+        )
   }
 
   @Test
@@ -351,17 +381,22 @@ class CdcSourceIdEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.startMatchLabels shouldBe emptySet()
-    result.startMatchProperties shouldBe emptyMap()
-    result.endMatchLabels shouldBe emptySet()
-    result.endMatchProperties shouldBe emptyMap()
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe emptyMap()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MATCH,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            true,
+        )
   }
 
   @Test
@@ -378,17 +413,22 @@ class CdcSourceIdEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.startMatchLabels shouldBe emptySet()
-    result.startMatchProperties shouldBe emptyMap()
-    result.endMatchLabels shouldBe emptySet()
-    result.endMatchProperties shouldBe emptyMap()
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe emptyMap()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MATCH,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            true,
+        )
   }
 
   @Test
@@ -405,17 +445,22 @@ class CdcSourceIdEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.startMatchLabels shouldBe emptySet()
-    result.startMatchProperties shouldBe emptyMap()
-    result.endMatchLabels shouldBe emptySet()
-    result.endMatchProperties shouldBe emptyMap()
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("sourceId" to "rel-element-id")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe emptyMap()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "s-element-id"),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                setOf("SourceLabel"),
+                mapOf("sourceId" to "e-element-id"),
+                LookupMode.MATCH,
+            ),
+            "KNOWS",
+            mapOf("sourceId" to "rel-element-id"),
+            true,
+        )
   }
 
   @Test

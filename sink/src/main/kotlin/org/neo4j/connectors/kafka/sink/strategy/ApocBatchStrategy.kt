@@ -14,16 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
+package org.neo4j.connectors.kafka.sink.strategy
 
-import kotlin.sequences.chunked
-import kotlin.sequences.map
-import kotlin.sequences.onEach
-import kotlin.sequences.toList
-import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.CanIUse
 import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
-import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
@@ -36,13 +31,13 @@ class ApocBatchStrategy(
     private val batchSize: Int,
     private val eosOffsetLabel: String,
     private val strategy: SinkStrategy,
-) : CdcBatchStrategy {
+) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultCdcStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
 
   override fun handle(
       messages: Iterable<SinkMessage>,
-      eventTransformer: (ChangeEvent) -> CdcData,
+      eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>> {
     val (topic, partition) =
         messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
@@ -51,10 +46,7 @@ class ApocBatchStrategy(
     return messages
         .asSequence()
         .onEach { logger.trace("received message: {}", it) }
-        .map {
-          val changeEvent = it.toChangeEvent()
-          MessageToEvent(it, changeEvent, eventTransformer(changeEvent))
-        }
+        .map { MessageToEvent(it, eventTransformer(it)) }
         .chunked(batchSize)
         .map { batch ->
           listOf(
@@ -72,7 +64,7 @@ class ApocBatchStrategy(
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
     val termination =
-        if (canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
+        if (CanIUse.canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
         else "RETURN COUNT(1) AS total"
 
     val query = buildString {
@@ -99,7 +91,7 @@ class ApocBatchStrategy(
           put(
               "events",
               events.map {
-                val query = statementGenerator.buildStatement(it.cdcData)
+                val query = statementGenerator.buildStatement(it.sinkAction)
 
                 mapOf(
                     "offset" to it.message.record.kafkaOffset(),
@@ -116,7 +108,7 @@ class ApocBatchStrategy(
   }
 
   private fun StringBuilder.appendCallSubquery() {
-    if (canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
+    if (CanIUse.canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
         appendLine("CALL (${EVENT}) {")
     else appendLine("CALL { WITH ${EVENT}")
     appendLine(

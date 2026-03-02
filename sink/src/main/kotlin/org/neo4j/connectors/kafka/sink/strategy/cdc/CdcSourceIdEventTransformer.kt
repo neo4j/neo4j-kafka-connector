@@ -16,11 +16,17 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cdc
 
-import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
+import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
@@ -31,7 +37,7 @@ class CdcSourceIdEventTransformer(
     val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
 ) : CdcEventTransformer {
 
-  override fun transformCreate(event: NodeEvent): CdcNodeData {
+  override fun transformCreate(event: NodeEvent): SinkAction {
     if (event.before != null) {
       throw InvalidDataException(
           "create operation requires 'before' field to be unset in the event object."
@@ -42,8 +48,7 @@ class CdcSourceIdEventTransformer(
       throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
-    return CdcNodeData(
-        EntityOperation.CREATE,
+    return MergeNodeSinkAction(
         setOf(labelName),
         mapOf(propertyName to event.elementId),
         event.after.properties,
@@ -52,7 +57,7 @@ class CdcSourceIdEventTransformer(
     )
   }
 
-  override fun transformUpdate(event: NodeEvent): CdcNodeData {
+  override fun transformUpdate(event: NodeEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
@@ -60,8 +65,7 @@ class CdcSourceIdEventTransformer(
       throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
-    return CdcNodeData(
-        EntityOperation.UPDATE,
+    return MergeNodeSinkAction(
         setOf(labelName),
         mapOf(propertyName to event.elementId),
         event.mutatedProperties(),
@@ -70,7 +74,7 @@ class CdcSourceIdEventTransformer(
     )
   }
 
-  override fun transformDelete(event: NodeEvent): CdcNodeData {
+  override fun transformDelete(event: NodeEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("delete operation requires 'before' field in the event object.")
     }
@@ -81,17 +85,10 @@ class CdcSourceIdEventTransformer(
       )
     }
 
-    return CdcNodeData(
-        EntityOperation.DELETE,
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
-        emptyMap(),
-        emptySet(),
-        emptySet(),
-    )
+    return DeleteNodeSinkAction(setOf(labelName), mapOf(propertyName to event.elementId))
   }
 
-  override fun transformCreate(event: RelationshipEvent): CdcRelationshipData {
+  override fun transformCreate(event: RelationshipEvent): SinkAction {
     if (event.before != null) {
       throw InvalidDataException(
           "create operation requires 'before' field to be unset in the event object."
@@ -102,20 +99,25 @@ class CdcSourceIdEventTransformer(
       throw InvalidDataException("create operation requires 'after' field in the event object.")
     }
 
-    return CdcRelationshipData(
-        EntityOperation.CREATE,
-        setOf(labelName),
-        mapOf(propertyName to event.start.elementId),
-        setOf(labelName),
-        mapOf(propertyName to event.end.elementId),
+    return MergeRelationshipSinkAction(
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.start.elementId),
+            LookupMode.MERGE,
+        ),
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.end.elementId),
+            LookupMode.MERGE,
+        ),
         event.type,
         mapOf(propertyName to event.elementId),
-        true,
         event.after.properties,
+        true,
     )
   }
 
-  override fun transformUpdate(event: RelationshipEvent): CdcRelationshipData {
+  override fun transformUpdate(event: RelationshipEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("update operation requires 'before' field in the event object.")
     }
@@ -123,20 +125,25 @@ class CdcSourceIdEventTransformer(
       throw InvalidDataException("update operation requires 'after' field in the event object.")
     }
 
-    return CdcRelationshipData(
-        EntityOperation.UPDATE,
-        setOf(labelName),
-        mapOf(propertyName to event.start.elementId),
-        setOf(labelName),
-        mapOf(propertyName to event.end.elementId),
+    return MergeRelationshipSinkAction(
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.start.elementId),
+            LookupMode.MERGE,
+        ),
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.end.elementId),
+            LookupMode.MERGE,
+        ),
         event.type,
         mapOf(propertyName to event.elementId),
-        true,
         event.mutatedProperties(),
+        true,
     )
   }
 
-  override fun transformDelete(event: RelationshipEvent): CdcRelationshipData {
+  override fun transformDelete(event: RelationshipEvent): SinkAction {
     if (event.before == null) {
       throw InvalidDataException("delete operation requires 'before' field in the event object.")
     }
@@ -147,16 +154,20 @@ class CdcSourceIdEventTransformer(
       )
     }
 
-    return CdcRelationshipData(
-        EntityOperation.DELETE,
-        emptySet(),
-        emptyMap(),
-        emptySet(),
-        emptyMap(),
+    return DeleteRelationshipSinkAction(
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.start.elementId),
+            LookupMode.MATCH,
+        ),
+        SinkActionNodeReference(
+            setOf(labelName),
+            mapOf(propertyName to event.end.elementId),
+            LookupMode.MATCH,
+        ),
         event.type,
         mapOf(propertyName to event.elementId),
         true,
-        emptyMap(),
     )
   }
 }

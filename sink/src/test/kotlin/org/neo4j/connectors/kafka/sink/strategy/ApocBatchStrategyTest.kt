@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy.cdc
+package org.neo4j.connectors.kafka.sink.strategy
 
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldMatchInOrder
@@ -32,8 +32,7 @@ import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.sink.SinkStrategy
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.newChangeEventMessage
-import org.neo4j.connectors.kafka.sink.strategy.TestUtils.randomChangeEvent
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 
 class ApocBatchStrategyTest {
 
@@ -46,8 +45,8 @@ class ApocBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 0, 0),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 1, 1),
             )
         ) {
           transformer.transform(it)
@@ -111,8 +110,8 @@ class ApocBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 0, 0),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 1, 1),
             )
         ) {
           transformer.transform(it)
@@ -178,13 +177,13 @@ class ApocBatchStrategyTest {
     val result =
         strategy.handle(
             listOf(
-                newChangeEventMessage(randomChangeEvent(), 0, 0, 0),
-                newChangeEventMessage(randomChangeEvent(), 0, 1, 1),
-                newChangeEventMessage(randomChangeEvent(), 0, 2, 2),
-                newChangeEventMessage(randomChangeEvent(), 1, 0, 3),
-                newChangeEventMessage(randomChangeEvent(), 1, 1, 4),
-                newChangeEventMessage(randomChangeEvent(), 2, 0, 5),
-                newChangeEventMessage(randomChangeEvent(), 3, 0, 6),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 0, 0),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 2, 2),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 1, 0, 3),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 1, 1, 4),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 2, 0, 5),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 3, 0, 6),
             )
         ) {
           transformer.transform(it)

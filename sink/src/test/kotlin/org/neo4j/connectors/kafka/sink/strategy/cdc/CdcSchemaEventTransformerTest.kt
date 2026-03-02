@@ -35,6 +35,12 @@ import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.events.StreamsTransactionEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.LookupMode
+import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.utils.JSONUtils
 
 class CdcSchemaEventTransformerTest {
@@ -52,14 +58,14 @@ class CdcSchemaEventTransformerTest {
             NodeState(listOf("Person"), mapOf("id" to 1, "name" to "John")),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.matchLabels shouldBe setOf("Person")
-    result.matchProperties shouldBe mapOf("id" to 1)
-    result.setProperties shouldBe mapOf("id" to 1, "name" to "John")
-    result.addLabels shouldBe emptySet()
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("Person"),
+            mapOf("id" to 1),
+            mapOf("id" to 1, "name" to "John"),
+            emptySet(),
+            emptySet(),
+        )
   }
 
   @Test
@@ -77,14 +83,14 @@ class CdcSchemaEventTransformerTest {
             ),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.matchLabels shouldBe setOf("Person")
-    result.matchProperties shouldBe mapOf("id" to 1)
-    result.setProperties shouldBe mapOf("salary" to 1000)
-    result.addLabels shouldBe setOf("Employee")
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeNodeSinkAction(
+            setOf("Person"),
+            mapOf("id" to 1),
+            mapOf("salary" to 1000),
+            setOf("Employee"),
+            emptySet(),
+        )
   }
 
   @Test
@@ -99,14 +105,8 @@ class CdcSchemaEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcNodeData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.matchLabels shouldBe setOf("Person")
-    result.matchProperties shouldBe mapOf("id" to 1)
-    result.setProperties shouldBe emptyMap()
-    result.addLabels shouldBe emptySet()
-    result.removeLabels shouldBe emptySet()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteNodeSinkAction(setOf("Person"), mapOf("id" to 1))
   }
 
   @Test
@@ -123,17 +123,15 @@ class CdcSchemaEventTransformerTest {
             RelationshipState(mapOf("since" to 2020)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("since" to 2020)
-    result.hasKeys shouldBe false
-    result.setProperties shouldBe mapOf("since" to 2020)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("since" to 2020),
+            mapOf("since" to 2020),
+            false,
+        )
   }
 
   @Test
@@ -150,17 +148,15 @@ class CdcSchemaEventTransformerTest {
             RelationshipState(mapOf("relId" to "R1", "since" to 2020)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.CREATE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("relId" to "R1")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("relId" to "R1", "since" to 2020)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("relId" to "R1"),
+            mapOf("relId" to "R1", "since" to 2020),
+            true,
+        )
   }
 
   @Test
@@ -177,17 +173,15 @@ class CdcSchemaEventTransformerTest {
             RelationshipState(mapOf("since" to 2021, "rating" to 5)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("since" to 2020)
-    result.hasKeys shouldBe false
-    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("since" to 2020),
+            mapOf("since" to 2021, "rating" to 5),
+            false,
+        )
   }
 
   @Test
@@ -204,17 +198,15 @@ class CdcSchemaEventTransformerTest {
             RelationshipState(mapOf("since" to 2021, "rating" to 5)),
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.UPDATE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("relId" to "R1")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe mapOf("since" to 2021, "rating" to 5)
+    transformer.transform(changeEvent(event)) shouldBe
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("relId" to "R1"),
+            mapOf("since" to 2021, "rating" to 5),
+            true,
+        )
   }
 
   @Test
@@ -231,17 +223,14 @@ class CdcSchemaEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("since" to 2020)
-    result.hasKeys shouldBe false
-    result.setProperties shouldBe emptyMap()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("since" to 2020),
+            false,
+        )
   }
 
   @Test
@@ -258,17 +247,14 @@ class CdcSchemaEventTransformerTest {
             null,
         )
 
-    val result = transformer.transform(changeEvent(event)) as CdcRelationshipData
-
-    result.operation shouldBe EntityOperation.DELETE
-    result.startMatchLabels shouldBe setOf("Person")
-    result.startMatchProperties shouldBe mapOf("id" to 1)
-    result.endMatchLabels shouldBe setOf("Person")
-    result.endMatchProperties shouldBe mapOf("id" to 2)
-    result.matchType shouldBe "KNOWS"
-    result.matchProperties shouldBe mapOf("relId" to "R1")
-    result.hasKeys shouldBe true
-    result.setProperties shouldBe emptyMap()
+    transformer.transform(changeEvent(event)) shouldBe
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 1), LookupMode.MATCH),
+            SinkActionNodeReference(setOf("Person"), mapOf("id" to 2), LookupMode.MATCH),
+            "KNOWS",
+            mapOf("relId" to "R1"),
+            true,
+        )
   }
 
   @Test
