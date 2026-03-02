@@ -66,7 +66,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
 
   private fun buildNodeStatement(action: UpdateNodeSinkAction, eventVariable: String): Query {
     return buildNodeUpdateStatement(
-        "MATCH",
+        LookupMode.MATCH,
         action.matcher,
         action.setProperties,
         action.addLabels,
@@ -77,7 +77,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
 
   private fun buildNodeStatement(action: MergeNodeSinkAction, eventVariable: String): Query {
     return buildNodeUpdateStatement(
-        "MERGE",
+        LookupMode.MERGE,
         action.matcher,
         action.setProperties,
         action.addLabels,
@@ -87,22 +87,14 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildNodeUpdateStatement(
-      action: String,
-      matcher: Matcher,
+      mode: LookupMode,
+      matcher: NodeMatcher,
       setProperties: Map<String, Any?>,
       addLabels: Set<String>,
       removeLabels: Set<String>,
       eventVariable: String,
   ): Query {
-    when (matcher) {
-      is NodeMatcher.ByLabelsAndProperties -> matcher
-      else -> TODO()
-    }
-    val matchLabelsPattern =
-        if (supportsDynamicLabelsWithPropertyIndices) {
-          ":${'$'}(_e.matchLabels)"
-        } else buildLabels(matcher.labels)
-    val matchPropsPattern = buildMatchProps(matcher.properties, "_e", "matchProperties")
+    val matchFragment = matcher.buildFragment(mode, "n", "_e")
     val setLabelsClause =
         if (setDynamicLabels) {
           " SET n:${'$'}(_e.addLabels)"
@@ -120,12 +112,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
           ""
         }
     val stmt =
-        "WITH $eventVariable AS _e $action (n$matchLabelsPattern$matchPropsPattern) SET n += _e.setProperties$setLabelsClause$removeLabelsClause"
+        "WITH $eventVariable AS _e ${matchFragment.clause} SET n += _e.setProperties$setLabelsClause$removeLabelsClause"
     val params = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchLabels"] = matcher.labels
-      }
-      this["matchProperties"] = matcher.properties
+      this.putAll(matchFragment.params)
+
       this["setProperties"] = setProperties
       if (setDynamicLabels) {
         this["addLabels"] = addLabels
@@ -139,22 +129,9 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildNodeStatement(action: DeleteNodeSinkAction, eventVariable: String): Query {
-    when (action.matcher) {
-      is NodeMatcher.ByLabelsAndProperties -> action.matcher
-      else -> TODO()
-    }
-    val matchLabels =
-        if (supportsDynamicLabelsWithPropertyIndices) {
-          ":${'$'}(_e.matchLabels)"
-        } else buildLabels(action.matcher.labels)
-    val matchProps = buildMatchProps(action.matcher.properties, "_e", "matchProperties")
-    val stmt = "WITH $eventVariable AS _e MATCH (n$matchLabels$matchProps) DELETE n"
-    val params = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchLabels"] = action.matcher.labels
-      }
-      this["matchProperties"] = action.matcher.properties
-    }
+    val matchFragment = action.matcher.buildFragment(LookupMode.MATCH, "n", "_e")
+    val stmt = "WITH $eventVariable AS _e ${matchFragment.clause} DELETE n"
+    val params = matchFragment.params
 
     return Query(stmt, if (eventVariable == "${'$'}$EVENT") mapOf(EVENT to params) else params)
   }
@@ -163,37 +140,23 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       action: CreateRelationshipSinkAction,
       eventVariable: String,
   ): Query {
-    val startClause = action.startNode.buildClause("start")
-    val endClause = action.endNode.buildClause("end")
+    val startFragment =
+        action.startNode.matcher.buildFragment(action.startNode.lookupMode, "start", "_e.start")
+    val endFragment =
+        action.endNode.matcher.buildFragment(action.endNode.lookupMode, "end", "_e.end")
 
     val typePattern =
         if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.type)"
         else SchemaNames.sanitize(action.type, true).orElseThrow()
 
     val stmt =
-        "WITH $eventVariable AS _e$startClause$endClause CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
+        "WITH $eventVariable AS _e ${startFragment.clause} ${endFragment.clause} CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
     val params = buildMap {
-      if (
-          action.startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              action.startNode.matcher.properties.isNotEmpty()
-      ) {
-        this["start"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.startNode.matcher.labels
-          }
-          this["matchProperties"] = action.startNode.matcher.properties
-        }
+      if (startFragment.params.isNotEmpty()) {
+        this["start"] = startFragment.params
       }
-      if (
-          action.endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              action.endNode.matcher.properties.isNotEmpty()
-      ) {
-        this["end"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.endNode.matcher.labels
-          }
-          this["matchProperties"] = action.endNode.matcher.properties
-        }
+      if (endFragment.params.isNotEmpty()) {
+        this["end"] = endFragment.params
       }
       if (supportsDynamicLabelsWithPropertyIndices) {
         this["type"] = action.type
@@ -208,12 +171,11 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       eventVariable: String,
   ): Query {
     return buildRelationshipUpdateStatement(
-        "MATCH",
+        LookupMode.MATCH,
         action.startNode,
         action.endNode,
         action.matcher,
         action.setProperties,
-        action.hasKeys,
         eventVariable,
     )
   }
@@ -223,71 +185,30 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       eventVariable: String,
   ): Query {
     return buildRelationshipUpdateStatement(
-        "MERGE",
+        LookupMode.MERGE,
         action.startNode,
         action.endNode,
         action.matcher,
         action.setProperties,
-        action.hasKeys,
         eventVariable,
     )
   }
 
   private fun buildRelationshipUpdateStatement(
-      action: String,
+      mode: LookupMode,
       startNode: SinkActionNodeReference,
       endNode: SinkActionNodeReference,
-      matcher: Matcher,
+      matcher: RelationshipMatcher,
       setProperties: Map<String, Any?>,
-      hasKeys: Boolean,
       eventVariable: String,
   ): Query {
-    when (matcher) {
-      is RelationshipMatcher.ByTypeAndProperties -> matcher
-      else -> TODO()
-    }
-    val startClause = startNode.buildClause("start")
-    val endClause = endNode.buildClause("end")
-
-    val matchTypePattern =
-        if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.matchType)"
-        else SchemaNames.sanitize(matcher.type, true).orElseThrow()
-    val matchPropsPattern = buildMatchProps(matcher.properties, "_e", "matchProperties")
-
+    val matchFragment = matcher.buildFragment(mode, startNode, endNode, "r", "_e")
     val stmt =
-        if (!hasKeys)
-            "WITH $eventVariable AS _e$startClause$endClause $action (start)-[r:$matchTypePattern$matchPropsPattern]->(end) WITH _e, r LIMIT 1 SET r += _e.setProperties"
-        else
-            "WITH $eventVariable AS _e$startClause$endClause $action (start)-[r:$matchTypePattern$matchPropsPattern]->(end) SET r += _e.setProperties"
+        if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys)
+            "WITH $eventVariable AS _e ${matchFragment.clause} WITH _e, r LIMIT 1 SET r += _e.setProperties"
+        else "WITH $eventVariable AS _e ${matchFragment.clause} SET r += _e.setProperties"
     val params = buildMap {
-      if (
-          startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              (startNode.matcher.properties.isNotEmpty() || !hasKeys)
-      ) {
-        this["start"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = startNode.matcher.labels
-          }
-          this["matchProperties"] = startNode.matcher.properties
-        }
-      }
-      if (
-          endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              (endNode.matcher.properties.isNotEmpty() || !hasKeys)
-      ) {
-        this["end"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = endNode.matcher.labels
-          }
-          this["matchProperties"] = endNode.matcher.properties
-        }
-      }
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = matcher.type
-      }
-      if (matcher.properties.isNotEmpty()) {
-        this["matchProperties"] = matcher.properties
-      }
+      putAll(matchFragment.params)
       this["setProperties"] = setProperties
     }
 
@@ -298,73 +219,172 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       action: DeleteRelationshipSinkAction,
       eventVariable: String,
   ): Query {
-    when (action.matcher) {
-      is RelationshipMatcher.ByTypeAndProperties -> action.matcher
-      else -> TODO()
-    }
-
-    val startClause = action.startNode.buildClause("start")
-    val endClause = action.endNode.buildClause("end")
-
-    val matchTypePattern =
-        if (supportsDynamicLabelsWithPropertyIndices) "${'$'}(_e.matchType)"
-        else SchemaNames.sanitize(action.matcher.type, true).orElseThrow()
-    val matchPropsPattern = buildMatchProps(action.matcher.properties, "_e", "matchProperties")
-
+    val matchFragment =
+        action.matcher.buildFragment(LookupMode.MATCH, action.startNode, action.endNode, "r", "_e")
     val stmt =
-        if (!action.hasKeys)
-            "WITH $eventVariable AS _e$startClause$endClause MATCH (start)-[r:$matchTypePattern$matchPropsPattern]->(end) WITH _e, r LIMIT 1 DELETE r"
-        else
-            "WITH $eventVariable AS _e MATCH ()-[r:$matchTypePattern$matchPropsPattern]->() DELETE r"
-    val params = buildMap {
-      if (
-          action.startNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              (action.startNode.matcher.properties.isNotEmpty() && !action.hasKeys)
-      ) {
-        this["start"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.startNode.matcher.labels
-          }
-          this["matchProperties"] = action.startNode.matcher.properties
-        }
-      }
-      if (
-          action.endNode.matcher is NodeMatcher.ByLabelsAndProperties &&
-              action.endNode.matcher.properties.isNotEmpty() &&
-              !action.hasKeys
-      ) {
-        this["end"] = buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = action.endNode.matcher.labels
-          }
-          this["matchProperties"] = action.endNode.matcher.properties
-        }
-      }
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = action.matcher.type
-      }
-      if (action.matcher.properties.isNotEmpty()) {
-        this["matchProperties"] = action.matcher.properties
-      }
-    }
+        if (action.matcher is RelationshipMatcher.ByTypeAndProperties && !action.matcher.hasKeys)
+            "WITH $eventVariable AS _e ${matchFragment.clause} WITH _e, r LIMIT 1 DELETE r"
+        else "WITH $eventVariable AS _e ${matchFragment.clause} DELETE r"
+    val params = matchFragment.params
 
     return Query(stmt, if (eventVariable == "${'$'}$EVENT") mapOf(EVENT to params) else params)
   }
 
-  private fun SinkActionNodeReference.buildClause(alias: String): String {
-    when (this.matcher) {
-      is NodeMatcher.ByLabelsAndProperties -> this.matcher
-      else -> TODO()
-    }
-    val matchLabels =
-        if (supportsDynamicLabelsWithPropertyIndices && this.matcher.labels.isNotEmpty())
-            ":${'$'}(_e.$alias.matchLabels)"
-        else buildLabels(this.matcher.labels)
-    val matchProps = buildMatchProps(this.matcher.properties, "_e", "$alias.matchProperties")
-    val op = this.lookupMode.name
+  data class Fragment(val clause: String, val params: Map<String, Any>)
 
-    return if (matchLabels.isEmpty() && matchProps.isEmpty()) ""
-    else " $op ($alias$matchLabels$matchProps)"
+  fun NodeMatcher.buildFragment(mode: LookupMode, alias: String, eventVariable: String): Fragment {
+    return when (this) {
+      is NodeMatcher.ByLabelsAndProperties -> this.buildFragment(mode, alias, eventVariable)
+      is NodeMatcher.ById -> this.buildFragment(mode, alias, eventVariable)
+      is NodeMatcher.ByElementId -> this.buildFragment(mode, alias, eventVariable)
+    }
+  }
+
+  fun NodeMatcher.ByLabelsAndProperties.buildFragment(
+      mode: LookupMode,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    val matchLabelsPattern =
+        if (supportsDynamicLabelsWithPropertyIndices) {
+          ":${'$'}($eventVariable.matchLabels)"
+        } else buildLabels(this.labels)
+    val matchPropsPattern = buildMatchProps(this.properties, eventVariable, "matchProperties")
+
+    return Fragment(
+        "$mode ($alias$matchLabelsPattern$matchPropsPattern)",
+        buildMap {
+          if (supportsDynamicLabelsWithPropertyIndices) {
+            this["matchLabels"] = this@buildFragment.labels
+          }
+          this["matchProperties"] = this@buildFragment.properties
+        },
+    )
+  }
+
+  fun NodeMatcher.ById.buildFragment(
+      mode: LookupMode,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    return Fragment(
+        "$mode ($alias) WHERE id($alias) = $eventVariable.matchId",
+        buildMap { this["matchId"] = this@buildFragment.id },
+    )
+  }
+
+  fun NodeMatcher.ByElementId.buildFragment(
+      mode: LookupMode,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    return Fragment(
+        "$mode ($alias) WHERE elementId($alias) = $eventVariable.matchElementId",
+        buildMap { this["matchElementId"] = this@buildFragment.elementId },
+    )
+  }
+
+  fun RelationshipMatcher.buildFragment(
+      mode: LookupMode,
+      startNode: SinkActionNodeReference,
+      endNode: SinkActionNodeReference,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    return when (this) {
+      is RelationshipMatcher.ByTypeAndProperties ->
+          this.buildFragment(mode, startNode, endNode, alias, eventVariable)
+      is RelationshipMatcher.ById ->
+          this.buildFragment(mode, startNode, endNode, alias, eventVariable)
+      is RelationshipMatcher.ByElementId ->
+          this.buildFragment(mode, startNode, endNode, alias, eventVariable)
+    }
+  }
+
+  fun RelationshipMatcher.ByTypeAndProperties.buildFragment(
+      mode: LookupMode,
+      startNode: SinkActionNodeReference,
+      endNode: SinkActionNodeReference,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    val startFragment =
+        startNode.matcher.buildFragment(startNode.lookupMode, "start", "$eventVariable.start")
+    val endFragment = endNode.matcher.buildFragment(endNode.lookupMode, "end", "$eventVariable.end")
+    val matchTypePattern =
+        if (supportsDynamicLabelsWithPropertyIndices) "${'$'}($eventVariable.matchType)"
+        else SchemaNames.sanitize(this.type, true).orElseThrow()
+    val matchPropsPattern = buildMatchProps(this.properties, eventVariable, "matchProperties")
+
+    return Fragment(
+        buildString {
+          append(startFragment.clause).append(" ")
+          append(endFragment.clause).append(" ")
+          append("$mode (start)-[$alias:$matchTypePattern$matchPropsPattern]->(end)")
+        },
+        buildMap {
+          this["start"] = startFragment.params
+          this["end"] = endFragment.params
+          if (supportsDynamicLabelsWithPropertyIndices) {
+            this["matchType"] = this@buildFragment.type
+          }
+          if (this@buildFragment.properties.isNotEmpty()) {
+            this["matchProperties"] = this@buildFragment.properties
+          }
+        },
+    )
+  }
+
+  fun RelationshipMatcher.ById.buildFragment(
+      mode: LookupMode,
+      startNode: SinkActionNodeReference,
+      endNode: SinkActionNodeReference,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    val startFragment =
+        startNode.matcher.buildFragment(startNode.lookupMode, "start", "$eventVariable.start")
+    val endFragment = endNode.matcher.buildFragment(endNode.lookupMode, "end", "$eventVariable.end")
+
+    return Fragment(
+        buildString {
+          append(startFragment.clause).append(" ")
+          append(endFragment.clause).append(" ")
+          append("$mode (start)-[$alias]->(end) WHERE id($alias) = $eventVariable.matchId")
+        },
+        buildMap {
+          this["start"] = startFragment.params
+          this["end"] = endFragment.params
+          this["matchId"] = this@buildFragment.id
+        },
+    )
+  }
+
+  fun RelationshipMatcher.ByElementId.buildFragment(
+      mode: LookupMode,
+      startNode: SinkActionNodeReference,
+      endNode: SinkActionNodeReference,
+      alias: String,
+      eventVariable: String,
+  ): Fragment {
+    val startFragment =
+        startNode.matcher.buildFragment(startNode.lookupMode, "start", "$eventVariable.start")
+    val endFragment = endNode.matcher.buildFragment(endNode.lookupMode, "end", "$eventVariable.end")
+
+    return Fragment(
+        buildString {
+          append(startFragment.clause).append(" ")
+          append(endFragment.clause).append(" ")
+          append(
+              "$mode (start)-[$alias]->(end) WHERE elementId($alias) = $eventVariable.matchElementId"
+          )
+        },
+        buildMap {
+          this["start"] = startFragment.params
+          this["end"] = endFragment.params
+          this["matchElementId"] = this@buildFragment.elementId
+        },
+    )
   }
 
   companion object {

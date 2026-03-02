@@ -116,9 +116,12 @@ class CdcSourceIdEventTransformer(
             ),
             LookupMode.MERGE,
         ),
-        RelationshipMatcher.ByTypeAndProperties(event.type, mapOf(propertyName to event.elementId)),
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
         event.after.properties,
-        true,
     )
   }
 
@@ -145,9 +148,12 @@ class CdcSourceIdEventTransformer(
             ),
             LookupMode.MERGE,
         ),
-        RelationshipMatcher.ByTypeAndProperties(event.type, mapOf(propertyName to event.elementId)),
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
         event.mutatedProperties(),
-        true,
     )
   }
 
@@ -177,8 +183,11 @@ class CdcSourceIdEventTransformer(
             ),
             LookupMode.MATCH,
         ),
-        RelationshipMatcher.ByTypeAndProperties(event.type, mapOf(propertyName to event.elementId)),
-        true,
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
     )
   }
 }

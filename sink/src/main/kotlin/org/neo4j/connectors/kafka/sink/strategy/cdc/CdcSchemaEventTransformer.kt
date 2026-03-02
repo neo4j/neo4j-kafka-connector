@@ -114,9 +114,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
             NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
             LookupMode.MATCH,
         ),
-        RelationshipMatcher.ByTypeAndProperties(relMatchType, relMatchProperties),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            event.keys.isNotEmpty(),
+        ),
         event.after.properties,
-        event.keys.isNotEmpty(),
     )
   }
 
@@ -145,9 +148,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
             NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
             LookupMode.MATCH,
         ),
-        RelationshipMatcher.ByTypeAndProperties(relMatchType, relMatchProperties),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            relationshipKeys.isNotEmpty(),
+        ),
         event.mutatedProperties(),
-        relationshipKeys.isNotEmpty(),
     )
   }
 
@@ -179,8 +185,11 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
             NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
             LookupMode.MATCH,
         ),
-        RelationshipMatcher.ByTypeAndProperties(relMatchType, relMatchProperties),
-        relationshipKeys.isNotEmpty(),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            relationshipKeys.isNotEmpty(),
+        ),
     )
   }
 

@@ -219,9 +219,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2020),
-            true,
         )
   }
 
@@ -255,9 +258,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2020),
-            true,
         )
   }
 
@@ -291,9 +297,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2020),
-            true,
         )
   }
 
@@ -327,9 +336,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2021, "rating" to 5),
-            true,
         )
   }
 
@@ -363,9 +375,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2021, "rating" to 5),
-            true,
         )
   }
 
@@ -399,9 +414,12 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MERGE,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
             mapOf("since" to 2021, "rating" to 5),
-            true,
         )
   }
 
@@ -435,8 +453,11 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
-            true,
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
         )
   }
 
@@ -470,8 +491,11 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
-            true,
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
         )
   }
 
@@ -505,8 +529,11 @@ class CdcSourceIdEventTransformerTest {
                 ),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("sourceId" to "rel-element-id")),
-            true,
+            RelationshipMatcher.ByTypeAndProperties(
+                "KNOWS",
+                mapOf("sourceId" to "rel-element-id"),
+                true,
+            ),
         )
   }
 

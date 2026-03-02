@@ -133,9 +133,8 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020), false),
             mapOf("since" to 2020),
-            false,
         )
   }
 
@@ -163,9 +162,8 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
             mapOf("relId" to "R1", "since" to 2020),
-            true,
         )
   }
 
@@ -193,9 +191,8 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020), false),
             mapOf("since" to 2021, "rating" to 5),
-            false,
         )
   }
 
@@ -223,9 +220,8 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
             mapOf("since" to 2021, "rating" to 5),
-            true,
         )
   }
 
@@ -253,8 +249,7 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020)),
-            false,
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020), false),
         )
   }
 
@@ -282,8 +277,7 @@ class CdcSchemaEventTransformerTest {
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
                 LookupMode.MATCH,
             ),
-            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1")),
-            true,
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
         )
   }
 

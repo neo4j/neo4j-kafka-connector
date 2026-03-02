@@ -24,7 +24,11 @@ sealed class Matcher
 
 sealed class NodeMatcher : Matcher() {
   data class ByLabelsAndProperties(val labels: Set<String>, val properties: Map<String, Any?>) :
-      NodeMatcher()
+      NodeMatcher() {
+    init {
+      require(properties.isNotEmpty()) { "properties can not be empty for node matchers" }
+    }
+  }
 
   data class ById(val id: Long) : NodeMatcher()
 
@@ -32,8 +36,15 @@ sealed class NodeMatcher : Matcher() {
 }
 
 sealed class RelationshipMatcher : Matcher() {
-  data class ByTypeAndProperties(val type: String, val properties: Map<String, Any?>) :
-      RelationshipMatcher()
+  data class ByTypeAndProperties(
+      val type: String,
+      val properties: Map<String, Any?>,
+      val hasKeys: Boolean,
+  ) : RelationshipMatcher() {
+    init {
+      require(type.isNotBlank()) { "type can not be blank." }
+    }
+  }
 
   data class ById(val id: Long) : RelationshipMatcher()
 
@@ -55,9 +66,15 @@ data class MergeNodeSinkAction(
     val setProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
-) : SinkAction()
+) : SinkAction() {
+  init {
+    require(matcher is NodeMatcher.ByLabelsAndProperties) {
+      "can only use labels and properties as a matcher for merge node action."
+    }
+  }
+}
 
-data class DeleteNodeSinkAction(val matcher: Matcher) : SinkAction()
+data class DeleteNodeSinkAction(val matcher: NodeMatcher) : SinkAction()
 
 enum class LookupMode {
   MATCH,
@@ -65,17 +82,12 @@ enum class LookupMode {
 }
 
 data class SinkActionNodeReference(val matcher: NodeMatcher, val lookupMode: LookupMode) {
-  companion object {
-    val MATCH_ANY =
-        SinkActionNodeReference(
-            NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
-            LookupMode.MATCH,
-        )
-    val MERGE_ANY =
-        SinkActionNodeReference(
-            NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
-            LookupMode.MERGE,
-        )
+  init {
+    if (lookupMode == LookupMode.MERGE) {
+      require(matcher is NodeMatcher.ByLabelsAndProperties) {
+        "can only use labels and properties as a matcher for MERGE lookup mode."
+      }
+    }
   }
 }
 
@@ -84,27 +96,46 @@ data class CreateRelationshipSinkAction(
     val endNode: SinkActionNodeReference,
     val type: String,
     val properties: Map<String, Any?>,
-) : SinkAction()
+) : SinkAction() {
+  init {
+    require(type.isNotBlank()) { "type can not be blank." }
+  }
+}
 
 data class UpdateRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
     val setProperties: Map<String, Any?>,
-    val hasKeys: Boolean,
-) : SinkAction()
+) : SinkAction() {
+  init {
+    require(startNode.lookupMode == LookupMode.MATCH) {
+      "start node must use MATCH lookup mode for update relationship action."
+    }
+    require(endNode.lookupMode == LookupMode.MATCH) {
+      "start node must use MATCH lookup mode for update relationship action."
+    }
+  }
+}
 
 data class MergeRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
     val setProperties: Map<String, Any?>,
-    val hasKeys: Boolean,
 ) : SinkAction()
 
 data class DeleteRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
-    val hasKeys: Boolean,
-) : SinkAction()
+) : SinkAction() {
+  init {
+    require(startNode.lookupMode == LookupMode.MATCH) {
+      "start node must use MATCH lookup mode for delete relationship action."
+    }
+    require(endNode.lookupMode == LookupMode.MATCH) {
+      "start node must use MATCH lookup mode for delete relationship action."
+    }
+  }
+}
