@@ -21,12 +21,8 @@ import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
-import org.neo4j.connectors.kafka.configuration.ConnectorType.SINK
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
-import org.neo4j.connectors.kafka.metrics.CdcMetricsData
-import org.neo4j.connectors.kafka.metrics.Metrics
-import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer

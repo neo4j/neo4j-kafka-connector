@@ -213,10 +213,10 @@ class SinkConfigurationTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    config.topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
+    topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
 
-    config.topicHandlers shouldHaveKey "bar"
-    config.topicHandlers["bar"] shouldBe instanceOf<SinkHandler>()
+    topicHandlers shouldHaveKey "bar"
+    topicHandlers["bar"] shouldBe instanceOf<SinkHandler>()
   }
 
   @ParameterizedTest

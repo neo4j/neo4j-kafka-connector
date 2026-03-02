@@ -21,7 +21,7 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 
-class SinkHandler(
+open class SinkHandler(
     private val strategy: SinkStrategy,
     internal val batchStrategy: SinkBatchStrategy,
     internal val eventTransformer: SinkEventTransformer,
