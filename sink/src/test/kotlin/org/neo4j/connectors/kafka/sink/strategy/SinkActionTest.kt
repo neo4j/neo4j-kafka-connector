@@ -60,20 +60,13 @@ class SinkActionTest {
     }
 
     @Test
-    fun `should create matcher with empty properties`() {
-      val matcher =
-          NodeMatcher.ByLabelsAndProperties(labels = setOf("Person"), properties = emptyMap())
+    fun `should throw exception when properties are empty`() {
+      val exception =
+          shouldThrow<IllegalArgumentException> {
+            NodeMatcher.ByLabelsAndProperties(labels = setOf("Person"), properties = emptyMap())
+          }
 
-      matcher.labels shouldBe setOf("Person")
-      matcher.properties shouldBe emptyMap()
-    }
-
-    @Test
-    fun `should create matcher with empty labels and properties`() {
-      val matcher = NodeMatcher.ByLabelsAndProperties(labels = emptySet(), properties = emptyMap())
-
-      matcher.labels shouldBe emptySet()
-      matcher.properties shouldBe emptyMap()
+      exception.message shouldBe "properties can not be empty for node matchers"
     }
   }
 
