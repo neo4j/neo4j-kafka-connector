@@ -129,7 +129,13 @@ class CompactValueConverter : ValueConverter {
                   .apply { if (optional) optional() }
                   .build()
 
-          else ->
+          else -> {
+            val merged = mergeStructSchemas(nonEmptyElementTypes.toSet())
+            if (merged != null) {
+              SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
+                  .apply { if (optional) optional() }
+                  .build()
+            } else {
               SchemaBuilder.struct()
                   .apply {
                     value.forEachIndexed { i, v ->
@@ -138,6 +144,8 @@ class CompactValueConverter : ValueConverter {
                   }
                   .apply { if (optional) optional() }
                   .build()
+            }
+          }
         }
       }
 
@@ -302,6 +310,64 @@ class CompactValueConverter : ValueConverter {
           }
 
       else -> value
+    }
+  }
+
+  /**
+   * Attempts to merge multiple STRUCT schemas into a single schema by taking the union of all
+   * fields. Fields present in only a subset of schemas are marked as optional. Returns null if
+   * schemas are incompatible (non-STRUCT types, or same field with conflicting types).
+   */
+  private fun mergeStructSchemas(schemas: Set<Schema>): Schema? {
+    if (schemas.any { it.type() != Schema.Type.STRUCT }) return null
+
+    // The null schema is what schema(null) returns — OPTIONAL_STRING via SimpleTypes.NULL.
+    // When a Map field has a null value, the Map branch's else case calls schema(null) and
+    // gets this schema. We treat it as compatible with any concrete type during merging,
+    // using structural equality (ConnectSchema.equals) for comparison.
+    val nullSchema = SimpleTypes.NULL.schema(true)
+    val allFieldNames = linkedSetOf<String>()
+    schemas.forEach { s -> s.fields().forEach { allFieldNames.add(it.name()) } }
+
+    val builder = SchemaBuilder.struct()
+    for (fieldName in allFieldNames) {
+      val fieldSchemas = schemas.mapNotNull { it.field(fieldName)?.schema() }
+      val presentInAll = fieldSchemas.size == schemas.size
+      val nonNullFieldSchemas = fieldSchemas.filter { it != nullSchema }
+      val hasNullSchema = nonNullFieldSchemas.size < fieldSchemas.size
+
+      val uniqueFieldSchemas = nonNullFieldSchemas.toSet()
+      val resolvedSchema =
+          when {
+            uniqueFieldSchemas.isEmpty() -> nullSchema
+            uniqueFieldSchemas.size == 1 -> uniqueFieldSchemas.first()
+            uniqueFieldSchemas.all { it.type() == Schema.Type.STRUCT } ->
+                mergeStructSchemas(uniqueFieldSchemas) ?: return null
+            else -> return null
+          }
+
+      builder.field(
+          fieldName,
+          if (!presentInAll || hasNullSchema) makeOptional(resolvedSchema) else resolvedSchema,
+      )
+    }
+    return builder.build()
+  }
+
+  private fun makeOptional(schema: Schema): Schema {
+    if (schema.isOptional) return schema
+    return when (schema.type()) {
+      Schema.Type.STRUCT ->
+          SchemaBuilder.struct()
+              .apply {
+                schema.fields().forEach { field(it.name(), it.schema()) }
+                optional()
+              }
+              .build()
+      Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema()).optional().build()
+      Schema.Type.MAP ->
+          SchemaBuilder.map(schema.keySchema(), schema.valueSchema()).optional().build()
+      else -> SchemaBuilder.type(schema.type()).optional().build()
     }
   }
 }
