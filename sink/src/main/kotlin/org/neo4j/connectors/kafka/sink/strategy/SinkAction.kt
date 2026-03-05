@@ -125,7 +125,7 @@ data class UpdateRelationshipSinkAction(
       "start node must use MATCH lookup mode for update relationship action."
     }
     require(endNode.lookupMode == LookupMode.MATCH) {
-      "start node must use MATCH lookup mode for update relationship action."
+      "end node must use MATCH lookup mode for update relationship action."
     }
     if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {
       require(startNode != SinkActionNodeReference.MATCH_ANY) {
@@ -164,7 +164,7 @@ data class DeleteRelationshipSinkAction(
       "start node must use MATCH lookup mode for delete relationship action."
     }
     require(endNode.lookupMode == LookupMode.MATCH) {
-      "start node must use MATCH lookup mode for delete relationship action."
+      "end node must use MATCH lookup mode for delete relationship action."
     }
     if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {
       require(startNode != SinkActionNodeReference.MATCH_ANY) {
