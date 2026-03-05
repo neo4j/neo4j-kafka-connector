@@ -23,11 +23,13 @@ import java.time.LocalDate
 import java.util.UUID
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
@@ -175,6 +177,8 @@ class SinkActionStatementGeneratorIT {
 
   @Test
   fun `should execute update node statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
     // Setup: Create a node and get its element id
     val elementId =
         session
@@ -283,6 +287,8 @@ class SinkActionStatementGeneratorIT {
 
   @Test
   fun `should execute delete node statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
     // Setup: Create a node and get its element id
     val elementId =
         session
@@ -362,6 +368,8 @@ class SinkActionStatementGeneratorIT {
 
   @Test
   fun `should execute create relationship statement with node element id matchers`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
     // Setup: Create start and end nodes
     val ids =
         session
@@ -495,6 +503,8 @@ class SinkActionStatementGeneratorIT {
 
   @Test
   fun `should execute update relationship statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
     // Setup: Create nodes and relationship, get relationship element id
     val relElementId =
         session
@@ -769,6 +779,8 @@ class SinkActionStatementGeneratorIT {
 
   @Test
   fun `should execute delete relationship statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
     // Setup: Create nodes and relationship, get relationship element id
     val relElementId =
         session
