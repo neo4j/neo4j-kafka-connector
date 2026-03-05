@@ -305,6 +305,72 @@ class SinkActionStatementGeneratorIT {
     count shouldBe 0
   }
 
+  @Test
+  fun `should execute detach delete node statement with labels and properties matcher`() {
+    // Setup: Create nodes with a relationship
+    session.run("CREATE (:Person {id: 1})-[:KNOWS]->(:Person {id: 2})").consume()
+
+    val action =
+        DeleteNodeSinkAction(
+            matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            detach = true,
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val count = session.run("MATCH (n:Person {id: 1}) RETURN count(n) as c").single()["c"].asLong()
+    count shouldBe 0
+    // The other node should still exist
+    val otherCount =
+        session.run("MATCH (n:Person {id: 2}) RETURN count(n) as c").single()["c"].asLong()
+    otherCount shouldBe 1
+  }
+
+  @Test
+  fun `should execute detach delete node statement with id matcher`() {
+    // Setup: Create nodes with a relationship and get the id
+    val nodeId =
+        session
+            .run(
+                "CREATE (n:Person {name: 'joe'})-[:KNOWS]->(:Person {name: 'jane'}) RETURN id(n) as id"
+            )
+            .single()["id"]
+            .asLong()
+
+    val action = DeleteNodeSinkAction(matcher = NodeMatcher.ById(nodeId), detach = true)
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val count =
+        session.run("MATCH (n:Person {name: 'joe'}) RETURN count(n) as c").single()["c"].asLong()
+    count shouldBe 0
+  }
+
+  @Test
+  fun `should execute detach delete node statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes with a relationship and get the element id
+    val elementId =
+        session
+            .run(
+                "CREATE (n:Person {name: 'joe'})-[:KNOWS]->(:Person {name: 'jane'}) RETURN elementId(n) as id"
+            )
+            .single()["id"]
+            .asString()
+
+    val action = DeleteNodeSinkAction(matcher = NodeMatcher.ByElementId(elementId), detach = true)
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val count =
+        session.run("MATCH (n:Person {name: 'joe'}) RETURN count(n) as c").single()["c"].asLong()
+    count shouldBe 0
+  }
+
   // ===========================================
   // Relationship Create Tests
   // ===========================================

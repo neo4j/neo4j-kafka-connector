@@ -70,7 +70,8 @@ data class MergeNodeSinkAction(
   }
 }
 
-data class DeleteNodeSinkAction(val matcher: NodeMatcher) : SinkAction()
+data class DeleteNodeSinkAction(val matcher: NodeMatcher, val detach: Boolean = false) :
+    SinkAction()
 
 enum class LookupMode {
   MATCH,

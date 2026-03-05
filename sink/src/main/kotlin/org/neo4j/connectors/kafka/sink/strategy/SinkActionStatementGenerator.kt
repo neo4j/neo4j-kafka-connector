@@ -127,7 +127,8 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
 
   private fun buildNodeStatement(action: DeleteNodeSinkAction, eventVariable: String): Query {
     val matchFragment = buildNodeFragment(action.matcher, LookupMode.MATCH, "n", "_e")
-    val stmt = "WITH $eventVariable AS _e ${matchFragment.clause} DELETE n"
+    val deleteClause = if (action.detach) "DETACH DELETE n" else "DELETE n"
+    val stmt = "WITH $eventVariable AS _e ${matchFragment.clause} $deleteClause"
     val params = matchFragment.params
 
     return buildQuery(stmt, eventVariable, params)

@@ -508,6 +508,129 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParams::class)
+  fun `should build node detach delete statements`(neo4j: Neo4j, expectedQuery: Query) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        DeleteNodeSinkAction(
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
+            detach = true,
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParams : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "DETACH DELETE n",
+          mapOf("e" to mapOf("matchProperties" to mapOf("name" to "joe", "surname" to "doe"))),
+      )
+    }
+
+    private fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "DETACH DELETE n",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParamsByIdMatchers::class)
+  fun `should build node detach delete statements by id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ById(1), detach = true)
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParamsByIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " + "DETACH DELETE n",
+          mapOf("e" to mapOf("matchId" to 1)),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParamsByElementIdMatchers::class)
+  fun `should build node detach delete statements by element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ByElementId("4:abc:1"), detach = true)
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParamsByElementIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "DETACH DELETE n",
+          mapOf("e" to mapOf("matchElementId" to "4:abc:1")),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(CreateRelationshipWithMatchNodesWithoutKeysParams::class)
   fun `should build relationship create statements with matching nodes without keys`(
       neo4j: Neo4j,

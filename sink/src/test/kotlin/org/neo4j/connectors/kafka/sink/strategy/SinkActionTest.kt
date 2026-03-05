@@ -335,6 +335,7 @@ class SinkActionTest {
       val action = DeleteNodeSinkAction(matcher = matcher)
 
       action.matcher shouldBe matcher
+      action.detach shouldBe false
     }
 
     @Test
@@ -343,6 +344,7 @@ class SinkActionTest {
       val action = DeleteNodeSinkAction(matcher = matcher)
 
       action.matcher shouldBe matcher
+      action.detach shouldBe false
     }
 
     @Test
@@ -351,6 +353,25 @@ class SinkActionTest {
       val action = DeleteNodeSinkAction(matcher = matcher)
 
       action.matcher shouldBe matcher
+      action.detach shouldBe false
+    }
+
+    @Test
+    fun `should create action with detach true`() {
+      val matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1))
+      val action = DeleteNodeSinkAction(matcher = matcher, detach = true)
+
+      action.matcher shouldBe matcher
+      action.detach shouldBe true
+    }
+
+    @Test
+    fun `should create action with detach false explicitly`() {
+      val matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1))
+      val action = DeleteNodeSinkAction(matcher = matcher, detach = false)
+
+      action.matcher shouldBe matcher
+      action.detach shouldBe false
     }
   }
 
