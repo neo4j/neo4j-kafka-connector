@@ -1024,6 +1024,90 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithMatchAnyNodesWithKeysParams::class)
+  fun `should build relationship update statements with matching any node with keys`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithMatchAnyNodesWithKeysParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) " +
+              "MATCH (end) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "end" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels)) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels)) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(MergeRelationshipWithMatchNodesWithoutKeysParams::class)
   fun `should build relationship merge statements with matching nodes without keys`(
       neo4j: Neo4j,
@@ -1525,6 +1609,89 @@ class SinkActionStatementGeneratorTest {
                           mapOf(
                               "matchLabels" to listOf("Company", "Corporation"),
                               "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipMatchingAnyNodeWithKeysParams::class)
+  fun `should build relationship delete statements with keys matching any node`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object DeleteRelationshipMatchingAnyNodeWithKeysParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start) " +
+              "MATCH (end) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "end" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "matchProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start:\$(_e.start.matchLabels)) " +
+              "MATCH (end:\$(_e.end.matchLabels)) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),

@@ -965,6 +965,49 @@ abstract class CdcSchemaHandlerIT(
   }
 
   @Test
+  fun `should delete relationship with key even if start and end node keys are not present`() {
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
+    session
+        .run(
+            "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
+        )
+        .consume()
+
+    task.put(
+        listOf(
+            newChangeEventMessage(
+                    RelationshipEvent(
+                        "rel-1",
+                        "PURCHASED",
+                        Node("node-1", listOf("User"), emptyMap()), // Missing userId key
+                        Node("product-1", listOf("Product"), emptyMap()), // Missing userId key
+                        listOf(mapOf("orderId" to "order-123")),
+                        EntityOperation.DELETE,
+                        RelationshipState(mapOf("orderId" to "order-123", "amount" to 50.00)),
+                        null,
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record
+        )
+    )
+
+    session
+        .run(
+            "MATCH (:User {userId: 'user1'})-[r:PURCHASED]->(:Product {productId: 'product1'}) RETURN count(r)"
+        )
+        .single()
+        .get(0)
+        .asInt() shouldBe 0
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
+  }
+
+  @Test
   fun `should handle multiple relationships with different keys between same nodes`() {
     session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")

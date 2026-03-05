@@ -21,6 +21,7 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldEndWith
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -60,13 +61,11 @@ class SinkActionTest {
     }
 
     @Test
-    fun `should throw exception when properties are empty`() {
-      val exception =
-          shouldThrow<IllegalArgumentException> {
-            NodeMatcher.ByLabelsAndProperties(labels = setOf("Person"), properties = emptyMap())
-          }
+    fun `should create matcher for any node`() {
+      val matcher = NodeMatcher.ByLabelsAndProperties(labels = emptySet(), properties = emptyMap())
 
-      exception.message shouldBe "properties can not be empty for node matchers"
+      matcher.labels shouldBe emptySet()
+      matcher.properties shouldBe emptyMap()
     }
   }
 
@@ -395,6 +394,32 @@ class SinkActionTest {
     }
 
     @Test
+    fun `should throw exception with MERGE lookup mode when using empty labels`() {
+      val exception =
+          shouldThrow<IllegalArgumentException> {
+            SinkActionNodeReference(
+                matcher = NodeMatcher.ByLabelsAndProperties(emptySet(), mapOf("id" to 5)),
+                lookupMode = LookupMode.MERGE,
+            )
+          }
+
+      exception.message shouldBe "match labels must not be empty."
+    }
+
+    @Test
+    fun `should throw exception with MERGE lookup mode when using empty properties`() {
+      val exception =
+          shouldThrow<IllegalArgumentException> {
+            SinkActionNodeReference(
+                matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), emptyMap()),
+                lookupMode = LookupMode.MERGE,
+            )
+          }
+
+      exception.message shouldBe "match properties must not be empty."
+    }
+
+    @Test
     fun `should throw exception with MERGE lookup mode when using id matcher`() {
       val exception =
           shouldThrow<IllegalArgumentException> {
@@ -479,25 +504,29 @@ class SinkActionTest {
             )
           }
 
-      exception.message shouldBe "type can not be blank."
+      exception.message shouldBe "type can not be empty."
     }
 
     @Test
-    fun `should throw exception when type is whitespace only`() {
-      val startNode = SinkActionNodeReference(NodeMatcher.ById(1L), LookupMode.MATCH)
-      val endNode = SinkActionNodeReference(NodeMatcher.ById(2L), LookupMode.MATCH)
+    fun `should throw exception when node references are match any`() {
+      val anyNode = SinkActionNodeReference.MATCH_ANY
+      val someNode = SinkActionNodeReference(NodeMatcher.ById(2L), LookupMode.MATCH)
 
-      val exception =
-          shouldThrow<IllegalArgumentException> {
-            CreateRelationshipSinkAction(
-                startNode = startNode,
-                endNode = endNode,
-                type = "   ",
-                properties = emptyMap(),
-            )
-          }
+      sequenceOf((anyNode to someNode), (someNode to anyNode), (anyNode to anyNode)).forEach {
+          (start, end) ->
+        val exception =
+            shouldThrow<IllegalArgumentException> {
+              CreateRelationshipSinkAction(
+                  startNode = start,
+                  endNode = end,
+                  type = "RELATED_TO",
+                  properties = mapOf("key" to "value"),
+              )
+            }
 
-      exception.message shouldBe "type can not be blank."
+        exception.message shouldEndWith
+            "node reference must specify labels and/or properties for create relationship action."
+      }
     }
   }
 
@@ -563,6 +592,109 @@ class SinkActionTest {
 
       action.matcher shouldBe matcher
     }
+
+    @Test
+    fun `should create action with matcher by id and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher = RelationshipMatcher.ById(123)
+      val action =
+          UpdateRelationshipSinkAction(
+              startNode = startNode,
+              endNode = endNode,
+              matcher = matcher,
+              setProperties = mapOf("prop" to "value"),
+          )
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should create action with matcher by element id and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher = RelationshipMatcher.ByElementId("5:rel:123")
+      val action =
+          UpdateRelationshipSinkAction(
+              startNode = startNode,
+              endNode = endNode,
+              matcher = matcher,
+              setProperties = mapOf("prop" to "value"),
+          )
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should create action when relationship has keys and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher =
+          RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("since" to 2020), true)
+      val action =
+          UpdateRelationshipSinkAction(
+              startNode = startNode,
+              endNode = endNode,
+              matcher = matcher,
+              setProperties = mapOf("prop" to "value"),
+          )
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should throw exception when relationship has no keys and node references are match any`() {
+      val anyNode = SinkActionNodeReference.MATCH_ANY
+      val someNode = SinkActionNodeReference(NodeMatcher.ById(2L), LookupMode.MATCH)
+
+      sequenceOf((anyNode to someNode), (someNode to anyNode), (anyNode to anyNode)).forEach {
+          (start, end) ->
+        val exception =
+            shouldThrow<IllegalArgumentException> {
+              UpdateRelationshipSinkAction(
+                  startNode = start,
+                  endNode = end,
+                  matcher =
+                      RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
+                  setProperties = mapOf("prop" to "value"),
+              )
+            }
+
+        exception.message shouldEndWith
+            "node matcher must contain at least one key property for keyless relationship update action."
+      }
+    }
+
+    @Test
+    fun `should throw exception node references use MERGE lookup mode`() {
+      val mergeNode =
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+              LookupMode.MERGE,
+          )
+      val matchNode =
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+              LookupMode.MATCH,
+          )
+
+      sequenceOf((mergeNode to matchNode), (matchNode to mergeNode), (mergeNode to mergeNode))
+          .forEach { (start, end) ->
+            val exception =
+                shouldThrow<IllegalArgumentException> {
+                  UpdateRelationshipSinkAction(
+                      startNode = start,
+                      endNode = end,
+                      matcher =
+                          RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
+                      setProperties = mapOf("prop" to "value"),
+                  )
+                }
+
+            exception.message shouldEndWith
+                "node must use MATCH lookup mode for update relationship action."
+          }
+    }
   }
 
   @Nested
@@ -585,6 +717,33 @@ class SinkActionTest {
       action.endNode shouldBe endNode
       action.matcher shouldBe matcher
       action.setProperties shouldBe mapOf("updated" to true)
+    }
+
+    @Test
+    fun `should throw exception node references are match any`() {
+      val anyNode = SinkActionNodeReference.MATCH_ANY
+      val matchNode =
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+              LookupMode.MATCH,
+          )
+
+      sequenceOf((anyNode to matchNode), (matchNode to anyNode), (anyNode to anyNode)).forEach {
+          (start, end) ->
+        val exception =
+            shouldThrow<IllegalArgumentException> {
+              MergeRelationshipSinkAction(
+                  startNode = start,
+                  endNode = end,
+                  matcher =
+                      RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
+                  setProperties = mapOf("prop" to "value"),
+              )
+            }
+
+        exception.message shouldEndWith
+            "node matcher must contain at least one key property for relationship merge action."
+      }
     }
   }
 
@@ -633,6 +792,92 @@ class SinkActionTest {
           DeleteRelationshipSinkAction(startNode = startNode, endNode = endNode, matcher = matcher)
 
       action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should create action with matcher by id and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher = RelationshipMatcher.ById(123)
+      val action =
+          DeleteRelationshipSinkAction(startNode = startNode, endNode = endNode, matcher = matcher)
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should create action with matcher by element id and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher = RelationshipMatcher.ByElementId("5:rel:123")
+      val action =
+          DeleteRelationshipSinkAction(startNode = startNode, endNode = endNode, matcher = matcher)
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should create action when relationship has keys and node references are match any`() {
+      val startNode = SinkActionNodeReference.MATCH_ANY
+      val endNode = SinkActionNodeReference.MATCH_ANY
+      val matcher =
+          RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("since" to 2020), true)
+      val action =
+          DeleteRelationshipSinkAction(startNode = startNode, endNode = endNode, matcher = matcher)
+
+      action.matcher shouldBe matcher
+    }
+
+    @Test
+    fun `should throw exception when relationship has no keys and node references are match any`() {
+      val anyNode = SinkActionNodeReference.MATCH_ANY
+      val someNode = SinkActionNodeReference(NodeMatcher.ById(2L), LookupMode.MATCH)
+
+      sequenceOf((anyNode to someNode), (someNode to anyNode), (anyNode to anyNode)).forEach {
+          (start, end) ->
+        val exception =
+            shouldThrow<IllegalArgumentException> {
+              DeleteRelationshipSinkAction(
+                  startNode = start,
+                  endNode = end,
+                  matcher = RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
+              )
+            }
+
+        exception.message shouldEndWith
+            "node matcher must contain at least one key property for keyless relationship delete action."
+      }
+    }
+
+    @Test
+    fun `should throw exception node references use MERGE lookup mode`() {
+      val mergeNode =
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+              LookupMode.MERGE,
+          )
+      val matchNode =
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+              LookupMode.MATCH,
+          )
+
+      sequenceOf((mergeNode to matchNode), (matchNode to mergeNode), (mergeNode to mergeNode))
+          .forEach { (start, end) ->
+            val exception =
+                shouldThrow<IllegalArgumentException> {
+                  UpdateRelationshipSinkAction(
+                      startNode = start,
+                      endNode = end,
+                      matcher =
+                          RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
+                      setProperties = mapOf("prop" to "value"),
+                  )
+                }
+
+            exception.message shouldEndWith
+                "node must use MATCH lookup mode for update relationship action."
+          }
     }
   }
 

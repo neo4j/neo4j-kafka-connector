@@ -24,11 +24,7 @@ sealed class Matcher
 
 sealed class NodeMatcher : Matcher() {
   data class ByLabelsAndProperties(val labels: Set<String>, val properties: Map<String, Any?>) :
-      NodeMatcher() {
-    init {
-      require(properties.isNotEmpty()) { "properties can not be empty for node matchers" }
-    }
-  }
+      NodeMatcher()
 
   data class ById(val id: Long) : NodeMatcher()
 
@@ -87,7 +83,17 @@ data class SinkActionNodeReference(val matcher: NodeMatcher, val lookupMode: Loo
       require(matcher is NodeMatcher.ByLabelsAndProperties) {
         "can only use labels and properties as a matcher for MERGE lookup mode."
       }
+      require(matcher.labels.isNotEmpty()) { "match labels must not be empty." }
+      require(matcher.properties.isNotEmpty()) { "match properties must not be empty." }
     }
+  }
+
+  companion object {
+    val MATCH_ANY =
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+            LookupMode.MATCH,
+        )
   }
 }
 
@@ -98,7 +104,13 @@ data class CreateRelationshipSinkAction(
     val properties: Map<String, Any?>,
 ) : SinkAction() {
   init {
-    require(type.isNotBlank()) { "type can not be blank." }
+    require(type.isNotEmpty()) { "type can not be empty." }
+    require(startNode != SinkActionNodeReference.MATCH_ANY) {
+      "start node reference must specify labels and/or properties for create relationship action."
+    }
+    require(endNode != SinkActionNodeReference.MATCH_ANY) {
+      "end node reference must specify labels and/or properties for create relationship action."
+    }
   }
 }
 
@@ -115,6 +127,14 @@ data class UpdateRelationshipSinkAction(
     require(endNode.lookupMode == LookupMode.MATCH) {
       "start node must use MATCH lookup mode for update relationship action."
     }
+    if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {
+      require(startNode != SinkActionNodeReference.MATCH_ANY) {
+        "start node matcher must contain at least one key property for keyless relationship update action."
+      }
+      require(endNode != SinkActionNodeReference.MATCH_ANY) {
+        "end node matcher must contain at least one key property for keyless relationship update action."
+      }
+    }
   }
 }
 
@@ -123,7 +143,16 @@ data class MergeRelationshipSinkAction(
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
     val setProperties: Map<String, Any?>,
-) : SinkAction()
+) : SinkAction() {
+  init {
+    require(startNode != SinkActionNodeReference.MATCH_ANY) {
+      "start node matcher must contain at least one key property for relationship merge action."
+    }
+    require(endNode != SinkActionNodeReference.MATCH_ANY) {
+      "end node matcher must contain at least one key property for relationship merge action."
+    }
+  }
+}
 
 data class DeleteRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
@@ -136,6 +165,14 @@ data class DeleteRelationshipSinkAction(
     }
     require(endNode.lookupMode == LookupMode.MATCH) {
       "start node must use MATCH lookup mode for delete relationship action."
+    }
+    if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {
+      require(startNode != SinkActionNodeReference.MATCH_ANY) {
+        "start node matcher must contain at least one key property for keyless relationship delete action."
+      }
+      require(endNode != SinkActionNodeReference.MATCH_ANY) {
+        "end node matcher must contain at least one key property for keyless relationship delete action."
+      }
     }
   }
 }
