@@ -928,4 +928,113 @@ class DynamicTypesCompactTest {
     elementSchema.isOptional shouldBe true
     elementSchema.field("address").schema().isOptional shouldBe true
   }
+
+  @Test
+  fun `collections where same field is MAP in one element and STRUCT in another should merge`() {
+    // When all values in a map have the same type, CompactValueConverter infers MAP schema.
+    // When values have mixed types, it infers STRUCT schema.
+    // mergeMapAndStructSchemas should handle merging these two representations.
+    val coll =
+        listOf(
+            // metadata has mixed value types (STRING + MAP) -> inferred as STRUCT
+            mapOf(
+                "name" to "alice",
+                "metadata" to mapOf("home" to mapOf("city" to "london"), "note" to "vip"),
+            ),
+            // metadata has all MAP values -> inferred as MAP<String, MAP>
+            mapOf(
+                "name" to "bob",
+                "metadata" to
+                    mapOf("home" to mapOf("city" to "paris"), "work" to mapOf("city" to "berlin")),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+    elementSchema.field("metadata").schema().type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections with array fields whose elements have different key sets should merge`() {
+    // When array elements have different STRUCT schemas (different key sets),
+    // mergeArraySchemas should recursively merge the element schemas.
+    // Both inner maps use mixed types (STRING + INT64) to ensure STRUCT inference.
+    val coll =
+        listOf(
+            mapOf(
+                "name" to "alice",
+                "tags" to listOf(mapOf("key" to "a", "color" to "red", "priority" to 1)),
+            ),
+            mapOf(
+                "name" to "bob",
+                "tags" to listOf(mapOf("key" to "b", "weight" to 10, "label" to "heavy")),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
+
+    val tagElementSchema = tagsSchema.valueSchema()
+    tagElementSchema.type() shouldBe Schema.Type.STRUCT
+    tagElementSchema.field("key").schema().isOptional shouldBe false
+    tagElementSchema.field("color").schema().isOptional shouldBe true
+    tagElementSchema.field("weight").schema().isOptional shouldBe true
+    tagElementSchema.field("priority").schema().isOptional shouldBe true
+    tagElementSchema.field("label").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections with array field where elements are MAP in one and STRUCT in another should merge`() {
+    // When one array element has all-same-type values (-> MAP schema) and another has
+    // mixed types (-> STRUCT schema), mergeArraySchemas should delegate to
+    // mergeMapAndStructSchemas and pick the STRUCT interpretation.
+    val coll =
+        listOf(
+            mapOf("name" to "alice", "tags" to listOf(mapOf("key" to "a", "color" to "red"))),
+            mapOf("name" to "bob", "tags" to listOf(mapOf("key" to "b", "weight" to 10))),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
+
+    val tagElementSchema = tagsSchema.valueSchema()
+    tagElementSchema.type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections with array field containing null elements should merge with populated array`() {
+    // When one element has a populated array and another has an array with only null
+    // elements, notNullOrEmpty() filters out the null-only array field entirely.
+    // This makes the second map produce MAP schema (single remaining value type).
+    // mergeStructSchemas should handle the MAP+STRUCT combination via delegation.
+    val coll =
+        listOf(
+            mapOf("name" to "alice", "tags" to listOf(mapOf("key" to "a", "score" to 5))),
+            mapOf("name" to "bob", "tags" to listOf(null)),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
+  }
 }
