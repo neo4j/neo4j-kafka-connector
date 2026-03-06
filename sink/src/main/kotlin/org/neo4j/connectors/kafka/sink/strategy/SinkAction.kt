@@ -146,11 +146,13 @@ data class MergeRelationshipSinkAction(
     val setProperties: Map<String, Any?>,
 ) : SinkAction() {
   init {
-    require(startNode != SinkActionNodeReference.MATCH_ANY) {
-      "start node matcher must contain at least one key property for relationship merge action."
-    }
-    require(endNode != SinkActionNodeReference.MATCH_ANY) {
-      "end node matcher must contain at least one key property for relationship merge action."
+    if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {
+      require(startNode != SinkActionNodeReference.MATCH_ANY) {
+        "start node matcher must contain at least one key property for relationship merge action."
+      }
+      require(endNode != SinkActionNodeReference.MATCH_ANY) {
+        "end node matcher must contain at least one key property for relationship merge action."
+      }
     }
   }
 }

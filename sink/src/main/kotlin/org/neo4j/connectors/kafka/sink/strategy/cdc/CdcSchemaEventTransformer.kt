@@ -28,6 +28,7 @@ import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
@@ -138,6 +139,28 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
         buildMatchLabelsAndProperties(event.end.keys, relationshipKeys.isEmpty())
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
+
+    // If there are no keys to match the relationship start and end nodes, then we should not use
+    // merge on the relationship as it may lead to unintended creation of relationships. Instead,
+    // we use an Update operation.
+    if (startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
+      return UpdateRelationshipSinkAction(
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+              LookupMode.MATCH,
+          ),
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+              LookupMode.MATCH,
+          ),
+          RelationshipMatcher.ByTypeAndProperties(
+              relMatchType,
+              relMatchProperties,
+              relationshipKeys.isNotEmpty(),
+          ),
+          event.mutatedProperties(),
+      )
+    }
 
     return MergeRelationshipSinkAction(
         SinkActionNodeReference(

@@ -43,6 +43,7 @@ import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateRelationshipSinkAction
 import org.neo4j.connectors.kafka.utils.JSONUtils
 
 class CdcSchemaEventTransformerTest {
@@ -218,6 +219,35 @@ class CdcSchemaEventTransformerTest {
             ),
             SinkActionNodeReference(
                 NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
+            mapOf("since" to 2021, "rating" to 5),
+        )
+  }
+
+  @Test
+  fun `should transform relationship update event with keys but without node keys to an update action`() {
+    val event =
+        RelationshipEvent(
+            "rel-id",
+            "KNOWS",
+            Node("s-id", listOf("Person"), mapOf("Person" to emptyList<Map<String, Any>>())),
+            Node("e-id", emptyList<String>(), emptyMap<String, List<Map<String, Any>>>()),
+            listOf(mapOf("relId" to "R1")),
+            EntityOperation.UPDATE,
+            RelationshipState(mapOf("since" to 2020)),
+            RelationshipState(mapOf("since" to 2021, "rating" to 5)),
+        )
+
+    transformer.transform(changeEvent(event)) shouldBe
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),

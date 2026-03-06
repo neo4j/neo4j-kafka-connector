@@ -922,6 +922,55 @@ abstract class CdcSchemaHandlerIT(
   }
 
   @Test
+  fun `should update relationship with key without any node key properties`() {
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
+    session.createRelationshipKeyConstraint(neo4j(), "purchased_key", "PURCHASED", "orderId")
+    session
+        .run(
+            "CREATE (:User {userId: 'user1'})-[:PURCHASED {orderId: 'order-123', amount: 50.00}]->(:Product {productId: 'product1'})"
+        )
+        .consume()
+
+    task.put(
+        listOf(
+            newChangeEventMessage(
+                    RelationshipEvent(
+                        "rel-1",
+                        "PURCHASED",
+                        Node("node-1", listOf("User"), emptyMap()), // Missing userId key
+                        Node("node-2", listOf("Product"), emptyMap()), // Missing productId key
+                        listOf(mapOf("orderId" to "order-123")),
+                        EntityOperation.UPDATE,
+                        RelationshipState(mapOf("orderId" to "order-123", "amount" to 50.00)),
+                        RelationshipState(
+                            mapOf(
+                                "orderId" to "order-123",
+                                "amount" to 75.00,
+                                "status" to "updated",
+                            )
+                        ),
+                    ),
+                    1,
+                    0,
+                    0,
+                )
+                .record
+        )
+    )
+
+    session
+        .run(
+            "MATCH (:User {userId: 'user1'})-[r:PURCHASED]->(:Product {productId: 'product1'}) RETURN r{.*}"
+        )
+        .single()
+        .get(0)
+        .asMap() shouldBe mapOf("orderId" to "order-123", "amount" to 75.00, "status" to "updated")
+
+    verifyEosOffsetIfEnabled(session, CDC_SCHEMA, eosOffsetLabel, 0)
+  }
+
+  @Test
   fun `should delete relationship with key`() {
     session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
     session.createNodeKeyConstraint(neo4j(), "product_key", "Product", "productId")
