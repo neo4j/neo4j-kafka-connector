@@ -40,12 +40,6 @@ data class DeleteRelationship(
       )
     }
 
-    if (start.ids.isEmpty() || end.ids.isEmpty()) {
-      throw InvalidDataException(
-          "'${Keys.FROM}' and '${Keys.TO}' must contain at least one ID property."
-      )
-    }
-
     val startParam = Cypher.parameter("start")
     val endParam = Cypher.parameter("end")
     val keysParam = Cypher.parameter("keys")
