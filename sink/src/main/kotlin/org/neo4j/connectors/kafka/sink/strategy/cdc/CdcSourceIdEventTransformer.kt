@@ -25,6 +25,8 @@ import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
 import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
@@ -49,8 +51,7 @@ class CdcSourceIdEventTransformer(
     }
 
     return MergeNodeSinkAction(
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
+        NodeMatcher.ByLabelsAndProperties(setOf(labelName), mapOf(propertyName to event.elementId)),
         event.after.properties,
         event.after.labels.minus(labelName).toSet(),
         emptySet(),
@@ -66,8 +67,7 @@ class CdcSourceIdEventTransformer(
     }
 
     return MergeNodeSinkAction(
-        setOf(labelName),
-        mapOf(propertyName to event.elementId),
+        NodeMatcher.ByLabelsAndProperties(setOf(labelName), mapOf(propertyName to event.elementId)),
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -85,7 +85,9 @@ class CdcSourceIdEventTransformer(
       )
     }
 
-    return DeleteNodeSinkAction(setOf(labelName), mapOf(propertyName to event.elementId))
+    return DeleteNodeSinkAction(
+        NodeMatcher.ByLabelsAndProperties(setOf(labelName), mapOf(propertyName to event.elementId))
+    )
   }
 
   override fun transformCreate(event: RelationshipEvent): SinkAction {
@@ -101,19 +103,25 @@ class CdcSourceIdEventTransformer(
 
     return MergeRelationshipSinkAction(
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.start.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.start.elementId),
+            ),
             LookupMode.MERGE,
         ),
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.end.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.end.elementId),
+            ),
             LookupMode.MERGE,
         ),
-        event.type,
-        mapOf(propertyName to event.elementId),
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
         event.after.properties,
-        true,
     )
   }
 
@@ -127,19 +135,25 @@ class CdcSourceIdEventTransformer(
 
     return MergeRelationshipSinkAction(
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.start.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.start.elementId),
+            ),
             LookupMode.MERGE,
         ),
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.end.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.end.elementId),
+            ),
             LookupMode.MERGE,
         ),
-        event.type,
-        mapOf(propertyName to event.elementId),
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
         event.mutatedProperties(),
-        true,
     )
   }
 
@@ -156,18 +170,24 @@ class CdcSourceIdEventTransformer(
 
     return DeleteRelationshipSinkAction(
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.start.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.start.elementId),
+            ),
             LookupMode.MATCH,
         ),
         SinkActionNodeReference(
-            setOf(labelName),
-            mapOf(propertyName to event.end.elementId),
+            NodeMatcher.ByLabelsAndProperties(
+                setOf(labelName),
+                mapOf(propertyName to event.end.elementId),
+            ),
             LookupMode.MATCH,
         ),
-        event.type,
-        mapOf(propertyName to event.elementId),
-        true,
+        RelationshipMatcher.ByTypeAndProperties(
+            event.type,
+            mapOf(propertyName to event.elementId),
+            true,
+        ),
     )
   }
 }
