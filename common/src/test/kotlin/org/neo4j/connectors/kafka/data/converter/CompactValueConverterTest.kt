@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.data.converter
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import java.nio.ByteBuffer
 import java.sql.Date
@@ -702,5 +703,338 @@ class DynamicTypesCompactTest {
             "events_of_interest" to
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"),
         )
+  }
+
+  @Test
+  fun `collections of structs with different key sets should merge into array schema`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+    elementSchema.fields().map { it.name() }.toSet() shouldBe setOf("name", "age", "address")
+
+    elementSchema.field("name").schema().isOptional shouldBe false
+    elementSchema.field("age").schema().isOptional shouldBe false
+    elementSchema.field("address").schema().isOptional shouldBe true
+    elementSchema.field("address").schema().type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections of structs with different key sets should convert values correctly`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema = schema.valueSchema().field("address").schema()
+    converted shouldBe
+        listOf(
+            Struct(schema.valueSchema()).put("name", "john").put("age", 21L).put("address", null),
+            Struct(schema.valueSchema())
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", Struct(addressSchema).put("city", "london").put("zip", 10001L)),
+        )
+  }
+
+  @Test
+  fun `collections of structs with incompatible field types should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), mapOf("name" to 42))
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+  }
+
+  @Test
+  fun `collections of structs with nested field differences should merge recursively`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "address" to mapOf("city" to "london", "zip" to 10001)),
+            mapOf(
+                "name" to "jane",
+                "address" to mapOf("city" to "paris", "zip" to 75001, "country" to "fr"),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val addressSchema = schema.valueSchema().field("address").schema()
+    addressSchema.field("city") shouldNotBe null
+    addressSchema.field("zip") shouldNotBe null
+    addressSchema.field("country") shouldNotBe null
+    addressSchema.field("country").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections of mixed types including maps should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), "a string")
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+  }
+
+  @Test
+  fun `collections of structs with null nested values should merge with optional fields`() {
+    // Simulates the case where a Map field is null in some elements (e.g. CASE WHEN x IS null
+    // THEN null ELSE {..} END). schema(null) returns OPTIONAL_STRING which should be treated
+    // as compatible with any other type during merge.
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21, "address" to null),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+    elementSchema.fields().map { it.name() }.toSet() shouldBe setOf("name", "age", "address")
+
+    elementSchema.field("address").schema().isOptional shouldBe true
+    elementSchema.field("address").schema().type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections of structs with null nested values should convert values correctly`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21, "address" to null),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema = schema.valueSchema().field("address").schema()
+    converted shouldBe
+        listOf(
+            Struct(schema.valueSchema()).put("name", "john").put("age", 21L).put("address", null),
+            Struct(schema.valueSchema())
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", Struct(addressSchema).put("city", "london").put("zip", 10001L)),
+        )
+  }
+
+  @Test
+  fun `collections of structs with null nested values should merge regardless of element order`() {
+    // Non-null element first, null element second — verifies schema inference is order-independent
+    val coll =
+        listOf(
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+            mapOf("name" to "john", "age" to 21, "address" to null),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    schema.valueSchema().field("address").schema().isOptional shouldBe true
+
+    val addressSchema = schema.valueSchema().field("address").schema()
+    converted shouldBe
+        listOf(
+            Struct(schema.valueSchema())
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", Struct(addressSchema).put("city", "london").put("zip", 10001L)),
+            Struct(schema.valueSchema()).put("name", "john").put("age", 21L).put("address", null),
+        )
+  }
+
+  @Test
+  fun `collections of three or more structs with varying key sets should merge`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf("name" to "jane", "employed" to true),
+            mapOf("name" to "bob", "age" to 30, "employed" to false),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.field("name").schema().isOptional shouldBe false
+    elementSchema.field("age").schema().isOptional shouldBe true
+    elementSchema.field("employed").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections of structs where a field is null in all elements should keep it as optional`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21, "address" to null),
+            mapOf("name" to "jane", "age" to 25, "address" to null),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.field("address").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections of structs with different key sets should merge when optional is true`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, true)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    schema.isOptional shouldBe true
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+    elementSchema.isOptional shouldBe true
+    elementSchema.field("address").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections where same field is MAP in one element and STRUCT in another should merge`() {
+    // When all values in a map have the same type, CompactValueConverter infers MAP schema.
+    // When values have mixed types, it infers STRUCT schema.
+    // mergeMapAndStructSchemas should handle merging these two representations.
+    val coll =
+        listOf(
+            // metadata has mixed value types (STRING + MAP) -> inferred as STRUCT
+            mapOf(
+                "name" to "alice",
+                "metadata" to mapOf("home" to mapOf("city" to "london"), "note" to "vip"),
+            ),
+            // metadata has all MAP values -> inferred as MAP<String, MAP>
+            mapOf(
+                "name" to "bob",
+                "metadata" to
+                    mapOf("home" to mapOf("city" to "paris"), "work" to mapOf("city" to "berlin")),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+    elementSchema.field("metadata").schema().type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections with array fields whose elements have different key sets should merge`() {
+    // When array elements have different STRUCT schemas (different key sets),
+    // mergeArraySchemas should recursively merge the element schemas.
+    // Both inner maps use mixed types (STRING + INT64) to ensure STRUCT inference.
+    val coll =
+        listOf(
+            mapOf(
+                "name" to "alice",
+                "tags" to listOf(mapOf("key" to "a", "color" to "red", "priority" to 1)),
+            ),
+            mapOf(
+                "name" to "bob",
+                "tags" to listOf(mapOf("key" to "b", "weight" to 10, "label" to "heavy")),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
+
+    val tagElementSchema = tagsSchema.valueSchema()
+    tagElementSchema.type() shouldBe Schema.Type.STRUCT
+    tagElementSchema.field("key").schema().isOptional shouldBe false
+    tagElementSchema.field("color").schema().isOptional shouldBe true
+    tagElementSchema.field("weight").schema().isOptional shouldBe true
+    tagElementSchema.field("priority").schema().isOptional shouldBe true
+    tagElementSchema.field("label").schema().isOptional shouldBe true
+  }
+
+  @Test
+  fun `collections with array field where elements are MAP in one and STRUCT in another should merge`() {
+    // When one array element has all-same-type values (-> MAP schema) and another has
+    // mixed types (-> STRUCT schema), mergeArraySchemas should delegate to
+    // mergeMapAndStructSchemas and pick the STRUCT interpretation.
+    val coll =
+        listOf(
+            mapOf("name" to "alice", "tags" to listOf(mapOf("key" to "a", "color" to "red"))),
+            mapOf("name" to "bob", "tags" to listOf(mapOf("key" to "b", "weight" to 10))),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
+
+    val tagElementSchema = tagsSchema.valueSchema()
+    tagElementSchema.type() shouldBe Schema.Type.STRUCT
+  }
+
+  @Test
+  fun `collections with array field containing null elements should merge with populated array`() {
+    // When one element has a populated array and another has an array with only null
+    // elements, notNullOrEmpty() filters out the null-only array field entirely.
+    // This makes the second map produce MAP schema (single remaining value type).
+    // mergeStructSchemas should handle the MAP+STRUCT combination via delegation.
+    val coll =
+        listOf(
+            mapOf("name" to "alice", "tags" to listOf(mapOf("key" to "a", "score" to 5))),
+            mapOf("name" to "bob", "tags" to listOf(null)),
+        )
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+
+    val elementSchema = schema.valueSchema()
+    elementSchema.type() shouldBe Schema.Type.STRUCT
+
+    val tagsSchema = elementSchema.field("tags").schema()
+    tagsSchema.type() shouldBe Schema.Type.ARRAY
   }
 }

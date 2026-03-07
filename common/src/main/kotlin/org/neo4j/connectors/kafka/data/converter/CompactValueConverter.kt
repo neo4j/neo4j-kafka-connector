@@ -129,7 +129,13 @@ class CompactValueConverter : ValueConverter {
                   .apply { if (optional) optional() }
                   .build()
 
-          else ->
+          else -> {
+            val merged = mergeStructSchemas(nonEmptyElementTypes.toSet())
+            if (merged != null) {
+              SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
+                  .apply { if (optional) optional() }
+                  .build()
+            } else {
               SchemaBuilder.struct()
                   .apply {
                     value.forEachIndexed { i, v ->
@@ -138,6 +144,8 @@ class CompactValueConverter : ValueConverter {
                   }
                   .apply { if (optional) optional() }
                   .build()
+            }
+          }
         }
       }
 
@@ -302,6 +310,116 @@ class CompactValueConverter : ValueConverter {
           }
 
       else -> value
+    }
+  }
+
+  /**
+   * Attempts to merge multiple STRUCT schemas into a single schema by taking the union of all
+   * fields. Fields present in only a subset of schemas are marked as optional. Returns null if
+   * schemas are incompatible (non-STRUCT types, or same field with conflicting types).
+   */
+  private fun mergeStructSchemas(schemas: Set<Schema>): Schema? {
+    if (schemas.any { it.type() != Schema.Type.STRUCT && it.type() != Schema.Type.MAP }) return null
+    if (schemas.any { it.type() == Schema.Type.MAP }) return mergeMapAndStructSchemas(schemas)
+
+    // The null schema is what schema(null) returns — OPTIONAL_STRING via SimpleTypes.NULL.
+    // When a Map field has a null value, the Map branch's else case calls schema(null) and
+    // gets this schema. We treat it as compatible with any concrete type during merging,
+    // using structural equality (ConnectSchema.equals) for comparison.
+    val nullSchema = SimpleTypes.NULL.schema(true)
+    val allFieldNames = linkedSetOf<String>()
+    schemas.forEach { s -> s.fields().forEach { allFieldNames.add(it.name()) } }
+
+    val builder = SchemaBuilder.struct()
+    for (fieldName in allFieldNames) {
+      val fieldSchemas = schemas.mapNotNull { it.field(fieldName)?.schema() }
+      val presentInAll = fieldSchemas.size == schemas.size
+      val nonNullFieldSchemas = fieldSchemas.filter { it != nullSchema }
+      val hasNullSchema = nonNullFieldSchemas.size < fieldSchemas.size
+
+      val uniqueFieldSchemas = nonNullFieldSchemas.toSet()
+      val resolvedSchema =
+          when {
+            uniqueFieldSchemas.isEmpty() -> nullSchema
+            uniqueFieldSchemas.size == 1 -> uniqueFieldSchemas.first()
+            uniqueFieldSchemas.all { it.type() == Schema.Type.STRUCT } ->
+                mergeStructSchemas(uniqueFieldSchemas) ?: return null
+            // Merge ARRAY schemas with different element types by merging their element schemas
+            uniqueFieldSchemas.all { it.type() == Schema.Type.ARRAY } ->
+                mergeArraySchemas(uniqueFieldSchemas) ?: return null
+            // Merge MAP and STRUCT schemas by converting MAPs to STRUCTs and merging
+            uniqueFieldSchemas.all {
+              it.type() == Schema.Type.STRUCT || it.type() == Schema.Type.MAP
+            } -> mergeMapAndStructSchemas(uniqueFieldSchemas) ?: return null
+            else -> return null
+          }
+
+      builder.field(
+          fieldName,
+          if (!presentInAll || hasNullSchema) makeOptional(resolvedSchema) else resolvedSchema,
+      )
+    }
+    return builder.build()
+  }
+
+  /**
+   * Merges multiple ARRAY schemas by merging their element (value) schemas. If all element schemas
+   * are identical, returns one of them. If element schemas are all STRUCTs, recursively merges
+   * them. Returns null if element schemas are incompatible.
+   */
+  private fun mergeArraySchemas(schemas: Set<Schema>): Schema? {
+    val elementSchemas = schemas.map { it.valueSchema() }.toSet()
+    if (elementSchemas.size == 1) return schemas.first()
+
+    val nullSchema = SimpleTypes.NULL.schema(true)
+    val nonNullElementSchemas = elementSchemas.filter { it != nullSchema }.toSet()
+    val mergedElement =
+        when {
+          nonNullElementSchemas.isEmpty() -> nullSchema
+          nonNullElementSchemas.size == 1 -> nonNullElementSchemas.first()
+          nonNullElementSchemas.all { it.type() == Schema.Type.STRUCT } ->
+              mergeStructSchemas(nonNullElementSchemas) ?: return null
+          // Merge ARRAY element schemas where some are MAP and some are STRUCT
+          nonNullElementSchemas.all {
+            it.type() == Schema.Type.STRUCT || it.type() == Schema.Type.MAP
+          } -> mergeMapAndStructSchemas(nonNullElementSchemas) ?: return null
+          else -> return null
+        }
+    return SchemaBuilder.array(mergedElement).build()
+  }
+
+  /**
+   * Merges a mix of MAP and STRUCT schemas. MAP schemas are not directly convertible to STRUCT for
+   * merging, so we simply check if there is exactly one unique STRUCT schema among the non-MAP
+   * schemas and use that. MAP schemas (which have homogeneous value types) are treated as
+   * compatible if they don't conflict with the STRUCT fields.
+   *
+   * In practice, this handles the case where the same Neo4j map field produces a MAP schema when
+   * all values have the same type (e.g., all strings) and a STRUCT schema when values have mixed
+   * types. We pick the STRUCT interpretation as the resolved schema.
+   */
+  private fun mergeMapAndStructSchemas(schemas: Set<Schema>): Schema? {
+    val structSchemas = schemas.filter { it.type() == Schema.Type.STRUCT }.toSet()
+    if (structSchemas.isEmpty()) return null
+    // Merge all STRUCT schemas together, ignoring MAP schemas
+    // (MAP schemas are a less-specific representation of the same data)
+    return mergeStructSchemas(structSchemas)
+  }
+
+  private fun makeOptional(schema: Schema): Schema {
+    if (schema.isOptional) return schema
+    return when (schema.type()) {
+      Schema.Type.STRUCT ->
+          SchemaBuilder.struct()
+              .apply {
+                schema.fields().forEach { field(it.name(), it.schema()) }
+                optional()
+              }
+              .build()
+      Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema()).optional().build()
+      Schema.Type.MAP ->
+          SchemaBuilder.map(schema.keySchema(), schema.valueSchema()).optional().build()
+      else -> SchemaBuilder.type(schema.type()).optional().build()
     }
   }
 }
