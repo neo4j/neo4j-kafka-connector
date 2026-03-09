@@ -8,6 +8,8 @@ import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
+private const val DRY_RUN = "dry-run"
+
 class Release(id: String, name: String, javaVersion: JavaVersion) :
     BuildType(
         {
@@ -29,26 +31,58 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
                 display = ParameterDisplay.PROMPT,
                 label = "Version on the next snapshot after the release",
             )
+            checkbox(
+                DRY_RUN,
+                "true",
+                "Dry run?",
+                description =
+                    "Whether to perform a dry run where nothing is published and released",
+                display = ParameterDisplay.PROMPT,
+                checked = "true",
+                unchecked = "false",
+            )
 
             password("env.JRELEASER_GITHUB_TOKEN", "%github-pull-request-token%")
+
+            text("env.JRELEASER_DRY_RUN", "%$DRY_RUN%")
+            text("env.JRELEASER_PROJECT_VERSION", "%releaseVersion%")
+
+            text("env.JRELEASER_ANNOUNCE_SLACK_ACTIVE", "NEVER")
+            text("env.JRELEASER_ANNOUNCE_SLACK_TOKEN", "%slack-token%")
           }
 
           steps {
             setVersion("Set release version", "%releaseVersion%", javaVersion)
 
-            commonMaven(javaVersion) {
-              this.name = "Build versionalised package"
-              goals = "package"
-              runnerArgs = "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipTests"
-            }
+            commitAndPush(
+                "Push release version",
+                "build: release version %releaseVersion%",
+                dryRunParameter = DRY_RUN,
+            )
 
-            commitAndPush("Push release version", "build: release version %releaseVersion%")
+            script {
+              scriptContent =
+                  """
+                  #!/bin/bash
 
-            commonMaven(javaVersion) {
-              this.name = "Release to Github"
-              goals = "jreleaser:full-release"
-              runnerArgs =
-                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -Prelease -pl :packaging"
+                  set -eux
+
+                  if [ "%dry-run%" = "true" ]; then
+                    echo "we are on a dry run"
+                    export JRELEASER_ANNOUNCE_SLACK_ACTIVE=NEVER
+                  else
+                    echo "we will do a full release"
+                    export JRELEASER_ANNOUNCE_SLACK_ACTIVE=ALWAYS
+                  fi
+
+                  jreleaser assemble
+                  jreleaser full-release
+                  """
+                      .trimIndent()
+
+              dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+              dockerImage = javaVersion.dockerImage
+              dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
 
             setVersion("Set next snapshot version", "%nextSnapshotVersion%", javaVersion)
@@ -56,6 +90,7 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
             commitAndPush(
                 "Push next snapshot version",
                 "build: update version to %nextSnapshotVersion%",
+                dryRunParameter = DRY_RUN,
             )
           }
 
@@ -75,7 +110,8 @@ fun BuildSteps.setVersion(name: String, version: String, javaVersion: JavaVersio
 fun BuildSteps.commitAndPush(
     name: String,
     commitMessage: String,
-    includeFiles: String = "\\*pom.xml"
+    includeFiles: String = "\\*pom.xml",
+    dryRunParameter: String = "dry-run",
 ): ScriptBuildStep {
   return this.script {
     this.name = name
@@ -88,5 +124,7 @@ fun BuildSteps.commitAndPush(
           git push
         """
             .trimIndent()
+
+    conditions { doesNotMatch(dryRunParameter, "true") }
   }
 }

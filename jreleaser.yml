@@ -1,0 +1,81 @@
+# Generated with JReleaser 1.17.0 at 2025-04-28T13:27:24.943485+01:00
+project:
+  name: neo4j-kafka-connector
+  description: Neo4j Connector for Kafka
+  authors:
+    - Connectors Team
+  license: Apache-2.0
+  copyright: Neo4j, Inc.
+  links:
+    homepage: https://github.com/neo4j/neo4j-kafka-connector
+  languages:
+    java:
+      groupId: org.neo4j.connectors
+
+release:
+  github:
+    owner: neo4j
+    name: neo4j-kafka-connector
+    tagName: "v{{projectVersion}}"
+    releaseName: "{{projectVersion}}"
+    update:
+      enabled: true
+      sections:
+        - TITLE
+        - BODY
+        - ASSETS
+    artifacts: false
+    files: true
+    checksums: true
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      skipMergeCommits: true
+      format: "- {{commitShortHash}} {{conventionalCommitDescription}}"
+      links: true
+      labelers:
+        - title: ci
+          label: ci
+      excludeLabels:
+        - ci
+      hide:
+        contributors:
+          - '[bot]'
+          - GitHub
+
+checksum:
+  name: 'neo4j-kafka-connect-{{projectVersion}}-checksums.txt'
+  algorithms:
+    - SHA_256
+  files: true
+  artifacts: true
+  individual: true
+
+files:
+  globs:
+    - pattern: packaging/target/neo4j-kafka-connect-*.jar
+    - pattern: packaging/target/neo4j-kafka-connect-*.zip
+
+hooks:
+  script:
+
+    before:
+      - filter:
+          includes: [ "assemble" ]
+        shell: BASH
+        run: |
+          ./mvnw clean
+      - filter:
+          includes: [ "assemble" ]
+        continueOnError: false
+        verbose: true
+        shell: BASH
+        run: |
+          ./mvnw -B package -DskipTests
+
+announce:
+  slack:
+    channels:
+      - '#release'
+      - '#team-kafka'
+    message: ':tada: {{projectNameCapitalized}} {{projectVersion}} has been released! {{releaseNotesUrl}}'
