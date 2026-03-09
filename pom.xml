@@ -53,7 +53,6 @@
         <jackson.version>2.21.1</jackson.version>
         <java.version>11</java.version>
         <joda-time.version>2.14.0</joda-time.version>
-        <jreleaser-maven-plugin.version>1.23.0</jreleaser-maven-plugin.version>
         <junit-jupiter.version>5.14.3</junit-jupiter.version>
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
@@ -381,11 +380,6 @@
                     <configuration>
                         <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
                     </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.jreleaser</groupId>
-                    <artifactId>jreleaser-maven-plugin</artifactId>
-                    <version>${jreleaser-maven-plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.neo4j.build.plugins</groupId>
