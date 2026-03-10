@@ -64,14 +64,14 @@ hooks:
           includes: [ "assemble" ]
         shell: BASH
         run: |
-          ./mvnw clean
+          ./mvnw ${MAVEN_ARGS:-} clean
       - filter:
           includes: [ "assemble" ]
         continueOnError: false
         verbose: true
         shell: BASH
         run: |
-          ./mvnw -B package -DskipTests
+          ./mvnw ${MAVEN_ARGS:-} package -DskipTests
 
 announce:
   slack:
