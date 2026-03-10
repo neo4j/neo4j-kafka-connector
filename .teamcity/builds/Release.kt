@@ -74,6 +74,7 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
                     echo "we will do a full release"
                     export JRELEASER_ANNOUNCE_SLACK_ACTIVE=ALWAYS
                   fi
+                  export MAVEN_ARGS="$MAVEN_DEFAULT_ARGS"
 
                   jreleaser assemble
                   jreleaser full-release
@@ -93,6 +94,8 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
                 dryRunParameter = DRY_RUN,
             )
           }
+
+          features { buildCache(javaVersion) }
 
           requirements { runOnLinux(LinuxSize.SMALL) }
         },
