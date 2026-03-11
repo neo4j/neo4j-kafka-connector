@@ -21,7 +21,6 @@ import io.kotest.matchers.maps.shouldHaveKey
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import io.kotest.matchers.types.instanceOf
-import kotlin.reflect.KClass
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
@@ -39,6 +38,7 @@ import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
+import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
@@ -220,12 +220,8 @@ class SinkConfigurationTest {
   }
 
   @ParameterizedTest
-  @MethodSource("cdcHandlersTypes")
-  fun `should return multiple CDC schema topics`(
-      apocDoItAvailable: Boolean,
-      neo4jTarget: Neo4j?,
-      clazz: KClass<SinkHandler>,
-  ) {
+  @MethodSource("sinkHandlerTypes")
+  fun `should return multiple CDC schema topics`(apocDoItAvailable: Boolean, neo4jTarget: Neo4j?) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -243,14 +239,19 @@ class SinkConfigurationTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf(clazz)
+    topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
+    val fooHandler = topicHandlers["foo"] as SinkHandler
+    fooHandler.eventTransformer shouldBe instanceOf<CdcSchemaEventTransformer>()
 
     topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf(clazz)
+    topicHandlers["bar"] shouldBe instanceOf<SinkHandler>()
+    val barHandler = topicHandlers["bar"] as SinkHandler
+    barHandler.eventTransformer shouldBe instanceOf<CdcSchemaEventTransformer>()
   }
 
-  @Test
-  fun `should return multiple CUD topics`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlerTypes")
+  fun `should return multiple CUD topics`(apocDoItAvailable: Boolean, neo4jTarget: Neo4j?) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -258,7 +259,13 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CUD_TOPICS to "bar,foo",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            neo4j = neo4jTarget,
+            apocCypherDoItAvailable = apocDoItAvailable,
+        )
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
@@ -383,34 +390,14 @@ class SinkConfigurationTest {
         Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
 
     @JvmStatic
-    fun cdcHandlersTypes() =
+    fun sinkHandlerTypes() =
         listOf(
-            Arguments.argumentSet(
-                "APOC DoIt not available 4.4",
-                false,
-                neo4j4_4,
-                SinkHandler::class,
-            ),
-            Arguments.argumentSet(
-                "APOC DoIt not available 5.26",
-                false,
-                neo4j5_26,
-                SinkHandler::class,
-            ),
-            Arguments.argumentSet(
-                "APOC DoIt not available 2026.01",
-                false,
-                neo4j2026_01,
-                SinkHandler::class,
-            ),
-            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4, SinkHandler::class),
-            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26, SinkHandler::class),
-            Arguments.argumentSet(
-                "APOC DoIt available 2026.01",
-                true,
-                neo4j2026_01,
-                SinkHandler::class,
-            ),
+            Arguments.argumentSet("APOC DoIt not available 4.4", false, neo4j4_4),
+            Arguments.argumentSet("APOC DoIt not available 5.26", false, neo4j5_26),
+            Arguments.argumentSet("APOC DoIt not available 2026.01", false, neo4j2026_01),
+            Arguments.argumentSet("APOC DoIt available 4.4", true, neo4j4_4),
+            Arguments.argumentSet("APOC DoIt available 5.26", true, neo4j5_26),
+            Arguments.argumentSet("APOC DoIt available 2026.01", true, neo4j2026_01),
         )
   }
 }
