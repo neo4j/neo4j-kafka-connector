@@ -43,27 +43,6 @@ class MergeNodeTest {
   }
 
   @Test
-  fun `should create correct statement with _id`() {
-    val operation = MergeNode(setOf("Person"), mapOf("_id" to 1), mapOf("age" to 18))
-
-    operation.toAction() shouldBe
-        MergeNodeSinkAction(NodeMatcher.ById(1), mapOf("age" to 18), emptySet(), emptySet())
-  }
-
-  @Test
-  fun `should create correct statement with _elementId`() {
-    val operation = MergeNode(setOf("Person"), mapOf("_elementId" to "db:1"), mapOf("age" to 18))
-
-    operation.toAction() shouldBe
-        MergeNodeSinkAction(
-            NodeMatcher.ByElementId("db:1"),
-            mapOf("age" to 18),
-            emptySet(),
-            emptySet(),
-        )
-  }
-
-  @Test
   fun `should create correct statement with multiple labels`() {
     val operation =
         MergeNode(
@@ -82,6 +61,22 @@ class MergeNodeTest {
             emptySet(),
             emptySet(),
         )
+  }
+
+  @Test
+  fun `should throw when merging with _id`() {
+    val operation = MergeNode(setOf("Person"), mapOf("_id" to 1), mapOf("age" to 18))
+
+    shouldThrow<IllegalArgumentException> { operation.toAction() } shouldHaveMessage
+        "can only use labels and properties as a matcher for merge node action."
+  }
+
+  @Test
+  fun `should throw when merging with _elementId`() {
+    val operation = MergeNode(setOf("Person"), mapOf("_elementId" to "db:1"), mapOf("age" to 18))
+
+    shouldThrow<IllegalArgumentException> { operation.toAction() } shouldHaveMessage
+        "can only use labels and properties as a matcher for merge node action."
   }
 
   @Test

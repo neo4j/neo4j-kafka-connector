@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
@@ -48,32 +49,6 @@ class UpdateRelationshipTest {
             SinkActionNodeReference(
                 NodeMatcher.ByLabelsAndProperties(setOf("LabelB"), mapOf("id" to 2)),
                 LookupMode.MATCH,
-            ),
-            RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
-        )
-  }
-
-  @Test
-  fun `should create correct statement with specified lookup modes`() {
-    val operation =
-        UpdateRelationship(
-            "RELATED",
-            NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
-            NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
-            emptyMap(),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
-        )
-
-    operation.toAction() shouldBe
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(
-                NodeMatcher.ByLabelsAndProperties(setOf("LabelA"), mapOf("id" to 1)),
-                LookupMode.MATCH,
-            ),
-            SinkActionNodeReference(
-                NodeMatcher.ByLabelsAndProperties(setOf("LabelB"), mapOf("id" to 2)),
-                LookupMode.MERGE,
             ),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
             mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
@@ -186,6 +161,21 @@ class UpdateRelationshipTest {
         } shouldHaveMessage "'from' and 'to' must contain at least one ID property."
       }
     }
+  }
+
+  @Test
+  fun `should not allow MERGE as a node lookup modes`() {
+    val operation =
+        UpdateRelationship(
+            "RELATED",
+            NodeReference(setOf("LabelA"), mapOf("id" to 1), LookupMode.MATCH),
+            NodeReference(setOf("LabelB"), mapOf("id" to 2), LookupMode.MERGE),
+            emptyMap(),
+            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+        )
+
+    shouldThrow<IllegalArgumentException> { operation.toAction() } shouldHaveMessage
+        "end node must use MATCH lookup mode for update relationship action."
   }
 
   @Test
