@@ -62,9 +62,8 @@ class DbTransactionMetricsData(
                               "SHOW DATABASE ${"$"}dbName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId",
                               mapOf("dbName" to explicitDatabaseName),
                           )
-                          .single()
-                          .get("txId")
-                          .asLong()
+                          .list()
+                          .maxOfOrNull { it.get("txId").asLong() } ?: 0
                     },
                     transactionConfig,
                 )
