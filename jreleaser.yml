@@ -16,7 +16,7 @@ release:
   github:
     owner: neo4j
     name: neo4j-kafka-connector
-    tagName: "v{{projectVersion}}"
+    tagName: "{{projectVersion}}"
     releaseName: "{{projectVersion}}"
     update:
       enabled: true
