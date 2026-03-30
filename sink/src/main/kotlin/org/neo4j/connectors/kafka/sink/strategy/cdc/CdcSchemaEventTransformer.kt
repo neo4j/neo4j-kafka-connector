@@ -24,8 +24,11 @@ import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
 import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
@@ -46,8 +49,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
     return MergeNodeSinkAction(
-        matchLabels,
-        matchProperties,
+        NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
         event.after.properties,
         event.after.labels.minus(matchLabels).toSet(),
         emptySet(),
@@ -65,8 +67,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
     return MergeNodeSinkAction(
-        matchLabels,
-        matchProperties,
+        NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -86,7 +87,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
 
-    return DeleteNodeSinkAction(matchLabels, matchProperties)
+    return DeleteNodeSinkAction(NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties))
   }
 
   override fun transformCreate(event: RelationshipEvent): SinkAction {
@@ -106,12 +107,20 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
         buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
     return MergeRelationshipSinkAction(
-        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
-        relMatchType,
-        relMatchProperties,
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+            LookupMode.MATCH,
+        ),
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+            LookupMode.MATCH,
+        ),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            event.keys.isNotEmpty(),
+        ),
         event.after.properties,
-        event.keys.isNotEmpty(),
     )
   }
 
@@ -131,13 +140,43 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
+    // If there are no keys to match the relationship start and end nodes, then we should not use
+    // merge on the relationship as it may lead to unintended creation of relationships. Instead,
+    // we use an Update operation.
+    if (startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
+      return UpdateRelationshipSinkAction(
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+              LookupMode.MATCH,
+          ),
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+              LookupMode.MATCH,
+          ),
+          RelationshipMatcher.ByTypeAndProperties(
+              relMatchType,
+              relMatchProperties,
+              relationshipKeys.isNotEmpty(),
+          ),
+          event.mutatedProperties(),
+      )
+    }
+
     return MergeRelationshipSinkAction(
-        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
-        relMatchType,
-        relMatchProperties,
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+            LookupMode.MATCH,
+        ),
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+            LookupMode.MATCH,
+        ),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            relationshipKeys.isNotEmpty(),
+        ),
         event.mutatedProperties(),
-        relationshipKeys.isNotEmpty(),
     )
   }
 
@@ -161,11 +200,19 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
         buildMatchLabelsAndProperties(event.type, relationshipKeys, event.before.properties)
 
     return DeleteRelationshipSinkAction(
-        SinkActionNodeReference(startMatchLabels, startMatchProperties, LookupMode.MATCH),
-        SinkActionNodeReference(endMatchLabels, endMatchProperties, LookupMode.MATCH),
-        relMatchType,
-        relMatchProperties,
-        relationshipKeys.isNotEmpty(),
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+            LookupMode.MATCH,
+        ),
+        SinkActionNodeReference(
+            NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+            LookupMode.MATCH,
+        ),
+        RelationshipMatcher.ByTypeAndProperties(
+            relMatchType,
+            relMatchProperties,
+            relationshipKeys.isNotEmpty(),
+        ),
     )
   }
 
