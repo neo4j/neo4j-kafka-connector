@@ -299,7 +299,7 @@ interface SinkStrategyHandler {
             } else {
               NativeBatchStrategy(
                   config.neo4j(),
-                  config.getInt(SinkConfiguration.CDC_MAX_BATCHED_QUERIES),
+                  config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CUD,
