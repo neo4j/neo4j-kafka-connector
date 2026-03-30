@@ -119,8 +119,11 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         UpdateNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
             setProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
@@ -192,13 +195,130 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(UpdateNodeParamsByIdMatchers::class)
+  fun `should build node update statements with id matchers`(neo4j: Neo4j, expectedQuery: Query) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ById(1),
+            setProperties = mapOf("name" to "john"),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object UpdateNodeParamsByIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
+              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf("e" to mapOf("matchId" to 1, "setProperties" to mapOf("name" to "john"))),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchId" to 1,
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "setProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, dynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateNodeParamsByElementIdMatchers::class)
+  fun `should build node update statements with element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByElementId("4:abc:1"),
+            setProperties = mapOf("name" to "john"),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object UpdateNodeParamsByElementIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf(
+              "e" to
+                  mapOf("matchElementId" to "4:abc:1", "setProperties" to mapOf("name" to "john"))
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchElementId" to "4:abc:1",
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "setProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, dynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(MergeNodeParams::class)
   fun `should build node merge statements`(neo4j: Neo4j, expectedQuery: Query) {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         MergeNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
             setProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
@@ -275,8 +395,11 @@ class SinkActionStatementGeneratorTest {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
     val data =
         DeleteNodeSinkAction(
-            matchLabels = setOf("Person"),
-            matchProperties = mapOf("name" to "joe", "surname" to "doe"),
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                )
         )
 
     generator.buildStatement(data) shouldBe expectedQuery
@@ -320,6 +443,194 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(DeleteNodeParamsByIdMatchers::class)
+  fun `should build node delete statements by id matchers`(neo4j: Neo4j, expectedQuery: Query) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ById(1))
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DeleteNodeParamsByIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " + "DELETE n",
+          mapOf("e" to mapOf("matchId" to 1)),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteNodeParamsByElementIdMatchers::class)
+  fun `should build node delete statements by element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ByElementId("4:abc:1"))
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DeleteNodeParamsByElementIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " + "DELETE n",
+          mapOf("e" to mapOf("matchElementId" to "4:abc:1")),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParams::class)
+  fun `should build node detach delete statements`(neo4j: Neo4j, expectedQuery: Query) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        DeleteNodeSinkAction(
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
+            detach = true,
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParams : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "DETACH DELETE n",
+          mapOf("e" to mapOf("matchProperties" to mapOf("name" to "joe", "surname" to "doe"))),
+      )
+    }
+
+    private fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "DETACH DELETE n",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParamsByIdMatchers::class)
+  fun `should build node detach delete statements by id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ById(1), detach = true)
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParamsByIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " + "DETACH DELETE n",
+          mapOf("e" to mapOf("matchId" to 1)),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DetachDeleteNodeParamsByElementIdMatchers::class)
+  fun `should build node detach delete statements by element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data = DeleteNodeSinkAction(matcher = NodeMatcher.ByElementId("4:abc:1"), detach = true)
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object DetachDeleteNodeParamsByElementIdMatchers : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "DETACH DELETE n",
+          mapOf("e" to mapOf("matchElementId" to "4:abc:1")),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(CreateRelationshipWithMatchNodesWithoutKeysParams::class)
   fun `should build relationship create statements with matching nodes without keys`(
       neo4j: Neo4j,
@@ -329,13 +640,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
             "WORKS_AT",
@@ -413,13 +725,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
             "WORKS_AT",
@@ -497,13 +810,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
             "WORKS_AT",
@@ -581,13 +895,14 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         CreateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
             "WORKS_AT",
@@ -665,18 +980,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
             setProperties = mapOf("senior" to true),
         )
 
@@ -746,96 +1060,6 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipWithMergeNodesWithoutKeysParams::class)
-  fun `should build relationship update statements with merging nodes without keys`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
-                LookupMode.MERGE,
-            ),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipWithMergeNodesWithoutKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to
-                          mapOf(
-                              "matchLabels" to listOf("Person", "Employee"),
-                              "matchProperties" to mapOf("id" to 1),
-                          ),
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithMatchNodesWithKeysParams::class)
   fun `should build relationship update statements with matching nodes with keys`(
       neo4j: Neo4j,
@@ -845,18 +1069,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
             setProperties = mapOf("senior" to true),
         )
 
@@ -924,8 +1147,8 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipWithMergeNodesWithKeysParams::class)
-  fun `should build relationship update statements with merging nodes with keys`(
+  @ArgumentsSource(UpdateRelationshipWithMatchAnyNodesWithKeysParams::class)
+  fun `should build relationship update statements with matching any node with keys`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -933,274 +1156,32 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
-                LookupMode.MERGE,
-            ),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipWithMergeNodesWithKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to
-                          mapOf(
-                              "matchLabels" to listOf("Person", "Employee"),
-                              "matchProperties" to mapOf("id" to 1),
-                          ),
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMatchingNodesWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without start node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipMatchingNodesWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMergingNodesWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without start node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipMergingNodesWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMatchingNodesWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without end node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
                 LookupMode.MATCH,
             ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
             setProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
   }
 
-  object UpdateRelationshipMatchingNodesWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
+  object UpdateRelationshipWithMatchAnyNodesWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start) " +
+              "MATCH (end) " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.setProperties",
           mapOf(
               "e" to
                   mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "start" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "end" to mapOf("matchProperties" to emptyMap<String, Any>()),
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
                   )
@@ -1210,7 +1191,8 @@ class SinkActionStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels)) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels)) " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.setProperties",
           mapOf(
@@ -1218,213 +1200,14 @@ class SinkActionStatementGeneratorTest {
                   mapOf(
                       "start" to
                           mapOf(
-                              "matchLabels" to listOf("Employee", "Person"),
-                              "matchProperties" to mapOf("id" to 7),
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
                           ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMergingNodesWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without end node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipMergingNodesWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to
+                      "end" to
                           mapOf(
-                              "matchLabels" to listOf("Employee", "Person"),
-                              "matchProperties" to mapOf("id" to 7),
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
                           ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMatchingNodesWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipMatchingNodesWithKeysWithoutNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UpdateRelationshipMergingNodesWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship update statements with keys and without node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        UpdateRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object UpdateRelationshipMergingNodesWithKeysWithoutNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
@@ -1457,18 +1240,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
             setProperties = mapOf("senior" to true),
         )
 
@@ -1547,18 +1329,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
             setProperties = mapOf("senior" to true),
         )
 
@@ -1637,18 +1418,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
             setProperties = mapOf("senior" to true),
         )
 
@@ -1725,18 +1505,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MERGE,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MERGE,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
             setProperties = mapOf("senior" to true),
         )
 
@@ -1804,442 +1583,6 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMatchingNodesWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without start node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MATCH,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMatchingNodesWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMergingNodesWithKeysWithoutStartNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without start node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMergingNodesWithKeysWithoutStartNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "end" to
-                          mapOf(
-                              "matchLabels" to listOf("Company", "Corporation"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMatchingNodesWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without end node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
-                LookupMode.MATCH,
-            ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMatchingNodesWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to
-                          mapOf(
-                              "matchLabels" to listOf("Employee", "Person"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMergingNodesWithKeysWithoutEndNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without end node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Employee", "Person"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMergingNodesWithKeysWithoutEndNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "start" to
-                          mapOf(
-                              "matchLabels" to listOf("Employee", "Person"),
-                              "matchProperties" to mapOf("id" to 7),
-                          ),
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMatchingNodesWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMatchingNodesWithKeysWithoutNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(MergeRelationshipMergingNodesWithKeysWithoutNodeKeysParams::class)
-  fun `should build relationship merge statements with keys and without node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        MergeRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-            setProperties = mapOf("senior" to true),
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-  }
-
-  object MergeRelationshipMergingNodesWithKeysWithoutNodeKeysParams : ArgumentsProvider {
-    fun standardCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    fun dynamicLabelsCypherQuery(): Query {
-      return Query(
-          "WITH ${'$'}e AS _e MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
-          mapOf(
-              "e" to
-                  mapOf(
-                      "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
-                  )
-          ),
-      )
-    }
-
-    override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
-      return Stream.of(
-          Arguments.of(neo4j4_4, standardCypherQuery()),
-          Arguments.of(neo4j5_26, standardCypherQuery()),
-          Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
-      )
-    }
-  }
-
-  @ParameterizedTest
   @ArgumentsSource(DeleteRelationshipMatchingNodesWithoutKeysParams::class)
   fun `should build relationship delete statements without keys matching nodes`(
       neo4j: Neo4j,
@@ -2249,18 +1592,17 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -2327,8 +1669,8 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMergingNodesWithoutKeysParams::class)
-  fun `should build relationship delete statements without keys merging nodes`(
+  @ArgumentsSource(DeleteRelationshipMatchingNodesWithKeysParams::class)
+  fun `should build relationship delete statements with keys matching nodes`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
@@ -2336,48 +1678,47 @@ class SinkActionStatementGeneratorTest {
     val withKeys =
         DeleteRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
-                LookupMode.MERGE,
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("role" to "dev"),
-            hasKeys = false,
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
   }
 
-  object DeleteRelationshipMergingNodesWithoutKeysParams : ArgumentsProvider {
+  object DeleteRelationshipMatchingNodesWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "WITH _e, r LIMIT 1 " +
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
-                      "matchProperties" to mapOf("role" to "dev"),
+                      "matchProperties" to mapOf("empId" to 5),
                   )
           ),
       )
     }
 
-    fun dynamicLabelsCypherQuery(): Query {
+    fun dynamicLabelsQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
-              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "WITH _e, r LIMIT 1 " +
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start:\$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:\$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
               "e" to
@@ -2393,7 +1734,173 @@ class SinkActionStatementGeneratorTest {
                               "matchProperties" to mapOf("id" to 7),
                           ),
                       "matchType" to "WORKS_AT",
-                      "matchProperties" to mapOf("role" to "dev"),
+                      "matchProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipMatchingAnyNodeWithKeysParams::class)
+  fun `should build relationship delete statements with keys matching any node`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(emptySet(), emptyMap()),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object DeleteRelationshipMatchingAnyNodeWithKeysParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start) " +
+              "MATCH (end) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "end" to mapOf("matchProperties" to emptyMap<String, Any>()),
+                      "matchProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e " +
+              "MATCH (start:\$(_e.start.matchLabels)) " +
+              "MATCH (end:\$(_e.end.matchLabels)) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to emptySet<String>(),
+                              "matchProperties" to emptyMap<String, Any>(),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipByIdMatcherParams::class)
+  fun `should build relationship update statements with id matcher`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ById(42),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipByIdMatcherParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchId" to 42,
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchId" to 42,
+                      "setProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2414,165 +1921,71 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMatchingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys matching nodes`(
+  @ArgumentsSource(UpdateRelationshipByElementIdMatcherParams::class)
+  fun `should build relationship update statements with element id matcher`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
+    val action =
+        UpdateRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
                 LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
                 LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ByElementId("5:rel:42"),
+            setProperties = mapOf("senior" to true),
         )
 
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
+    generator.buildStatement(action) shouldBe expectedQuery
   }
 
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMatchingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without start node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MATCH,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMatchingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without end node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 5),
-                LookupMode.MATCH,
-            ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMatchingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without node keys matching nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            startNode =
-                SinkActionNodeReference(setOf("Person", "Employee"), emptyMap(), LookupMode.MATCH),
-            endNode =
-                SinkActionNodeReference(
-                    setOf("Company", "Corporation"),
-                    emptyMap(),
-                    LookupMode.MATCH,
-                ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  object DeleteRelationshipMatchingNodesWithKeysParams : ArgumentsProvider {
+  object UpdateRelationshipByElementIdMatcherParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH ()-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->() " +
-              "DELETE r",
-          mapOf("e" to mapOf("matchProperties" to mapOf("empId" to 5))),
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchElementId" to "5:rel:42",
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
       )
     }
 
-    fun dynamicLabelsQuery(): Query {
+    fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH ()-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->() " +
-              "DELETE r",
-          mapOf("e" to mapOf("matchType" to "WORKS_AT", "matchProperties" to mapOf("empId" to 5))),
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchElementId" to "5:rel:42",
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
       )
     }
 
@@ -2584,172 +1997,78 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
 
   @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMergingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys merging nodes`(
+  @ArgumentsSource(MergeRelationshipByIdMatcherParams::class)
+  fun `should build relationship merge statements with id matcher`(
       neo4j: Neo4j,
       expectedQuery: Query,
   ) {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
+    val action =
+        MergeRelationshipSinkAction(
             SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 1),
-                LookupMode.MERGE,
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
             ),
             SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
+                LookupMode.MATCH,
             ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
+            RelationshipMatcher.ById(42),
+            setProperties = mapOf("senior" to true),
         )
 
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
+    generator.buildStatement(action) shouldBe expectedQuery
   }
 
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMergingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without start node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            SinkActionNodeReference(
-                setOf("Company", "Corporation"),
-                mapOf("id" to 7),
-                LookupMode.MERGE,
-            ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMergingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without end node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            SinkActionNodeReference(
-                setOf("Person", "Employee"),
-                mapOf("id" to 5),
-                LookupMode.MERGE,
-            ),
-            SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MERGE),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(DeleteRelationshipMergingNodesWithKeysParams::class)
-  fun `should build relationship delete statements with keys and without node keys merging nodes`(
-      neo4j: Neo4j,
-      expectedQuery: Query,
-  ) {
-    val generator = DefaultSinkActionStatementGenerator(neo4j)
-    val withKeys =
-        DeleteRelationshipSinkAction(
-            startNode =
-                SinkActionNodeReference(setOf("Person", "Employee"), emptyMap(), LookupMode.MERGE),
-            endNode =
-                SinkActionNodeReference(
-                    setOf("Company", "Corporation"),
-                    emptyMap(),
-                    LookupMode.MERGE,
-                ),
-            matchType = "WORKS_AT",
-            matchProperties = mapOf("empId" to 5),
-            hasKeys = true,
-        )
-
-    generator.buildStatement(withKeys) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH))
-    ) shouldBe expectedQuery
-    generator.buildStatement(
-        withKeys.copy(
-            startNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-            endNode = SinkActionNodeReference(emptySet(), emptyMap(), LookupMode.MATCH),
-        )
-    ) shouldBe expectedQuery
-  }
-
-  object DeleteRelationshipMergingNodesWithKeysParams : ArgumentsProvider {
+  object MergeRelationshipByIdMatcherParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH ()-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->() " +
-              "DELETE r",
-          mapOf("e" to mapOf("matchProperties" to mapOf("empId" to 5))),
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchId" to 42,
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
       )
     }
 
-    fun dynamicLabelsQuery(): Query {
+    fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH ()-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->() " +
-              "DELETE r",
-          mapOf("e" to mapOf("matchType" to "WORKS_AT", "matchProperties" to mapOf("empId" to 5))),
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchId" to 42,
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
       )
     }
 
@@ -2761,8 +2080,667 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipByElementIdMatcherParams::class)
+  fun `should build relationship merge statements with element id matcher`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByElementId("5:rel:42"),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipByElementIdMatcherParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchElementId" to "5:rel:42",
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchElementId" to "5:rel:42",
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipByIdMatcherParams::class)
+  fun `should build relationship delete statements with id matcher`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ById(42),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object DeleteRelationshipByIdMatcherParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchId" to 42,
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchId" to 42,
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(DeleteRelationshipByElementIdMatcherParams::class)
+  fun `should build relationship delete statements with element id matcher`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        DeleteRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 7)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByElementId("5:rel:42"),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object DeleteRelationshipByElementIdMatcherParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchElementId" to "5:rel:42",
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "DELETE r",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchElementId" to "5:rel:42",
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(CreateRelationshipWithNodeIdMatchersParams::class)
+  fun `should build relationship create statements with node id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ById(7), LookupMode.MATCH),
+            "WORKS_AT",
+            mapOf("role" to "dev"),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object CreateRelationshipWithNodeIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "CREATE (start)-[r:`WORKS_AT`]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "type" to "WORKS_AT",
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(CreateRelationshipWithNodeElementIdMatchersParams::class)
+  fun `should build relationship create statements with node element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:1"), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:7"), LookupMode.MATCH),
+            "WORKS_AT",
+            mapOf("role" to "dev"),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object CreateRelationshipWithNodeElementIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "CREATE (start)-[r:`WORKS_AT`]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "type" to "WORKS_AT",
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithNodeIdMatchersParams::class)
+  fun `should build relationship update statements with node id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ById(7), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithNodeIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithNodeElementIdMatchersParams::class)
+  fun `should build relationship update statements with node element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:1"), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:7"), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithNodeElementIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithNodeIdMatchersParams::class)
+  fun `should build relationship merge statements with node id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ById(7), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithNodeIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchId" to 1),
+                      "end" to mapOf("matchId" to 7),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithNodeElementIdMatchersParams::class)
+  fun `should build relationship merge statements with node element id matchers`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:1"), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:7"), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            setProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithNodeElementIdMatchersParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.setProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchElementId" to "4:abc:1"),
+                      "end" to mapOf("matchElementId" to "4:abc:7"),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "setProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
   }
