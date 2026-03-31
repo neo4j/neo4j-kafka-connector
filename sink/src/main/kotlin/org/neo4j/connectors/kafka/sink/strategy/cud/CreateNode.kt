@@ -17,19 +17,15 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class CreateNode(val labels: Set<String>, val properties: Map<String, Any?>) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
-    val node = buildNode(labels, emptyMap(), Cypher.parameter("keys")).named("n")
-    val stmt =
-        renderer.render(Cypher.create(node).set(node, Cypher.parameter("properties")).build())
 
-    return Query(stmt, mapOf("properties" to properties))
+  override fun toAction(): SinkAction {
+    return CreateNodeSinkAction(labels, properties)
   }
 
   companion object {

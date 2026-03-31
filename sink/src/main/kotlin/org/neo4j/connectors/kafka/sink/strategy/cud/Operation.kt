@@ -21,6 +21,7 @@ import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.SpecificationVersion
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.CREATE
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.DELETE
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.MERGE
@@ -28,12 +29,10 @@ import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.UPDATE
 import org.neo4j.connectors.kafka.sink.strategy.cud.Type.NODE
 import org.neo4j.connectors.kafka.sink.strategy.cud.Type.RELATIONSHIP
 import org.neo4j.connectors.kafka.utils.JSONUtils
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 interface Operation {
 
-  fun toQuery(renderer: Renderer = Renderer.getDefaultRenderer()): Query
+  fun toAction(): SinkAction
 
   companion object {
     private val SCHEMA: Schema =

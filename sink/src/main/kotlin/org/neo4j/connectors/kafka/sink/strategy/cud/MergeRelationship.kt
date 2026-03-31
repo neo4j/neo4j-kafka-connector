@@ -17,11 +17,11 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.MergeRelationshipSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class MergeRelationship(
     val type: String,
@@ -30,7 +30,7 @@ data class MergeRelationship(
     val ids: Map<String, Any?> = emptyMap(),
     val properties: Map<String, Any?>,
 ) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
+  override fun toAction(): SinkAction {
     if (type.isEmpty()) {
       throw InvalidDataException("'${Keys.RELATION_TYPE}' must be specified.")
     }
@@ -41,28 +41,11 @@ data class MergeRelationship(
       )
     }
 
-    val startParam = Cypher.parameter("start")
-    val endParam = Cypher.parameter("end")
-    val keysParam = Cypher.parameter("keys")
-    val propertiesParam = Cypher.parameter("properties")
-    val (startNode, endNode, lookup) = lookupNodes(start, end, startParam, endParam)
-    val relationship =
-        startNode
-            .relationshipTo(endNode, type)
-            .withProperties(ids.entries.associate { it.key to keysParam.property(it.key) })
-            .named("r")
-
-    val stmt =
-        renderer.render(lookup.merge(relationship).mutate(relationship, propertiesParam).build())
-
-    return Query(
-        stmt,
-        mapOf(
-            "start" to mapOf("keys" to start.ids),
-            "end" to mapOf("keys" to end.ids),
-            "keys" to ids,
-            "properties" to properties,
-        ),
+    return MergeRelationshipSinkAction(
+        startNode = SinkActionNodeReference(buildNodeMatcher(start.labels, start.ids), start.op),
+        endNode = SinkActionNodeReference(buildNodeMatcher(end.labels, end.ids), end.op),
+        matcher = buildRelationshipMatcher(type, ids),
+        setProperties = properties,
     )
   }
 

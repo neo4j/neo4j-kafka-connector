@@ -17,40 +17,23 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
 import org.neo4j.connectors.kafka.utils.MapUtils.getTyped
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class DeleteNode(
     val labels: Set<String>,
     val ids: Map<String, Any?>,
     val detach: Boolean = false,
 ) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
+  override fun toAction(): SinkAction {
     if (ids.isEmpty()) {
       throw InvalidDataException("Node must contain at least one ID property.")
     }
 
-    val keysParam = Cypher.parameter("keys")
-    val node = buildNode(labels, ids, keysParam).named("n")
-    val stmt =
-        renderer.render(
-            Cypher.match(node)
-                .applyFilter(node, ids, keysParam)
-                .let {
-                  if (detach) {
-                    it.detachDelete(node)
-                  } else {
-                    it.delete(node)
-                  }
-                }
-                .build()
-        )
-
-    return Query(stmt, mapOf("keys" to ids))
+    return DeleteNodeSinkAction(buildNodeMatcher(labels, ids), detach)
   }
 
   companion object {

@@ -21,7 +21,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
+import org.neo4j.connectors.kafka.sink.strategy.UpdateNodeSinkAction
 
 class UpdateNodeTest {
   @Test
@@ -29,13 +30,15 @@ class UpdateNodeTest {
     val operation =
         UpdateNode(setOf("Person"), mapOf("name" to "john", "surname" to "doe"), mapOf("age" to 18))
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n:`Person` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) SET n += ${'$'}properties",
-            mapOf(
-                "keys" to mapOf("name" to "john", "surname" to "doe"),
-                "properties" to mapOf("age" to 18),
+    operation.toAction() shouldBe
+        UpdateNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("Person"),
+                mapOf("name" to "john", "surname" to "doe"),
             ),
+            mapOf("age" to 18),
+            emptySet(),
+            emptySet(),
         )
   }
 
@@ -43,21 +46,20 @@ class UpdateNodeTest {
   fun `should create correct statement with _id`() {
     val operation = UpdateNode(setOf("Person"), mapOf("_id" to 1), mapOf("age" to 18))
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n) WHERE id(n) = ${'$'}keys._id SET n += ${'$'}properties",
-            mapOf("keys" to mapOf("_id" to 1), "properties" to mapOf("age" to 18)),
-        )
+    operation.toAction() shouldBe
+        UpdateNodeSinkAction(NodeMatcher.ById(1), mapOf("age" to 18), emptySet(), emptySet())
   }
 
   @Test
   fun `should create correct statement with _elementId`() {
     val operation = UpdateNode(setOf("Person"), mapOf("_elementId" to "db:1"), mapOf("age" to 18))
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n) WHERE elementId(n) = ${'$'}keys._elementId SET n += ${'$'}properties",
-            mapOf("keys" to mapOf("_elementId" to "db:1"), "properties" to mapOf("age" to 18)),
+    operation.toAction() shouldBe
+        UpdateNodeSinkAction(
+            NodeMatcher.ByElementId("db:1"),
+            mapOf("age" to 18),
+            emptySet(),
+            emptySet(),
         )
   }
 
@@ -70,13 +72,15 @@ class UpdateNodeTest {
             mapOf("age" to 18),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n:`Person`:`Employee` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) SET n += ${'$'}properties",
-            mapOf(
-                "keys" to mapOf("name" to "john", "surname" to "doe"),
-                "properties" to mapOf("age" to 18),
+    operation.toAction() shouldBe
+        UpdateNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("Person", "Employee"),
+                mapOf("name" to "john", "surname" to "doe"),
             ),
+            mapOf("age" to 18),
+            emptySet(),
+            emptySet(),
         )
   }
 
@@ -84,7 +88,7 @@ class UpdateNodeTest {
   fun `should throw if no keys specified`() {
     val operation = UpdateNode(setOf("Person"), emptyMap(), mapOf("age" to 18))
 
-    shouldThrow<InvalidDataException> { operation.toQuery() } shouldHaveMessage
+    shouldThrow<InvalidDataException> { operation.toAction() } shouldHaveMessage
         "Node must contain at least one ID property."
   }
 }

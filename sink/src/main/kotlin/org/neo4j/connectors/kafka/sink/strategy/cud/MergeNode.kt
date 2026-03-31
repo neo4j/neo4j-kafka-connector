@@ -17,38 +17,27 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.MergeNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.utils.MapUtils.getIterable
 import org.neo4j.connectors.kafka.utils.MapUtils.getMap
-import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.neo4j.driver.Query
 
 data class MergeNode(
     val labels: Set<String>,
     val ids: Map<String, Any?>,
     val properties: Map<String, Any?>,
 ) : Operation {
-  override fun toQuery(renderer: Renderer): Query {
+  override fun toAction(): SinkAction {
     if (ids.isEmpty()) {
       throw InvalidDataException("Node must contain at least one ID property.")
     }
 
-    val keysParam = Cypher.parameter("keys")
-    val propertiesParam = Cypher.parameter("properties")
-    val node = buildNode(labels, ids, keysParam).named("n")
-    val stmt =
-        renderer.render(
-            if (ids.containsKey(Keys.PHYSICAL_ID) || ids.containsKey(Keys.ELEMENT_ID)) {
-              Cypher.match(node)
-                  .applyFilter(node, ids, keysParam)
-                  .mutate(node, propertiesParam)
-                  .build()
-            } else {
-              Cypher.merge(node).mutate(node, propertiesParam).build()
-            }
-        )
-
-    return Query(stmt, mapOf("keys" to ids, "properties" to properties))
+    return MergeNodeSinkAction(
+        matcher = buildNodeMatcher(labels, ids),
+        setProperties = properties,
+        addLabels = emptySet(),
+        removeLabels = emptySet(),
+    )
   }
 
   companion object {

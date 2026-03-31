@@ -18,7 +18,7 @@ package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
 
 class CreateNodeTest {
 
@@ -27,10 +27,10 @@ class CreateNodeTest {
     val operation =
         CreateNode(setOf("Person"), mapOf("id" to 1, "name" to "john", "surname" to "doe"))
 
-    operation.toQuery() shouldBe
-        Query(
-            "CREATE (n:`Person` {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+    operation.toAction() shouldBe
+        CreateNodeSinkAction(
+            setOf("Person"),
+            mapOf("id" to 1, "name" to "john", "surname" to "doe"),
         )
   }
 
@@ -42,10 +42,10 @@ class CreateNodeTest {
             mapOf("id" to 1, "name" to "john", "surname" to "doe"),
         )
 
-    operation.toQuery() shouldBe
-        Query(
-            "CREATE (n:`Person`:`Employee` {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
+    operation.toAction() shouldBe
+        CreateNodeSinkAction(
+            setOf("Person", "Employee"),
+            mapOf("id" to 1, "name" to "john", "surname" to "doe"),
         )
   }
 
@@ -53,10 +53,7 @@ class CreateNodeTest {
   fun `should create correct statement without labels`() {
     val operation = CreateNode(emptySet(), mapOf("id" to 1, "name" to "john", "surname" to "doe"))
 
-    operation.toQuery() shouldBe
-        Query(
-            "CREATE (n {}) SET n = ${'$'}properties",
-            mapOf("properties" to mapOf("id" to 1, "name" to "john", "surname" to "doe")),
-        )
+    operation.toAction() shouldBe
+        CreateNodeSinkAction(emptySet(), mapOf("id" to 1, "name" to "john", "surname" to "doe"))
   }
 }

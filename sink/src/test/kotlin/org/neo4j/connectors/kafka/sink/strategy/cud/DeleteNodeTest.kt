@@ -21,7 +21,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import org.junit.jupiter.api.Test
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
-import org.neo4j.driver.Query
+import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 
 class DeleteNodeTest {
 
@@ -29,10 +30,13 @@ class DeleteNodeTest {
   fun `should create correct statement`() {
     val operation = DeleteNode(setOf("Person"), mapOf("name" to "john", "surname" to "doe"), false)
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n:`Person` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+    operation.toAction() shouldBe
+        DeleteNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("Person"),
+                mapOf("name" to "john", "surname" to "doe"),
+            ),
+            false,
         )
   }
 
@@ -40,29 +44,27 @@ class DeleteNodeTest {
   fun `should create correct statement with _id`() {
     val operation = DeleteNode(setOf("Person"), mapOf("_id" to 1), false)
 
-    operation.toQuery() shouldBe
-        Query("MATCH (n) WHERE id(n) = ${'$'}keys._id DELETE n", mapOf("keys" to mapOf("_id" to 1)))
+    operation.toAction() shouldBe DeleteNodeSinkAction(NodeMatcher.ById(1), false)
   }
 
   @Test
   fun `should create correct statement with _elementId`() {
     val operation = DeleteNode(setOf("Person"), mapOf("_elementId" to "db:1"), false)
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n) WHERE elementId(n) = ${'$'}keys._elementId DELETE n",
-            mapOf("keys" to mapOf("_elementId" to "db:1")),
-        )
+    operation.toAction() shouldBe DeleteNodeSinkAction(NodeMatcher.ByElementId("db:1"), false)
   }
 
   @Test
   fun `should create correct statement with detach delete`() {
     val operation = DeleteNode(setOf("Person"), mapOf("name" to "john", "surname" to "doe"), true)
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n:`Person` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DETACH DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+    operation.toAction() shouldBe
+        DeleteNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("Person"),
+                mapOf("name" to "john", "surname" to "doe"),
+            ),
+            true,
         )
   }
 
@@ -71,10 +73,13 @@ class DeleteNodeTest {
     val operation =
         DeleteNode(setOf("Person", "Employee"), mapOf("name" to "john", "surname" to "doe"), true)
 
-    operation.toQuery() shouldBe
-        Query(
-            "MATCH (n:`Person`:`Employee` {name: ${'$'}keys.name, surname: ${'$'}keys.surname}) DETACH DELETE n",
-            mapOf("keys" to mapOf("name" to "john", "surname" to "doe")),
+    operation.toAction() shouldBe
+        DeleteNodeSinkAction(
+            NodeMatcher.ByLabelsAndProperties(
+                setOf("Person", "Employee"),
+                mapOf("name" to "john", "surname" to "doe"),
+            ),
+            true,
         )
   }
 
@@ -82,7 +87,7 @@ class DeleteNodeTest {
   fun `should throw if no keys specified`() {
     val operation = DeleteNode(setOf("Person"), emptyMap())
 
-    shouldThrow<InvalidDataException> { operation.toQuery() } shouldHaveMessage
+    shouldThrow<InvalidDataException> { operation.toAction() } shouldHaveMessage
         "Node must contain at least one ID property."
   }
 }

@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.instanceOf
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.io.File
 import java.io.FileInputStream
 import java.util.*
-import kotlin.reflect.KClass
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -35,8 +34,8 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.CudHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
@@ -59,11 +58,10 @@ class ConfigPropertiesTest {
   }
 
   @ParameterizedTest
-  @MethodSource("cdcSchemaHandlers")
+  @MethodSource("sinkHandlers")
   fun `sink cdc schema quick start config should be valid`(
       apocDoITAvailable: Boolean,
       neo4j: Neo4j?,
-      expectedHandlerType: KClass<SinkStrategyHandler>,
   ) {
     val properties = loadConfigProperties("sink-cdc-schema-quickstart.properties")
 
@@ -75,17 +73,18 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
-    topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
-    topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
+    sequenceOf("creates", "updates", "deletes").forEach { topic ->
+      topicHandlers[topic].shouldBeInstanceOf<SinkHandler> {
+        it.strategy() shouldBe SinkStrategy.CDC_SCHEMA
+      }
+    }
   }
 
   @ParameterizedTest
-  @MethodSource("cdcSourceIdHandlers")
+  @MethodSource("sinkHandlers")
   fun `sink cdc source id quick start config should be valid`(
       apocDoITAvailable: Boolean,
       neo4j: Neo4j?,
-      expectedHandlerType: KClass<SinkStrategyHandler>,
   ) {
     val properties = loadConfigProperties("sink-cdc-source-id-quickstart.properties")
 
@@ -97,22 +96,29 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
-    topicHandlers["creates"] shouldBe instanceOf(expectedHandlerType)
-    topicHandlers["updates"] shouldBe instanceOf(expectedHandlerType)
-    topicHandlers["deletes"] shouldBe instanceOf(expectedHandlerType)
+    sequenceOf("creates", "updates", "deletes").forEach { topic ->
+      topicHandlers[topic].shouldBeInstanceOf<SinkHandler> {
+        it.strategy() shouldBe SinkStrategy.CDC_SOURCE_ID
+      }
+    }
   }
 
-  @Test
-  fun `sink cud quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlers")
+  fun `sink cud quick start config should be valid`(apocDoITAvailable: Boolean, neo4j: Neo4j?) {
     val properties = loadConfigProperties("sink-cud-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
+    }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<CudHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.CUD
+    }
   }
 
   @Test
@@ -211,66 +217,14 @@ class ConfigPropertiesTest {
     }
 
     @JvmStatic
-    fun cdcSourceIdHandlers(): List<Arguments> {
+    fun sinkHandlers(): List<Arguments> {
       return listOf(
           Arguments.argumentSet("5.26 & APOC DoIT available", true, neo4j5_26, SinkHandler::class),
-          Arguments.argumentSet(
-              "2026.01 & APOC DoIT available",
-              true,
-              neo4j2026_1,
-              SinkHandler::class,
-          ),
+          Arguments.argumentSet("2026.01 & APOC DoIT available", true, neo4j2026_1),
           Arguments.argumentSet("4.4 & APOC DoIT available", true, neo4j4_4, SinkHandler::class),
-          Arguments.argumentSet(
-              "5.26 & APOC DoIT not available",
-              false,
-              neo4j5_26,
-              SinkHandler::class,
-          ),
-          Arguments.argumentSet(
-              "2026.01 & APOC DoIT not available",
-              false,
-              neo4j2026_1,
-              SinkHandler::class,
-          ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT not available",
-              false,
-              neo4j4_4,
-              SinkHandler::class,
-          ),
-      )
-    }
-
-    @JvmStatic
-    fun cdcSchemaHandlers(): List<Arguments> {
-      return listOf(
-          Arguments.argumentSet("5.26 & APOC DoIT available", true, neo4j5_26, SinkHandler::class),
-          Arguments.argumentSet(
-              "2026.1 & APOC DoIT available",
-              true,
-              neo4j2026_1,
-              SinkHandler::class,
-          ),
-          Arguments.argumentSet("4.4 & APOC DoIT available", true, neo4j4_4, SinkHandler::class),
-          Arguments.argumentSet(
-              "5.26 & APOC DoIT not available",
-              false,
-              neo4j5_26,
-              SinkHandler::class,
-          ),
-          Arguments.argumentSet(
-              "2026.01 & APOC DoIT not available",
-              false,
-              neo4j2026_1,
-              SinkHandler::class,
-          ),
-          Arguments.argumentSet(
-              "4.4 & APOC DoIT not available",
-              false,
-              neo4j4_4,
-              SinkHandler::class,
-          ),
+          Arguments.argumentSet("5.26 & APOC DoIT not available", false, neo4j5_26),
+          Arguments.argumentSet("2026.01 & APOC DoIT not available", false, neo4j2026_1),
+          Arguments.argumentSet("4.4 & APOC DoIT not available", false, neo4j4_4),
       )
     }
 
