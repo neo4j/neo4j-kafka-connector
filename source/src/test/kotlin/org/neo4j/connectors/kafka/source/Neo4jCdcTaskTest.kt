@@ -16,12 +16,17 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.equals.shouldNotBeEqual
 import io.kotest.matchers.shouldBe
+import java.lang.management.ManagementFactory
 import java.util.UUID
+import javax.management.MBeanServer
+import javax.management.ObjectName
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 import org.apache.kafka.connect.source.SourceTaskContext
@@ -341,7 +346,7 @@ class Neo4jCdcTaskTest {
     session
         .run(
             """
-            UNWIND RANGE(1, 100, 2) AS n 
+            UNWIND RANGE(1, 100, 2) AS n
             MATCH (p:Person {id: n})
             MATCH (c:Company {id: n%25+1})
             CREATE (p)-[:WORKS_FOR {id: n, since: date()}]->(c)
@@ -477,6 +482,51 @@ class Neo4jCdcTaskTest {
     task.poll() shouldBe emptyList()
     val finishedWith = task.latestOffset()
     finishedWith shouldNotBeEqual afterFirstPoll
+  }
+
+  @Test
+  fun `should expose cdc metrics`() {
+    // start a task with a set connector name and task ID so we can re-fetch it
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
+            Neo4jConfiguration.TASK_ID to "0",
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
+
+    // poll for initial state before any CDC event
+    task.poll()
+    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+
+    val firstCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp")
+    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta")
+    val firstStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp")
+    val firstId = mbs.getAttribute(objectName, "last_cdc_tx_id")
+
+    // run a transaction and poll for CDC events
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
+    task.poll()
+
+    val lastCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp")
+    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta")
+    val lastStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp")
+    val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id")
+
+    assertSoftly {
+      firstDelta shouldBeEqual lastDelta
+
+      firstCommit shouldNotBeEqual lastCommit
+      firstStart shouldNotBeEqual lastStart
+      firstId shouldNotBeEqual lastId
+    }
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
