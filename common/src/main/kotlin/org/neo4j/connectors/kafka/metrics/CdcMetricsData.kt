@@ -44,7 +44,7 @@ class CdcMetricsData(
         "The time (in seconds) since the last committed ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
-      if (lastTxCommitTs.get() == 0L) 0L // no tx to compare to
+      if (lastTxCommitTs.get() == 0L) -1L // no tx to compare to
       else Clock.System.now().epochSeconds - lastTxCommitTs.get()
     }
     metrics.addGauge(

@@ -16,12 +16,10 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.equals.shouldNotBeEqual
-import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import java.lang.management.ManagementFactory
 import java.util.UUID
@@ -522,9 +520,8 @@ class Neo4jCdcTaskTest {
     val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
 
     assertSoftly {
-      lastDelta shouldBeGreaterThanOrEqual firstDelta
-
       lastCommit shouldBeGreaterThan firstCommit
+      lastDelta shouldBeGreaterThan firstDelta
       lastStart shouldBeGreaterThan firstStart
       lastId shouldBeGreaterThan firstId
     }
