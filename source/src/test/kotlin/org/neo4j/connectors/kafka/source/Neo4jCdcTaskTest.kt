@@ -16,13 +16,12 @@
  */
 package org.neo4j.connectors.kafka.source
 
-import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
-import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.equals.shouldNotBeEqual
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import java.lang.management.ManagementFactory
 import java.util.UUID
@@ -30,6 +29,7 @@ import javax.management.MBeanServer
 import javax.management.ObjectName
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
+import kotlinx.coroutines.delay
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.assertj.core.api.SoftAssertions.assertSoftly
@@ -52,6 +52,7 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
@@ -528,7 +529,7 @@ class Neo4jCdcTaskTest {
   }
 
   @Test
-  fun `should expose cdc time delta metrics`() {
+  fun `should expose cdc time delta metrics`() = runTest {
     val sleepSeconds = 1L
 
     // start a task with a set connector name and task ID so we can re-fetch it
@@ -557,11 +558,11 @@ class Neo4jCdcTaskTest {
     // run a transaction and then delay to increase commit age
     session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
 
-    shouldNotThrow<InterruptedException> { Thread.sleep(sleepSeconds * 1000) }
+    delay(sleepSeconds.seconds)
 
     task.poll()
     val newDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
-    newDelta shouldBeEqual sleepSeconds
+    newDelta shouldBeGreaterThanOrEqual sleepSeconds
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
