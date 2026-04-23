@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.metrics
 
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Clock
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 
@@ -26,9 +27,9 @@ class CdcMetricsData(
     tags: LinkedHashMap<String, String> = linkedMapOf(),
 ) {
 
-  private var lastTxCommitTs: AtomicLong = AtomicLong(0L)
-  private var lastTxStartTs: AtomicLong = AtomicLong(0L)
-  private var lastTxId: AtomicLong = AtomicLong(0L)
+  private val lastTxCommitTs: AtomicLong = AtomicLong(0L)
+  private val lastTxStartTs: AtomicLong = AtomicLong(0L)
+  private val lastTxId: AtomicLong = AtomicLong(0L)
 
   init {
     metrics.addGauge(
@@ -37,6 +38,15 @@ class CdcMetricsData(
         tags,
     ) {
       lastTxCommitTs.get()
+    }
+    metrics.addGauge(
+        "last_cdc_tx_commit_age",
+        "The time (in seconds) since the last committed ${connectorType.descriptionActionVerb()} CDC message",
+        tags,
+    ) {
+      val timeStamp = lastTxCommitTs.get()
+      if (timeStamp == 0L) -1L // no tx to compare to
+      else Clock.System.now().epochSeconds - timeStamp
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",

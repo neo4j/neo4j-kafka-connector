@@ -16,16 +16,23 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.equals.shouldNotBeEqual
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
+import java.lang.management.ManagementFactory
 import java.util.UUID
+import javax.management.MBeanServer
+import javax.management.ObjectName
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
+import kotlinx.coroutines.delay
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
+import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions
@@ -45,6 +52,7 @@ import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
+import org.neo4j.connectors.kafka.testing.TestSupport.runTest
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
 import org.neo4j.connectors.kafka.testing.createRelationshipKeyConstraint
 import org.neo4j.connectors.kafka.testing.neo4jDatabase
@@ -341,7 +349,7 @@ class Neo4jCdcTaskTest {
     session
         .run(
             """
-            UNWIND RANGE(1, 100, 2) AS n 
+            UNWIND RANGE(1, 100, 2) AS n
             MATCH (p:Person {id: n})
             MATCH (c:Company {id: n%25+1})
             CREATE (p)-[:WORKS_FOR {id: n, since: date()}]->(c)
@@ -477,6 +485,84 @@ class Neo4jCdcTaskTest {
     task.poll() shouldBe emptyList()
     val finishedWith = task.latestOffset()
     finishedWith shouldNotBeEqual afterFirstPoll
+  }
+
+  @Test
+  fun `should expose cdc timestamp and id metrics`() {
+    val metricsUnderTest =
+        listOf("last_cdc_tx_commit_timestamp", "last_cdc_tx_start_timestamp", "last_cdc_tx_id")
+
+    // start a task with a set connector name and task ID so we can re-fetch it
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
+            Neo4jConfiguration.TASK_ID to "0",
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
+
+    // poll for initial state before any CDC event
+    task.poll()
+    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+
+    val initial = metricsUnderTest.map { mbs.getAttribute(objectName, it) as Long }
+
+    // run a transaction and poll for CDC events
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
+    task.poll()
+
+    assertSoftly {
+      metricsUnderTest.forEachIndexed { i, metricName ->
+        withClue("metric=$metricName") {
+          val metricValue = mbs.getAttribute(objectName, metricName) as Long
+          metricValue shouldBeGreaterThan initial[i]
+        }
+      }
+    }
+  }
+
+  @Test
+  fun `should expose cdc time delta metrics`() = runTest {
+    val sleepSeconds = 1L
+
+    // start a task with a set connector name and task ID so we can re-fetch it
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
+            Neo4jConfiguration.TASK_ID to "0",
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
+
+    // poll for initial state before any CDC event
+    task.poll()
+    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+    val initialDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
+
+    initialDelta shouldBe -1L
+
+    // run a transaction and then delay to increase commit age
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
+
+    delay(sleepSeconds.seconds)
+
+    task.poll()
+    val newDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
+    newDelta shouldBeGreaterThanOrEqual sleepSeconds
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
