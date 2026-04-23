@@ -508,7 +508,7 @@ class Neo4jCdcTaskTest {
     val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
 
     val firstCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
-    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta") as Long
+    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age_to_now") as Long
     val firstStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
     val firstId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
 
@@ -517,7 +517,7 @@ class Neo4jCdcTaskTest {
     task.poll()
 
     val lastCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
-    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta") as Long
+    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age_to_now") as Long
     val lastStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
     val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
 

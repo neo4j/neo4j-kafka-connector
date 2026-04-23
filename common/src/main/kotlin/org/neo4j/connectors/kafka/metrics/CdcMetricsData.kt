@@ -40,7 +40,7 @@ class CdcMetricsData(
       lastTxCommitTs.get()
     }
     metrics.addGauge(
-        "last_cdc_tx_commit_time_delta",
+        "last_cdc_tx_commit_age_to_now",
         "The time (in seconds) since the last committed ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
