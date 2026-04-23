@@ -16,9 +16,12 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.assertions.throwables.shouldNotThrow
+import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.equals.shouldNotBeEqual
 import io.kotest.matchers.shouldBe
 import java.lang.management.ManagementFactory
@@ -484,7 +487,10 @@ class Neo4jCdcTaskTest {
   }
 
   @Test
-  fun `should expose cdc metrics`() {
+  fun `should expose cdc timestamp and id metrics`() {
+    val metricsUnderTest =
+        listOf("last_cdc_tx_commit_timestamp", "last_cdc_tx_start_timestamp", "last_cdc_tx_id")
+
     // start a task with a set connector name and task ID so we can re-fetch it
     task.start(
         mapOf(
@@ -505,26 +511,57 @@ class Neo4jCdcTaskTest {
     val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
     val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
 
-    val firstCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
-    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age_to_now") as Long
-    val firstStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
-    val firstId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
+    val initial = metricsUnderTest.map { mbs.getAttribute(objectName, it) as Long }
 
     // run a transaction and poll for CDC events
     session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
     task.poll()
 
-    val lastCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
-    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age_to_now") as Long
-    val lastStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
-    val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
-
     assertSoftly {
-      lastCommit shouldBeGreaterThan firstCommit
-      lastDelta shouldBeGreaterThan firstDelta
-      lastStart shouldBeGreaterThan firstStart
-      lastId shouldBeGreaterThan firstId
+      metricsUnderTest.forEachIndexed { i, metricName ->
+        withClue("metric=$metricName") {
+          val metricValue = mbs.getAttribute(objectName, metricName) as Long
+          metricValue shouldBeGreaterThan initial[i]
+        }
+      }
     }
+  }
+
+  @Test
+  fun `should expose cdc time delta metrics`() {
+    val sleepSeconds = 1L
+
+    // start a task with a set connector name and task ID so we can re-fetch it
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
+            Neo4jConfiguration.TASK_ID to "0",
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            "neo4j.cdc.topic.nodes.patterns" to "()",
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
+
+    // poll for initial state before any CDC event
+    task.poll()
+    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+    val initialDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
+
+    initialDelta shouldBe -1L
+
+    // run a transaction and then delay to increase commit age
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
+
+    shouldNotThrow<InterruptedException> { Thread.sleep(sleepSeconds * 1000) }
+
+    task.poll()
+    val newDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
+    newDelta shouldBeEqual sleepSeconds
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {

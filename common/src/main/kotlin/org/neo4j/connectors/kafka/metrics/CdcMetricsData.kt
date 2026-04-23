@@ -40,12 +40,13 @@ class CdcMetricsData(
       lastTxCommitTs.get()
     }
     metrics.addGauge(
-        "last_cdc_tx_commit_age_to_now",
+        "last_cdc_tx_commit_age",
         "The time (in seconds) since the last committed ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
-      if (lastTxCommitTs.get() == 0L) -1L // no tx to compare to
-      else Clock.System.now().epochSeconds - lastTxCommitTs.get()
+      val timeStamp = lastTxCommitTs.get()
+      if (timeStamp == 0L) -1L // no tx to compare to
+      else Clock.System.now().epochSeconds - timeStamp
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
