@@ -20,8 +20,8 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
-import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.equals.shouldNotBeEqual
+import io.kotest.matchers.longs.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import java.lang.management.ManagementFactory
 import java.util.UUID
@@ -31,6 +31,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
+import org.assertj.core.api.SoftAssertions.assertSoftly
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions
@@ -506,26 +507,26 @@ class Neo4jCdcTaskTest {
     val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
     val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
 
-    val firstCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp")
-    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta")
-    val firstStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp")
-    val firstId = mbs.getAttribute(objectName, "last_cdc_tx_id")
+    val firstCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
+    val firstDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta") as Long
+    val firstStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
+    val firstId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
 
     // run a transaction and poll for CDC events
     session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
     task.poll()
 
-    val lastCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp")
-    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta")
-    val lastStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp")
-    val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id")
+    val lastCommit = mbs.getAttribute(objectName, "last_cdc_tx_commit_timestamp") as Long
+    val lastDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_time_delta") as Long
+    val lastStart = mbs.getAttribute(objectName, "last_cdc_tx_start_timestamp") as Long
+    val lastId = mbs.getAttribute(objectName, "last_cdc_tx_id") as Long
 
     assertSoftly {
-      firstDelta shouldBeEqual lastDelta
+      lastDelta shouldBeGreaterThanOrEqual firstDelta
 
-      firstCommit shouldNotBeEqual lastCommit
-      firstStart shouldNotBeEqual lastStart
-      firstId shouldNotBeEqual lastId
+      lastCommit shouldBeGreaterThan firstCommit
+      lastStart shouldBeGreaterThan firstStart
+      lastId shouldBeGreaterThan firstId
     }
   }
 

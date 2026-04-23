@@ -41,7 +41,7 @@ class CdcMetricsData(
     }
     metrics.addGauge(
         "last_cdc_tx_commit_time_delta",
-        "The time (in seconds) since the last commited ${connectorType.descriptionActionVerb()} CDC message",
+        "The time (in seconds) since the last committed ${connectorType.descriptionActionVerb()} CDC message",
         tags,
     ) {
       if (lastTxCommitTs.get() == 0L) 0L // no tx to compare to
