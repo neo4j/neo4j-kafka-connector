@@ -45,7 +45,7 @@ data class MergeRelationship(
         startNode = SinkActionNodeReference(buildNodeMatcher(start.labels, start.ids), start.op),
         endNode = SinkActionNodeReference(buildNodeMatcher(end.labels, end.ids), end.op),
         matcher = buildRelationshipMatcher(type, ids),
-        setProperties = properties,
+        mutateProperties = properties,
     )
   }
 

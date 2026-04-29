@@ -66,6 +66,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         LookupMode.MATCH,
         action.matcher,
         action.setProperties,
+        action.mutateProperties,
         action.addLabels,
         action.removeLabels,
         eventVariable,
@@ -77,6 +78,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         LookupMode.MERGE,
         action.matcher,
         action.setProperties,
+        action.mutateProperties,
         action.addLabels,
         action.removeLabels,
         eventVariable,
@@ -86,12 +88,13 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildNodeUpdateStatement(
       mode: LookupMode,
       matcher: NodeMatcher,
-      setProperties: Map<String, Any?>,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>,
       addLabels: Set<String>,
       removeLabels: Set<String>,
       eventVariable: String,
   ): Query {
-    val matchFragment = buildNodeFragment(matcher, mode, "n", "_e")
+    val matchFragment = buildNodeFragment(matcher, mode, "n", "_e", setProperties, mutateProperties)
     val setLabelsClause =
         if (setDynamicLabels) {
           " SET n:\$(_e.addLabels)"
@@ -109,11 +112,13 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
           ""
         }
     val stmt =
-        "WITH $eventVariable AS _e ${matchFragment.clause} SET n += _e.setProperties$setLabelsClause$removeLabelsClause"
+        "WITH $eventVariable AS _e ${matchFragment.clause}$setLabelsClause$removeLabelsClause"
     val params = buildMap {
       this.putAll(matchFragment.params)
-
-      this["setProperties"] = setProperties
+      if (setProperties != null) {
+        this["setProperties"] = setProperties
+      }
+      this["mutateProperties"] = mutateProperties
       if (setDynamicLabels) {
         this["addLabels"] = addLabels
       }
@@ -168,6 +173,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         action.endNode,
         action.matcher,
         action.setProperties,
+        action.mutateProperties,
         eventVariable,
     )
   }
@@ -182,6 +188,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         action.endNode,
         action.matcher,
         action.setProperties,
+        action.mutateProperties,
         eventVariable,
     )
   }
@@ -191,20 +198,30 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       startNode: SinkActionNodeReference,
       endNode: SinkActionNodeReference,
       matcher: RelationshipMatcher,
-      setProperties: Map<String, Any?>,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>,
       eventVariable: String,
   ): Query {
     val matchFragment = buildRelationshipFragment(matcher, mode, startNode, endNode, "r", "_e")
+    val operation = buildString {
+      if (setProperties != null) {
+        append("SET r = _e.setProperties ")
+      }
+      append("SET r += _e.mutateProperties")
+    }
     val stmt =
         buildRelationshipStatementWithKeylessHandling(
             matcher,
             eventVariable,
             matchFragment.clause,
-            "SET r += _e.setProperties",
+            operation,
         )
     val params = buildMap {
       putAll(matchFragment.params)
-      this["setProperties"] = setProperties
+      if (setProperties != null) {
+        this["setProperties"] = setProperties
+      }
+      this["mutateProperties"] = mutateProperties
     }
 
     return buildQuery(stmt, eventVariable, params)
@@ -242,12 +259,32 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       mode: LookupMode,
       alias: String,
       eventVariable: String,
+      setProperties: Map<String, Any?>? = null,
+      mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
     return when (matcher) {
       is NodeMatcher.ByLabelsAndProperties ->
-          buildByLabelsAndPropertiesFragment(matcher, mode, alias, eventVariable)
-      is NodeMatcher.ById -> buildByIdFragment(matcher, mode, alias, eventVariable)
-      is NodeMatcher.ByElementId -> buildByElementIdFragment(matcher, mode, alias, eventVariable)
+          buildByLabelsAndPropertiesFragment(
+              matcher,
+              mode,
+              alias,
+              eventVariable,
+              setProperties,
+              mutateProperties,
+          )
+
+      is NodeMatcher.ById ->
+          buildByIdFragment(matcher, mode, alias, eventVariable, setProperties, mutateProperties)
+
+      is NodeMatcher.ByElementId ->
+          buildByElementIdFragment(
+              matcher,
+              mode,
+              alias,
+              eventVariable,
+              setProperties,
+              mutateProperties,
+          )
     }
   }
 
@@ -256,17 +293,33 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       mode: LookupMode,
       alias: String,
       eventVariable: String,
+      setProperties: Map<String, Any?>? = null,
+      mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
     val matchLabelsPattern = buildLabelPattern(matcher.labels, eventVariable, "matchLabels")
     val matchPropsPattern = buildMatchProps(matcher.properties, eventVariable, "matchProperties")
+    val updatePropertiesClause = buildString {
+      if (setProperties != null) {
+        append(" SET $alias = $eventVariable.setProperties")
+      }
+      if (mutateProperties != null) {
+        append(" SET $alias += $eventVariable.mutateProperties")
+      }
+    }
 
     return Fragment(
-        "$mode ($alias$matchLabelsPattern$matchPropsPattern)",
+        "$mode ($alias$matchLabelsPattern$matchPropsPattern)$updatePropertiesClause",
         buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
             this["matchLabels"] = matcher.labels
           }
           this["matchProperties"] = matcher.properties
+          if (setProperties != null) {
+            this["setProperties"] = setProperties
+          }
+          if (mutateProperties != null) {
+            this["mutateProperties"] = mutateProperties
+          }
         },
     )
   }
@@ -276,10 +329,29 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       mode: LookupMode,
       alias: String,
       eventVariable: String,
+      setProperties: Map<String, Any?>? = null,
+      mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
+    val updatePropertiesClause = buildString {
+      if (setProperties != null) {
+        append(" SET $alias = $eventVariable.setProperties")
+      }
+      if (mutateProperties != null) {
+        append(" SET $alias += $eventVariable.mutateProperties")
+      }
+    }
+
     return Fragment(
-        "$mode ($alias) WHERE id($alias) = $eventVariable.matchId",
-        mapOf("matchId" to matcher.id),
+        "$mode ($alias) WHERE id($alias) = $eventVariable.matchId$updatePropertiesClause",
+        buildMap {
+          this["matchId"] = matcher.id
+          if (setProperties != null) {
+            this["setProperties"] = setProperties
+          }
+          if (mutateProperties != null) {
+            this["mutateProperties"] = mutateProperties
+          }
+        },
     )
   }
 
@@ -288,10 +360,29 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       mode: LookupMode,
       alias: String,
       eventVariable: String,
+      setProperties: Map<String, Any?>? = null,
+      mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
+    val updatePropertiesClause = buildString {
+      if (setProperties != null) {
+        append(" SET $alias = $eventVariable.setProperties")
+      }
+      if (mutateProperties != null) {
+        append(" SET $alias += $eventVariable.mutateProperties")
+      }
+    }
+
     return Fragment(
-        "$mode ($alias) WHERE elementId($alias) = $eventVariable.matchElementId",
-        mapOf("matchElementId" to matcher.elementId),
+        "$mode ($alias) WHERE elementId($alias) = $eventVariable.matchElementId$updatePropertiesClause",
+        buildMap {
+          this["matchElementId"] = matcher.elementId
+          if (setProperties != null) {
+            this["setProperties"] = setProperties
+          }
+          if (mutateProperties != null) {
+            this["mutateProperties"] = mutateProperties
+          }
+        },
     )
   }
 
@@ -307,8 +398,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     return when (matcher) {
       is RelationshipMatcher.ByTypeAndProperties ->
           buildByTypeAndPropertiesFragment(matcher, mode, startNode, endNode, alias, eventVariable)
+
       is RelationshipMatcher.ById ->
           buildByIdFragment(matcher, mode, startNode, endNode, alias, eventVariable)
+
       is RelationshipMatcher.ByElementId ->
           buildByElementIdFragment(matcher, mode, startNode, endNode, alias, eventVariable)
     }
@@ -418,8 +511,18 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
                 startNode.lookupMode,
                 "start",
                 "$eventVariable.start",
+                startNode.setProperties,
+                startNode.mutateProperties,
             ),
-        end = buildNodeFragment(endNode.matcher, endNode.lookupMode, "end", "$eventVariable.end"),
+        end =
+            buildNodeFragment(
+                endNode.matcher,
+                endNode.lookupMode,
+                "end",
+                "$eventVariable.end",
+                endNode.setProperties,
+                endNode.mutateProperties,
+            ),
     )
   }
 

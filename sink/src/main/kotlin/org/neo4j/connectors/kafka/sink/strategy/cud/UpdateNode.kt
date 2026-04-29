@@ -34,7 +34,7 @@ data class UpdateNode(
 
     return UpdateNodeSinkAction(
         matcher = buildNodeMatcher(labels, ids),
-        setProperties = properties,
+        mutateProperties = properties,
         addLabels = emptySet(),
         removeLabels = emptySet(),
     )

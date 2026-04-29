@@ -34,7 +34,7 @@ data class MergeNode(
 
     return MergeNodeSinkAction(
         matcher = buildNodeMatcher(labels, ids),
-        setProperties = properties,
+        mutateProperties = properties,
         addLabels = emptySet(),
         removeLabels = emptySet(),
     )

@@ -50,7 +50,7 @@ class MergeRelationshipTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 
@@ -76,7 +76,7 @@ class MergeRelationshipTest {
                 LookupMode.MERGE,
             ),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 
@@ -102,7 +102,7 @@ class MergeRelationshipTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("RELATED", mapOf("id" to 3), true),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 
@@ -122,7 +122,7 @@ class MergeRelationshipTest {
             SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ById(2), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 
@@ -142,7 +142,7 @@ class MergeRelationshipTest {
             SinkActionNodeReference(NodeMatcher.ByElementId("db:1"), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ByElementId("db:2"), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 
@@ -168,7 +168,7 @@ class MergeRelationshipTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("RELATED", emptyMap(), false),
-            mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
+            mutateProperties = mapOf("prop1" to 1, "prop2" to "test", "prop3" to true),
         )
   }
 

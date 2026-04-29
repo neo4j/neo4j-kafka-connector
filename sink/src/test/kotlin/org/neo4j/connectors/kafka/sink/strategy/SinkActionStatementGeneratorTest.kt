@@ -124,7 +124,7 @@ class SinkActionStatementGeneratorTest {
                     setOf("Person"),
                     mapOf("name" to "joe", "surname" to "doe"),
                 ),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
         )
@@ -136,12 +136,12 @@ class SinkActionStatementGeneratorTest {
     private fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+              "SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
           mapOf(
               "e" to
                   mapOf(
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -150,14 +150,14 @@ class SinkActionStatementGeneratorTest {
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -166,7 +166,7 @@ class SinkActionStatementGeneratorTest {
     private fun dynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -174,7 +174,7 @@ class SinkActionStatementGeneratorTest {
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -201,7 +201,7 @@ class SinkActionStatementGeneratorTest {
     val data =
         UpdateNodeSinkAction(
             matcher = NodeMatcher.ById(1),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
         )
@@ -213,15 +213,80 @@ class SinkActionStatementGeneratorTest {
     private fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
-              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
-          mapOf("e" to mapOf("matchId" to 1, "setProperties" to mapOf("name" to "john"))),
+              "SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf("e" to mapOf("matchId" to 1, "mutateProperties" to mapOf("name" to "john"))),
       )
     }
 
     private fun dynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchId" to 1,
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "mutateProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, dynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateNodeParamsByIdMatchersWithSetProperties::class)
+  fun `should build node update statements with id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ById(1),
+            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("id" to 1),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object UpdateNodeParamsByIdMatchersWithSetProperties : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchId" to 1,
+                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("id" to 1),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE id(n) = _e.matchId " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -229,6 +294,7 @@ class SinkActionStatementGeneratorTest {
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("id" to 1),
                   )
           ),
       )
@@ -258,7 +324,7 @@ class SinkActionStatementGeneratorTest {
     val data =
         UpdateNodeSinkAction(
             matcher = NodeMatcher.ByElementId("4:abc:1"),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
         )
@@ -270,10 +336,13 @@ class SinkActionStatementGeneratorTest {
     private fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
-              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+              "SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
           mapOf(
               "e" to
-                  mapOf("matchElementId" to "4:abc:1", "setProperties" to mapOf("name" to "john"))
+                  mapOf(
+                      "matchElementId" to "4:abc:1",
+                      "mutateProperties" to mapOf("name" to "john"),
+                  )
           ),
       )
     }
@@ -281,14 +350,14 @@ class SinkActionStatementGeneratorTest {
     private fun dynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
                       "matchElementId" to "4:abc:1",
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -309,6 +378,160 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(UpdateNodeParamsByElementIdMatchersWithSetProperties::class)
+  fun `should build node update statements with element id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByElementId("4:abc:1"),
+            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("id" to 1),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object UpdateNodeParamsByElementIdMatchersWithSetProperties : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchElementId" to "4:abc:1",
+                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("id" to 1),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n) WHERE elementId(n) = _e.matchElementId " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchElementId" to "4:abc:1",
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("id" to 1),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, dynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateNodeWithSetPropertiesParams::class)
+  fun `should build node update statements with set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        UpdateNodeSinkAction(
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
+            setProperties = mapOf("id" to 5),
+            mutateProperties = mapOf("name" to "joe", "surname" to "doe"),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object UpdateNodeWithSetPropertiesParams : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    private fun setRemoveDynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(MergeNodeParams::class)
   fun `should build node merge statements`(neo4j: Neo4j, expectedQuery: Query) {
     val generator = DefaultSinkActionStatementGenerator(neo4j)
@@ -319,7 +542,7 @@ class SinkActionStatementGeneratorTest {
                     setOf("Person"),
                     mapOf("name" to "joe", "surname" to "doe"),
                 ),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Undergrad", "Intern"),
         )
@@ -331,12 +554,12 @@ class SinkActionStatementGeneratorTest {
     private fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+              "SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
           mapOf(
               "e" to
                   mapOf(
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -345,14 +568,14 @@ class SinkActionStatementGeneratorTest {
     private fun setRemoveDynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
                   )
           ),
       )
@@ -361,7 +584,7 @@ class SinkActionStatementGeneratorTest {
     private fun dynamicLabelsQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
-              "SET n += _e.setProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+              "SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
           mapOf(
               "e" to
                   mapOf(
@@ -369,7 +592,92 @@ class SinkActionStatementGeneratorTest {
                       "addLabels" to listOf("Employee"),
                       "removeLabels" to listOf("Undergrad", "Intern"),
                       "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
-                      "setProperties" to mapOf("name" to "john"),
+                      "mutateProperties" to mapOf("name" to "john"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeNodeWithSetPropertiesParams::class)
+  fun `should build node merge statements with set properties`(neo4j: Neo4j, expectedQuery: Query) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val data =
+        MergeNodeSinkAction(
+            matcher =
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Person"),
+                    mapOf("name" to "joe", "surname" to "doe"),
+                ),
+            setProperties = mapOf("id" to 5),
+            mutateProperties = mapOf("name" to "john", "surname" to "doe"),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Undergrad", "Intern"),
+        )
+
+    generator.buildStatement(data) shouldBe expectedQuery
+  }
+
+  object MergeNodeWithSetPropertiesParams : ArgumentsProvider {
+    private fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:`Employee` REMOVE n:`Intern`:`Undergrad`",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "john", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    private fun setRemoveDynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (n:`Person` {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "john", "surname" to "doe"),
+                  )
+          ),
+      )
+    }
+
+    private fun dynamicLabelsQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (n:${'$'}(_e.matchLabels) {`name`: _e.matchProperties.`name`, `surname`: _e.matchProperties.`surname`}) " +
+              "SET n = _e.setProperties SET n += _e.mutateProperties SET n:${'$'}(_e.addLabels) REMOVE n:${'$'}(_e.removeLabels)",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "matchLabels" to listOf("Person"),
+                      "addLabels" to listOf("Employee"),
+                      "removeLabels" to listOf("Undergrad", "Intern"),
+                      "matchProperties" to mapOf("name" to "joe", "surname" to "doe"),
+                      "setProperties" to mapOf("id" to 5),
+                      "mutateProperties" to mapOf("name" to "john", "surname" to "doe"),
                   )
           ),
       )
@@ -991,7 +1299,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1004,14 +1312,14 @@ class SinkActionStatementGeneratorTest {
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1023,7 +1331,7 @@ class SinkActionStatementGeneratorTest {
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1039,7 +1347,7 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1080,7 +1388,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1092,14 +1400,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1110,7 +1418,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1126,7 +1434,7 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1164,7 +1472,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1176,14 +1484,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) " +
               "MATCH (end) " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to emptyMap<String, Any>()),
                       "end" to mapOf("matchProperties" to emptyMap<String, Any>()),
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1194,7 +1502,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels)) " +
               "MATCH (end:${'$'}(_e.end.matchLabels)) " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1210,7 +1518,304 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithSetPropertiesParams::class)
+  fun `should build relationship update statements with set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("empId" to 5),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithStartNodeSetPropertiesParams::class)
+  fun `should build relationship update statements with start node set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            mutateProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithStartNodeSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithNodeAndRelationshipSetPropertiesParams::class)
+  fun `should build relationship update statements with node and relationship set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("empId" to 5),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithNodeAndRelationshipSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 7),
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
                   )
           ),
       )
@@ -1251,7 +1856,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1264,14 +1869,14 @@ class SinkActionStatementGeneratorTest {
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1283,7 +1888,7 @@ class SinkActionStatementGeneratorTest {
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1299,7 +1904,7 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1340,7 +1945,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MERGE,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), false),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1353,14 +1958,14 @@ class SinkActionStatementGeneratorTest {
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1372,7 +1977,7 @@ class SinkActionStatementGeneratorTest {
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1388,7 +1993,7 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1429,7 +2034,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1441,14 +2046,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1459,7 +2064,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1475,7 +2080,7 @@ class SinkActionStatementGeneratorTest {
                           ),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1516,7 +2121,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MERGE,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(withKeys) shouldBe expectedQuery
@@ -1528,14 +2133,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchProperties" to mapOf("empId" to 5),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1546,7 +2151,194 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithStartNodeSetPropertiesParams::class)
+  fun `should build relationship merge statements with start node set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MERGE,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MERGE,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            mutateProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithStartNodeSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithSetPropertiesParams::class)
+  fun `should build relationship merge statements with set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MERGE,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MERGE,
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("empId" to 5),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to mapOf("matchProperties" to mapOf("id" to 1)),
+                      "end" to mapOf("matchProperties" to mapOf("id" to 7)),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1563,6 +2355,116 @@ class SinkActionStatementGeneratorTest {
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("empId" to 5),
                       "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithNodeAndRelationshipSetPropertiesParams::class)
+  fun `should build relationship merge statements with node and relationship set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val withKeys =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person", "Employee"), mapOf("id" to 1)),
+                LookupMode.MERGE,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(
+                    setOf("Company", "Corporation"),
+                    mapOf("id" to 7),
+                ),
+                LookupMode.MERGE,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 5), true),
+            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("empId" to 5),
+        )
+
+    generator.buildStatement(withKeys) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithNodeAndRelationshipSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "SET end += _e.end.mutateProperties " +
+              "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchProperties" to mapOf("id" to 7),
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "SET end += _e.end.mutateProperties " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
+              "SET r = _e.setProperties SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchLabels" to listOf("Person", "Employee"),
+                              "matchProperties" to mapOf("id" to 1),
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchLabels" to listOf("Company", "Corporation"),
+                              "matchProperties" to mapOf("id" to 7),
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("empId" to 5),
+                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("empId" to 5),
                   )
           ),
       )
@@ -1855,7 +2757,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ById(42),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -1867,14 +2769,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchId" to 42,
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1885,7 +2787,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1900,7 +2802,7 @@ class SinkActionStatementGeneratorTest {
                               "matchProperties" to mapOf("id" to 7),
                           ),
                       "matchId" to 42,
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1938,7 +2840,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByElementId("5:rel:42"),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -1950,14 +2852,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchElementId" to "5:rel:42",
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -1968,7 +2870,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -1983,7 +2885,7 @@ class SinkActionStatementGeneratorTest {
                               "matchProperties" to mapOf("id" to 7),
                           ),
                       "matchElementId" to "5:rel:42",
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2021,7 +2923,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ById(42),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2033,14 +2935,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchId" to 42,
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2051,7 +2953,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2066,7 +2968,7 @@ class SinkActionStatementGeneratorTest {
                               "matchProperties" to mapOf("id" to 7),
                           ),
                       "matchId" to 42,
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2104,7 +3006,7 @@ class SinkActionStatementGeneratorTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByElementId("5:rel:42"),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2116,14 +3018,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchProperties" to mapOf("id" to 1)),
                       "end" to mapOf("matchProperties" to mapOf("id" to 7)),
                       "matchElementId" to "5:rel:42",
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2134,7 +3036,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2149,7 +3051,7 @@ class SinkActionStatementGeneratorTest {
                               "matchProperties" to mapOf("id" to 7),
                           ),
                       "matchElementId" to "5:rel:42",
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2398,6 +3300,99 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(CreateRelationshipWithNodeIdMatchersAndSetPropertiesParams::class)
+  fun `should build relationship create statements with node id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(1),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(7),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            "WORKS_AT",
+            mapOf("role" to "dev"),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object CreateRelationshipWithNodeIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "CREATE (start)-[r:`WORKS_AT`]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "type" to "WORKS_AT",
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(CreateRelationshipWithNodeElementIdMatchersParams::class)
   fun `should build relationship create statements with node element id matchers`(
       neo4j: Neo4j,
@@ -2466,6 +3461,105 @@ class SinkActionStatementGeneratorTest {
   }
 
   @ParameterizedTest
+  @ArgumentsSource(CreateRelationshipWithNodeElementIdMatchersAndSetPropertiesParams::class)
+  fun `should build relationship create statements with node element id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId("4:abc:1"),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId("4:abc:7"),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            "WORKS_AT",
+            mapOf("role" to "dev"),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object CreateRelationshipWithNodeElementIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "SET end += _e.end.mutateProperties " +
+              "CREATE (start)-[r:`WORKS_AT`]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchElementId" to "4:abc:1",
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchElementId" to "4:abc:7",
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "SET end += _e.end.mutateProperties " +
+              "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
+              "SET r += _e.properties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchElementId" to "4:abc:1",
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchElementId" to "4:abc:7",
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "type" to "WORKS_AT",
+                      "properties" to mapOf("role" to "dev"),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
   @ArgumentsSource(UpdateRelationshipWithNodeIdMatchersParams::class)
   fun `should build relationship update statements with node id matchers`(
       neo4j: Neo4j,
@@ -2477,7 +3571,7 @@ class SinkActionStatementGeneratorTest {
             SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ById(7), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2489,14 +3583,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchId" to 1),
                       "end" to mapOf("matchId" to 7),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2507,7 +3601,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2515,7 +3609,102 @@ class SinkActionStatementGeneratorTest {
                       "end" to mapOf("matchId" to 7),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithNodeIdMatchersAndSetPropertiesParams::class)
+  fun `should build relationship update statements with node id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(1),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(7),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            mutateProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithNodeIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2547,7 +3736,7 @@ class SinkActionStatementGeneratorTest {
             SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:1"), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:7"), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2559,14 +3748,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchElementId" to "4:abc:1"),
                       "end" to mapOf("matchElementId" to "4:abc:7"),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2577,7 +3766,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2585,7 +3774,108 @@ class SinkActionStatementGeneratorTest {
                       "end" to mapOf("matchElementId" to "4:abc:7"),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(UpdateRelationshipWithNodeElementIdMatchersAndSetPropertiesParams::class)
+  fun `should build relationship update statements with node element id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId("4:abc:1"),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId("4:abc:7"),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            mutateProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object UpdateRelationshipWithNodeElementIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchElementId" to "4:abc:1",
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchElementId" to "4:abc:7",
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "SET end += _e.end.mutateProperties " +
+              "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchElementId" to "4:abc:1",
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf(
+                              "matchElementId" to "4:abc:7",
+                              "mutateProperties" to mapOf("name" to "Acme Corp"),
+                          ),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2617,7 +3907,7 @@ class SinkActionStatementGeneratorTest {
             SinkActionNodeReference(NodeMatcher.ById(1), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ById(7), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2629,14 +3919,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchId" to 1),
                       "end" to mapOf("matchId" to 7),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2647,7 +3937,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2655,7 +3945,102 @@ class SinkActionStatementGeneratorTest {
                       "end" to mapOf("matchId" to 7),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(neo4j4_4, standardCypherQuery()),
+          Arguments.of(neo4j5_26, standardCypherQuery()),
+          Arguments.of(neo4j2025_11, standardCypherQuery()),
+          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(MergeRelationshipWithNodeIdMatchersAndSetPropertiesParams::class)
+  fun `should build relationship merge statements with node id matchers and set properties`(
+      neo4j: Neo4j,
+      expectedQuery: Query,
+  ) {
+    val generator = DefaultSinkActionStatementGenerator(neo4j)
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(1),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "Alice"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(7),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+            mutateProperties = mapOf("senior" to true),
+        )
+
+    generator.buildStatement(action) shouldBe expectedQuery
+  }
+
+  object MergeRelationshipWithNodeIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+    fun standardCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
+                  )
+          ),
+      )
+    }
+
+    fun dynamicLabelsCypherQuery(): Query {
+      return Query(
+          "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "SET end += _e.end.mutateProperties " +
+              "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+              "SET r += _e.mutateProperties",
+          mapOf(
+              "e" to
+                  mapOf(
+                      "start" to
+                          mapOf(
+                              "matchId" to 1,
+                              "setProperties" to mapOf("name" to "Alice"),
+                              "mutateProperties" to mapOf("id" to 1),
+                          ),
+                      "end" to
+                          mapOf("matchId" to 7, "mutateProperties" to mapOf("name" to "Acme Corp")),
+                      "matchType" to "WORKS_AT",
+                      "matchProperties" to mapOf("role" to "dev"),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2687,7 +4072,7 @@ class SinkActionStatementGeneratorTest {
             SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:1"), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ByElementId("4:abc:7"), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
-            setProperties = mapOf("senior" to true),
+            mutateProperties = mapOf("senior" to true),
         )
 
     generator.buildStatement(action) shouldBe expectedQuery
@@ -2699,14 +4084,14 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
                       "start" to mapOf("matchElementId" to "4:abc:1"),
                       "end" to mapOf("matchElementId" to "4:abc:7"),
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
@@ -2717,7 +4102,7 @@ class SinkActionStatementGeneratorTest {
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
-              "SET r += _e.setProperties",
+              "SET r += _e.mutateProperties",
           mapOf(
               "e" to
                   mapOf(
@@ -2725,10 +4110,111 @@ class SinkActionStatementGeneratorTest {
                       "end" to mapOf("matchElementId" to "4:abc:7"),
                       "matchType" to "WORKS_AT",
                       "matchProperties" to mapOf("role" to "dev"),
-                      "setProperties" to mapOf("senior" to true),
+                      "mutateProperties" to mapOf("senior" to true),
                   )
           ),
       )
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(MergeRelationshipWithNodeElementIdMatchersAndSetPropertiesParams::class)
+    fun `should build relationship merge statements with node element id matchers and set properties`(
+        neo4j: Neo4j,
+        expectedQuery: Query,
+    ) {
+      val generator = DefaultSinkActionStatementGenerator(neo4j)
+      val action =
+          MergeRelationshipSinkAction(
+              SinkActionNodeReference(
+                  NodeMatcher.ByElementId("4:abc:1"),
+                  LookupMode.MATCH,
+                  setProperties = mapOf("name" to "Alice"),
+                  mutateProperties = mapOf("id" to 1),
+              ),
+              SinkActionNodeReference(
+                  NodeMatcher.ByElementId("4:abc:7"),
+                  LookupMode.MATCH,
+                  mutateProperties = mapOf("name" to "Acme Corp"),
+              ),
+              RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "dev"), true),
+              mutateProperties = mapOf("senior" to true),
+          )
+
+      generator.buildStatement(action) shouldBe expectedQuery
+    }
+
+    object MergeRelationshipWithNodeElementIdMatchersAndSetPropertiesParams : ArgumentsProvider {
+      fun standardCypherQuery(): Query {
+        return Query(
+            "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+                "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+                "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+                "SET end += _e.end.mutateProperties " +
+                "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
+                "SET r += _e.mutateProperties",
+            mapOf(
+                "e" to
+                    mapOf(
+                        "start" to
+                            mapOf(
+                                "matchElementId" to "4:abc:1",
+                                "setProperties" to mapOf("name" to "Alice"),
+                                "mutateProperties" to mapOf("id" to 1),
+                            ),
+                        "end" to
+                            mapOf(
+                                "matchElementId" to "4:abc:7",
+                                "mutateProperties" to mapOf("name" to "Acme Corp"),
+                            ),
+                        "matchProperties" to mapOf("role" to "dev"),
+                        "mutateProperties" to mapOf("senior" to true),
+                    )
+            ),
+        )
+      }
+
+      fun dynamicLabelsCypherQuery(): Query {
+        return Query(
+            "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+                "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+                "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+                "SET end += _e.end.mutateProperties " +
+                "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
+                "SET r += _e.mutateProperties",
+            mapOf(
+                "e" to
+                    mapOf(
+                        "start" to
+                            mapOf(
+                                "matchElementId" to "4:abc:1",
+                                "setProperties" to mapOf("name" to "Alice"),
+                                "mutateProperties" to mapOf("id" to 1),
+                            ),
+                        "end" to
+                            mapOf(
+                                "matchElementId" to "4:abc:7",
+                                "mutateProperties" to mapOf("name" to "Acme Corp"),
+                            ),
+                        "matchType" to "WORKS_AT",
+                        "matchProperties" to mapOf("role" to "dev"),
+                        "mutateProperties" to mapOf("senior" to true),
+                    )
+            ),
+        )
+      }
+
+      override fun provideArguments(
+          parameters: ParameterDeclarations?,
+          context: ExtensionContext?,
+      ): Stream<out Arguments?>? {
+        return Stream.of(
+            Arguments.of(neo4j4_4, standardCypherQuery()),
+            Arguments.of(neo4j5_26, standardCypherQuery()),
+            Arguments.of(neo4j2025_11, standardCypherQuery()),
+            Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
+            Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+        )
+      }
     }
 
     override fun provideArguments(

@@ -50,6 +50,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     return MergeNodeSinkAction(
         NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
+        null,
         event.after.properties,
         event.after.labels.minus(matchLabels).toSet(),
         emptySet(),
@@ -68,6 +69,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     return MergeNodeSinkAction(
         NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
+        null,
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -120,7 +122,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
             relMatchProperties,
             event.keys.isNotEmpty(),
         ),
-        event.after.properties,
+        mutateProperties = event.after.properties,
     )
   }
 
@@ -158,7 +160,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
               relMatchProperties,
               relationshipKeys.isNotEmpty(),
           ),
-          event.mutatedProperties(),
+          mutateProperties = event.mutatedProperties(),
       )
     }
 
@@ -176,7 +178,7 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
             relMatchProperties,
             relationshipKeys.isNotEmpty(),
         ),
-        event.mutatedProperties(),
+        mutateProperties = event.mutatedProperties(),
     )
   }
 

@@ -54,14 +54,16 @@ data class CreateNodeSinkAction(val labels: Set<String>, val properties: Map<Str
 
 data class UpdateNodeSinkAction(
     val matcher: NodeMatcher,
-    val setProperties: Map<String, Any?>,
+    val setProperties: Map<String, Any?>? = null,
+    val mutateProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
 ) : SinkAction()
 
 data class MergeNodeSinkAction(
     val matcher: NodeMatcher,
-    val setProperties: Map<String, Any?>,
+    val setProperties: Map<String, Any?>? = null,
+    val mutateProperties: Map<String, Any?>,
     val addLabels: Set<String>,
     val removeLabels: Set<String>,
 ) : SinkAction() {
@@ -93,7 +95,12 @@ enum class LookupMode {
   }
 }
 
-data class SinkActionNodeReference(val matcher: NodeMatcher, val lookupMode: LookupMode) {
+data class SinkActionNodeReference(
+    val matcher: NodeMatcher,
+    val lookupMode: LookupMode,
+    val setProperties: Map<String, Any?>? = null,
+    val mutateProperties: Map<String, Any?>? = null,
+) {
   init {
     if (lookupMode == LookupMode.MERGE) {
       require(matcher is NodeMatcher.ByLabelsAndProperties) {
@@ -134,7 +141,8 @@ data class UpdateRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
-    val setProperties: Map<String, Any?>,
+    val setProperties: Map<String, Any?>? = null,
+    val mutateProperties: Map<String, Any?>,
 ) : SinkAction() {
   init {
     require(startNode.lookupMode == LookupMode.MATCH) {
@@ -158,7 +166,8 @@ data class MergeRelationshipSinkAction(
     val startNode: SinkActionNodeReference,
     val endNode: SinkActionNodeReference,
     val matcher: RelationshipMatcher,
-    val setProperties: Map<String, Any?>,
+    val setProperties: Map<String, Any?>? = null,
+    val mutateProperties: Map<String, Any?>,
 ) : SinkAction() {
   init {
     if (matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys) {

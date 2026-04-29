@@ -114,7 +114,7 @@ class CudEventTransformerTest : HandlerTest() {
                     labels = setOf("Foo", "Bar"),
                     properties = mapOf("id" to 0),
                 ),
-            setProperties = mapOf("id" to 1, "foo" to "foo-value"),
+            mutateProperties = mapOf("id" to 1, "foo" to "foo-value"),
             addLabels = emptySet(),
             removeLabels = emptySet(),
         )
@@ -147,7 +147,7 @@ class CudEventTransformerTest : HandlerTest() {
                     labels = emptySet(),
                     properties = mapOf("id" to 0),
                 ),
-            setProperties = mapOf("id" to 1, "foo" to "foo-value"),
+            mutateProperties = mapOf("id" to 1, "foo" to "foo-value"),
             addLabels = emptySet(),
             removeLabels = emptySet(),
         )
@@ -181,7 +181,7 @@ class CudEventTransformerTest : HandlerTest() {
                     labels = setOf("Foo", "Bar"),
                     properties = mapOf("id" to 0),
                 ),
-            setProperties = mapOf("id" to 1, "foo" to "foo-value"),
+            mutateProperties = mapOf("id" to 1, "foo" to "foo-value"),
             addLabels = emptySet(),
             removeLabels = emptySet(),
         )
@@ -214,7 +214,7 @@ class CudEventTransformerTest : HandlerTest() {
                     labels = emptySet(),
                     properties = mapOf("id" to 0),
                 ),
-            setProperties = mapOf("id" to 1, "foo" to "foo-value"),
+            mutateProperties = mapOf("id" to 1, "foo" to "foo-value"),
             addLabels = emptySet(),
             removeLabels = emptySet(),
         )
@@ -446,7 +446,7 @@ class CudEventTransformerTest : HandlerTest() {
                     properties = emptyMap(),
                     hasKeys = false,
                 ),
-            setProperties = mapOf("by" to "incident"),
+            mutateProperties = mapOf("by" to "incident"),
         )
   }
 
@@ -500,7 +500,7 @@ class CudEventTransformerTest : HandlerTest() {
                     properties = mapOf("id" to 5),
                     hasKeys = true,
                 ),
-            setProperties = mapOf("by" to "incident"),
+            mutateProperties = mapOf("by" to "incident"),
         )
   }
 
@@ -552,7 +552,7 @@ class CudEventTransformerTest : HandlerTest() {
                     properties = emptyMap(),
                     hasKeys = false,
                 ),
-            setProperties = mapOf("by" to "incident"),
+            mutateProperties = mapOf("by" to "incident"),
         )
   }
 
@@ -607,7 +607,7 @@ class CudEventTransformerTest : HandlerTest() {
                     properties = mapOf("id" to 5),
                     hasKeys = true,
                 ),
-            setProperties = mapOf("by" to "incident"),
+            mutateProperties = mapOf("by" to "incident"),
         )
   }
 

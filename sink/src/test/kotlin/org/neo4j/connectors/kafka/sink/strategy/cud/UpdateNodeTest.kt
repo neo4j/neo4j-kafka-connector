@@ -36,6 +36,7 @@ class UpdateNodeTest {
                 setOf("Person"),
                 mapOf("name" to "john", "surname" to "doe"),
             ),
+            null,
             mapOf("age" to 18),
             emptySet(),
             emptySet(),
@@ -47,7 +48,7 @@ class UpdateNodeTest {
     val operation = UpdateNode(setOf("Person"), mapOf("_id" to 1), mapOf("age" to 18))
 
     operation.toAction() shouldBe
-        UpdateNodeSinkAction(NodeMatcher.ById(1), mapOf("age" to 18), emptySet(), emptySet())
+        UpdateNodeSinkAction(NodeMatcher.ById(1), null, mapOf("age" to 18), emptySet(), emptySet())
   }
 
   @Test
@@ -57,6 +58,7 @@ class UpdateNodeTest {
     operation.toAction() shouldBe
         UpdateNodeSinkAction(
             NodeMatcher.ByElementId("db:1"),
+            null,
             mapOf("age" to 18),
             emptySet(),
             emptySet(),
@@ -78,6 +80,7 @@ class UpdateNodeTest {
                 setOf("Person", "Employee"),
                 mapOf("name" to "john", "surname" to "doe"),
             ),
+            null,
             mapOf("age" to 18),
             emptySet(),
             emptySet(),

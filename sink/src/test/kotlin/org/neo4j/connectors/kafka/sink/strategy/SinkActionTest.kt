@@ -245,12 +245,14 @@ class SinkActionTest {
           UpdateNodeSinkAction(
               matcher = matcher,
               setProperties = mapOf("name" to "John"),
+              mutateProperties = mapOf("id" to 1),
               addLabels = setOf("Employee"),
               removeLabels = setOf("Contractor"),
           )
 
       action.matcher shouldBe matcher
       action.setProperties shouldBe mapOf("name" to "John")
+      action.mutateProperties shouldBe mapOf("id" to 1)
       action.addLabels shouldBe setOf("Employee")
       action.removeLabels shouldBe setOf("Contractor")
     }
@@ -261,13 +263,13 @@ class SinkActionTest {
       val action =
           UpdateNodeSinkAction(
               matcher = matcher,
-              setProperties = emptyMap(),
+              mutateProperties = emptyMap(),
               addLabels = emptySet(),
               removeLabels = emptySet(),
           )
 
       action.matcher shouldBe matcher
-      action.setProperties.shouldBeEmpty()
+      action.mutateProperties.shouldBeEmpty()
       action.addLabels shouldBe emptySet()
       action.removeLabels shouldBe emptySet()
     }
@@ -283,12 +285,14 @@ class SinkActionTest {
           MergeNodeSinkAction(
               matcher = matcher,
               setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("id" to 1),
               addLabels = setOf("Active"),
               removeLabels = setOf("Inactive"),
           )
 
       action.matcher shouldBe matcher
       action.setProperties shouldBe mapOf("updated" to true)
+      action.mutateProperties shouldBe mapOf("id" to 1)
       action.addLabels shouldBe setOf("Active")
       action.removeLabels shouldBe setOf("Inactive")
     }
@@ -299,7 +303,7 @@ class SinkActionTest {
           shouldThrow<IllegalArgumentException> {
             MergeNodeSinkAction(
                 matcher = NodeMatcher.ById(123L),
-                setProperties = mapOf("updated" to true),
+                mutateProperties = mapOf("updated" to true),
                 addLabels = emptySet(),
                 removeLabels = emptySet(),
             )
@@ -315,7 +319,7 @@ class SinkActionTest {
           shouldThrow<IllegalArgumentException> {
             MergeNodeSinkAction(
                 matcher = NodeMatcher.ByElementId("4:abc:123"),
-                setProperties = mapOf("updated" to true),
+                mutateProperties = mapOf("updated" to true),
                 addLabels = emptySet(),
                 removeLabels = emptySet(),
             )
@@ -388,12 +392,46 @@ class SinkActionTest {
     }
 
     @Test
+    fun `should create reference with MATCH lookup mode and set & mutate properties`() {
+      val matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1))
+      val ref =
+          SinkActionNodeReference(
+              matcher = matcher,
+              lookupMode = LookupMode.MATCH,
+              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("id" to 1),
+          )
+
+      ref.matcher shouldBe matcher
+      ref.lookupMode shouldBe LookupMode.MATCH
+      ref.setProperties shouldBe mapOf("updated" to true)
+      ref.mutateProperties shouldBe mapOf("id" to 1)
+    }
+
+    @Test
     fun `should create reference with MATCH lookup mode when using id matcher`() {
       val matcher = NodeMatcher.ById(4)
       val ref = SinkActionNodeReference(matcher = matcher, lookupMode = LookupMode.MATCH)
 
       ref.matcher shouldBe matcher
       ref.lookupMode shouldBe LookupMode.MATCH
+    }
+
+    @Test
+    fun `should create reference with MATCH lookup mode when using id matcher and set & mutate properties`() {
+      val matcher = NodeMatcher.ById(4)
+      val ref =
+          SinkActionNodeReference(
+              matcher = matcher,
+              lookupMode = LookupMode.MATCH,
+              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("id" to 1),
+          )
+
+      ref.matcher shouldBe matcher
+      ref.lookupMode shouldBe LookupMode.MATCH
+      ref.setProperties shouldBe mapOf("updated" to true)
+      ref.mutateProperties shouldBe mapOf("id" to 1)
     }
 
     @Test
@@ -406,12 +444,46 @@ class SinkActionTest {
     }
 
     @Test
+    fun `should create reference with MATCH lookup mode when using element id matcher and set & mutate properties`() {
+      val matcher = NodeMatcher.ByElementId("4:abc:1")
+      val ref =
+          SinkActionNodeReference(
+              matcher = matcher,
+              lookupMode = LookupMode.MATCH,
+              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("id" to 1),
+          )
+
+      ref.matcher shouldBe matcher
+      ref.lookupMode shouldBe LookupMode.MATCH
+      ref.setProperties shouldBe mapOf("updated" to true)
+      ref.mutateProperties shouldBe mapOf("id" to 1)
+    }
+
+    @Test
     fun `should create reference with MERGE lookup mode`() {
       val matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1))
       val ref = SinkActionNodeReference(matcher = matcher, lookupMode = LookupMode.MERGE)
 
       ref.matcher shouldBe matcher
       ref.lookupMode shouldBe LookupMode.MERGE
+    }
+
+    @Test
+    fun `should create reference with MERGE lookup mode and set & mutate properties`() {
+      val matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1))
+      val ref =
+          SinkActionNodeReference(
+              matcher = matcher,
+              lookupMode = LookupMode.MERGE,
+              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("id" to 1),
+          )
+
+      ref.matcher shouldBe matcher
+      ref.lookupMode shouldBe LookupMode.MERGE
+      ref.setProperties shouldBe mapOf("updated" to true)
+      ref.mutateProperties shouldBe mapOf("id" to 1)
     }
 
     @Test
@@ -573,13 +645,13 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("updated" to true),
           )
 
       action.startNode shouldBe startNode
       action.endNode shouldBe endNode
       action.matcher shouldBe matcher
-      action.setProperties shouldBe mapOf("updated" to true)
+      action.mutateProperties shouldBe mapOf("updated" to true)
     }
 
     @Test
@@ -592,7 +664,7 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = emptyMap(),
+              mutateProperties = emptyMap(),
           )
 
       action.matcher shouldBe matcher
@@ -608,7 +680,7 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("prop" to "value"),
+              mutateProperties = mapOf("prop" to "value"),
           )
 
       action.matcher shouldBe matcher
@@ -624,7 +696,7 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("prop" to "value"),
+              mutateProperties = mapOf("prop" to "value"),
           )
 
       action.matcher shouldBe matcher
@@ -640,7 +712,7 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("prop" to "value"),
+              mutateProperties = mapOf("prop" to "value"),
           )
 
       action.matcher shouldBe matcher
@@ -657,7 +729,7 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("prop" to "value"),
+              mutateProperties = mapOf("prop" to "value"),
           )
 
       action.matcher shouldBe matcher
@@ -677,7 +749,7 @@ class SinkActionTest {
                   endNode = end,
                   matcher =
                       RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
-                  setProperties = mapOf("prop" to "value"),
+                  mutateProperties = mapOf("prop" to "value"),
               )
             }
 
@@ -708,7 +780,7 @@ class SinkActionTest {
                       endNode = end,
                       matcher =
                           RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
-                      setProperties = mapOf("prop" to "value"),
+                      mutateProperties = mapOf("prop" to "value"),
                   )
                 }
 
@@ -731,13 +803,13 @@ class SinkActionTest {
               startNode = startNode,
               endNode = endNode,
               matcher = matcher,
-              setProperties = mapOf("updated" to true),
+              mutateProperties = mapOf("updated" to true),
           )
 
       action.startNode shouldBe startNode
       action.endNode shouldBe endNode
       action.matcher shouldBe matcher
-      action.setProperties shouldBe mapOf("updated" to true)
+      action.mutateProperties shouldBe mapOf("updated" to true)
     }
 
     @Test
@@ -758,7 +830,7 @@ class SinkActionTest {
                   endNode = end,
                   matcher =
                       RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
-                  setProperties = mapOf("prop" to "value"),
+                  mutateProperties = mapOf("prop" to "value"),
               )
             }
 
@@ -892,7 +964,7 @@ class SinkActionTest {
                       endNode = end,
                       matcher =
                           RelationshipMatcher.ByTypeAndProperties("RELATED_TO", emptyMap(), false),
-                      setProperties = mapOf("prop" to "value"),
+                      mutateProperties = mapOf("prop" to "value"),
                   )
                 }
 

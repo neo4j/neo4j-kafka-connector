@@ -138,7 +138,7 @@ class SinkActionStatementGeneratorIT {
     val action =
         UpdateNodeSinkAction(
             matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
-            setProperties = mapOf("name" to "john", "updated" to true),
+            mutateProperties = mapOf("name" to "john", "updated" to true),
             addLabels = setOf("Employee"),
             removeLabels = setOf("Intern"),
         )
@@ -154,6 +154,52 @@ class SinkActionStatementGeneratorIT {
   }
 
   @Test
+  fun `should execute update node statement with labels and properties matcher and set properties`() {
+    // Setup: Create a node to update
+    session.run("CREATE (:Person {id: 1, name: 'joe', surname: 'doe'})").consume()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            setProperties = mapOf("id" to 1, "name" to "john", "updated" to true),
+            mutateProperties = emptyMap(),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Intern"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (n:Person:Employee {id: 1}) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("id" to 1, "name" to "john", "updated" to true)
+    node.labels().toList() shouldContainExactlyInAnyOrder listOf("Person", "Employee")
+  }
+
+  @Test
+  fun `should execute update node statement with labels and properties matcher and set & mutate properties`() {
+    // Setup: Create a node to update
+    session.run("CREATE (:Person {id: 1, name: 'joe', surname: 'doe'})").consume()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            setProperties = mapOf("name" to "john", "updated" to true),
+            mutateProperties = mapOf("id" to 1),
+            addLabels = setOf("Employee"),
+            removeLabels = setOf("Intern"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (n:Person:Employee {id: 1}) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("id" to 1, "name" to "john", "updated" to true)
+    node.labels().toList() shouldContainExactlyInAnyOrder listOf("Person", "Employee")
+  }
+
+  @Test
   fun `should execute update node statement with id matcher`() {
     // Setup: Create a node and get its id
     val nodeId =
@@ -162,7 +208,7 @@ class SinkActionStatementGeneratorIT {
     val action =
         UpdateNodeSinkAction(
             matcher = NodeMatcher.ById(nodeId),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Updated"),
             removeLabels = emptySet(),
         )
@@ -173,6 +219,58 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (n:Person:Updated) RETURN n").single()
     val node = result["n"].asNode()
     node["name"].asString() shouldBe "john"
+  }
+
+  @Test
+  fun `should execute update node statement with id matcher and set properties`() {
+    // Setup: Create a node and get its id
+    val nodeId =
+        session
+            .run("CREATE (n:Person {name: 'joe', surname: 'doe'}) RETURN id(n) as id")
+            .single()["id"]
+            .asLong()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ById(nodeId),
+            setProperties = mapOf("name" to "john"),
+            mutateProperties = emptyMap(),
+            addLabels = setOf("Updated"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (n:Person:Updated) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("name" to "john")
+  }
+
+  @Test
+  fun `should execute update node statement with id matcher and set & mutate properties`() {
+    // Setup: Create a node and get its id
+    val nodeId =
+        session
+            .run("CREATE (n:Person {name: 'joe', surname: 'doe'}) RETURN id(n) as id")
+            .single()["id"]
+            .asLong()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ById(nodeId),
+            setProperties = mapOf("name" to "john", "updated" to true),
+            mutateProperties = mapOf("id" to 1),
+            addLabels = setOf("Updated"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (n:Person:Updated) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "updated" to true)
   }
 
   @Test
@@ -189,7 +287,7 @@ class SinkActionStatementGeneratorIT {
     val action =
         UpdateNodeSinkAction(
             matcher = NodeMatcher.ByElementId(elementId),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Updated"),
             removeLabels = emptySet(),
         )
@@ -202,6 +300,62 @@ class SinkActionStatementGeneratorIT {
     node["name"].asString() shouldBe "john"
   }
 
+  @Test
+  fun `should execute update node statement with element id matcher and set properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create a node and get its element id
+    val elementId =
+        session
+            .run("CREATE (n:Person {name: 'joe', surname: 'doe'}) RETURN elementId(n) as id")
+            .single()["id"]
+            .asString()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByElementId(elementId),
+            setProperties = mapOf("name" to "john"),
+            mutateProperties = emptyMap(),
+            addLabels = setOf("Updated"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (n:Person:Updated) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("name" to "john")
+  }
+
+  @Test
+  fun `should execute update node statement with element id matcher and set & mutate properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create a node and get its element id
+    val elementId =
+        session
+            .run("CREATE (n:Person {name: 'joe', surname: 'doe'}) RETURN elementId(n) as id")
+            .single()["id"]
+            .asString()
+
+    val action =
+        UpdateNodeSinkAction(
+            matcher = NodeMatcher.ByElementId(elementId),
+            setProperties = mapOf("name" to "john", "updated" to true),
+            mutateProperties = mapOf("id" to 1),
+            addLabels = setOf("Updated"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (n:Person:Updated) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "updated" to true)
+  }
+
   // ===========================================
   // Node Merge Tests
   // ===========================================
@@ -211,7 +365,7 @@ class SinkActionStatementGeneratorIT {
     val action =
         MergeNodeSinkAction(
             matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
-            setProperties = mapOf("name" to "john"),
+            mutateProperties = mapOf("name" to "john"),
             addLabels = setOf("Employee"),
             removeLabels = emptySet(),
         )
@@ -232,7 +386,7 @@ class SinkActionStatementGeneratorIT {
     val action =
         MergeNodeSinkAction(
             matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
-            setProperties = mapOf("name" to "john", "merged" to true),
+            mutateProperties = mapOf("name" to "john", "merged" to true),
             addLabels = setOf("Employee"),
             removeLabels = emptySet(),
         )
@@ -247,6 +401,56 @@ class SinkActionStatementGeneratorIT {
     val node = result["n"].asNode()
     node["name"].asString() shouldBe "john"
     node["merged"].asBoolean() shouldBe true
+  }
+
+  @Test
+  fun `should execute merge node statement - updates existing node and sets properties`() {
+    // Setup: Create a node
+    session.run("CREATE (:Person {id: 1, name: 'joe'})").consume()
+
+    val action =
+        MergeNodeSinkAction(
+            matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            setProperties = mapOf("name" to "john", "set" to true),
+            mutateProperties = emptyMap(),
+            addLabels = setOf("Employee"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val count = session.run("MATCH (n:Person) RETURN count(n) as c").single()["c"].asLong()
+    count shouldBe 1
+
+    val result = session.run("MATCH (n:Person:Employee) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("name" to "john", "set" to true)
+  }
+
+  @Test
+  fun `should execute merge node statement - updates existing node and sets & mutates properties`() {
+    // Setup: Create a node
+    session.run("CREATE (:Person {id: 1, name: 'joe'})").consume()
+
+    val action =
+        MergeNodeSinkAction(
+            matcher = NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            setProperties = mapOf("name" to "john", "set" to true),
+            mutateProperties = mapOf("id" to 1, "merged" to true),
+            addLabels = setOf("Employee"),
+            removeLabels = emptySet(),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val count = session.run("MATCH (n:Person {id: 1}) RETURN count(n) as c").single()["c"].asLong()
+    count shouldBe 1
+
+    val result = session.run("MATCH (n:Person:Employee {id: 1}) RETURN n").single()
+    val node = result["n"].asNode()
+    node.asMap() shouldBe mapOf("id" to 1L, "name" to "john", "set" to true, "merged" to true)
   }
 
   // ===========================================
@@ -404,6 +608,45 @@ class SinkActionStatementGeneratorIT {
   }
 
   @Test
+  fun `should execute create relationship statement with labels and properties node matchers and setting & mutating properties`() {
+    // Setup: Create start and end nodes
+    session.run("CREATE (:Person {id: 1}), (:Company {id: 2})").consume()
+
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp"),
+            ),
+            "WORKS_AT",
+            mapOf("since" to 2020),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result =
+        session
+            .run("MATCH (p:Person {id: 1})-[r:WORKS_AT]->(c:Company {id: 2}) RETURN r, p, c")
+            .single()
+    val rel = result["r"].asRelationship()
+    rel["since"].asInt() shouldBe 2020
+
+    val start = result["p"].asNode()
+    start.asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+
+    val end = result["c"].asNode()
+    end.asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
+  }
+
+  @Test
   fun `should execute create relationship statement with node id matchers`() {
     // Setup: Create start and end nodes
     val ids =
@@ -430,6 +673,47 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "developer"
+  }
+
+  @Test
+  fun `should execute create relationship statement with node id matchers and setting & mutating properties`() {
+    // Setup: Create start and end nodes
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'}), (c:Company {name: 'acme'}) " +
+                    "RETURN id(p) as pid, id(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asLong()
+    val companyId = ids["cid"].asLong()
+
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(personId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(companyId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            "WORKS_AT",
+            mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "developer"
+
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   @Test
@@ -461,6 +745,49 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "developer"
+  }
+
+  @Test
+  fun `should execute create relationship statement with node element id matchers and sets & mutates properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create start and end nodes
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'}), (c:Company {name: 'acme'}) " +
+                    "RETURN elementId(p) as pid, elementId(c) as cid"
+            )
+            .single()
+    val personElementId = ids["pid"].asString()
+    val companyElementId = ids["cid"].asString()
+
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(personElementId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(companyElementId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            "WORKS_AT",
+            mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "developer"
+
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   @Test
@@ -497,6 +824,48 @@ class SinkActionStatementGeneratorIT {
     nodeCount shouldBe 2
   }
 
+  @Test
+  fun `should execute create relationship statement with merge node matchers and setting & mutating properties`() {
+    // No pre-existing nodes - they should be created via MERGE
+    val action =
+        CreateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MERGE,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MERGE,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            "WORKS_AT",
+            mapOf("since" to 2020),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result =
+        session
+            .run("MATCH (p:Person {id: 1})-[r:WORKS_AT]->(c:Company {id: 2}) RETURN r, p, c")
+            .single()
+    val rel = result["r"].asRelationship()
+    rel["since"].asInt() shouldBe 2020
+
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
+
+    // Verify nodes were created
+    val nodeCount =
+        session
+            .run("MATCH (n) WHERE n:Person OR n:Company RETURN count(n) as c")
+            .single()["c"]
+            .asLong()
+    nodeCount shouldBe 2
+  }
+
   // ===========================================
   // Relationship Update Tests
   // ===========================================
@@ -521,7 +890,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
-            setProperties = mapOf("role" to "senior", "promoted" to true),
+            mutateProperties = mapOf("role" to "senior", "promoted" to true),
         )
 
     val query = generator.buildStatement(action)
@@ -531,6 +900,44 @@ class SinkActionStatementGeneratorIT {
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "senior"
     rel["promoted"].asBoolean() shouldBe true
+  }
+
+  @Test
+  fun `should execute update relationship statement with type and properties matcher and sets & mutates properties`() {
+    // Setup: Create nodes and relationship
+    session
+        .run(
+            "CREATE (:Person {id: 1})-[:WORKS_AT {empId: 100, role: 'junior'}]->(:Company {id: 2})"
+        )
+        .consume()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            mutateProperties = mapOf("role" to "senior", "promoted" to true),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "senior"
+    rel["promoted"].asBoolean() shouldBe true
+
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   @Test
@@ -556,7 +963,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ById(relId),
-            setProperties = mapOf("role" to "senior"),
+            mutateProperties = mapOf("role" to "senior"),
         )
 
     val query = generator.buildStatement(action)
@@ -565,6 +972,41 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "senior"
+  }
+
+  @Test
+  fun `should execute update relationship statement with id matcher and sets & mutates properties`() {
+    // Setup: Create nodes and relationship, get relationship id
+    val relId =
+        session
+            .run(
+                "CREATE (:Person {id: 1})-[r:WORKS_AT {role: 'junior'}]->(:Company {id: 2}) " +
+                    "RETURN id(r) as rid"
+            )
+            .single()["rid"]
+            .asLong()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ById(relId),
+            setProperties = mapOf("since" to 2020, "contractId" to 1),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
+    result["r"].asRelationship().asMap() shouldBe
+        mapOf("contractId" to 1L, "since" to 2020L, "role" to "senior")
   }
 
   @Test
@@ -592,7 +1034,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByElementId(relElementId),
-            setProperties = mapOf("role" to "senior"),
+            mutateProperties = mapOf("role" to "senior"),
         )
 
     val query = generator.buildStatement(action)
@@ -601,6 +1043,48 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "senior"
+  }
+
+  @Test
+  fun `should execute update relationship statement with element id matcher and sets & mutates properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes and relationship, get relationship element id
+    val relElementId =
+        session
+            .run(
+                "CREATE (:Person {id: 1})-[r:WORKS_AT {role: 'junior'}]->(:Company {id: 2}) " +
+                    "RETURN elementId(r) as rid"
+            )
+            .single()["rid"]
+            .asString()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByElementId(relElementId),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "senior"
+
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   @Test
@@ -621,7 +1105,7 @@ class SinkActionStatementGeneratorIT {
             SinkActionNodeReference(NodeMatcher.ById(personId), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ById(companyId), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "junior"), true),
-            setProperties = mapOf("role" to "senior"),
+            mutateProperties = mapOf("role" to "senior"),
         )
 
     val query = generator.buildStatement(action)
@@ -630,6 +1114,117 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "senior"
+  }
+
+  @Test
+  fun `should execute update relationship statement with node id matchers and sets & mutates properties`() {
+    // Setup: Create nodes and relationship
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'})-[r:WORKS_AT {role: 'junior'}]->(c:Company {name: 'acme'}) " +
+                    "RETURN id(p) as pid, id(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asLong()
+    val companyId = ids["cid"].asLong()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(personId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(companyId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "junior"), true),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("role" to "senior")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
+  }
+
+  @Test
+  fun `should execute update relationship statement with node element id matchers`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes and relationship
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'})-[r:WORKS_AT {role: 'junior'}]->(c:Company {name: 'acme'}) " +
+                    "RETURN elementId(p) as pid, elementId(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asString()
+    val companyId = ids["cid"].asString()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId(personId), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId(companyId), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "junior"), true),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "senior"
+  }
+
+  @Test
+  fun `should execute update relationship statement with node element id matchers and sets & mutates properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes and relationship
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'})-[r:WORKS_AT {role: 'junior'}]->(c:Company {name: 'acme'}) " +
+                    "RETURN elementId(p) as pid, elementId(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asString()
+    val companyId = ids["cid"].asString()
+
+    val action =
+        UpdateRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(personId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(companyId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("role" to "junior"), true),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("role" to "senior")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   // ===========================================
@@ -652,7 +1247,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
-            setProperties = mapOf("role" to "developer"),
+            mutateProperties = mapOf("role" to "developer"),
         )
 
     val query = generator.buildStatement(action)
@@ -684,7 +1279,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
-            setProperties = mapOf("role" to "senior"),
+            mutateProperties = mapOf("role" to "senior"),
         )
 
     val query = generator.buildStatement(action)
@@ -704,6 +1299,52 @@ class SinkActionStatementGeneratorIT {
   }
 
   @Test
+  fun `should execute merge relationship statement and set & mutate properties - updates existing relationship`() {
+    // Setup: Create nodes with existing relationship
+    session
+        .run(
+            "CREATE (:Person {id: 1})-[:WORKS_AT {empId: 100, role: 'junior'}]->(:Company {id: 2})"
+        )
+        .consume()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            setProperties = mapOf("since" to 2020, "contractId" to 1),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    // Should only have one relationship
+    val count =
+        session
+            .run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN count(r) as c")
+            .single()["c"]
+            .asLong()
+    count shouldBe 1
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+
+    result["r"].asRelationship().asMap() shouldBe
+        mapOf("since" to 2020L, "contractId" to 1L, "role" to "senior")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
+  }
+
+  @Test
   fun `should execute merge relationship statement with merge node matchers`() {
     // No pre-existing nodes - they should be created via MERGE
     val action =
@@ -717,7 +1358,7 @@ class SinkActionStatementGeneratorIT {
                 LookupMode.MERGE,
             ),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
-            setProperties = mapOf("role" to "developer"),
+            mutateProperties = mapOf("role" to "developer"),
         )
 
     val query = generator.buildStatement(action)
@@ -728,6 +1369,46 @@ class SinkActionStatementGeneratorIT {
     val rel = result["r"].asRelationship()
     rel["empId"].asInt() shouldBe 100
     rel["role"].asString() shouldBe "developer"
+
+    // Verify nodes were created
+    val nodeCount =
+        session
+            .run("MATCH (n) WHERE n:Person OR n:Company RETURN count(n) as c")
+            .single()["c"]
+            .asLong()
+    nodeCount shouldBe 2
+  }
+
+  @Test
+  fun `should execute merge relationship statement and sets & mutates properties with merge node matchers`() {
+    // No pre-existing nodes - they should be created via MERGE
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MERGE,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MERGE,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            mutateProperties = mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result =
+        session
+            .run("MATCH (p:Person {id: 1})-[r:WORKS_AT]->(c:Company {id: 2}) RETURN r, p, c")
+            .single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("empId" to 100L, "role" to "developer")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
 
     // Verify nodes were created
     val nodeCount =
@@ -756,7 +1437,7 @@ class SinkActionStatementGeneratorIT {
             SinkActionNodeReference(NodeMatcher.ById(personId), LookupMode.MATCH),
             SinkActionNodeReference(NodeMatcher.ById(companyId), LookupMode.MATCH),
             RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
-            setProperties = mapOf("role" to "developer"),
+            mutateProperties = mapOf("role" to "developer"),
         )
 
     val query = generator.buildStatement(action)
@@ -765,6 +1446,117 @@ class SinkActionStatementGeneratorIT {
     val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
     val rel = result["r"].asRelationship()
     rel["role"].asString() shouldBe "developer"
+  }
+
+  @Test
+  fun `should execute merge relationship statement with node id matchers and sets & mutates properties`() {
+    // Setup: Create nodes
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'}), (c:Company {name: 'acme'}) " +
+                    "RETURN id(p) as pid, id(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asLong()
+    val companyId = ids["cid"].asLong()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ById(personId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ById(companyId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            mutateProperties = mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("empId" to 100L, "role" to "developer")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
+  }
+
+  @Test
+  fun `should execute merge relationship statement with node element id matchers`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'}), (c:Company {name: 'acme'}) " +
+                    "RETURN elementId(p) as pid, elementId(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asString()
+    val companyId = ids["cid"].asString()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(NodeMatcher.ByElementId(personId), LookupMode.MATCH),
+            SinkActionNodeReference(NodeMatcher.ByElementId(companyId), LookupMode.MATCH),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            mutateProperties = mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
+    val rel = result["r"].asRelationship()
+    rel["role"].asString() shouldBe "developer"
+  }
+
+  @Test
+  fun `should execute merge relationship statement with node element id matchers and sets & mutates properties`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // Setup: Create nodes
+    val ids =
+        session
+            .run(
+                "CREATE (p:Person {name: 'joe'}), (c:Company {name: 'acme'}) " +
+                    "RETURN elementId(p) as pid, elementId(c) as cid"
+            )
+            .single()
+    val personId = ids["pid"].asString()
+    val companyId = ids["cid"].asString()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(personId),
+                LookupMode.MATCH,
+                setProperties = mapOf("name" to "joe"),
+                mutateProperties = mapOf("id" to 1),
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByElementId(companyId),
+                LookupMode.MATCH,
+                mutateProperties = mapOf("name" to "Acme Corp", "id" to 2),
+            ),
+            RelationshipMatcher.ByTypeAndProperties("WORKS_AT", mapOf("empId" to 100), true),
+            mutateProperties = mapOf("role" to "developer"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (p:Person)-[r:WORKS_AT]->(c:Company) RETURN r, p, c").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("empId" to 100L, "role" to "developer")
+    result["p"].asNode().asMap() shouldBe mapOf("id" to 1, "name" to "joe")
+    result["c"].asNode().asMap() shouldBe mapOf("id" to 2, "name" to "Acme Corp")
   }
 
   // ===========================================
