@@ -91,12 +91,12 @@ class NativeBatchStrategyTest {
         |CALL {
         |  WITH e
         |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  RETURN 0 AS x
         |  UNION ALL
         |  WITH e
         |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties
+        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties
         |  RETURN 1 AS x
         |}
         |RETURN COUNT(1) AS total
@@ -109,11 +109,11 @@ class NativeBatchStrategyTest {
         |WITH e ORDER BY e.offset ASC
         |CALL (e) {
         |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  RETURN 0 AS x
         |  UNION ALL
         |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  RETURN 1 AS x
         |}
         |FINISH
@@ -127,10 +127,10 @@ class NativeBatchStrategyTest {
         |WITH e ORDER BY e.offset ASC
         |CALL (e) {
         |  WHEN e.q = ${'$'}q0 THEN {
-        |    WITH e.params AS _e MATCH (start:$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) MATCH (end:$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:$(_e.matchType) {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |    WITH e.params AS _e MATCH (start:$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:$(_e.matchType) {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  }
         |  WHEN e.q = ${'$'}q1 THEN {
-        |    WITH e.params AS _e MERGE (n:$(_e.matchLabels) {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |    WITH e.params AS _e MERGE (n:$(_e.matchLabels) {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
         |FINISH
@@ -209,12 +209,12 @@ class NativeBatchStrategyTest {
         |CALL {
         |  WITH e
         |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  RETURN 0 AS x
         |  UNION ALL
         |  WITH e
         |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties
+        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties
         |  RETURN 1 AS x
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
@@ -230,11 +230,11 @@ class NativeBatchStrategyTest {
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
         |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  RETURN 0 AS x
         |  UNION ALL
         |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  RETURN 1 AS x
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
@@ -251,10 +251,10 @@ class NativeBatchStrategyTest {
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
         |  WHEN e.q = ${'$'}q0 THEN {
-        |    WITH e.params AS _e MATCH (start:$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) MATCH (end:$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) MERGE (start)-[r:$(_e.matchType) {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.setProperties
+        |    WITH e.params AS _e MATCH (start:$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:$(_e.matchType) {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
         |  }
         |  WHEN e.q = ${'$'}q1 THEN {
-        |    WITH e.params AS _e MERGE (n:$(_e.matchLabels) {`id`: _e.matchProperties.`id`}) SET n += _e.setProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |    WITH e.params AS _e MERGE (n:$(_e.matchLabels) {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset

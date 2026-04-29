@@ -64,6 +64,7 @@ class CdcSchemaEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
             NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            null,
             mapOf("id" to 1, "name" to "John"),
             emptySet(),
             emptySet(),
@@ -88,6 +89,7 @@ class CdcSchemaEventTransformerTest {
     transformer.transform(changeEvent(event)) shouldBe
         MergeNodeSinkAction(
             NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+            null,
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -135,7 +137,7 @@ class CdcSchemaEventTransformerTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020), false),
-            mapOf("since" to 2020),
+            mutateProperties = mapOf("since" to 2020),
         )
   }
 
@@ -164,7 +166,7 @@ class CdcSchemaEventTransformerTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
-            mapOf("relId" to "R1", "since" to 2020),
+            mutateProperties = mapOf("relId" to "R1", "since" to 2020),
         )
   }
 
@@ -193,7 +195,7 @@ class CdcSchemaEventTransformerTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("since" to 2020), false),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 
@@ -222,7 +224,7 @@ class CdcSchemaEventTransformerTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 
@@ -251,7 +253,7 @@ class CdcSchemaEventTransformerTest {
                 LookupMode.MATCH,
             ),
             RelationshipMatcher.ByTypeAndProperties("KNOWS", mapOf("relId" to "R1"), true),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 

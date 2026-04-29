@@ -63,6 +63,7 @@ class CdcSourceIdEventTransformerTest {
                 setOf("SourceLabel"),
                 mapOf("sourceId" to "node-element-id"),
             ),
+            null,
             mapOf("id" to 1, "name" to "John"),
             setOf("Person"),
             emptySet(),
@@ -87,6 +88,7 @@ class CdcSourceIdEventTransformerTest {
                 setOf("SourceLabel"),
                 mapOf("sourceId" to "node-element-id"),
             ),
+            null,
             mapOf("id" to 1, "name" to "John"),
             setOf("Person"),
             emptySet(),
@@ -114,6 +116,7 @@ class CdcSourceIdEventTransformerTest {
                 setOf("SourceLabel"),
                 mapOf("sourceId" to "node-element-id"),
             ),
+            null,
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -141,6 +144,7 @@ class CdcSourceIdEventTransformerTest {
                 setOf("SourceLabel"),
                 mapOf("sourceId" to "node-element-id"),
             ),
+            null,
             mapOf("salary" to 1000),
             setOf("Employee"),
             emptySet(),
@@ -224,7 +228,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2020),
+            mutateProperties = mapOf("since" to 2020),
         )
   }
 
@@ -263,7 +267,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2020),
+            mutateProperties = mapOf("since" to 2020),
         )
   }
 
@@ -302,7 +306,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2020),
+            mutateProperties = mapOf("since" to 2020),
         )
   }
 
@@ -341,7 +345,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 
@@ -380,7 +384,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 
@@ -419,7 +423,7 @@ class CdcSourceIdEventTransformerTest {
                 mapOf("sourceId" to "rel-element-id"),
                 true,
             ),
-            mapOf("since" to 2021, "rating" to 5),
+            mutateProperties = mapOf("since" to 2021, "rating" to 5),
         )
   }
 

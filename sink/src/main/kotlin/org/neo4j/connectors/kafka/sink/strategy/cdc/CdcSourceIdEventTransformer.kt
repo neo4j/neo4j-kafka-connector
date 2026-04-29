@@ -52,6 +52,7 @@ class CdcSourceIdEventTransformer(
 
     return MergeNodeSinkAction(
         NodeMatcher.ByLabelsAndProperties(setOf(labelName), mapOf(propertyName to event.elementId)),
+        null,
         event.after.properties,
         event.after.labels.minus(labelName).toSet(),
         emptySet(),
@@ -68,6 +69,7 @@ class CdcSourceIdEventTransformer(
 
     return MergeNodeSinkAction(
         NodeMatcher.ByLabelsAndProperties(setOf(labelName), mapOf(propertyName to event.elementId)),
+        null,
         event.mutatedProperties(),
         event.addedLabels().toSet(),
         event.removedLabels().toSet(),
@@ -121,7 +123,7 @@ class CdcSourceIdEventTransformer(
             mapOf(propertyName to event.elementId),
             true,
         ),
-        event.after.properties,
+        mutateProperties = event.after.properties,
     )
   }
 
@@ -153,7 +155,7 @@ class CdcSourceIdEventTransformer(
             mapOf(propertyName to event.elementId),
             true,
         ),
-        event.mutatedProperties(),
+        mutateProperties = event.mutatedProperties(),
     )
   }
 
