@@ -37,9 +37,9 @@ import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
-import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePatternEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPatternEventTransformer
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -144,7 +144,7 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<NodePatternHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<NodePatternEventTransformer>()
   }
 
   @Test
@@ -157,7 +157,7 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("knows")
-    topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternHandler>()
+    topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternEventTransformer>()
   }
 
   @Test
