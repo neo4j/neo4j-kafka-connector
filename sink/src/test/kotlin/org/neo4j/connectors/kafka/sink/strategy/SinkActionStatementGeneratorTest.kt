@@ -969,7 +969,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -986,7 +988,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1054,7 +1058,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1071,7 +1077,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1138,8 +1146,8 @@ class SinkActionStatementGeneratorTest {
   object CreateRelationshipWithMatchNodesWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start " +
+              "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1155,8 +1163,8 @@ class SinkActionStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) WITH _e, start " +
+              "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1223,8 +1231,8 @@ class SinkActionStatementGeneratorTest {
   object CreateRelationshipWithMergeNodesWithKeysParams : ArgumentsProvider {
     fun standardCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start " +
+              "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1240,8 +1248,8 @@ class SinkActionStatementGeneratorTest {
 
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
-          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
-              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+          "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) WITH _e, start " +
+              "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -1309,7 +1317,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -1328,7 +1338,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -1398,7 +1410,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1416,7 +1430,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1482,7 +1498,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) " +
+              "WITH _e, start " +
               "MATCH (end) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1500,7 +1518,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels)) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels)) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1570,7 +1590,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -1589,7 +1611,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -1662,7 +1686,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1686,7 +1712,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -1762,8 +1790,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -1792,8 +1822,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -1866,7 +1898,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -1885,7 +1919,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -1955,7 +1991,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -1974,7 +2012,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "SET r += _e.mutateProperties",
@@ -2044,7 +2084,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2062,7 +2104,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2131,7 +2175,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2149,7 +2195,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2221,7 +2269,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2245,7 +2295,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2317,7 +2369,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -2336,7 +2390,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -2411,8 +2467,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MERGE (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -2441,8 +2499,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MERGE (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MERGE (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "SET r = _e.setProperties SET r += _e.mutateProperties",
           mapOf(
@@ -2514,7 +2574,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "DELETE r",
@@ -2532,7 +2594,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "WITH _e, r LIMIT 1 " +
               "DELETE r",
@@ -2601,7 +2665,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e " +
               "MATCH (start:`Employee`:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company`:`Corporation` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
@@ -2619,7 +2685,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e " +
               "MATCH (start:\$(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:\$(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
@@ -2684,7 +2752,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e " +
               "MATCH (start) " +
+              "WITH _e, start " +
               "MATCH (end) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
@@ -2702,7 +2772,9 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e " +
               "MATCH (start:\$(_e.start.matchLabels)) " +
+              "WITH _e, start " +
               "MATCH (end:\$(_e.end.matchLabels)) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`empId`: _e.matchProperties.`empId`}]->(end) " +
               "DELETE r",
           mapOf(
@@ -2767,7 +2839,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2785,7 +2859,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2850,7 +2926,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2868,7 +2946,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2933,7 +3013,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -2951,7 +3033,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3016,7 +3100,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3034,7 +3120,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3098,7 +3186,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "DELETE r",
           mapOf(
@@ -3115,7 +3205,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "DELETE r",
           mapOf(
@@ -3178,7 +3270,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:`Company` {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "DELETE r",
           mapOf(
@@ -3195,7 +3289,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start:${'$'}(_e.start.matchLabels) {`id`: _e.start.matchProperties.`id`}) " +
+              "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {`id`: _e.end.matchProperties.`id`}) " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "DELETE r",
           mapOf(
@@ -3253,7 +3349,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3270,7 +3368,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3331,8 +3431,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3356,8 +3458,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3414,7 +3518,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3431,7 +3537,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3492,8 +3600,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:`WORKS_AT`]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3520,8 +3630,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "CREATE (start)-[r:${'$'}(_e.type)]->(end) " +
               "SET r += _e.properties",
           mapOf(
@@ -3581,7 +3693,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3599,7 +3713,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3661,8 +3777,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3687,8 +3805,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3746,7 +3866,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3764,7 +3886,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3826,8 +3950,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3855,8 +3981,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MATCH (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3917,7 +4045,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3935,7 +4065,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -3997,8 +4129,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -4023,8 +4157,10 @@ class SinkActionStatementGeneratorTest {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE id(start) = _e.start.matchId " +
               "SET start = _e.start.setProperties SET start += _e.start.mutateProperties " +
+              "WITH _e, start " +
               "MATCH (end) WHERE id(end) = _e.end.matchId " +
               "SET end += _e.end.mutateProperties " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -4082,7 +4218,9 @@ class SinkActionStatementGeneratorTest {
     fun standardCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:`WORKS_AT` {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(
@@ -4100,7 +4238,9 @@ class SinkActionStatementGeneratorTest {
     fun dynamicLabelsCypherQuery(): Query {
       return Query(
           "WITH ${'$'}e AS _e MATCH (start) WHERE elementId(start) = _e.start.matchElementId " +
+              "WITH _e, start " +
               "MATCH (end) WHERE elementId(end) = _e.end.matchElementId " +
+              "WITH _e, start, end " +
               "MERGE (start)-[r:${'$'}(_e.matchType) {`role`: _e.matchProperties.`role`}]->(end) " +
               "SET r += _e.mutateProperties",
           mapOf(

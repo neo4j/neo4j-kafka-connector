@@ -147,7 +147,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val typePattern = buildTypePattern(action.type, "_e", "type")
 
     val stmt =
-        "WITH $eventVariable AS _e ${nodeFragments.start.clause} ${nodeFragments.end.clause} CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
+        "WITH $eventVariable AS _e ${nodeFragments.start.clause} WITH _e, start ${nodeFragments.end.clause} WITH _e, start, end CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
     val params = buildMap {
       if (nodeFragments.start.params.isNotEmpty()) {
         this["start"] = nodeFragments.start.params
@@ -417,8 +417,8 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val nodeFragments = buildNodeFragments(startNode, endNode, eventVariable)
     return Fragment(
         buildString {
-          append(nodeFragments.start.clause).append(" ")
-          append(nodeFragments.end.clause).append(" ")
+          append(nodeFragments.start.clause).append(" WITH _e, start ")
+          append(nodeFragments.end.clause).append(" WITH _e, start, end ")
           append(relationshipPattern)
         },
         buildMap {
