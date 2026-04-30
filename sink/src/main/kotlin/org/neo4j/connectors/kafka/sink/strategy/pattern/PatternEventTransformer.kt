@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy
+package org.neo4j.connectors.kafka.sink.strategy.pattern
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -23,30 +23,19 @@ import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
-import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
+import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
 import org.neo4j.connectors.kafka.utils.MapUtils.flatten
-import org.neo4j.cypherdsl.core.Cypher
 
-abstract class PatternHandler<T : Pattern>(
+abstract class PatternEventTransformer<T : Pattern>(
     val pattern: T,
     protected val bindTimestampAs: String = SinkConfiguration.DEFAULT_BIND_TIMESTAMP_ALIAS,
     protected val bindHeaderAs: String = SinkConfiguration.DEFAULT_BIND_HEADER_ALIAS,
     protected val bindKeyAs: String = SinkConfiguration.DEFAULT_BIND_KEY_ALIAS,
     protected val bindValueAs: String = SinkConfiguration.DEFAULT_BIND_VALUE_ALIAS,
-) : SinkStrategyHandler {
+) : SinkEventTransformer {
   companion object {
     internal const val CREATE = "C"
     internal const val DELETE = "D"
-    internal const val EVENTS = "events"
-    internal const val KEYS = "keys"
-    internal const val PROPERTIES = "properties"
-    internal const val START = "start"
-    internal const val END = "end"
-
-    internal val NAME_EVENT = Cypher.name("event")
-    internal val NAME_CREATED = Cypher.name("created")
-    internal val NAME_DELETED = Cypher.name("deleted")
   }
 
   @Suppress("UNCHECKED_CAST")
