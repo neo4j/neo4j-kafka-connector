@@ -173,32 +173,38 @@ interface SinkStrategyHandler {
           throw ConfigException("Topic '${topic}' has multiple strategies defined")
         }
 
-        val eventTransformer =
+        val (strategy, eventTransformer) =
             when (val parsedPattern = Pattern.parse(pattern)) {
               is NodePattern ->
-                  NodePatternEventTransformer(
-                      topic,
-                      parsedPattern,
-                      config.getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES).toBoolean(),
-                      bindTimestampAs = config.patternBindTimestampAs,
-                      bindHeaderAs = config.patternBindHeaderAs,
-                      bindKeyAs = config.patternBindKeyAs,
-                      bindValueAs = config.patternBindValueAs,
-                  )
+                  SinkStrategy.NODE_PATTERN to
+                      NodePatternEventTransformer(
+                          topic,
+                          parsedPattern,
+                          config
+                              .getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES)
+                              .toBoolean(),
+                          bindTimestampAs = config.patternBindTimestampAs,
+                          bindHeaderAs = config.patternBindHeaderAs,
+                          bindKeyAs = config.patternBindKeyAs,
+                          bindValueAs = config.patternBindValueAs,
+                      )
 
               is RelationshipPattern ->
-                  RelationshipPatternEventTransformer(
-                      topic,
-                      parsedPattern,
-                      config.getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES).toBoolean(),
-                      config
-                          .getString(SinkConfiguration.PATTERN_MERGE_RELATIONSHIP_PROPERTIES)
-                          .toBoolean(),
-                      bindTimestampAs = config.patternBindTimestampAs,
-                      bindHeaderAs = config.patternBindHeaderAs,
-                      bindKeyAs = config.patternBindKeyAs,
-                      bindValueAs = config.patternBindValueAs,
-                  )
+                  SinkStrategy.RELATIONSHIP_PATTERN to
+                      RelationshipPatternEventTransformer(
+                          topic,
+                          parsedPattern,
+                          config
+                              .getString(SinkConfiguration.PATTERN_MERGE_NODE_PROPERTIES)
+                              .toBoolean(),
+                          config
+                              .getString(SinkConfiguration.PATTERN_MERGE_RELATIONSHIP_PROPERTIES)
+                              .toBoolean(),
+                          bindTimestampAs = config.patternBindTimestampAs,
+                          bindHeaderAs = config.patternBindHeaderAs,
+                          bindKeyAs = config.patternBindKeyAs,
+                          bindValueAs = config.patternBindValueAs,
+                      )
 
               else ->
                   throw IllegalArgumentException(
@@ -210,35 +216,18 @@ interface SinkStrategyHandler {
 
         val batchStrategy =
             if (config.isApocCypherDoItAvailable()) {
-              ApocBatchStrategy(
-                  config.neo4j(),
-                  config.batchSize,
-                  config.eosOffsetLabel,
-                  SinkStrategy.CDC_SOURCE_ID,
-              )
+              ApocBatchStrategy(config.neo4j(), config.batchSize, config.eosOffsetLabel, strategy)
             } else {
               NativeBatchStrategy(
                   config.neo4j(),
                   config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
                   config.batchSize,
                   config.eosOffsetLabel,
-                  SinkStrategy.CDC_SOURCE_ID,
+                  strategy,
               )
             }
 
-        handler =
-            SinkHandler(
-                when (eventTransformer) {
-                  is NodePatternEventTransformer -> SinkStrategy.NODE_PATTERN
-                  is RelationshipPatternEventTransformer -> SinkStrategy.RELATIONSHIP_PATTERN
-                  else ->
-                      throw IllegalStateException(
-                          "Unexpected event transformer type: ${eventTransformer.javaClass.name}"
-                      )
-                },
-                batchStrategy,
-                eventTransformer,
-            )
+        handler = SinkHandler(strategy, batchStrategy, eventTransformer)
       }
 
       val cdcSourceIdTopics = config.getList(SinkConfiguration.CDC_SOURCE_ID_TOPICS)
