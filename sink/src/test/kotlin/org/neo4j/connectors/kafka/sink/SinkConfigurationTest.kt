@@ -110,8 +110,12 @@ class SinkConfigurationTest {
         "CREATE (p:Person{name: event.firstName})"
   }
 
-  @Test
-  fun `should return the configuration with shuffled topic order`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlerTypes")
+  fun `should return the configuration with shuffled topic order`(
+      apocDoItAvailable: Boolean,
+      neo4jTarget: Neo4j?,
+  ) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -121,7 +125,13 @@ class SinkConfigurationTest {
             "${SinkConfiguration.PATTERN_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
             SinkConfiguration.BATCH_SIZE to "10",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            neo4j = neo4jTarget,
+            apocCypherDoItAvailable = apocDoItAvailable,
+        )
 
     config.batchSize shouldBe 10
 
