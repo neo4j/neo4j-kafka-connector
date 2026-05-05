@@ -36,11 +36,11 @@ import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
-import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
+import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePatternEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
@@ -110,8 +110,12 @@ class SinkConfigurationTest {
         "CREATE (p:Person{name: event.firstName})"
   }
 
-  @Test
-  fun `should return the configuration with shuffled topic order`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlerTypes")
+  fun `should return the configuration with shuffled topic order`(
+      apocDoItAvailable: Boolean,
+      neo4jTarget: Neo4j?,
+  ) {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -121,14 +125,23 @@ class SinkConfigurationTest {
             "${SinkConfiguration.PATTERN_TOPIC_PREFIX}bar" to "(:Bar{!barId,barName})",
             SinkConfiguration.BATCH_SIZE to "10",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            neo4j = neo4jTarget,
+            apocCypherDoItAvailable = apocDoItAvailable,
+        )
 
     config.batchSize shouldBe 10
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<NodePatternHandler>()
-    (topicHandlers["foo"] as NodePatternHandler).pattern shouldBe
+    topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
+    val fooHandler = topicHandlers["foo"] as SinkHandler
+    fooHandler.eventTransformer shouldBe instanceOf<NodePatternEventTransformer>()
+    val fooEventTransformer = fooHandler.eventTransformer as NodePatternEventTransformer
+    fooEventTransformer.pattern shouldBe
         NodePattern(
             setOf("Foo"),
             false,
@@ -138,8 +151,10 @@ class SinkConfigurationTest {
         )
 
     topicHandlers shouldHaveKey "bar"
-    topicHandlers["bar"] shouldBe instanceOf<NodePatternHandler>()
-    (topicHandlers["bar"] as NodePatternHandler).pattern shouldBe
+    val barHandler = topicHandlers["bar"] as SinkHandler
+    barHandler.eventTransformer shouldBe instanceOf<NodePatternEventTransformer>()
+    val barEventTransformer = barHandler.eventTransformer as NodePatternEventTransformer
+    barEventTransformer.pattern shouldBe
         NodePattern(
             setOf("Bar"),
             false,
