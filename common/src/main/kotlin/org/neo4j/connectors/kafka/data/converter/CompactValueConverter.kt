@@ -129,7 +129,19 @@ class CompactValueConverter : ValueConverter {
                   .apply { if (optional) optional() }
                   .build()
 
-          else ->
+          else -> {
+            val nonEmptyElements = value.filter { it.notNullOrEmpty() }
+            val merged =
+                if (nonEmptyElements.all { it is Map<*, *> }) {
+                  @Suppress("UNCHECKED_CAST")
+                  mergeMapElementSchemas(nonEmptyElements as List<Map<*, *>>, optional)
+                } else null
+
+            if (merged != null) {
+              SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
+                  .apply { if (optional) optional() }
+                  .build()
+            } else {
               SchemaBuilder.struct()
                   .apply {
                     value.forEachIndexed { i, v ->
@@ -138,6 +150,8 @@ class CompactValueConverter : ValueConverter {
                   }
                   .apply { if (optional) optional() }
                   .build()
+            }
+          }
         }
       }
 
@@ -302,6 +316,68 @@ class CompactValueConverter : ValueConverter {
           }
 
       else -> value
+    }
+  }
+
+  /**
+   * Builds a merged STRUCT schema covering the union of keys across all element Maps. Keys absent
+   * (or null/empty) in some elements are marked optional. Element values are re-inferred with
+   * [forceMapsAsStruct] = true so a key whose value is a homogeneously-typed nested Map (which
+   * would otherwise be inferred as MAP) is rendered as a STRUCT, comparable field-by-field with
+   * sibling elements that already produced a STRUCT for the same key.
+   *
+   * Returns null when any key has multiple incompatible non-null value types across elements, so
+   * the caller falls back to the indexed `{e0, e1, ...}` representation.
+   */
+  private fun mergeMapElementSchemas(elements: List<Map<*, *>>, optional: Boolean): Schema? {
+    val allKeys = linkedSetOf<String>()
+    for (element in elements) {
+      for (key in element.keys) {
+        if (key !is String) return null
+        allKeys.add(key)
+      }
+    }
+
+    val builder = SchemaBuilder.struct()
+    for (key in allKeys) {
+      val fieldValues =
+          elements.filter { it.containsKey(key) && it[key].notNullOrEmpty() }.map { it[key] }
+
+      val resolvedSchema =
+          if (fieldValues.isEmpty()) {
+            SimpleTypes.NULL.schema(true)
+          } else {
+            val fieldSchemas = fieldValues.map { schema(it, optional, true) }.toSet()
+            when {
+              fieldSchemas.size == 1 -> fieldSchemas.first()
+              fieldValues.all { it is Map<*, *> } -> {
+                @Suppress("UNCHECKED_CAST")
+                mergeMapElementSchemas(fieldValues as List<Map<*, *>>, optional) ?: return null
+              }
+              else -> return null
+            }
+          }
+
+      val presentInAll = elements.all { it.containsKey(key) && it[key].notNullOrEmpty() }
+      builder.field(key, if (presentInAll) resolvedSchema else makeOptional(resolvedSchema))
+    }
+    return builder.build()
+  }
+
+  private fun makeOptional(schema: Schema): Schema {
+    if (schema.isOptional) return schema
+    return when (schema.type()) {
+      Schema.Type.STRUCT ->
+          SchemaBuilder.struct()
+              .apply {
+                schema.fields().forEach { field(it.name(), it.schema()) }
+                optional()
+              }
+              .build()
+      Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema()).optional().build()
+      Schema.Type.MAP ->
+          SchemaBuilder.map(schema.keySchema(), schema.valueSchema()).optional().build()
+      else -> SchemaBuilder.type(schema.type()).optional().build()
     }
   }
 }
