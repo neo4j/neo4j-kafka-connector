@@ -3,23 +3,23 @@ GEM
   specs:
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
-    bigdecimal (3.1.8)
-    dip (8.2.5)
+    bigdecimal (3.3.1)
+    dip (8.2.6)
       json-schema (~> 5)
       public_suffix (>= 2.0.2, < 6.0)
       thor (>= 0.20, < 2)
-    json-schema (5.1.1)
+    json-schema (5.2.2)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
     public_suffix (5.1.1)
-    thor (1.4.0)
+    thor (1.5.0)
 
 PLATFORMS
   arm64-darwin-23
   ruby
 
 DEPENDENCIES
-  dip (~> 8.2.5)
+  dip (~> 8.2.6)
 
 BUNDLED WITH
    2.5.23
