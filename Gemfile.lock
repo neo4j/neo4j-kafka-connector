@@ -4,7 +4,7 @@ GEM
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
     bigdecimal (3.3.1)
-    dip (8.2.6)
+    dip (8.3.0)
       json-schema (~> 5)
       public_suffix (>= 2.0.2, < 6.0)
       thor (>= 0.20, < 2)
@@ -19,7 +19,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  dip (~> 8.2.6)
+  dip (~> 8.3.0)
 
 BUNDLED WITH
    2.5.23
