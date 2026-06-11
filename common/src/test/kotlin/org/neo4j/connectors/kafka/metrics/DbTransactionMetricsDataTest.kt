@@ -40,7 +40,7 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalStdlibApi::class, ExperimentalCoroutinesApi::class)
 @Testcontainers
 class DbTransactionMetricsDataTest {
 
