@@ -17,9 +17,11 @@
 package org.neo4j.connectors.kafka.metrics
 
 import java.util.UUID
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -52,7 +54,7 @@ class DbTransactionMetricsDataTest {
     val transactionConfig = TransactionConfig.builder().build()
 
     val driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
-    val dispatcher = this.coroutineContext[kotlinx.coroutines.CoroutineDispatcher]!!
+    val dispatcher = this.coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
 
     DbTransactionMetricsData(
             metrics = metrics,
@@ -103,7 +105,7 @@ class DbTransactionMetricsDataTest {
     val transactionConfig = TransactionConfig.builder().build()
 
     val driver = GraphDatabase.driver(neo4j.boltUrl, AuthTokens.none())
-    val dispatcher = this.coroutineContext[kotlinx.coroutines.CoroutineDispatcher]!!
+    val dispatcher = this.coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
 
     DbTransactionMetricsData(
             metrics = metrics,
