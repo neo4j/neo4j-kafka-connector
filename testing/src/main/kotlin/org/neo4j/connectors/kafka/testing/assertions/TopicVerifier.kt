@@ -180,7 +180,7 @@ class TopicVerifier<K, V>(
       is String -> {
         // if the value is a string, we assume it is a JSON string and deserialize it
         if (assertionClass == Map::class.java) {
-          JSONUtils.readValue(sourceValue, true)
+          JSONUtils.readValue<Map<String, Any?>>(sourceValue, true)
         } else {
           sourceValue
         }
