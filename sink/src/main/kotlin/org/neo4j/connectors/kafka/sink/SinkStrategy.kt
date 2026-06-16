@@ -35,6 +35,7 @@ import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSourceIdEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cypher.CypherEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePatternEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.Pattern
@@ -153,17 +154,36 @@ interface SinkStrategyHandler {
 
       val query = originals[SinkConfiguration.CYPHER_TOPIC_PREFIX + topic]
       if (query != null) {
+        val batchStrategy =
+            if (config.isApocCypherDoItAvailable()) {
+              ApocBatchStrategy(
+                  config.neo4j(),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CYPHER,
+              )
+            } else {
+              NativeBatchStrategy(
+                  config.neo4j(),
+                  config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
+                  config.batchSize,
+                  config.eosOffsetLabel,
+                  SinkStrategy.CYPHER,
+              )
+            }
         handler =
-            CypherHandler(
-                topic,
-                query,
-                config.renderer,
-                config.batchSize,
-                bindTimestampAs = config.cypherBindTimestampAs,
-                bindHeaderAs = config.cypherBindHeaderAs,
-                bindKeyAs = config.cypherBindKeyAs,
-                bindValueAs = config.cypherBindValueAs,
-                bindValueAsEvent = config.cypherBindValueAsEvent,
+            SinkHandler(
+                SinkStrategy.CYPHER,
+                batchStrategy,
+                CypherEventTransformer(
+                    topic,
+                    query,
+                    bindTimestampAs = config.cypherBindTimestampAs,
+                    bindHeaderAs = config.cypherBindHeaderAs,
+                    bindKeyAs = config.cypherBindKeyAs,
+                    bindValueAs = config.cypherBindValueAs,
+                    bindValueAsEvent = config.cypherBindValueAsEvent,
+                )
             )
       }
 
