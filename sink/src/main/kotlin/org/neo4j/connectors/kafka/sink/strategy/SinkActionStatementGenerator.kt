@@ -254,9 +254,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildCypherStatement(action: CypherSinkAction, eventVariable: String): Query {
-    val projection = action.aliasProjection.joinToString(", ") { (alias, source) ->
-      "$eventVariable.$source AS ${SchemaNames.sanitize(alias, true).orElseThrow()}"
-    }
+    val projection =
+        action.aliasProjection.joinToString(", ") { (alias, source) ->
+          "$eventVariable.$source AS ${SchemaNames.sanitize(alias, true).orElseThrow()}"
+        }
     val stmt = "WITH $projection ${action.query}"
 
     return buildQuery(stmt, eventVariable, action.bindings)

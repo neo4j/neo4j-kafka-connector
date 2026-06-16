@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy.cypher
 import com.squareup.wire.Instant
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
+import java.time.ZoneOffset
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
 import org.junit.Test
@@ -26,21 +27,21 @@ import org.junit.jupiter.api.assertThrows
 import org.neo4j.connectors.kafka.connect.ConnectHeader
 import org.neo4j.connectors.kafka.sink.strategy.CypherSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.HandlerTest
-import java.time.ZoneOffset
 
 class CypherEventTransformerTest : HandlerTest() {
 
   @Test
   fun `should project only the value-as-event accessor when others disabled`() {
-    val transformer = CypherEventTransformer(
-        "my-topic",
-        "CREATE (n:Node) SET n = event",
-        bindTimestampAs = "",
-        bindHeaderAs = "",
-        bindKeyAs = "",
-        bindValueAs = "",
-        bindValueAsEvent = true
-    )
+    val transformer =
+        CypherEventTransformer(
+            "my-topic",
+            "CREATE (n:Node) SET n = event",
+            bindTimestampAs = "",
+            bindHeaderAs = "",
+            bindKeyAs = "",
+            bindValueAs = "",
+            bindValueAsEvent = true,
+        )
 
     transformer.transform(newMessage(Schema.STRING_SCHEMA, "{}")) shouldBe
         CypherSinkAction(
@@ -51,7 +52,7 @@ class CypherEventTransformerTest : HandlerTest() {
                 "key" to null,
                 "value" to emptyMap<String, Any>(),
             ),
-            listOf("event" to "value")
+            listOf("event" to "value"),
         )
   }
 
@@ -65,7 +66,7 @@ class CypherEventTransformerTest : HandlerTest() {
             bindHeaderAs = "__header",
             bindKeyAs = "__key",
             bindValueAs = "__value",
-            bindValueAsEvent = true
+            bindValueAsEvent = true,
         )
 
     val message =
@@ -84,29 +85,30 @@ class CypherEventTransformerTest : HandlerTest() {
                 "timestamp" to Instant.ofEpochMilli(TIMESTAMP).atOffset(ZoneOffset.UTC),
                 "header" to mapOf("age" to 24),
                 "key" to 32L,
-                "value" to emptyMap<String, Any>()
+                "value" to emptyMap<String, Any>(),
             ),
             listOf(
                 "event" to "value",
                 "__timestamp" to "timestamp",
                 "__header" to "header",
                 "__key" to "key",
-                "__value" to "value"
-            )
+                "__value" to "value",
+            ),
         )
   }
 
   @Test
   fun `should omit value-as-event when disabled`() {
-    val transformer = CypherEventTransformer(
-        "my-topic",
-        "CREATE (n:Node) SET n = __value",
-        bindTimestampAs = "",
-        bindHeaderAs = "__header",
-        bindKeyAs = "__key",
-        bindValueAs = "__value",
-        bindValueAsEvent = false
-    )
+    val transformer =
+        CypherEventTransformer(
+            "my-topic",
+            "CREATE (n:Node) SET n = __value",
+            bindTimestampAs = "",
+            bindHeaderAs = "__header",
+            bindKeyAs = "__key",
+            bindValueAs = "__value",
+            bindValueAsEvent = false,
+        )
 
     transformer.transform(newMessage(Schema.STRING_SCHEMA, "{}")) shouldBe
         CypherSinkAction(
@@ -117,11 +119,7 @@ class CypherEventTransformerTest : HandlerTest() {
                 "key" to null,
                 "value" to emptyMap<String, Any>(),
             ),
-            listOf(
-                "__header" to "header",
-                "__key" to "key",
-                "__value" to "value",
-            )
+            listOf("__header" to "header", "__key" to "key", "__value" to "value"),
         )
   }
 
@@ -134,7 +132,7 @@ class CypherEventTransformerTest : HandlerTest() {
             newMessage(Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}")
         ) as CypherSinkAction
 
-    action.bindings["value"] shouldBe mapOf("x" to 123, "y" to listOf(1,2,3), "z" to true)
+    action.bindings["value"] shouldBe mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true)
   }
 
   @Test
@@ -147,7 +145,7 @@ class CypherEventTransformerTest : HandlerTest() {
           bindHeaderAs = "",
           bindKeyAs = "",
           bindValueAs = "",
-          bindValueAsEvent = false
+          bindValueAsEvent = false,
       )
     } shouldHaveMessage
         "no effective accessors specified for binding the message into cypher template for topic 'my-topic'"

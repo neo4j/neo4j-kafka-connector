@@ -16,13 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cypher
 
+import java.time.Instant
+import java.time.ZoneOffset
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.CypherSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
-import java.time.Instant
-import java.time.ZoneOffset
 
 class CypherEventTransformer(
     private val topic: String,
@@ -66,9 +66,9 @@ class CypherEventTransformer(
                 Instant.ofEpochMilli(message.record.timestamp()).atOffset(ZoneOffset.UTC),
             "header" to message.headerFromConnectValue(),
             "key" to message.keyFromConnectValue(),
-            "value" to message.valueFromConnectValue()
+            "value" to message.valueFromConnectValue(),
         ),
-        aliasProjection
+        aliasProjection,
     )
   }
 }

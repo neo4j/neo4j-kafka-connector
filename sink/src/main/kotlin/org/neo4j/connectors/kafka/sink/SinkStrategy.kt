@@ -28,7 +28,6 @@ import org.neo4j.connectors.kafka.data.fetchConstraintData
 import org.neo4j.connectors.kafka.data.isCdcMessage
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.ApocBatchStrategy
-import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
@@ -183,7 +182,7 @@ interface SinkStrategyHandler {
                     bindKeyAs = config.cypherBindKeyAs,
                     bindValueAs = config.cypherBindValueAs,
                     bindValueAsEvent = config.cypherBindValueAsEvent,
-                )
+                ),
             )
       }
 
