@@ -24,7 +24,6 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.matchers.string.shouldEndWith
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -343,8 +342,9 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.driver.exceptions.ClientException"
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String>{
-            it shouldContain "Cannot merge the following node because of null property value for 'name': (:Person {name: null})"
+          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String> {
+            it shouldContain
+                "Cannot merge the following node because of null property value for 'name': (:Person {name: null})"
           }
 
           msg.value shouldBe mapOf("id" to 2L, "surname" to "Doe")
@@ -354,10 +354,10 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 3
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.driver.exceptions.ClientException"
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String>{
-            it shouldContain "Cannot merge the following node because of null property value for 'surname': (:Person {surname: null})"
+          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String> {
+            it shouldContain
+                "Cannot merge the following node because of null property value for 'surname': (:Person {surname: null})"
           }
-
 
           msg.value shouldBe mapOf("id" to 4L, "name" to "Martin")
         }
