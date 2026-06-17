@@ -155,7 +155,9 @@ abstract class Neo4jSinkErrorIT {
               "org.apache.kafka.connect.sink.SinkTask"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
               "org.neo4j.driver.exceptions.ClientException"
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String>() shouldContain
+          errorHeaders
+              .getValue(ErrorHeaders.EXCEPTION_MESSAGE)
+              .shouldBeInstanceOf<String>() shouldContain
               """Cannot merge the following node because of null property value for 'surname': (:Person {surname: null})"""
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_STACKTRACE) shouldNotBe null
 
