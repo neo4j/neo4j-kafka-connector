@@ -260,7 +260,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         }
     val stmt = "WITH $projection ${action.query}"
 
-    return buildQuery(stmt, eventVariable, action.bindings)
+    return buildQuery(stmt, eventVariable, action.params)
   }
 
   data class Fragment(val clause: String, val params: Map<String, Any>)

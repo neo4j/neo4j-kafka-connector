@@ -132,7 +132,7 @@ class CypherEventTransformerTest : HandlerTest() {
             newMessage(Schema.STRING_SCHEMA, "{\"x\": 123, \"y\": [1,2,3], \"z\": true}")
         ) as CypherSinkAction
 
-    action.bindings["value"] shouldBe mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true)
+    action.params["value"] shouldBe mapOf("x" to 123, "y" to listOf(1, 2, 3), "z" to true)
   }
 
   @Test

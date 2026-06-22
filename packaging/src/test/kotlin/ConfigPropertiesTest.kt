@@ -135,7 +135,9 @@ class ConfigPropertiesTest {
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.CYPHER
+    }
   }
 
   @ParameterizedTest

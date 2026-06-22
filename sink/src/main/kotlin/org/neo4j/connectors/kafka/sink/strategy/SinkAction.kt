@@ -206,6 +206,6 @@ data class DeleteRelationshipSinkAction(
 
 data class CypherSinkAction(
     val query: String,
-    val bindings: Map<String, Any?>,
+    val params: Map<String, Any?>,
     val aliasProjection: List<Pair<String, String>>,
 ) : SinkAction()
