@@ -35,10 +35,10 @@ import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.metrics.Metrics
-import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.cud.CudEventTransformer
+import org.neo4j.connectors.kafka.sink.strategy.cypher.CypherEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePatternEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
@@ -60,7 +60,13 @@ class SinkConfigurationTest {
               "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                   "CREATE (p:Person{name: event.firstName})",
           )
-      val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val config =
+          SinkConfiguration(
+              originals,
+              Renderer.getDefaultRenderer(),
+              apocCypherDoItAvailable = false,
+              neo4j = neo4j5_26,
+          )
       val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
       config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'bar' is not assigned a sink strategy"
@@ -81,7 +87,13 @@ class SinkConfigurationTest {
               SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
           )
 
-      val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+      val config =
+          SinkConfiguration(
+              originals,
+              Renderer.getDefaultRenderer(),
+              apocCypherDoItAvailable = false,
+              neo4j = neo4j5_26,
+          )
       val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
       config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'foo' has multiple strategies defined"
@@ -99,15 +111,22 @@ class SinkConfigurationTest {
             SinkConfiguration.BATCH_SIZE to "10",
             Neo4jConfiguration.DATABASE to "customers",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config =
+        SinkConfiguration(
+            originals,
+            Renderer.getDefaultRenderer(),
+            apocCypherDoItAvailable = false,
+            neo4j = neo4j5_26,
+        )
 
     config.batchSize shouldBe 10
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
-    topicHandlers["foo"] shouldBe instanceOf<CypherHandler>()
-    (topicHandlers["foo"] as CypherHandler).query shouldBe
-        "CREATE (p:Person{name: event.firstName})"
+    topicHandlers["foo"] shouldBe instanceOf<SinkHandler>()
+    val fooHandler = topicHandlers["foo"] as SinkHandler
+    fooHandler.strategy() shouldBe SinkStrategy.CYPHER
+    fooHandler.eventTransformer shouldBe instanceOf<CypherEventTransformer>()
   }
 
   @ParameterizedTest

@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.util.stream.Stream
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -4369,6 +4370,45 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
       )
     }
+  }
+
+  @Test
+  fun `should build cypher statement for native event variable`() {
+    val generator = DefaultSinkActionStatementGenerator(neo4j5_26)
+    val bindings =
+        mapOf(
+            "timestamp" to "2026-01-01T00:00:00Z",
+            "header" to emptyMap<String, Any>(),
+            "key" to 1L,
+            "value" to mapOf("id" to 1),
+        )
+    val action =
+        CypherSinkAction("CREATE (n: Node) SET n = event", bindings, listOf("event" to "value"))
+    generator.buildStatement(action, "${'$'}e.params") shouldBe
+        Query("WITH ${'$'}e.params.value AS `event` CREATE (n: Node) SET n = event", bindings)
+  }
+
+  @Test
+  fun `should build cypher statement for apoc event variable wrapping params under e`() {
+    val generator = DefaultSinkActionStatementGenerator(neo4j5_26)
+    val bindings =
+        mapOf(
+            "timestamp" to "2026-01-01T00:00:00Z",
+            "header" to emptyMap<String, Any>(),
+            "key" to 1L,
+            "value" to mapOf("id" to 1),
+        )
+    val action =
+        CypherSinkAction(
+            "CREATE (n: Node) SET n = event",
+            bindings,
+            listOf("event" to "value", "__value" to "value"),
+        )
+    generator.buildStatement(action) shouldBe
+        Query(
+            "WITH ${'$'}e.value AS `event`, ${'$'}e.value AS `__value` CREATE (n: Node) SET n = event",
+            mapOf("e" to bindings),
+        )
   }
 
   companion object {
