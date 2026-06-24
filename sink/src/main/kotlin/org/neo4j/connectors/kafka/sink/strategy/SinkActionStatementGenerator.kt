@@ -44,6 +44,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       is UpdateRelationshipSinkAction -> buildRelationshipStatement(data, eventVariable)
       is MergeRelationshipSinkAction -> buildRelationshipStatement(data, eventVariable)
       is DeleteRelationshipSinkAction -> buildRelationshipStatement(data, eventVariable)
+      is CypherSinkAction -> buildCypherStatement(data, eventVariable)
     }
   }
 
@@ -250,6 +251,16 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val params = matchFragment.params
 
     return buildQuery(stmt, eventVariable, params)
+  }
+
+  private fun buildCypherStatement(action: CypherSinkAction, eventVariable: String): Query {
+    val projection =
+        action.aliasProjection.joinToString(", ") { (alias, source) ->
+          "$eventVariable.$source AS ${SchemaNames.sanitize(alias, true).orElseThrow()}"
+        }
+    val stmt = "WITH $projection ${action.query}"
+
+    return buildQuery(stmt, eventVariable, action.params)
   }
 
   data class Fragment(val clause: String, val params: Map<String, Any>)
