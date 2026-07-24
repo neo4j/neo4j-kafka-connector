@@ -117,8 +117,6 @@ class SinkConfiguration : Neo4jConfiguration {
     return apocCypherDoItAvailable!!
   }
 
-  val renderer: Renderer by lazy { fixedRenderer ?: Cypher5Renderer(neo4j()) }
-
   val topicNames: List<String>
     get() =
         originalsStrings()[SinkTask.TOPICS_CONFIG]?.split(',')?.map { it.trim() }?.toList()
