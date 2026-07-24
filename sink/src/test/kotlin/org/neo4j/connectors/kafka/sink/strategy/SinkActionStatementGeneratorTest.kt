@@ -108,8 +108,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
           Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
       )
     }
   }
@@ -189,8 +189,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
           Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
       )
     }
   }
@@ -526,8 +526,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
           Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
       )
     }
   }
@@ -607,8 +607,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
           Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
       )
     }
   }
@@ -692,8 +692,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
           Arguments.of(neo4j2025_11, setRemoveDynamicLabelsQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, setRemoveDynamicLabelsQuery()),
+          Arguments.of(neo4jAura, setRemoveDynamicLabelsQuery()),
       )
     }
   }
@@ -745,8 +745,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -864,8 +864,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1022,8 +1022,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1111,8 +1111,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1196,8 +1196,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1281,8 +1281,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1374,8 +1374,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1465,8 +1465,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1553,8 +1553,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1647,8 +1647,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1749,8 +1749,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1862,8 +1862,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -1955,8 +1955,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2048,8 +2048,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2139,8 +2139,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2230,8 +2230,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2332,8 +2332,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2426,8 +2426,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2539,8 +2539,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2629,8 +2629,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2719,8 +2719,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2806,8 +2806,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2893,8 +2893,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -2980,8 +2980,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3067,8 +3067,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3154,8 +3154,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3238,8 +3238,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3322,8 +3322,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3394,8 +3394,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3491,8 +3491,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3563,8 +3563,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3666,8 +3666,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3740,8 +3740,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3839,8 +3839,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -3913,8 +3913,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -4018,8 +4018,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -4092,8 +4092,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -4191,8 +4191,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }
@@ -4352,8 +4352,8 @@ class SinkActionStatementGeneratorTest {
             Arguments.of(neo4j4_4, standardCypherQuery()),
             Arguments.of(neo4j5_26, standardCypherQuery()),
             Arguments.of(neo4j2025_11, standardCypherQuery()),
-            Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-            Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+            Arguments.of(neo4j2026_1, standardCypherQuery()),
+            Arguments.of(neo4jAura, standardCypherQuery()),
         )
       }
     }
@@ -4366,8 +4366,8 @@ class SinkActionStatementGeneratorTest {
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
           Arguments.of(neo4j2025_11, standardCypherQuery()),
-          Arguments.of(neo4j2026_1, dynamicLabelsCypherQuery()),
-          Arguments.of(neo4jAura, dynamicLabelsCypherQuery()),
+          Arguments.of(neo4j2026_1, standardCypherQuery()),
+          Arguments.of(neo4jAura, standardCypherQuery()),
       )
     }
   }

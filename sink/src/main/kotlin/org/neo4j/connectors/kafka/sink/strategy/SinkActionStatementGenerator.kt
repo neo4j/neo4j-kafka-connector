@@ -29,8 +29,7 @@ interface SinkActionStatementGenerator {
 }
 
 class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
-  private val supportsDynamicLabelsWithPropertyIndices =
-      canIUse(Cypher.dynamicLabelsAndTypesCanLeveragePropertyIndices()).withNeo4j(neo4j)
+  private val supportsDynamicLabelsWithPropertyIndices = false
   private val setDynamicLabels = canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
   private val removeDynamicLabels = canIUse(Cypher.removeDynamicLabels()).withNeo4j(neo4j)
 
