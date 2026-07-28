@@ -44,7 +44,7 @@ release:
           - GitHub
 
 checksum:
-  name: 'neo4j-kafka-connect-{{projectVersion}}-checksums.txt'
+  name: 'neo4j-kafka-connect-neo4j-{{projectVersion}}-checksums.txt'
   algorithms:
     - SHA_256
   files: true
@@ -53,8 +53,8 @@ checksum:
 
 files:
   globs:
-    - pattern: packaging/target/neo4j-kafka-connect-*.jar
-    - pattern: packaging/target/neo4j-kafka-connect-*.zip
+    - pattern: packaging/target/neo4j-kafka-connect-neo4j-*.jar
+    - pattern: packaging/target/neo4j-kafka-connect-neo4j-*.zip
 
 hooks:
   script:
