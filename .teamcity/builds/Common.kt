@@ -41,7 +41,7 @@ const val NODE_DOCKER_IMAGE = "%ecr-registry-connectors%:node-24-latest"
 
 const val SEMGREP_DOCKER_IMAGE = "%ecr-registry-connectors%:semgrep-latest"
 
-val DEFAULT_JAVA_VERSION = JavaVersion.V_11
+val DEFAULT_JAVA_VERSION = JavaVersion.V_17
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
 // Look into Root Project's settings -> Connections

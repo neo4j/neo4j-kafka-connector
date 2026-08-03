@@ -11,10 +11,6 @@ enum class JavaPlatform(
     val javaVersion: JavaVersion = DEFAULT_JAVA_VERSION,
     val platformITVersions: List<String> = listOf(DEFAULT_CONFLUENT_PLATFORM_VERSION),
 ) {
-  JDK_11(
-      JavaVersion.V_11,
-      platformITVersions = listOf("7.2.9", "7.7.0"),
-  ),
   JDK_17(JavaVersion.V_17, platformITVersions = listOf("7.7.0")),
 }
 
