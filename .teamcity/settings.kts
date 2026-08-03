@@ -75,4 +75,22 @@ project {
                   })
         }
       })
+
+  subProject(
+      Build(
+          name = "6.0",
+          neo4jVersions = setOf(Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
+          forPullRequests = false) {
+            triggers {
+              vcs {
+                this.branchFilter = "+:6.0"
+                this.triggerRules =
+                    """
+            -:comment=^build.*release version.*:**
+            -:comment=^build.*update version.*:**
+            """
+                        .trimIndent()
+              }
+            }
+          })
 }
