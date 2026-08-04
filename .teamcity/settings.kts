@@ -21,8 +21,8 @@ project {
 
   subProject(
       Build(
-          name = "main",
-          neo4jVersions = setOf(Neo4jVersion.V_4_4, Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
+          name = "6.0",
+          neo4jVersions = setOf(Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
           forPullRequests = false) {
             triggers {
               vcs {
@@ -43,7 +43,7 @@ project {
   subProject(
       Build(
           name = "pull-request",
-          neo4jVersions = setOf(Neo4jVersion.V_4_4, Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
+          neo4jVersions = setOf(Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
           forPullRequests = true) {
             triggers {
               vcs {
