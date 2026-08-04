@@ -32,7 +32,7 @@ val MAVEN_DEFAULT_ARGS = buildString {
   append(
       "-Dmaven.wagon.http.retryHandler.nonRetryableClasses=java.io.InterruptedIOException,java.net.UnknownHostException,java.net.ConnectException ")
 }
-const val DEFAULT_BRANCH = "main"
+const val DEFAULT_BRANCH = "6.0"
 
 const val FULL_GITHUB_REPOSITORY = "$GITHUB_OWNER/$GITHUB_REPOSITORY"
 const val GITHUB_URL = "https://github.com/$FULL_GITHUB_REPOSITORY"
@@ -59,17 +59,11 @@ enum class LinuxSize(val value: String) {
 }
 
 enum class JavaVersion(val version: String, val dockerImage: String) {
-  V_11(version = "11", dockerImage = "%ecr-registry-connectors%:jdk-11-latest"),
   V_17(version = "17", dockerImage = "%ecr-registry-connectors%:jdk-17-latest"),
 }
 
 enum class Neo4jVersion(val version: String, val dockerImage: String) {
   V_NONE("", ""),
-  V_4_4("4.4", "neo4j:4.4-enterprise"),
-  V_4_4_DEV(
-      "4.4-dev",
-      "535893049302.dkr.ecr.eu-west-1.amazonaws.com/build-service/neo4j:4.4-enterprise-debian-nightly",
-  ),
   V_5("5", "neo4j:5-enterprise"),
   V_5_DEV(
       "5-dev",
