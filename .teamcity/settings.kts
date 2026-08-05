@@ -26,7 +26,10 @@ project {
           forPullRequests = false) {
             triggers {
               vcs {
-                this.branchFilter = "+:$DEFAULT_BRANCH"
+                this.branchFilter = buildString {
+                  appendLine("+:$DEFAULT_BRANCH")
+                  appendLine("+:refs/heads/$DEFAULT_BRANCH")
+                }
                 this.triggerRules =
                     """
               -:comment=^build.*release version.*:**
@@ -42,7 +45,14 @@ project {
           name = "pull-request",
           neo4jVersions = setOf(Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
           forPullRequests = true) {
-            triggers { vcs { this.branchFilter = "+:pull/*" } }
+            triggers {
+              vcs {
+                this.branchFilter = buildString {
+                  appendLine("+:pull/*")
+                  appendLine("+:refs/heads/pull/*")
+                }
+              }
+            }
           })
 
   subProject(
@@ -61,7 +71,10 @@ project {
                       vcs { enabled = false }
 
                       schedule {
-                        branchFilter = "+:$DEFAULT_BRANCH"
+                        branchFilter = buildString {
+                          appendLine("+:$DEFAULT_BRANCH")
+                          appendLine("+:refs/heads/$DEFAULT_BRANCH")
+                        }
                         schedulingPolicy = daily {
                           hour = 8
                           minute = 0

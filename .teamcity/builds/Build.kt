@@ -113,7 +113,7 @@ class Build(
           }
 
           bts.buildTypes().forEach {
-            it.thisVcs()
+            it.thisVcs(if (forPullRequests) "pull/*" else DEFAULT_BRANCH)
 
             it.features {
               loginToECR()
@@ -127,12 +127,14 @@ class Build(
 
           complete.features {
             notifications {
-              branchFilter =
-                  """
-                  +:$DEFAULT_BRANCH
-                  ${if (forPullRequests) "+:pull/*" else ""}
-                  """
-                      .trimIndent()
+              branchFilter = buildString {
+                appendLine("+:$DEFAULT_BRANCH")
+                appendLine("+:refs/heads/$DEFAULT_BRANCH")
+                if (forPullRequests) {
+                  appendLine("+:pull/*")
+                  appendLine("+:refs/heads/pull/*")
+                }
+              }
 
               queuedBuildRequiresApproval = forPullRequests
               buildFailedToStart = !forPullRequests
