@@ -1,5 +1,6 @@
 package builds
 
+import builds.Neo4jKafkaConnectorVcs.branchSpec
 import jetbrains.buildServer.configs.kotlin.BuildFeatures
 import jetbrains.buildServer.configs.kotlin.BuildSteps
 import jetbrains.buildServer.configs.kotlin.BuildType
@@ -94,8 +95,13 @@ fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {
   startsWith("cloud.amazon.agent-name-prefix", "linux-${size.value}")
 }
 
-fun BuildType.thisVcs() = vcs {
+fun BuildType.thisVcs(forBranch: String) = vcs {
   root(Neo4jKafkaConnectorVcs)
+
+  branchSpec = buildString {
+    appendLine("-:*")
+    appendLine("+:$forBranch")
+  }
 
   cleanCheckout = true
 }
