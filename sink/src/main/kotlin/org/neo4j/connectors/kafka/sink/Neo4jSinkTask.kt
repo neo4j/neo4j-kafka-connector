@@ -108,8 +108,8 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       log.warn("failed to process messages with handler {}", handler.strategy(), e)
       log.warn(
           "first and last messages in this batch were: {} and {}",
-          messages.firstOrNull()?.record,
-          messages.lastOrNull()?.record,
+          messages.firstOrNull(),
+          messages.lastOrNull(),
       )
       if (handled.isNotEmpty()) {
         val handledSorted = handled.sortedBy { it.record.kafkaOffset() }
