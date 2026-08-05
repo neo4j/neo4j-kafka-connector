@@ -61,6 +61,8 @@ enum class LinuxSize(val value: String) {
 
 enum class JavaVersion(val version: String, val dockerImage: String) {
   V_17(version = "17", dockerImage = "%ecr-registry-connectors%:jdk-17-latest"),
+  V_21(version = "21", dockerImage = "%ecr-registry-connectors%:jdk-21-latest"),
+  V_25(version = "25", dockerImage = "%ecr-registry-connectors%:jdk-25-latest"),
 }
 
 enum class Neo4jVersion(val version: String, val dockerImage: String) {
