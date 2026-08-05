@@ -82,7 +82,7 @@
         <mockito-kotlin.version>6.3.0</mockito-kotlin.version>
         <mockito.version>5.23.0</mockito.version>
         <neo4j-cypher-dsl.version>2022.11.0</neo4j-cypher-dsl.version>
-        <neo4j-java-driver.version>4.4.26</neo4j-java-driver.version>
+        <neo4j-java-driver.version>6.2.1</neo4j-java-driver.version>
         <netty.version>4.1.136.Final</netty.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
@@ -289,6 +289,12 @@
                 <groupId>org.neo4j</groupId>
                 <artifactId>caniuse-neo4j-detection</artifactId>
                 <version>${caniuse-neo4j-detection.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.neo4j.driver</groupId>
+                        <artifactId>neo4j-java-driver-slim</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.neo4j</groupId>
@@ -304,10 +310,16 @@
                 <groupId>org.neo4j.connectors</groupId>
                 <artifactId>cdc</artifactId>
                 <version>${cdc.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.neo4j.driver</groupId>
+                        <artifactId>neo4j-java-driver-slim</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.neo4j.driver</groupId>
-                <artifactId>neo4j-java-driver-slim</artifactId>
+                <artifactId>neo4j-java-driver</artifactId>
                 <version>${neo4j-java-driver.version}</version>
             </dependency>
             <dependency>

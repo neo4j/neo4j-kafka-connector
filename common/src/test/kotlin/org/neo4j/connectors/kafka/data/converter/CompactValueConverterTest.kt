@@ -212,50 +212,50 @@ class DynamicTypesCompactTest {
         }
 
     // Node
-    converter.schema(TestNode(0, emptyList(), emptyMap()), false) shouldBe
+    converter.schema(TestNode("0", emptyList(), emptyMap()), false) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<id>", Schema.STRING_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .build()
 
     converter.schema(
         TestNode(
-            0,
+            "0",
             listOf("Person"),
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
         ),
         false,
     ) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<id>", Schema.STRING_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
             .build()
 
     // Relationship
-    converter.schema(TestRelationship(0, 1, 2, "KNOWS", emptyMap()), false) shouldBe
+    converter.schema(TestRelationship("0", "1", "2", "KNOWS", emptyMap()), false) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<id>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
-            .field("<start.id>", Schema.INT64_SCHEMA)
-            .field("<end.id>", Schema.INT64_SCHEMA)
+            .field("<start.id>", Schema.STRING_SCHEMA)
+            .field("<end.id>", Schema.STRING_SCHEMA)
             .build()
     converter.schema(
         TestRelationship(
-            0,
-            1,
-            2,
+            "0",
+            "1",
+            "2",
             "KNOWS",
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
         ),
         false,
     ) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.INT64_SCHEMA)
+            .field("<id>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
-            .field("<start.id>", Schema.INT64_SCHEMA)
-            .field("<end.id>", Schema.INT64_SCHEMA)
+            .field("<start.id>", Schema.STRING_SCHEMA)
+            .field("<end.id>", Schema.STRING_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
             .build()
@@ -537,7 +537,7 @@ class DynamicTypesCompactTest {
   fun `nodes should be returned as structs and should be converted back as maps`() {
     val node =
         TestNode(
-            0,
+            "0",
             listOf("Person", "Employee"),
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
         )
@@ -546,7 +546,7 @@ class DynamicTypesCompactTest {
 
     converted shouldBe
         Struct(schema)
-            .put("<id>", 0L)
+            .put("<id>", "0")
             .put("<labels>", listOf("Person", "Employee"))
             .put("name", "john")
             .put("surname", "doe")
@@ -554,7 +554,7 @@ class DynamicTypesCompactTest {
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
         mapOf(
-            "<id>" to 0L,
+            "<id>" to "0",
             "<labels>" to listOf("Person", "Employee"),
             "name" to "john",
             "surname" to "doe",
@@ -565,9 +565,9 @@ class DynamicTypesCompactTest {
   fun `relationships should be returned as structs and should be converted back as maps`() {
     val rel =
         TestRelationship(
-            0,
-            1,
-            2,
+            "0",
+            "1",
+            "2",
             "KNOWS",
             mapOf("name" to Values.value("john"), "surname" to Values.value("doe")),
         )
@@ -576,9 +576,9 @@ class DynamicTypesCompactTest {
 
     converted shouldBe
         Struct(schema)
-            .put("<id>", 0L)
-            .put("<start.id>", 1L)
-            .put("<end.id>", 2L)
+            .put("<id>", "0")
+            .put("<start.id>", "1")
+            .put("<end.id>", "2")
             .put("<type>", "KNOWS")
             .put("name", "john")
             .put("surname", "doe")
@@ -586,9 +586,9 @@ class DynamicTypesCompactTest {
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
         mapOf(
-            "<id>" to 0L,
-            "<start.id>" to 1L,
-            "<end.id>" to 2L,
+            "<id>" to "0",
+            "<start.id>" to "1",
+            "<end.id>" to "2",
             "<type>" to "KNOWS",
             "name" to "john",
             "surname" to "doe",
