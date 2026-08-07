@@ -86,7 +86,11 @@ internal class Neo4jSourceExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = { url, token ->
-      GraphDatabase.driver(url, token, Config.builder().withLogging(Logging.slf4j()).build())
+      GraphDatabase.driver(
+          url,
+          token,
+          @Suppress("DEPRECATION") Config.builder().withLogging(Logging.slf4j()).build(),
+      )
     },
     private val consumerFactory: (Properties, String) -> KafkaConsumer<ByteArray, ByteArray> =
         { properties, topic ->

@@ -87,7 +87,7 @@ class ExtendedValueConverter : ValueConverter {
       is Node ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", Schema.INT64_SCHEMA)
+                field("<id>", Schema.STRING_SCHEMA)
                 field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
 
                 value.keys().forEach { field(it, PropertyType.schema) }
@@ -99,10 +99,10 @@ class ExtendedValueConverter : ValueConverter {
       is Relationship ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", Schema.INT64_SCHEMA)
+                field("<id>", Schema.STRING_SCHEMA)
                 field("<type>", Schema.STRING_SCHEMA)
-                field("<start.id>", Schema.INT64_SCHEMA)
-                field("<end.id>", Schema.INT64_SCHEMA)
+                field("<start.id>", Schema.STRING_SCHEMA)
+                field("<end.id>", Schema.STRING_SCHEMA)
 
                 value.keys().forEach { field(it, PropertyType.schema) }
 
@@ -239,7 +239,7 @@ class ExtendedValueConverter : ValueConverter {
 
             is Node ->
                 Struct(schema).apply {
-                  put("<id>", value.id())
+                  put("<id>", value.elementId())
                   put("<labels>", value.labels())
                   value
                       .asMap { it.asObject() }
@@ -248,10 +248,10 @@ class ExtendedValueConverter : ValueConverter {
 
             is Relationship ->
                 Struct(schema).apply {
-                  put("<id>", value.id())
+                  put("<id>", value.elementId())
                   put("<type>", value.type())
-                  put("<start.id>", value.startNodeId())
-                  put("<end.id>", value.endNodeId())
+                  put("<start.id>", value.startNodeElementId())
+                  put("<end.id>", value.endNodeElementId())
                   value
                       .asMap { it.asObject() }
                       .forEach { e -> put(e.key, value(schema.field(e.key).schema(), e.value)) }

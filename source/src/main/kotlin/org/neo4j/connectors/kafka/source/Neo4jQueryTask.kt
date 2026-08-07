@@ -28,6 +28,7 @@ import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
+import org.neo4j.driver.reactivestreams.ReactiveSession
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
@@ -68,9 +69,12 @@ class Neo4jQueryTask : SourceTask() {
       while (limit.hasNotPassedNow()) {
         Flux.from(
                 config.driver
-                    .rxSession(config.sessionConfig())
-                    .readTransaction(
-                        { it.run(config.query, mapOf("lastCheck" to offset.get())).records() },
+                    .session(ReactiveSession::class.java, config.sessionConfig())
+                    .executeRead(
+                        { tx ->
+                          Flux.from(tx.run(config.query, mapOf("lastCheck" to offset.get())))
+                              .flatMap { result -> result.records() }
+                        },
                         config.txConfig(),
                     )
             )

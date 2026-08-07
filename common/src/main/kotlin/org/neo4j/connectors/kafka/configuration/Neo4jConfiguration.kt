@@ -180,7 +180,7 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       }
     }
 
-    config.withLogging(Logging.slf4j())
+    @Suppress("DEPRECATION") config.withLogging(Logging.slf4j())
 
     GraphDatabase.driver(mainUri, authenticationToken, config.build())
   }

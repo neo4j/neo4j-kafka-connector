@@ -1704,6 +1704,7 @@ class SinkActionStatementGeneratorIT {
     count shouldBe 0
   }
 
+  @Suppress("DEPRECATION")
   private fun executeAndVerifyNoDeprecations(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary
@@ -1720,6 +1721,7 @@ class SinkActionStatementGeneratorIT {
    * tests that intentionally use `NodeMatcher.ById` or `RelationshipMatcher.ById` which generate
    * deprecated `id()` calls for backward compatibility.
    */
+  @Suppress("DEPRECATION")
   private fun executeAllowingIdDeprecation(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary

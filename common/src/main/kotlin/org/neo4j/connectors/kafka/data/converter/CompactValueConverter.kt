@@ -92,7 +92,7 @@ class CompactValueConverter : ValueConverter {
       is Node ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", SimpleTypes.LONG.schema())
+                field("<id>", SimpleTypes.STRING.schema())
                 field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 value.keys().forEach {
                   field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
@@ -104,10 +104,10 @@ class CompactValueConverter : ValueConverter {
       is Relationship ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", SimpleTypes.LONG.schema())
+                field("<id>", SimpleTypes.STRING.schema())
                 field("<type>", SimpleTypes.STRING.schema())
-                field("<start.id>", SimpleTypes.LONG.schema())
-                field("<end.id>", SimpleTypes.LONG.schema())
+                field("<start.id>", SimpleTypes.STRING.schema())
+                field("<end.id>", SimpleTypes.STRING.schema())
                 value.keys().forEach {
                   field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
                 }
@@ -239,7 +239,7 @@ class CompactValueConverter : ValueConverter {
 
             is Node ->
                 Struct(schema).apply {
-                  put("<id>", value.id())
+                  put("<id>", value.elementId())
                   put("<labels>", value.labels())
                   value
                       .asMap { it.asObject() }
@@ -248,10 +248,10 @@ class CompactValueConverter : ValueConverter {
 
             is Relationship ->
                 Struct(schema).apply {
-                  put("<id>", value.id())
+                  put("<id>", value.elementId())
                   put("<type>", value.type())
-                  put("<start.id>", value.startNodeId())
-                  put("<end.id>", value.endNodeId())
+                  put("<start.id>", value.startNodeElementId())
+                  put("<end.id>", value.endNodeElementId())
                   value
                       .asMap { it.asObject() }
                       .forEach { e -> put(e.key, value(schema.field(e.key).schema(), e.value)) }

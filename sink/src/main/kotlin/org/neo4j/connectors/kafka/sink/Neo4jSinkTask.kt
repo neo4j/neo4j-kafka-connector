@@ -88,7 +88,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
           log.trace("processing queries for group {}", index)
           config.driver.session(config.sessionConfig()).use { session ->
             log.trace("before write transaction for group {}", index)
-            session.writeTransaction(
+            session.executeWrite(
                 { tx -> group.forEach { tx.run(it.query).consume() } },
                 config.txConfig { this["batch-size"] = group.flatMap { it.messages }.size },
             )

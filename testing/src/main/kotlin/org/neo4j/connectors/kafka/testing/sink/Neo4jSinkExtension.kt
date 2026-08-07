@@ -87,7 +87,11 @@ internal class Neo4jSinkExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = { url, token ->
-      GraphDatabase.driver(url, token, Config.builder().withLogging(Logging.slf4j()).build())
+      GraphDatabase.driver(
+          url,
+          token,
+          @Suppress("DEPRECATION") Config.builder().withLogging(Logging.slf4j()).build(),
+      )
     },
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
