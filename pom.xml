@@ -46,7 +46,7 @@
         <build-resources.version>2026.07.1</build-resources.version>
         <byte-buddy.version>1.18.11</byte-buddy.version>
         <caniuse-neo4j-detection.version>1.3.3</caniuse-neo4j-detection.version>
-        <cdc.version>1.2.2</cdc.version>
+        <cdc.version>2.0.0</cdc.version>
         <commons-collections4.version>4.5.0</commons-collections4.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <hamcrest.version>3.0</hamcrest.version>
@@ -310,12 +310,6 @@
                 <groupId>org.neo4j.connectors</groupId>
                 <artifactId>cdc</artifactId>
                 <version>${cdc.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.neo4j.driver</groupId>
-                        <artifactId>neo4j-java-driver-slim</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.neo4j.driver</groupId>
