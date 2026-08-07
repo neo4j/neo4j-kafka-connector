@@ -38,6 +38,7 @@ import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetIfEnabled
+import org.neo4j.connectors.kafka.sink.strategy.TestUtils.verifyEosOffsetsPerPartitionIfEnabled
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.createNodeKeyConstraint
@@ -187,16 +188,68 @@ abstract class CypherHandlerIT(
     verifyEosOffsetIfEnabled(session, SinkStrategy.CYPHER, eosOffsetLabel, 3)
   }
 
+  @Test
+  fun `should track offsets independently per partition`() {
+    session.createNodeKeyConstraint(neo4j(), "user_key", "User", "userId")
+    startTask("MERGE (u:User {userId: event.userId}) SET u.name = event.name")
+
+    val partition0 =
+        (100L..102L).map { offset ->
+          newMessage(mapOf("userId" to "p0-$offset", "name" to "P0-$offset"), offset, partition = 0)
+        }
+    val partition1 =
+        (3L..5L).map { offset ->
+          newMessage(mapOf("userId" to "p1-$offset", "name" to "P1-$offset"), offset, partition = 1)
+        }
+
+    task.put(partition0 + partition1)
+
+    session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 6
+    session
+        .run("MATCH (a:User) WHERE a.userId STARTS WITH 'p1-' RETURN count(a)")
+        .single()
+        .get(0)
+        .asInt() shouldBe 3
+
+    verifyEosOffsetsPerPartitionIfEnabled(
+        session,
+        SinkStrategy.CYPHER,
+        eosOffsetLabel,
+        mapOf(0 to 102L, 1 to 5L),
+    )
+
+    // Now that watermarks exist, send the next messages for partition 1 only.
+    task.put(
+        (6L..8L).map { offset ->
+          newMessage(mapOf("userId" to "p1-$offset", "name" to "P1-$offset"), offset, partition = 1)
+        }
+    )
+
+    session.run("MATCH (a:User) RETURN count(a)").single().get(0).asInt() shouldBe 9
+    session
+        .run("MATCH (a:User) WHERE a.userId STARTS WITH 'p1-' RETURN count(a)")
+        .single()
+        .get(0)
+        .asInt() shouldBe 6
+
+    verifyEosOffsetsPerPartitionIfEnabled(
+        session,
+        SinkStrategy.CYPHER,
+        eosOffsetLabel,
+        mapOf(0 to 102L, 1 to 8L),
+    )
+  }
+
   protected fun newTaskContext(): SinkTaskContext {
     return mock<SinkTaskContext> {
       on { errantRecordReporter() } doReturn ErrantRecordReporter { _, error -> throw error }
     }
   }
 
-  private fun newMessage(value: Map<String, Any?>, offset: Long): SinkRecord {
+  private fun newMessage(value: Map<String, Any?>, offset: Long, partition: Int = 0): SinkRecord {
     return SinkRecord(
         "my-topic",
-        0,
+        partition,
         null,
         null,
         null,

@@ -31,16 +31,19 @@ open class HandlerTest {
       keySchema: Schema? = null,
       key: Any? = null,
       headers: Iterable<Header> = emptyList(),
+      topic: String = "my-topic",
+      partition: Int = 0,
+      offset: Long = 0,
   ): SinkMessage {
     return SinkMessage(
         SinkRecord(
-            "my-topic",
-            0,
+            topic,
+            partition,
             keySchema,
             key,
             valueSchema,
             value,
-            0,
+            offset,
             TIMESTAMP,
             TimestampType.CREATE_TIME,
             headers,
