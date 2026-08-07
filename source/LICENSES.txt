@@ -17,18 +17,6 @@ Apache Software License, Version 2.0
   kotlinx-coroutines-core
   kotlinx-coroutines-reactive
   kotlinx-coroutines-reactor
-  Neo4j Bolt Connection (Bolt Provider reference impl)
-  Neo4j Bolt Connection (Pooled Source impl)
-  Neo4j Bolt Connection (Provider SPI)
-  Neo4j Bolt Connection (Routed Source impl)
-  Netty/Buffer
-  Netty/Codec
-  Netty/Common
-  Netty/Handler
-  Netty/Resolver
-  Netty/TomcatNative [OpenSSL - Classes]
-  Netty/Transport
-  Netty/Transport/Native/Unix/Common
   Non-Blocking Reactive Foundation for the JVM
 ------------------------------------------------------------------------------
 
