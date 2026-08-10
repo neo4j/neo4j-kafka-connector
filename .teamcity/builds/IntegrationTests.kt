@@ -62,8 +62,7 @@ class IntegrationTests(
             }
             commonMaven(javaVersion) {
               this.goals = "verify"
-              this.runnerArgs =
-                  "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests"
+              this.runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipUnitTests"
 
               dockerRunParameters =
                   "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"

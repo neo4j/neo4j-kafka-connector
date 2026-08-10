@@ -15,10 +15,7 @@ open class Maven(
       this.id(id.toId())
       this.name = name
 
-      params {
-        text("env.JAVA_VERSION", javaVersion.version)
-        text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage)
-      }
+      params { text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage) }
 
       steps {
         if (neo4jVersion != Neo4jVersion.V_NONE) {
@@ -27,8 +24,7 @@ open class Maven(
 
         commonMaven(javaVersion) {
           this.goals = goals
-          this.runnerArgs =
-              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} ${args ?: ""}"
+          this.runnerArgs = "$MAVEN_DEFAULT_ARGS ${args ?: ""}"
         }
       }
 
