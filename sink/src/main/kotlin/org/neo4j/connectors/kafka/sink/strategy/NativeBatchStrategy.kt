@@ -17,11 +17,12 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.caniuse.CanIUse
-import org.neo4j.caniuse.Cypher
+import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -35,6 +36,7 @@ class NativeBatchStrategy(
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val renderer = CypherRenderer(neo4j)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -113,58 +115,67 @@ class NativeBatchStrategy(
     return result
   }
 
+  /**
+   * Each per-record statement was already generated (and rendered to text) by
+   * [DefaultSinkActionStatementGenerator] before reaching here - `stmt` below is that opaque,
+   * already-rendered text, deduplicated and grouped by [queries]. There is no way to compose an
+   * opaque pre-rendered fragment into a further Cypher-DSL clause chain without re-parsing it (and
+   * no justification for adding a Cypher parser dependency just to immediately re-render the same
+   * text), so the `UNION ALL`/`WHEN ... THEN` dispatch around those fragments remains text-based,
+   * same as before - including the `CYPHER 25` conditional-apply syntax, which the Cypher-DSL does
+   * not model in any form as of the pinned version. Everything that does not embed one of those
+   * opaque fragments (the `UNWIND`, the exactly-once offset tracker, `FINISH` vs `RETURN COUNT`) is
+   * still built and rendered through the DSL, same as [ApocBatchStrategy].
+   */
   private fun batchedStatement(
       queries: Map<String, Int>,
       events: List<Map<String, Any>>,
       topic: String,
       partition: Int,
   ): Query {
-    val cypher25 = CanIUse.canIUse(Cypher.explicitCypher25Selection()).withNeo4j(neo4j)
-    val termination =
-        if (CanIUse.canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
-        else "RETURN COUNT(1) AS total"
+    val cypher25 = CanIUse.canIUse(CanIUseCypher.explicitCypher25Selection()).withNeo4j(neo4j)
+    val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
+    val termination = if (hasFinish) "FINISH" else "RETURN count(1) AS total"
     val sortedQueries = queries.keys.sorted()
     val withVariableScope =
-        CanIUse.canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
+        CanIUse.canIUse(CanIUseCypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
 
     val query = buildString {
       if (cypher25) {
         appendLine("CYPHER 25")
       }
-      appendLine("UNWIND \$events AS ${EVENT}")
+      appendLine("UNWIND \$events AS $EVENT")
       if (eosOffsetLabel.isNotBlank()) {
-        appendLine(
-            "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
-        )
-        appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
-        appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
+        appendLine(offsetTrackerMergeClause())
+        appendLine("WITH k, $EVENT WHERE $EVENT.offset > k.offset")
+        appendLine("WITH k, $EVENT ORDER BY $EVENT.offset ASC")
       } else {
-        appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
+        appendLine("WITH $EVENT ORDER BY $EVENT.offset ASC")
       }
       if (withVariableScope) {
-        appendLine("CALL (${EVENT}) {")
+        appendLine("CALL ($EVENT) {")
       } else {
         appendLine("CALL {")
       }
       sortedQueries.forEachIndexed { index, stmt ->
         if (cypher25) {
-          appendLine("  WHEN ${EVENT}.q = \$q$index THEN {")
+          appendLine("  WHEN $EVENT.q = \$q$index THEN {")
           appendLine("    $stmt")
           appendLine("  }")
         } else {
           if (index > 0) appendLine("  UNION ALL")
           if (!withVariableScope) {
-            appendLine("  WITH ${EVENT}")
+            appendLine("  WITH $EVENT")
           }
 
-          appendLine("  WITH ${EVENT} WHERE ${EVENT}.q = \$q$index")
+          appendLine("  WITH $EVENT WHERE $EVENT.q = \$q$index")
           appendLine("  $stmt")
           appendLine("  RETURN $index AS x")
         }
       }
       appendLine("}")
       if (eosOffsetLabel.isNotBlank()) {
-        appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
+        appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
       }
       append(termination)
     }
@@ -179,5 +190,35 @@ class NativeBatchStrategy(
           put("events", events)
         },
     )
+  }
+
+  private fun offsetTrackerMergeClause(): String {
+    // eosOffsetLabel is already a fully-sanitized Cypher label token (see
+    // SinkConfiguration.eosOffsetLabel) - the node is built unlabeled here and the token is
+    // spliced in as text below, rather than handed to the DSL, which would escape (and thus
+    // double-escape) it again.
+    val offsetNode =
+        Cypher.anyNode()
+            .named("k")
+            .withProperties(
+                Cypher.mapOf(
+                    "strategy",
+                    Cypher.parameter("strategy"),
+                    "topic",
+                    Cypher.parameter("topic"),
+                    "partition",
+                    Cypher.parameter("partition"),
+                )
+            )
+    val statement =
+        Cypher.merge(offsetNode)
+            .onCreate()
+            .set(offsetNode.property("offset"), Cypher.literalOf<Any>(-1))
+            .returning(Cypher.literalTrue())
+            .build()
+    return renderer
+        .render(statement)
+        .removeSuffix(" RETURN true")
+        .replaceFirst("(k ", "(k:$eosOffsetLabel ")
   }
 }

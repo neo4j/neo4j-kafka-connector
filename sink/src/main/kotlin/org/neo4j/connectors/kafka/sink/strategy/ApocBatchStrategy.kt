@@ -17,11 +17,13 @@
 package org.neo4j.connectors.kafka.sink.strategy
 
 import org.neo4j.caniuse.CanIUse
-import org.neo4j.caniuse.Cypher
+import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -34,6 +36,7 @@ class ApocBatchStrategy(
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val renderer = CypherRenderer(neo4j)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -66,26 +69,13 @@ class ApocBatchStrategy(
   }
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
-    val termination =
-        if (CanIUse.canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
-        else "RETURN COUNT(1) AS total"
-
-    val query = buildString {
-      appendLine("UNWIND \$events AS ${EVENT}")
-      if (eosOffsetLabel.isNotBlank()) {
-        appendLine(
-            "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
-        )
-        appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
-        appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
-      } else {
-        appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
-      }
-      appendCallSubquery()
-      if (eosOffsetLabel.isNotBlank()) {
-        appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
-      }
-      append(termination)
+    var query = renderer.render(batchedCypherStatement())
+    if (eosOffsetLabel.isNotBlank()) {
+      // eosOffsetLabel (from SinkConfiguration) is already a fully-sanitized Cypher label token
+      // (backtick-quoted where needed) - batchedCypherStatement() built the offset tracker node
+      // unlabeled so the DSL's own escaping wouldn't double-escape that already-sanitized token;
+      // splice it in now.
+      query = query.replaceFirst("(k ", "(k:$eosOffsetLabel ")
     }
 
     return Query(
@@ -110,13 +100,65 @@ class ApocBatchStrategy(
     )
   }
 
-  private fun StringBuilder.appendCallSubquery() {
-    if (CanIUse.canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-        appendLine("CALL (${EVENT}) {")
-    else appendLine("CALL { WITH ${EVENT}")
-    appendLine(
-        "  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value RETURN COUNT(1) AS total"
-    )
-    appendLine("}")
+  /**
+   * Cypher-DSL renders the very same [call] expression differently depending on that dialect.
+   * `FINISH` vs `RETURN COUNT(1) AS total`, on the other hand, is not a dialect concern the DSL
+   * knows about - it is gated explicitly below, same as before.
+   */
+  private fun batchedCypherStatement(): Statement {
+    val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
+    val event = Cypher.name(EVENT)
+    val subquery =
+        Cypher.call("apoc.cypher.doIt")
+            .withArgs(event.property("stmt"), event.property("params"))
+            .yield("value")
+            .returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total"))
+            .build()
+    val unwound = Cypher.unwind(Cypher.parameter("events")).`as`(event)
+
+    return if (eosOffsetLabel.isNotBlank()) {
+      // eosOffsetLabel is already a fully-sanitized Cypher label token (see
+      // SinkConfiguration.eosOffsetLabel) - it is spliced in as text by batchedStatement() below
+      // rather than handed to the DSL here, which would escape (and thus double-escape) it again.
+      val offsetTracker =
+          Cypher.anyNode()
+              .named("k")
+              .withProperties(
+                  Cypher.mapOf(
+                      "strategy",
+                      Cypher.parameter("strategy"),
+                      "topic",
+                      Cypher.parameter("topic"),
+                      "partition",
+                      Cypher.parameter("partition"),
+                  )
+              )
+      val afterSet =
+          unwound
+              .merge(offsetTracker)
+              .onCreate()
+              .set(offsetTracker.property("offset"), Cypher.literalOf<Any>(-1))
+              .with(offsetTracker, event)
+              .where(event.property("offset").gt(offsetTracker.property("offset")))
+              .with(offsetTracker, event)
+              .orderBy(event.property("offset"))
+              .ascending()
+              .call(subquery, event)
+              .with(offsetTracker, Cypher.max(event.property("offset")).`as`("newOffset"))
+              .set(offsetTracker.property("offset"), Cypher.name("newOffset"))
+      if (hasFinish) {
+        afterSet.finish().build()
+      } else {
+        afterSet.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
+      }
+    } else {
+      val afterCall =
+          unwound.with(event).orderBy(event.property("offset")).ascending().call(subquery, event)
+      if (hasFinish) {
+        afterCall.finish().build()
+      } else {
+        afterCall.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
+      }
+    }
   }
 }

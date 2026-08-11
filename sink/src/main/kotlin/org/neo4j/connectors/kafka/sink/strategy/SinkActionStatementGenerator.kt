@@ -18,8 +18,17 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import kotlin.collections.buildMap
 import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
+import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.MapExpression
+import org.neo4j.cypherdsl.core.Node
+import org.neo4j.cypherdsl.core.PatternElement
+import org.neo4j.cypherdsl.core.Statement
+import org.neo4j.cypherdsl.core.StatementBuilder
+import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.neo4j.driver.Query
 
@@ -28,10 +37,23 @@ interface SinkActionStatementGenerator {
   fun buildStatement(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): Query
 }
 
+/**
+ * Generates per-record Cypher statements via the Cypher-DSL, still gated by the same
+ * [org.neo4j.caniuse.CanIUse] feature checks as before, now also used to pick a rendering
+ * [org.neo4j.cypherdsl.core.renderer.Dialect] (see [CypherRenderer]).
+ *
+ * The DSL cannot express a `WHERE` clause following a `MERGE` (real Cypher does not support that
+ * either), so [matchOrMergeClause] renders those as a `MATCH` internally and swaps the keyword
+ * afterwards. That combination is unreachable for nodes - [NodeMatcher.ById]/[NodeMatcher
+ * .ByElementId] never coexist with [LookupMode.MERGE], see [SinkAction.kt] - but relationships
+ * allow [RelationshipMatcher.ById]/[RelationshipMatcher.ByElementId] with a `MERGE` lookup mode, so
+ * the keyword swap is what actually reproduces that (pre-existing) behaviour there.
+ */
 class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
   private val supportsDynamicLabelsWithPropertyIndices = false
-  private val setDynamicLabels = canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
-  private val removeDynamicLabels = canIUse(Cypher.removeDynamicLabels()).withNeo4j(neo4j)
+  private val setDynamicLabels = canIUse(CanIUseCypher.setDynamicLabels()).withNeo4j(neo4j)
+  private val removeDynamicLabels = canIUse(CanIUseCypher.removeDynamicLabels()).withNeo4j(neo4j)
+  private val renderer = CypherRenderer(neo4j)
 
   override fun buildStatement(data: SinkAction, eventVariable: String): Query {
     return when (data) {
@@ -48,8 +70,12 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildNodeStatement(action: CreateNodeSinkAction, eventVariable: String): Query {
-    val labels = buildLabelPattern(action.labels, "_e", "labels")
-    val stmt = "WITH $eventVariable AS _e CREATE (n$labels) SET n += _e.properties"
+    val node = namedNode(action.labels, "n", "_e", "labels")
+    val stmt =
+        Cypher.with(rawEvent(eventVariable).`as`(Cypher.name("_e")))
+            .create(node)
+            .set(Cypher.mutate(node.requiredSymbolicName, rawEvent("_e").property("properties")))
+            .build()
 
     val params = buildMap {
       if (supportsDynamicLabelsWithPropertyIndices) {
@@ -58,7 +84,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       this["properties"] = action.properties
     }
 
-    return buildQuery(stmt, eventVariable, params)
+    return buildQuery(renderer.render(stmt), eventVariable, params)
   }
 
   private fun buildNodeStatement(action: UpdateNodeSinkAction, eventVariable: String): Query {
@@ -144,10 +170,26 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       eventVariable: String,
   ): Query {
     val nodeFragments = buildNodeFragments(action.startNode, action.endNode, "_e")
-    val typePattern = buildTypePattern(action.type, "_e", "type")
+    val createClause =
+        if (supportsDynamicLabelsWithPropertyIndices) {
+          "CREATE (start)-[r:${dynamicPlaceholder("_e", "type")}]->(end) SET r += _e.properties"
+        } else {
+          val rel =
+              Cypher.anyNode()
+                  .named("start")
+                  .relationshipTo(Cypher.anyNode().named("end"), action.type)
+                  .named("r")
+          renderer.render(
+              Cypher.create(rel)
+                  .set(
+                      Cypher.mutate(rel.requiredSymbolicName, rawEvent("_e").property("properties"))
+                  )
+                  .build()
+          )
+        }
 
     val stmt =
-        "WITH $eventVariable AS _e ${nodeFragments.start.clause} WITH _e, start ${nodeFragments.end.clause} WITH _e, start, end CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
+        "WITH $eventVariable AS _e ${nodeFragments.start.clause} WITH _e, start ${nodeFragments.end.clause} WITH _e, start, end $createClause"
     val params = buildMap {
       if (nodeFragments.start.params.isNotEmpty()) {
         this["start"] = nodeFragments.start.params
@@ -253,6 +295,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildCypherStatement(action: CypherSinkAction, eventVariable: String): Query {
+    // action.query is arbitrary user-supplied Cypher text - there is no version-dependent syntax
+    // here for the Cypher-DSL to help with, and nothing to generate beyond the WITH-projection
+    // prefix, whose alias still goes through the same sanitizer the DSL itself uses for every
+    // other identifier in this file.
     val projection =
         action.aliasProjection.joinToString(", ") { (alias, source) ->
           "$eventVariable.$source AS ${SchemaNames.sanitize(alias, true).orElseThrow()}"
@@ -306,19 +352,25 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>? = null,
       mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
-    val matchLabelsPattern = buildLabelPattern(matcher.labels, eventVariable, "matchLabels")
-    val matchPropsPattern = buildMatchProps(matcher.properties, eventVariable, "matchProperties")
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
+    val node = namedNode(matcher.labels, alias, eventVariable, "matchLabels")
+    val propsMap = propsMapExpression(matcher.properties, eventVariable, "matchProperties")
+    val pattern = if (propsMap != null) node.withProperties(propsMap) else node
+
+    // NodeMatcher.ByLabelsAndProperties never carries a WHERE condition, so a real MATCH/MERGE
+    // clause always applies cleanly here - unlike the ById/ByElementId overloads below.
+    val clause =
+        matchOrMergeClause(
+            mode,
+            pattern,
+            null,
+            node.requiredSymbolicName,
+            eventVariable,
+            setProperties,
+            mutateProperties,
+        )
 
     return Fragment(
-        "$mode ($alias$matchLabelsPattern$matchPropsPattern)$updatePropertiesClause",
+        clause,
         buildMap {
           if (supportsDynamicLabelsWithPropertyIndices) {
             this["matchLabels"] = matcher.labels
@@ -342,17 +394,24 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>? = null,
       mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
+    // NodeMatcher.ById never coexists with LookupMode.MERGE (see the class-level comment), so the
+    // MERGE+WHERE combination the Cypher-DSL can't express is unreachable here.
+    val node = Cypher.anyNode().named(alias)
+    val condition = idCondition(node.requiredSymbolicName, eventVariable)
+
+    val clause =
+        matchOrMergeClause(
+            mode,
+            node,
+            condition,
+            node.requiredSymbolicName,
+            eventVariable,
+            setProperties,
+            mutateProperties,
+        )
 
     return Fragment(
-        "$mode ($alias) WHERE id($alias) = $eventVariable.matchId$updatePropertiesClause",
+        clause,
         buildMap {
           this["matchId"] = matcher.id
           if (setProperties != null) {
@@ -373,17 +432,23 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>? = null,
       mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
+    // See the comment in the ById overload above: this combination is always LookupMode.MATCH.
+    val node = Cypher.anyNode().named(alias)
+    val condition = elementIdCondition(node.requiredSymbolicName, eventVariable)
+
+    val clause =
+        matchOrMergeClause(
+            mode,
+            node,
+            condition,
+            node.requiredSymbolicName,
+            eventVariable,
+            setProperties,
+            mutateProperties,
+        )
 
     return Fragment(
-        "$mode ($alias) WHERE elementId($alias) = $eventVariable.matchElementId$updatePropertiesClause",
+        clause,
         buildMap {
           this["matchElementId"] = matcher.elementId
           if (setProperties != null) {
@@ -447,9 +512,26 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       alias: String,
       eventVariable: String,
   ): Fragment {
-    val matchTypePattern = buildTypePattern(matcher.type, eventVariable, "matchType")
-    val matchPropsPattern = buildMatchProps(matcher.properties, eventVariable, "matchProperties")
-    val relationshipPattern = "$mode (start)-[$alias:$matchTypePattern$matchPropsPattern]->(end)"
+    val start = Cypher.anyNode().named("start")
+    val end = Cypher.anyNode().named("end")
+    val rel = start.relationshipTo(end, matcher.type).named(alias)
+    val propsMap = propsMapExpression(matcher.properties, eventVariable, "matchProperties")
+
+    val relationshipPattern =
+        if (supportsDynamicLabelsWithPropertyIndices) {
+          "$mode (start)-[$alias:${dynamicPlaceholder(eventVariable, "matchType")}${buildMatchProps(matcher.properties, eventVariable, "matchProperties")}]->(end)"
+        } else {
+          val pattern = if (propsMap != null) rel.withProperties(propsMap) else rel
+          matchOrMergeClause(
+              mode,
+              pattern,
+              null,
+              rel.requiredSymbolicName,
+              eventVariable,
+              null,
+              null,
+          )
+        }
 
     val additionalParams = buildMap {
       if (supportsDynamicLabelsWithPropertyIndices) {
@@ -477,8 +559,21 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       alias: String,
       eventVariable: String,
   ): Fragment {
+    val start = Cypher.anyNode().named("start")
+    val end = Cypher.anyNode().named("end")
+    val rel = start.relationshipTo(end).named(alias)
+    val condition = idCondition(rel.requiredSymbolicName, eventVariable)
     val relationshipPattern =
-        "$mode (start)-[$alias]->(end) WHERE id($alias) = $eventVariable.matchId"
+        matchOrMergeClause(
+            mode,
+            rel,
+            condition,
+            rel.requiredSymbolicName,
+            eventVariable,
+            null,
+            null,
+        )
+
     return buildRelationshipFragmentWithNodes(
         startNode,
         endNode,
@@ -496,8 +591,21 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       alias: String,
       eventVariable: String,
   ): Fragment {
+    val start = Cypher.anyNode().named("start")
+    val end = Cypher.anyNode().named("end")
+    val rel = start.relationshipTo(end).named(alias)
+    val condition = elementIdCondition(rel.requiredSymbolicName, eventVariable)
     val relationshipPattern =
-        "$mode (start)-[$alias]->(end) WHERE elementId($alias) = $eventVariable.matchElementId"
+        matchOrMergeClause(
+            mode,
+            rel,
+            condition,
+            rel.requiredSymbolicName,
+            eventVariable,
+            null,
+            null,
+        )
+
     return buildRelationshipFragmentWithNodes(
         startNode,
         endNode,
@@ -542,18 +650,6 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildQuery(stmt: String, eventVariable: String, params: Map<String, Any?>): Query =
       Query(stmt, wrapParams(eventVariable, params))
 
-  private fun buildLabelPattern(
-      labels: Set<String>,
-      eventVariable: String,
-      paramName: String,
-  ): String =
-      if (supportsDynamicLabelsWithPropertyIndices) ":\$($eventVariable.$paramName)"
-      else buildLabels(labels)
-
-  private fun buildTypePattern(type: String, eventVariable: String, paramName: String): String =
-      if (supportsDynamicLabelsWithPropertyIndices) "\$($eventVariable.$paramName)"
-      else SchemaNames.sanitize(type, true).orElseThrow()
-
   private fun buildRelationshipStatementWithKeylessHandling(
       matcher: RelationshipMatcher,
       eventVariable: String,
@@ -563,6 +659,129 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val needsLimit = matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys
     return if (needsLimit) "WITH $eventVariable AS _e $matchClause WITH _e, r LIMIT 1 $operation"
     else "WITH $eventVariable AS _e $matchClause $operation"
+  }
+
+  // ---------- Cypher-DSL helpers ----------
+
+  /**
+   * A raw expression referencing [eventVariable] verbatim. [eventVariable] is not always a simple
+   * identifier - it can be a top-level parameter reference like `$e`, or a nested property path
+   * like `_e.start` built up by [buildNodeFragments] - so it is lifted into the DSL as-is rather
+   * than parsed.
+   */
+  private fun rawEvent(eventVariable: String): Expression = Cypher.raw(eventVariable)
+
+  /**
+   * A sorted map-expression for a `matchProperties`/`properties`-style property bag, or `null` when
+   * there is nothing to render (matching the pre-refactor convention of omitting the `{...}` suffix
+   * entirely rather than rendering `{}`).
+   */
+  private fun propsMapExpression(
+      properties: Map<String, Any?>,
+      eventVariable: String,
+      paramsPath: String,
+  ): MapExpression? {
+    if (properties.isEmpty()) return null
+    val event = rawEvent(eventVariable)
+    val keysAndValues =
+        properties.keys.flatMap { key -> listOf(key, event.property(paramsPath, key)) }
+    return Cypher.sortedMapOf(*keysAndValues.toTypedArray())
+  }
+
+  private fun namedNode(
+      labels: Set<String>,
+      alias: String,
+      eventVariable: String,
+      paramName: String,
+  ): Node {
+    return when {
+      supportsDynamicLabelsWithPropertyIndices ->
+          Cypher.node(Cypher.allLabels(rawEvent(eventVariable).property(paramName))).named(alias)
+      labels.isEmpty() -> Cypher.anyNode().named(alias)
+      else -> {
+        val sorted = labels.sorted()
+        Cypher.node(sorted.first(), sorted.drop(1)).named(alias)
+      }
+    }
+  }
+
+  private fun idCondition(target: SymbolicName, eventVariable: String): Condition =
+      Cypher.raw("id(\$E)", target).eq(rawEvent(eventVariable).property("matchId"))
+
+  private fun elementIdCondition(target: SymbolicName, eventVariable: String): Condition =
+      Cypher.raw("elementId(\$E)", target).eq(rawEvent(eventVariable).property("matchElementId"))
+
+  private fun dynamicPlaceholder(eventVariable: String, paramName: String): String =
+      "\$($eventVariable.$paramName)"
+
+  /**
+   * Renders `mode (pattern)[ WHERE condition][ SET ...]`. A real `MERGE` clause never supports a
+   * `WHERE` (see the class-level comment), so when [mode] is [LookupMode.MERGE] and [condition] is
+   * non-null this renders as `MATCH` internally and swaps the keyword afterwards.
+   */
+  private fun matchOrMergeClause(
+      mode: LookupMode,
+      pattern: PatternElement,
+      condition: Condition?,
+      target: SymbolicName,
+      eventVariable: String,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>?,
+  ): String {
+    val event = rawEvent(eventVariable)
+    val renderAsMatch = mode == LookupMode.MATCH || condition != null
+
+    val statement =
+        if (renderAsMatch) {
+          val matched = Cypher.match(pattern)
+          val reading: StatementBuilder.OngoingReading =
+              if (condition != null) matched.where(condition) else matched
+          finishReading(reading, target, event, setProperties, mutateProperties)
+        } else {
+          finishMerge(Cypher.merge(pattern), target, event, setProperties, mutateProperties)
+        }
+
+    val text = renderer.render(statement)
+    val stripped = text.removePrefix("MATCH ").removePrefix("MERGE ").removeSuffix(" RETURN true")
+    return "$mode $stripped"
+  }
+
+  private fun finishReading(
+      reading: StatementBuilder.OngoingReading,
+      target: SymbolicName,
+      event: Expression,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>?,
+  ): Statement {
+    if (setProperties == null && mutateProperties == null) {
+      return reading.returning(Cypher.literalTrue()).build()
+    }
+    var current: StatementBuilder.BuildableMatchAndUpdate =
+        if (setProperties != null) reading.set(Cypher.set(target, event.property("setProperties")))
+        else reading.set(Cypher.mutate(target, event.property("mutateProperties")))
+    if (setProperties != null && mutateProperties != null) {
+      current = current.set(Cypher.mutate(target, event.property("mutateProperties")))
+    }
+    return current.returning(Cypher.literalTrue()).build()
+  }
+
+  private fun finishMerge(
+      merged: StatementBuilder.OngoingMerge,
+      target: SymbolicName,
+      event: Expression,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>?,
+  ): Statement {
+    if (setProperties == null && mutateProperties == null) {
+      return merged.returning(Cypher.literalTrue()).build()
+    }
+    var current: StatementBuilder.BuildableMatchAndUpdate =
+        if (setProperties != null) merged.set(Cypher.set(target, event.property("setProperties")))
+        else merged.set(Cypher.mutate(target, event.property("mutateProperties")))
+    if (setProperties != null && mutateProperties != null) {
+      current = current.set(Cypher.mutate(target, event.property("mutateProperties")))
+    }
+    return current.returning(Cypher.literalTrue()).build()
   }
 
   companion object {
