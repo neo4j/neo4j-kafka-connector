@@ -9,6 +9,17 @@ updates:
     cooldown:
       default-days: 3
     open-pull-requests-limit: 15
+    target-branch: "main"
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "08:00"
+      timezone: "UTC"
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 15
+    target-branch: "6.0"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -18,9 +29,28 @@ updates:
     groups:
       dev-deps:
         dependency-type: "development"
+    target-branch: "main"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    groups:
+      dev-deps:
+        dependency-type: "development"
+    target-branch: "6.0"
   - package-ecosystem: "bundler"
     directory: "/"
     schedule:
       interval: "weekly"
     cooldown:
       default-days: 3
+    target-branch: "main"
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 3
+    target-branch: "6.0"
