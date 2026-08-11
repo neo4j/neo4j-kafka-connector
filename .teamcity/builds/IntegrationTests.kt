@@ -49,7 +49,7 @@ class IntegrationTests(
               scriptContent =
                   """
                 #!/bin/bash -eu
-                dip compose up -d neo4j zookeeper broker schema-registry control-center
+                dip compose up -d neo4j broker schema-registry control-center
                 until [ "`docker inspect -f {{.State.Health.Status}} control-center`"=="healthy" ]; do
                     sleep 0.1;
                 done;
