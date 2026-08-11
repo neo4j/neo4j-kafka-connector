@@ -41,7 +41,9 @@ import org.neo4j.cypherdsl.core.renderer.Renderer
  */
 class CypherRenderer(private val neo4j: Neo4j) {
 
-  fun render(statement: Statement): String = rendererFor(neo4j).render(statement)
+  private val renderer = rendererFor(neo4j)
+
+  fun render(statement: Statement): String = renderer.render(statement)
 
   companion object {
     private val renderers = ConcurrentHashMap<Neo4j, Renderer>()
