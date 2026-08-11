@@ -33,21 +33,15 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration : Neo4jConfiguration {
-  private var fixedRenderer: Renderer? = null
-
-  constructor(original: Map<String, *>) : this(original, null)
 
   @TestOnly
   constructor(
       originals: Map<String, *>,
-      renderer: Renderer?,
       neo4j: Neo4j? = null,
       apocCypherDoItAvailable: Boolean? = null,
   ) : super(config(), originals, ConnectorType.SINK) {
-    fixedRenderer = renderer
     _neo4j = neo4j
     this.apocCypherDoItAvailable = apocCypherDoItAvailable
   }
