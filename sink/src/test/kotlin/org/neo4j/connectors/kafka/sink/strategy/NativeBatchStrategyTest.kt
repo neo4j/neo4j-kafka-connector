@@ -203,7 +203,7 @@ class NativeBatchStrategyTest {
     private fun callSubqueryImportWith(): String =
         """
         |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL {
@@ -225,7 +225,7 @@ class NativeBatchStrategyTest {
     private fun callSubqueryWithVariableScope(): String =
         """
         |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
@@ -246,7 +246,7 @@ class NativeBatchStrategyTest {
         """
         |CYPHER 25
         |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {

@@ -204,7 +204,7 @@ class SinkConfigurationTest {
   }
 
   @Test
-  fun `should return configured exactly once offset label escaped`() {
+  fun `should return configured exactly once offset label`() {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -221,7 +221,7 @@ class SinkConfigurationTest {
             neo4j = neo4j5_26,
         )
 
-    config.eosOffsetLabel shouldBe "`__MyKafkaOffset`"
+    config.eosOffsetLabel shouldBe "__MyKafkaOffset"
   }
 
   @Test

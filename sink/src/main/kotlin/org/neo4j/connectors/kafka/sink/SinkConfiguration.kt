@@ -33,7 +33,6 @@ import org.neo4j.connectors.kafka.configuration.helpers.Recommenders
 import org.neo4j.connectors.kafka.configuration.helpers.SIMPLE_DURATION_PATTERN
 import org.neo4j.connectors.kafka.configuration.helpers.Validators
 import org.neo4j.connectors.kafka.configuration.helpers.toSimpleString
-import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class SinkConfiguration : Neo4jConfiguration {
@@ -56,11 +55,10 @@ class SinkConfiguration : Neo4jConfiguration {
   val batchSize
     get(): Int = getInt(BATCH_SIZE)
 
+  // Left unsanitized here - ApocBatchStrategy/NativeBatchStrategy hand this straight to the
+  // Cypher-DSL as a node label, which escapes it itself.
   val eosOffsetLabel
-    get(): String =
-        getString(EOS_OFFSET_LABEL)
-            .takeIf { it.isNotBlank() }
-            ?.let { SchemaNames.sanitize(it, true).orElseThrow() } ?: ""
+    get(): String = getString(EOS_OFFSET_LABEL).takeIf { it.isNotBlank() } ?: ""
 
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)

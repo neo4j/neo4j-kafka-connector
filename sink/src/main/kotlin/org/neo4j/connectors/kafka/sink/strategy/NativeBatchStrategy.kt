@@ -22,6 +22,7 @@ import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -193,12 +194,10 @@ class NativeBatchStrategy(
   }
 
   private fun offsetTrackerMergeClause(): String {
-    // eosOffsetLabel is already a fully-sanitized Cypher label token (see
-    // SinkConfiguration.eosOffsetLabel) - the node is built unlabeled here and the token is
-    // spliced in as text below, rather than handed to the DSL, which would escape (and thus
-    // double-escape) it again.
+    // eosOffsetLabel is the operator-configured, raw (unsanitized) label - handing it straight to
+    // the DSL lets it escape the identifier itself, exactly once.
     val offsetNode =
-        Cypher.anyNode()
+        Cypher.node(eosOffsetLabel)
             .named("k")
             .withProperties(
                 Cypher.mapOf(
@@ -216,9 +215,6 @@ class NativeBatchStrategy(
             .set(offsetNode.property("offset"), Cypher.literalOf<Any>(-1))
             .returning(Cypher.literalTrue())
             .build()
-    return renderer
-        .render(statement)
-        .removeSuffix(" RETURN true")
-        .replaceFirst("(k ", "(k:$eosOffsetLabel ")
+    return renderer.render(statement).removeSuffix(" RETURN true")
   }
 }

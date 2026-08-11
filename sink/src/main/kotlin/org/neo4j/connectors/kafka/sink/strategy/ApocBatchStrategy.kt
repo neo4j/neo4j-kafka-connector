@@ -22,7 +22,10 @@ import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.ExposesFinish
+import org.neo4j.cypherdsl.core.ExposesReturning
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -69,17 +72,8 @@ class ApocBatchStrategy(
   }
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
-    var query = renderer.render(batchedCypherStatement())
-    if (eosOffsetLabel.isNotBlank()) {
-      // eosOffsetLabel (from SinkConfiguration) is already a fully-sanitized Cypher label token
-      // (backtick-quoted where needed) - batchedCypherStatement() built the offset tracker node
-      // unlabeled so the DSL's own escaping wouldn't double-escape that already-sanitized token;
-      // splice it in now.
-      query = query.replaceFirst("(k ", "(k:$eosOffsetLabel ")
-    }
-
     return Query(
-        query,
+        renderer.render(batchedCypherStatement()),
         buildMap {
           put(
               "events",
@@ -117,11 +111,10 @@ class ApocBatchStrategy(
     val unwound = Cypher.unwind(Cypher.parameter("events")).`as`(event)
 
     return if (eosOffsetLabel.isNotBlank()) {
-      // eosOffsetLabel is already a fully-sanitized Cypher label token (see
-      // SinkConfiguration.eosOffsetLabel) - it is spliced in as text by batchedStatement() below
-      // rather than handed to the DSL here, which would escape (and thus double-escape) it again.
+      // eosOffsetLabel is the operator-configured, raw (unsanitized) label - handing it straight
+      // to the DSL lets it escape the identifier itself, exactly once.
       val offsetTracker =
-          Cypher.anyNode()
+          Cypher.node(eosOffsetLabel)
               .named("k")
               .withProperties(
                   Cypher.mapOf(
@@ -146,19 +139,19 @@ class ApocBatchStrategy(
               .call(subquery, event)
               .with(offsetTracker, Cypher.max(event.property("offset")).`as`("newOffset"))
               .set(offsetTracker.property("offset"), Cypher.name("newOffset"))
-      if (hasFinish) {
-        afterSet.finish().build()
-      } else {
-        afterSet.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
-      }
+      terminate(afterSet, hasFinish)
     } else {
       val afterCall =
           unwound.with(event).orderBy(event.property("offset")).ascending().call(subquery, event)
-      if (hasFinish) {
-        afterCall.finish().build()
-      } else {
-        afterCall.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
-      }
+      terminate(afterCall, hasFinish)
     }
+  }
+
+  /** `FINISH` when supported, otherwise `RETURN COUNT(1) AS total`. */
+  private fun <T> terminate(ongoing: T, hasFinish: Boolean): Statement where
+  T : ExposesFinish,
+  T : ExposesReturning {
+    return if (hasFinish) ongoing.finish().build()
+    else ongoing.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
   }
 }
