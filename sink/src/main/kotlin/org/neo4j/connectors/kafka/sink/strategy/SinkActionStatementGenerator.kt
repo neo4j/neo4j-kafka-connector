@@ -51,7 +51,6 @@ interface SinkActionStatementGenerator {
  * the keyword swap is what actually reproduces that (pre-existing) behaviour there.
  */
 class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
-  private val supportsDynamicLabelsWithPropertyIndices = false
   private val setDynamicLabels = canIUse(CanIUseCypher.setDynamicLabels()).withNeo4j(neo4j)
   private val removeDynamicLabels = canIUse(CanIUseCypher.removeDynamicLabels()).withNeo4j(neo4j)
   private val renderer = CypherRenderer(neo4j)
@@ -71,19 +70,14 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   private fun buildNodeStatement(action: CreateNodeSinkAction, eventVariable: String): Query {
-    val node = namedNode(action.labels, "n", "_e", "labels")
+    val node = namedNode(action.labels, "n")
     val stmt =
         Cypher.with(rawEvent(eventVariable).`as`(Cypher.name("_e")))
             .create(node)
             .set(Cypher.mutate(node.requiredSymbolicName, rawEvent("_e").property("properties")))
             .build()
 
-    val params = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["labels"] = action.labels
-      }
-      this["properties"] = action.properties
-    }
+    val params = buildMap { this["properties"] = action.properties }
 
     return buildQuery(renderer.render(stmt), eventVariable, params)
   }
@@ -171,23 +165,18 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       eventVariable: String,
   ): Query {
     val nodeFragments = buildNodeFragments(action.startNode, action.endNode, "_e")
+    val rel =
+        Cypher.anyNode()
+            .named("start")
+            .relationshipTo(Cypher.anyNode().named("end"), action.type)
+            .named("r")
+
     val createClause =
-        if (supportsDynamicLabelsWithPropertyIndices) {
-          "CREATE (start)-[r:${dynamicPlaceholder("_e", "type")}]->(end) SET r += _e.properties"
-        } else {
-          val rel =
-              Cypher.anyNode()
-                  .named("start")
-                  .relationshipTo(Cypher.anyNode().named("end"), action.type)
-                  .named("r")
-          renderer.render(
-              Cypher.create(rel)
-                  .set(
-                      Cypher.mutate(rel.requiredSymbolicName, rawEvent("_e").property("properties"))
-                  )
-                  .build()
-          )
-        }
+        renderer.render(
+            Cypher.create(rel)
+                .set(Cypher.mutate(rel.requiredSymbolicName, rawEvent("_e").property("properties")))
+                .build()
+        )
 
     val stmt =
         "WITH $eventVariable AS _e ${nodeFragments.start.clause} WITH _e, start ${nodeFragments.end.clause} WITH _e, start, end $createClause"
@@ -197,9 +186,6 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       }
       if (nodeFragments.end.params.isNotEmpty()) {
         this["end"] = nodeFragments.end.params
-      }
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["type"] = action.type
       }
       this["properties"] = action.properties
     }
@@ -353,7 +339,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>? = null,
       mutateProperties: Map<String, Any?>? = null,
   ): Fragment {
-    val node = namedNode(matcher.labels, alias, eventVariable, "matchLabels")
+    val node = namedNode(matcher.labels, alias)
     val propsMap = propsMapExpression(matcher.properties, eventVariable, "matchProperties")
     val pattern = if (propsMap != null) node.withProperties(propsMap) else node
 
@@ -373,9 +359,6 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     return Fragment(
         clause,
         buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = matcher.labels
-          }
           this["matchProperties"] = matcher.properties
           if (setProperties != null) {
             this["setProperties"] = setProperties
@@ -518,26 +501,11 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     val rel = start.relationshipTo(end, matcher.type).named(alias)
     val propsMap = propsMapExpression(matcher.properties, eventVariable, "matchProperties")
 
+    val pattern = if (propsMap != null) rel.withProperties(propsMap) else rel
     val relationshipPattern =
-        if (supportsDynamicLabelsWithPropertyIndices) {
-          "$mode (start)-[$alias:${dynamicPlaceholder(eventVariable, "matchType")}${buildMatchProps(matcher.properties, eventVariable, "matchProperties")}]->(end)"
-        } else {
-          val pattern = if (propsMap != null) rel.withProperties(propsMap) else rel
-          matchOrMergeClause(
-              mode,
-              pattern,
-              null,
-              rel.requiredSymbolicName,
-              eventVariable,
-              null,
-              null,
-          )
-        }
+        matchOrMergeClause(mode, pattern, null, rel.requiredSymbolicName, eventVariable, null, null)
 
     val additionalParams = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = matcher.type
-      }
       if (matcher.properties.isNotEmpty()) {
         this["matchProperties"] = matcher.properties
       }
@@ -689,21 +657,9 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     return Cypher.sortedMapOf(*keysAndValues.toTypedArray())
   }
 
-  private fun namedNode(
-      labels: Set<String>,
-      alias: String,
-      eventVariable: String,
-      paramName: String,
-  ): Node {
-    return when {
-      supportsDynamicLabelsWithPropertyIndices ->
-          Cypher.node(Cypher.allLabels(rawEvent(eventVariable).property(paramName))).named(alias)
-      labels.isEmpty() -> Cypher.anyNode().named(alias)
-      else -> {
-        val sorted = labels.sorted()
-        Cypher.node(sorted.first(), sorted.drop(1)).named(alias)
-      }
-    }
+  private fun namedNode(labels: Set<String>, alias: String): Node {
+    val sorted = labels.sorted()
+    return Cypher.node(sorted.first(), sorted.drop(1)).named(alias)
   }
 
   private fun idCondition(target: SymbolicName, eventVariable: String): Condition =
@@ -786,18 +742,6 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   }
 
   companion object {
-    private fun buildMatchProps(
-        matchProperties: Map<String, Any?>,
-        eventVariable: String,
-        paramsPath: String,
-    ): String =
-        if (matchProperties.isEmpty()) ""
-        else
-            matchProperties
-                .map { SchemaNames.sanitize(it.key, true).orElseThrow() }
-                .sorted()
-                .joinToString(", ", " {", "}") { "$it: $eventVariable.${paramsPath}.$it" }
-
     private fun buildLabels(labels: Set<String>): String =
         if (labels.isEmpty()) ""
         else labels.sorted().joinToString(":", ":") { SchemaNames.sanitize(it, true).orElseThrow() }

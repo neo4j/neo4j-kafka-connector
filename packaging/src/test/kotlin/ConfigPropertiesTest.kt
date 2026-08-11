@@ -39,7 +39,6 @@ import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
-import org.neo4j.cypherdsl.core.renderer.Renderer
 
 class ConfigPropertiesTest {
 
@@ -64,9 +63,7 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
-    }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, neo4j, apocDoITAvailable) }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
@@ -87,9 +84,7 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
-    }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, neo4j, apocDoITAvailable) }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("creates", "updates", "deletes")
@@ -107,9 +102,7 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
-    }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, neo4j, apocDoITAvailable) }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
@@ -125,12 +118,7 @@ class ConfigPropertiesTest {
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
     val config = shouldNotThrowAny {
-      SinkConfiguration(
-          properties,
-          Renderer.getDefaultRenderer(),
-          neo4j = neo4j5_26,
-          apocCypherDoItAvailable = true,
-      )
+      SinkConfiguration(properties, neo4j = neo4j5_26, apocCypherDoItAvailable = true)
     }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
@@ -150,9 +138,7 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
-    }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, neo4j, apocDoITAvailable) }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
@@ -170,9 +156,7 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny {
-      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
-    }
+    val config = shouldNotThrowAny { SinkConfiguration(properties, neo4j, apocDoITAvailable) }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers["knows"].shouldBeInstanceOf<SinkHandler>().should {
