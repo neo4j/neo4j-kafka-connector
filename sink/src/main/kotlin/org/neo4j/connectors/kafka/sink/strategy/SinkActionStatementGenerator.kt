@@ -668,9 +668,6 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun elementIdCondition(target: SymbolicName, eventVariable: String): Condition =
       Cypher.raw("elementId(\$E)", target).eq(rawEvent(eventVariable).property("matchElementId"))
 
-  private fun dynamicPlaceholder(eventVariable: String, paramName: String): String =
-      "\$($eventVariable.$paramName)"
-
   /**
    * Renders `mode (pattern)[ WHERE condition][ SET ...]`. A real `MERGE` clause never supports a
    * `WHERE` (see the class-level comment), so when [mode] is [LookupMode.MERGE] and [condition] is
