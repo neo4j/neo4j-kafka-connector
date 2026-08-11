@@ -24,6 +24,7 @@ import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.ExposesWhere
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.Node
+import org.neo4j.cypherdsl.core.StatementBuilder.OngoingReading
 import org.neo4j.cypherdsl.core.StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere
 
 fun buildNodeMatcher(labels: Set<String>, ids: Map<String, Any?>): NodeMatcher {
@@ -58,17 +59,20 @@ fun buildNode(labels: Set<String>, ids: Map<String, Any?>, keys: Expression): No
   }
 }
 
-@Suppress("UNCHECKED_CAST")
-fun <T : ExposesWhere> T.applyFilter(node: Node, ids: Map<String, Any?>, keys: Expression): T {
+fun <T, R : OngoingReading> T.applyFilter(
+    node: Node,
+    ids: Map<String, Any?>,
+    keys: Expression,
+): OngoingReading where T : OngoingReading, T : ExposesWhere<R> {
   return if (ids.containsKey(Keys.PHYSICAL_ID)) {
     this.where(
         Cypher.raw("id(${'$'}E)", node.requiredSymbolicName).eq(keys.property(Keys.PHYSICAL_ID))
-    ) as T
+    )
   } else if (ids.containsKey(Keys.ELEMENT_ID)) {
     this.where(
         Cypher.raw("elementId(${'$'}E)", node.requiredSymbolicName)
             .eq(keys.property(Keys.ELEMENT_ID))
-    ) as T
+    )
   } else {
     this
   }
