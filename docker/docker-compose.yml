@@ -23,38 +23,26 @@ services:
       timeout: 10s
       retries: 5
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:${CONFLUENT_PLATFORM_VERSION}
-    hostname: zookeeper
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "2181" ]
-      start_period: 5m
-      start_interval: 10s
-      interval: 1m
-      timeout: 10s
-      retries: 5
 
   broker:
     image: confluentinc/cp-server:${CONFLUENT_PLATFORM_VERSION}
     hostname: broker
     container_name: broker
-    depends_on:
-      - zookeeper
     ports:
       - "9092:9092"
       - "9101:9101"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: CI-cluster1234567890
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
@@ -143,7 +131,7 @@ services:
       retries: 5
 
   control-center:
-    image: confluentinc/cp-enterprise-control-center:${CONFLUENT_PLATFORM_VERSION}
+    image: confluentinc/cp-enterprise-control-center-next-gen:2.6.0
     hostname: control-center
     container_name: control-center
     depends_on:
