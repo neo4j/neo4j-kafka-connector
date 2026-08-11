@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.sink.strategy
+package org.neo4j.connectors.kafka.utils
 
 import io.kotest.matchers.shouldBe
 import java.util.stream.Stream
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -30,7 +29,6 @@ import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.renderer.Dialect
 
 class CypherRendererTest {
 
@@ -38,12 +36,12 @@ class CypherRendererTest {
   // Neo4j version picked Dialect.NEO4J_5_DEFAULT_CYPHER over Dialect.NEO4J_5 - it is exactly the
   // dialect difference org.neo4j.caniuse.Cypher.callSubqueryWithVariableScopeClause() (the 5.23
   // threshold) governs.
-  private fun render(neo4j: Neo4j, dialectOverride: Dialect? = null): String {
+  private fun render(neo4j: Neo4j): String {
     val event = Cypher.name("e")
     val subquery = Cypher.match(Cypher.anyNode()).returning(Cypher.literalTrue()).build()
     val statement =
         Cypher.unwind(Cypher.parameter("events")).`as`(event).call(subquery, event).finish().build()
-    return CypherRenderer(neo4j, dialectOverride).render(statement)
+    return CypherRenderer(neo4j).render(statement)
   }
 
   @ParameterizedTest
@@ -98,16 +96,5 @@ class CypherRendererTest {
           ),
       )
     }
-  }
-
-  @Test
-  fun `an explicit dialect override takes precedence over the Neo4j-derived one`() {
-    val old = Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
-    val new = Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
-
-    render(old, Dialect.NEO4J_5_DEFAULT_CYPHER) shouldBe
-        "UNWIND \$events AS e CALL (e) {MATCH () RETURN true} FINISH"
-    render(new, Dialect.NEO4J_5) shouldBe
-        "UNWIND \$events AS e CALL {WITH e MATCH () RETURN true} FINISH"
   }
 }

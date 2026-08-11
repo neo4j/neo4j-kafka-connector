@@ -20,6 +20,7 @@ import kotlin.collections.buildMap
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
