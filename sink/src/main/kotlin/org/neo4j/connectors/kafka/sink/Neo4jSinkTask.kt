@@ -63,9 +63,10 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     val duration = measureTime {
       records
           ?.map { SinkMessage(it) }
-          ?.groupBy { it.topic }
-          ?.mapKeys { topicHandlers.getValue(it.key) }
-          ?.forEach { (handler, messages) -> processMessages(handler, messages) }
+          ?.groupBy { it.topic to it.record.kafkaPartition() }
+          ?.forEach { (topicPartition, messages) ->
+            processMessages(topicHandlers.getValue(topicPartition.first), messages)
+          }
     }
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
