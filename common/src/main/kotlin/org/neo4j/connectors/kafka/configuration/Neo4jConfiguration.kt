@@ -40,7 +40,6 @@ import org.neo4j.driver.Config.TrustStrategy
 import org.neo4j.driver.Config.TrustStrategy.Strategy
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.Logging
 import org.neo4j.driver.SessionConfig
 import org.neo4j.driver.TransactionConfig
 import org.neo4j.driver.net.ServerAddress
@@ -179,8 +178,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
         config.withoutEncryption()
       }
     }
-
-    @Suppress("DEPRECATION") config.withLogging(Logging.slf4j())
 
     GraphDatabase.driver(mainUri, authenticationToken, config.build())
   }

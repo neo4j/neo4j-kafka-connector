@@ -40,6 +40,7 @@ import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Query
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.internal.summary.InternalGqlNotification
 import org.neo4j.driver.summary.ResultSummary
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
@@ -1704,11 +1705,11 @@ class SinkActionStatementGeneratorIT {
     count shouldBe 0
   }
 
-  @Suppress("DEPRECATION")
   private fun executeAndVerifyNoDeprecations(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary
-        .notifications()
+        .gqlStatusObjects()
+        .filterIsInstance<InternalGqlNotification>()
         .filter {
           it.code()?.equals("Neo.ClientNotification.Statement.FeatureDeprecationWarning") ?: false
         }
@@ -1721,11 +1722,11 @@ class SinkActionStatementGeneratorIT {
    * tests that intentionally use `NodeMatcher.ById` or `RelationshipMatcher.ById` which generate
    * deprecated `id()` calls for backward compatibility.
    */
-  @Suppress("DEPRECATION")
   private fun executeAllowingIdDeprecation(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary
-        .notifications()
+        .gqlStatusObjects()
+        .filterIsInstance<InternalGqlNotification>()
         .filter {
           it.code()?.equals("Neo.ClientNotification.Statement.FeatureDeprecationWarning") ?: false
         }
