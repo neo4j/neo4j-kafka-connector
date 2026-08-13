@@ -33,16 +33,16 @@ abstract class Entity(val props: Map<String, Value>) {
 
   fun values(): Iterable<Value> = props.values
 
-  fun <T : Any?> values(mapFunction: Function<Value, T>): Iterable<T> =
+  fun <T> values(mapFunction: Function<Value, T>): Iterable<T> =
       props.values.map { mapFunction.apply(it) }
 
   fun asMap(): Map<String, Any> = props
 
-  fun <T : Any?> asMap(mapFunction: Function<Value, T>): Map<String, T> =
+  fun <T> asMap(mapFunction: Function<Value, T>): Map<String, T> =
       props.mapValues { mapFunction.apply(it.value) }
 }
 
-class TestNode(val id: String, val labels: List<String>, props: Map<String, Value>) :
+class TestNode(val elementId: String, val labels: List<String>, props: Map<String, Value>) :
     Entity(props), Node {
 
   @Deprecated("Use elementId() instead")
@@ -50,7 +50,7 @@ class TestNode(val id: String, val labels: List<String>, props: Map<String, Valu
     throw UnsupportedOperationException("Numeric id() is deprecated. Use elementId().")
   }
 
-  override fun elementId(): String = id
+  override fun elementId(): String = elementId
 
   override fun labels(): Iterable<String> = labels
 
@@ -58,7 +58,7 @@ class TestNode(val id: String, val labels: List<String>, props: Map<String, Valu
 }
 
 class TestRelationship(
-    val id: String,
+    val elementId: String,
     val startId: String,
     val endId: String,
     val type: String,
@@ -70,7 +70,7 @@ class TestRelationship(
     throw UnsupportedOperationException("Numeric id() is deprecated. Use elementId().")
   }
 
-  override fun elementId(): String = id
+  override fun elementId(): String = elementId
 
   @Deprecated("Use startNodeElementId() instead")
   override fun startNodeId(): Long {

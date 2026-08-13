@@ -529,7 +529,7 @@ class TypesTest {
       schemaAndValue(payloadMode, person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.STRING_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                 .field("name", PropertyType.schema)
                 .field("surname", PropertyType.schema)
@@ -538,7 +538,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", person.elementId())
+                .put("<elementId>", person.elementId())
                 .put("<labels>", person.labels().toList())
                 .put("name", PropertyType.toConnectValue("john"))
                 .put("surname", PropertyType.toConnectValue("doe"))
@@ -546,7 +546,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to person.elementId(),
+                "<elementId>" to person.elementId(),
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
@@ -558,7 +558,7 @@ class TypesTest {
       schemaAndValue(payloadMode, company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.STRING_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                 .field("name", PropertyType.schema)
                 .field("est", PropertyType.schema)
@@ -566,14 +566,14 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", company.elementId())
+                .put("<elementId>", company.elementId())
                 .put("<labels>", company.labels().toList())
                 .put("name", PropertyType.toConnectValue("acme corp"))
                 .put("est", PropertyType.toConnectValue(LocalDate.of(1980, 1, 1)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to company.elementId(),
+                "<elementId>" to company.elementId(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
                 "est" to LocalDate.of(1980, 1, 1),
@@ -584,7 +584,7 @@ class TypesTest {
       schemaAndValue(payloadMode, worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.STRING_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<type>", Schema.STRING_SCHEMA)
                 .field("<start.id>", Schema.STRING_SCHEMA)
                 .field("<end.id>", Schema.STRING_SCHEMA)
@@ -594,7 +594,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", worksFor.elementId())
+                .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
                 .put("<start.id>", worksFor.startNodeElementId())
                 .put("<end.id>", worksFor.endNodeElementId())
@@ -603,7 +603,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to worksFor.elementId(),
+                "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
                 "<start.id>" to worksFor.startNodeElementId(),
                 "<end.id>" to worksFor.endNodeElementId(),
@@ -645,7 +645,7 @@ class TypesTest {
       schemaAndValue(payloadMode, person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.STRING.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
                 .field("surname", SimpleTypes.STRING.schema())
@@ -654,7 +654,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", person.elementId())
+                .put("<elementId>", person.elementId())
                 .put("<labels>", person.labels().toList())
                 .put("name", "john")
                 .put("surname", "doe")
@@ -662,7 +662,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to person.elementId(),
+                "<elementId>" to person.elementId(),
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
@@ -674,7 +674,7 @@ class TypesTest {
       schemaAndValue(payloadMode, company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.STRING.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
                 .field("est", SimpleTypes.LOCALDATE.schema())
@@ -682,14 +682,14 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", company.elementId())
+                .put("<elementId>", company.elementId())
                 .put("<labels>", company.labels().toList())
                 .put("name", "acme corp")
                 .put("est", DateTimeFormatter.ISO_DATE.format(LocalDate.of(1980, 1, 1)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to company.elementId(),
+                "<elementId>" to company.elementId(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
                 "est" to LocalDate.of(1980, 1, 1),
@@ -700,7 +700,7 @@ class TypesTest {
       schemaAndValue(payloadMode, worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.STRING.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<type>", SimpleTypes.STRING.schema())
                 .field("<start.id>", SimpleTypes.STRING.schema())
                 .field("<end.id>", SimpleTypes.STRING.schema())
@@ -710,7 +710,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", worksFor.elementId())
+                .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
                 .put("<start.id>", worksFor.startNodeElementId())
                 .put("<end.id>", worksFor.endNodeElementId())
@@ -719,7 +719,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to worksFor.elementId(),
+                "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
                 "<start.id>" to worksFor.startNodeElementId(),
                 "<end.id>" to worksFor.endNodeElementId(),

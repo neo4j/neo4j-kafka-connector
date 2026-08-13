@@ -214,7 +214,7 @@ class DynamicTypesCompactTest {
     // Node
     converter.schema(TestNode("0", emptyList(), emptyMap()), false) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.STRING_SCHEMA)
+            .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .build()
 
@@ -227,7 +227,7 @@ class DynamicTypesCompactTest {
         false,
     ) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.STRING_SCHEMA)
+            .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
@@ -236,7 +236,7 @@ class DynamicTypesCompactTest {
     // Relationship
     converter.schema(TestRelationship("0", "1", "2", "KNOWS", emptyMap()), false) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.STRING_SCHEMA)
+            .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
             .field("<start.id>", Schema.STRING_SCHEMA)
             .field("<end.id>", Schema.STRING_SCHEMA)
@@ -252,7 +252,7 @@ class DynamicTypesCompactTest {
         false,
     ) shouldBe
         SchemaBuilder.struct()
-            .field("<id>", Schema.STRING_SCHEMA)
+            .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
             .field("<start.id>", Schema.STRING_SCHEMA)
             .field("<end.id>", Schema.STRING_SCHEMA)
@@ -546,7 +546,7 @@ class DynamicTypesCompactTest {
 
     converted shouldBe
         Struct(schema)
-            .put("<id>", "0")
+            .put("<elementId>", "0")
             .put("<labels>", listOf("Person", "Employee"))
             .put("name", "john")
             .put("surname", "doe")
@@ -554,7 +554,7 @@ class DynamicTypesCompactTest {
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
         mapOf(
-            "<id>" to "0",
+            "<elementId>" to "0",
             "<labels>" to listOf("Person", "Employee"),
             "name" to "john",
             "surname" to "doe",
@@ -576,7 +576,7 @@ class DynamicTypesCompactTest {
 
     converted shouldBe
         Struct(schema)
-            .put("<id>", "0")
+            .put("<elementId>", "0")
             .put("<start.id>", "1")
             .put("<end.id>", "2")
             .put("<type>", "KNOWS")
@@ -586,7 +586,7 @@ class DynamicTypesCompactTest {
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     reverted shouldBe
         mapOf(
-            "<id>" to "0",
+            "<elementId>" to "0",
             "<start.id>" to "1",
             "<end.id>" to "2",
             "<type>" to "KNOWS",

@@ -92,7 +92,7 @@ class CompactValueConverter : ValueConverter {
       is Node ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", SimpleTypes.STRING.schema())
+                field("<elementId>", SimpleTypes.STRING.schema())
                 field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 value.keys().forEach {
                   field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
@@ -104,7 +104,7 @@ class CompactValueConverter : ValueConverter {
       is Relationship ->
           SchemaBuilder.struct()
               .apply {
-                field("<id>", SimpleTypes.STRING.schema())
+                field("<elementId>", SimpleTypes.STRING.schema())
                 field("<type>", SimpleTypes.STRING.schema())
                 field("<start.id>", SimpleTypes.STRING.schema())
                 field("<end.id>", SimpleTypes.STRING.schema())
@@ -239,7 +239,7 @@ class CompactValueConverter : ValueConverter {
 
             is Node ->
                 Struct(schema).apply {
-                  put("<id>", value.elementId())
+                  put("<elementId>", value.elementId())
                   put("<labels>", value.labels())
                   value
                       .asMap { it.asObject() }
@@ -248,7 +248,7 @@ class CompactValueConverter : ValueConverter {
 
             is Relationship ->
                 Struct(schema).apply {
-                  put("<id>", value.elementId())
+                  put("<elementId>", value.elementId())
                   put("<type>", value.type())
                   put("<start.id>", value.startNodeElementId())
                   put("<end.id>", value.endNodeElementId())
