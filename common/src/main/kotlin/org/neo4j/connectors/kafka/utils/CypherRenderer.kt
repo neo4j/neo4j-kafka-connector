@@ -25,20 +25,6 @@ import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Dialect
 import org.neo4j.cypherdsl.core.renderer.Renderer
 
-/**
- * Renders Cypher-DSL [Statement]s to Cypher text, picking a [Dialect] from the target [Neo4j]'s
- * capabilities via [CanIUse]. The underlying [Renderer] is cached per [Neo4j] value, since a given
- * [Neo4j] always maps onto the same [Dialect] and building a [Renderer] from a [Configuration] is
- * not free.
- *
- * Lives in `common` (rather than `sink`, where it originated) so that `source` can depend on it
- * too.
- *
- * [neo4j] is currently the only input to dialect selection. A future configuration-file-driven
- * override would most naturally take the form of an externally-supplied [Configuration] (of which
- * [Dialect] is only one part) rather than a bare [Dialect] override, but that dependency is not
- * introduced yet.
- */
 class CypherRenderer(private val neo4j: Neo4j) {
 
   private val renderer = rendererFor(neo4j)
