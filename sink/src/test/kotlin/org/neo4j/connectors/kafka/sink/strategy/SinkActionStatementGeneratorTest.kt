@@ -3017,7 +3017,7 @@ class SinkActionStatementGeneratorTest {
               "WITH _e, start " +
               "MATCH (end:`Company` {id: _e.end.matchProperties.id}) " +
               "WITH _e, start, end " +
-              "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
               "e" to
@@ -3037,7 +3037,7 @@ class SinkActionStatementGeneratorTest {
               "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {id: _e.end.matchProperties.id}) " +
               "WITH _e, start, end " +
-              "MERGE (start)-[r]->(end) WHERE id(r) = _e.matchId " +
+              "MATCH (start)-[r]->(end) WHERE id(r) = _e.matchId " +
               "SET r += _e.mutateProperties",
           mapOf(
               "e" to
@@ -3104,7 +3104,7 @@ class SinkActionStatementGeneratorTest {
               "WITH _e, start " +
               "MATCH (end:`Company` {id: _e.end.matchProperties.id}) " +
               "WITH _e, start, end " +
-              "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
               "e" to
@@ -3124,7 +3124,7 @@ class SinkActionStatementGeneratorTest {
               "WITH _e, start " +
               "MATCH (end:${'$'}(_e.end.matchLabels) {id: _e.end.matchProperties.id}) " +
               "WITH _e, start, end " +
-              "MERGE (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
+              "MATCH (start)-[r]->(end) WHERE elementId(r) = _e.matchElementId " +
               "SET r += _e.mutateProperties",
           mapOf(
               "e" to
