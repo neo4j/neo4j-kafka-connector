@@ -1338,6 +1338,77 @@ class SinkActionStatementGeneratorIT {
   }
 
   @Test
+  fun `should execute merge relationship statement with id matcher`() {
+    // Merging by internal id is not expressible: a MERGE cannot carry a WHERE, and an id cannot be
+    // chosen for a relationship that does not exist yet. The generator therefore reads the
+    // relationship with MATCH, which means the statement runs and no-ops when nothing matches.
+    val relId =
+        session
+            .run(
+                "CREATE (:Person {id: 1})-[r:WORKS_AT {role: 'junior'}]->(:Company {id: 2}) " +
+                    "RETURN id(r) as rid"
+            )
+            .single()["rid"]
+            .asLong()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ById(relId),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAllowingIdDeprecation(query)
+
+    val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("role" to "senior")
+  }
+
+  @Test
+  fun `should execute merge relationship statement with element id matcher`() {
+    Assumptions.assumeTrue { neo4j.version >= Neo4jVersion(5, 0, 0) }
+
+    // See the id matcher test above: this is read with MATCH for the same reason.
+    val relElementId =
+        session
+            .run(
+                "CREATE (:Person {id: 1})-[r:WORKS_AT {role: 'junior'}]->(:Company {id: 2}) " +
+                    "RETURN elementId(r) as rid"
+            )
+            .single()["rid"]
+            .asString()
+
+    val action =
+        MergeRelationshipSinkAction(
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Person"), mapOf("id" to 1)),
+                LookupMode.MATCH,
+            ),
+            SinkActionNodeReference(
+                NodeMatcher.ByLabelsAndProperties(setOf("Company"), mapOf("id" to 2)),
+                LookupMode.MATCH,
+            ),
+            RelationshipMatcher.ByElementId(relElementId),
+            setProperties = mapOf("since" to 2020),
+            mutateProperties = mapOf("role" to "senior"),
+        )
+
+    val query = generator.buildStatement(action)
+    executeAndVerifyNoDeprecations(query)
+
+    val result = session.run("MATCH (:Person)-[r:WORKS_AT]->(:Company) RETURN r").single()
+    result["r"].asRelationship().asMap() shouldBe mapOf("since" to 2020L, "role" to "senior")
+  }
+
+  @Test
   fun `should execute merge relationship statement with merge node matchers`() {
     // No pre-existing nodes - they should be created via MERGE
     val action =
