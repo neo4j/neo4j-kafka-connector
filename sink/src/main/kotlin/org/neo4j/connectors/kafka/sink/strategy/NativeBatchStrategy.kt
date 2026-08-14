@@ -24,6 +24,7 @@ import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -38,6 +39,17 @@ class NativeBatchStrategy(
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
   private val renderer = CypherRenderer(neo4j)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
+  private val cypher25 = CanIUse.canIUse(CanIUseCypher.explicitCypher25Selection()).withNeo4j(neo4j)
+  private val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
+  private val withVariableScope =
+      CanIUse.canIUse(CanIUseCypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
+
+  /**
+   * One of a batch's distinct statements: the [id] its records carry in their `q` field, and the
+   * statement's clauses in open form - `null` for a [CypherSinkAction], see [GeneratedStatement].
+   */
+  private data class DistinctStatement(val id: Int, val clauses: OpenStatement?)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -69,7 +81,7 @@ class NativeBatchStrategy(
     val result = mutableListOf<ChangeQuery>()
 
     var currentGroupId = 0
-    val queries = mutableMapOf<String, Int>()
+    val queries = mutableMapOf<String, DistinctStatement>()
     val currentEvents = mutableListOf<Map<String, Any>>()
     val currentMessages = mutableListOf<SinkMessage>()
 
@@ -88,18 +100,23 @@ class NativeBatchStrategy(
     }
 
     events.forEach { event ->
-      val query = statementGenerator.buildStatement(event.sinkAction, "${EVENT}.params")
+      // Statements are deduplicated - and later ordered - by their rendered text even when the
+      // envelope goes on to compose them as clauses, so that the `q` index a record carries does
+      // not depend on which of the two envelopes it ends up in.
+      val generated = statementGenerator.generate(event.sinkAction, "${EVENT}.params")
+      val statement = generated.query.text()
 
-      if (!queries.containsKey(query.text()) && (queries.size >= maxBatchedStatements)) {
+      if (!queries.containsKey(statement) && (queries.size >= maxBatchedStatements)) {
         flush()
       }
 
-      val queryId = queries.getOrPut(query.text()) { currentGroupId++ }
+      val queryId =
+          queries.getOrPut(statement) { DistinctStatement(currentGroupId++, generated.clauses) }.id
       currentEvents.add(
           mapOf(
               "q" to queryId,
               "offset" to event.message.record.kafkaOffset(),
-              "params" to query.parameters(),
+              "params" to generated.query.parameters(),
           )
       )
       currentMessages.add(event.message)
@@ -117,31 +134,86 @@ class NativeBatchStrategy(
   }
 
   /**
-   * Each per-record statement was already generated (and rendered to text) by
-   * [DefaultSinkActionStatementGenerator] before reaching here - `stmt` below is that opaque,
-   * already-rendered text, deduplicated and grouped by [queries]. There is no way to compose an
-   * opaque pre-rendered fragment into a further Cypher-DSL clause chain without re-parsing it (and
-   * no justification for adding a Cypher parser dependency just to immediately re-render the same
-   * text), so the `UNION ALL`/`WHEN ... THEN` dispatch around those fragments remains text-based,
-   * same as before - including the `CYPHER 25` conditional-apply syntax, which the Cypher-DSL does
-   * not model in any form as of the pinned version. Everything that does not embed one of those
-   * opaque fragments (the `UNWIND`, the exactly-once offset tracker, `FINISH` vs `RETURN COUNT`) is
-   * still built and rendered through the DSL, same as [ApocBatchStrategy].
+   * The batch's distinct statements, deduplicated and ordered by [queries], dispatched on the `q`
+   * index each record carries.
+   *
+   * Two of the three shapes this can take cannot be expressed with the Cypher-DSL, and are still
+   * assembled as text: Cypher 25's conditional apply (`WHEN ... THEN { }`), which the DSL does not
+   * model in any form as of the pinned version, and a [CypherSinkAction]'s query, which is opaque
+   * operator-authored text with no DSL hole to append it into. Everything else - which is every
+   * strategy other than [SinkStrategy.CYPHER] on a server without conditional apply - composes its
+   * branches as clauses, through [dispatch].
    */
   private fun batchedStatement(
-      queries: Map<String, Int>,
+      queries: Map<String, DistinctStatement>,
       events: List<Map<String, Any>>,
       topic: String,
       partition: Int,
   ): Query {
-    val cypher25 = CanIUse.canIUse(CanIUseCypher.explicitCypher25Selection()).withNeo4j(neo4j)
-    val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
-    val termination = if (hasFinish) "FINISH" else "RETURN count(1) AS total"
-    val sortedQueries = queries.keys.sorted()
-    val withVariableScope =
-        CanIUse.canIUse(CanIUseCypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
+    val sorted = queries.entries.sortedBy { it.key }
+    val branches = sorted.map { it.value.clauses }
 
-    val query = buildString {
+    val query =
+        if (cypher25 || branches.any { it == null }) {
+          textEnvelope(sorted.map { it.key })
+        } else {
+          renderer.render(
+              envelope.around(dispatch(branches.filterNotNull()), importEvent = withVariableScope)
+          )
+        }
+
+    return Query(
+        query,
+        buildMap {
+          sorted.forEachIndexed { index, (_, statement) -> put("q$index", statement.id) }
+          put("strategy", strategy.name)
+          put("topic", topic)
+          put("partition", partition)
+          put("events", events)
+        },
+    )
+  }
+
+  /**
+   * The subquery body: one [branch] per distinct statement, joined by `UNION ALL`. A batch often
+   * holds a single distinct statement, and `UNION ALL` needs two operands, so that case is the
+   * branch on its own - which is the same Cypher, since a branch already carries its own gate.
+   */
+  private fun dispatch(branches: List<OpenStatement>): Statement {
+    val built = branches.mapIndexed { index, clauses -> branch(clauses, index) }
+    return if (built.size == 1) built.single() else Cypher.unionAll(*built.toTypedArray())
+  }
+
+  /**
+   * One branch of the dispatch, gated on the `q` index the statement's records carry and tagged
+   * with it, since every branch of a `UNION` has to return the same thing.
+   *
+   * The clauses are rebuilt from [OpenStatement] per branch rather than reused as a built
+   * statement: an aliased expression renders its `AS` only the first time a render pass meets it,
+   * so a shared branch would silently lose its `_e` projection everywhere but the first.
+   *
+   * Without the variable scope clause each branch also has to import `e` for itself, with a bare
+   * `WITH` carrying no `WHERE`. That one the DSL will not write: asking the subquery to import `e`
+   * puts a single leading `WITH` in front of the first branch only, leaving the rest unbound - so
+   * the import is spelled out here instead, and [BatchEnvelope.around] is told to leave it alone.
+   */
+  private fun branch(clauses: OpenStatement, index: Int): Statement {
+    val opening = Cypher.with(envelope.event)
+    val gate =
+        (if (withVariableScope) opening else opening.with(envelope.event)).where(
+            envelope.event.property("q").eq(Cypher.parameter("q$index"))
+        )
+
+    return clauses
+        .appendTo { items -> gate.with(*items) }
+        .returning(Cypher.literalOf<Any>(index).`as`("x"))
+  }
+
+  /** The envelope hand-written around already-rendered statements, for the two shapes above. */
+  private fun textEnvelope(statements: List<String>): String {
+    val termination = if (hasFinish) "FINISH" else "RETURN count(1) AS total"
+
+    return buildString {
       if (cypher25) {
         appendLine("CYPHER 25")
       }
@@ -158,7 +230,7 @@ class NativeBatchStrategy(
       } else {
         appendLine("CALL {")
       }
-      sortedQueries.forEachIndexed { index, stmt ->
+      statements.forEachIndexed { index, stmt ->
         if (cypher25) {
           appendLine("  WHEN $EVENT.q = \$q$index THEN {")
           appendLine("    $stmt")
@@ -180,35 +252,10 @@ class NativeBatchStrategy(
       }
       append(termination)
     }
-
-    return Query(
-        query,
-        buildMap {
-          sortedQueries.forEachIndexed { index, stmt -> put("q$index", queries[stmt]) }
-          put("strategy", strategy.name)
-          put("topic", topic)
-          put("partition", partition)
-          put("events", events)
-        },
-    )
   }
 
   private fun offsetTrackerMergeClause(): String {
-    // eosOffsetLabel is the operator-configured, raw (unsanitized) label - handing it straight to
-    // the DSL lets it escape the identifier itself, exactly once.
-    val offsetNode =
-        Cypher.node(eosOffsetLabel)
-            .named("k")
-            .withProperties(
-                Cypher.mapOf(
-                    "strategy",
-                    Cypher.parameter("strategy"),
-                    "topic",
-                    Cypher.parameter("topic"),
-                    "partition",
-                    Cypher.parameter("partition"),
-                )
-            )
+    val offsetNode = envelope.offsetTrackerNode()
     val statement =
         Cypher.merge(offsetNode)
             .onCreate()

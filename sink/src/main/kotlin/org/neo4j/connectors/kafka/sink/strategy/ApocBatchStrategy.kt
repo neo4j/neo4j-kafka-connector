@@ -16,16 +16,12 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.caniuse.CanIUse
-import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.ExposesFinish
-import org.neo4j.cypherdsl.core.ExposesReturning
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
 import org.slf4j.Logger
@@ -34,12 +30,13 @@ import org.slf4j.LoggerFactory
 class ApocBatchStrategy(
     private val neo4j: Neo4j,
     private val batchSize: Int,
-    private val eosOffsetLabel: String,
+    eosOffsetLabel: String,
     private val strategy: SinkStrategy,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
   private val renderer = CypherRenderer(neo4j)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -73,7 +70,7 @@ class ApocBatchStrategy(
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
     return Query(
-        renderer.render(batchedCypherStatement()),
+        renderer.render(envelope.around(applyRecordStatement())),
         buildMap {
           put(
               "events",
@@ -95,63 +92,13 @@ class ApocBatchStrategy(
   }
 
   /**
-   * Cypher-DSL renders the very same [call] expression differently depending on that dialect.
-   * `FINISH` vs `RETURN COUNT(1) AS total`, on the other hand, is not a dialect concern the DSL
-   * knows about - it is gated explicitly below, same as before.
+   * The batch's per-event body: the record's own statement, which travels as a `stmt`/`params` pair
+   * on the event rather than as code, handed to `apoc.cypher.doIt` to run.
    */
-  private fun batchedCypherStatement(): Statement {
-    val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
-    val event = Cypher.name(EVENT)
-    val subquery =
-        Cypher.call("apoc.cypher.doIt")
-            .withArgs(event.property("stmt"), event.property("params"))
-            .yield("value")
-            .returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total"))
-            .build()
-    val unwound = Cypher.unwind(Cypher.parameter("events")).`as`(event)
-
-    return if (eosOffsetLabel.isNotBlank()) {
-      // eosOffsetLabel is the operator-configured, raw (unsanitized) label - handing it straight
-      // to the DSL lets it escape the identifier itself, exactly once.
-      val offsetTracker =
-          Cypher.node(eosOffsetLabel)
-              .named("k")
-              .withProperties(
-                  Cypher.mapOf(
-                      "strategy",
-                      Cypher.parameter("strategy"),
-                      "topic",
-                      Cypher.parameter("topic"),
-                      "partition",
-                      Cypher.parameter("partition"),
-                  )
-              )
-      val afterSet =
-          unwound
-              .merge(offsetTracker)
-              .onCreate()
-              .set(offsetTracker.property("offset"), Cypher.literalOf<Any>(-1))
-              .with(offsetTracker, event)
-              .where(event.property("offset").gt(offsetTracker.property("offset")))
-              .with(offsetTracker, event)
-              .orderBy(event.property("offset"))
-              .ascending()
-              .call(subquery, event)
-              .with(offsetTracker, Cypher.max(event.property("offset")).`as`("newOffset"))
-              .set(offsetTracker.property("offset"), Cypher.name("newOffset"))
-      terminate(afterSet, hasFinish)
-    } else {
-      val afterCall =
-          unwound.with(event).orderBy(event.property("offset")).ascending().call(subquery, event)
-      terminate(afterCall, hasFinish)
-    }
-  }
-
-  /** `FINISH` when supported, otherwise `RETURN COUNT(1) AS total`. */
-  private fun <T> terminate(ongoing: T, hasFinish: Boolean): Statement where
-  T : ExposesFinish,
-  T : ExposesReturning {
-    return if (hasFinish) ongoing.finish().build()
-    else ongoing.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
-  }
+  private fun applyRecordStatement(): Statement =
+      Cypher.call("apoc.cypher.doIt")
+          .withArgs(envelope.event.property("stmt"), envelope.event.property("params"))
+          .yield("value")
+          .returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total"))
+          .build()
 }
