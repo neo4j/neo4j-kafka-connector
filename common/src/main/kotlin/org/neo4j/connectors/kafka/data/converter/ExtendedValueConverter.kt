@@ -101,8 +101,8 @@ class ExtendedValueConverter : ValueConverter {
               .apply {
                 field("<elementId>", Schema.STRING_SCHEMA)
                 field("<type>", Schema.STRING_SCHEMA)
-                field("<start.id>", Schema.STRING_SCHEMA)
-                field("<end.id>", Schema.STRING_SCHEMA)
+                field("<start.elementId>", Schema.STRING_SCHEMA)
+                field("<end.elementId>", Schema.STRING_SCHEMA)
 
                 value.keys().forEach { field(it, PropertyType.schema) }
 
@@ -250,8 +250,8 @@ class ExtendedValueConverter : ValueConverter {
                 Struct(schema).apply {
                   put("<elementId>", value.elementId())
                   put("<type>", value.type())
-                  put("<start.id>", value.startNodeElementId())
-                  put("<end.id>", value.endNodeElementId())
+                  put("<start.elementId>", value.startNodeElementId())
+                  put("<end.elementId>", value.endNodeElementId())
                   value
                       .asMap { it.asObject() }
                       .forEach { e -> put(e.key, value(schema.field(e.key).schema(), e.value)) }

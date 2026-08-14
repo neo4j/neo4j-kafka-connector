@@ -106,8 +106,8 @@ class CompactValueConverter : ValueConverter {
               .apply {
                 field("<elementId>", SimpleTypes.STRING.schema())
                 field("<type>", SimpleTypes.STRING.schema())
-                field("<start.id>", SimpleTypes.STRING.schema())
-                field("<end.id>", SimpleTypes.STRING.schema())
+                field("<start.elementId>", SimpleTypes.STRING.schema())
+                field("<end.elementId>", SimpleTypes.STRING.schema())
                 value.keys().forEach {
                   field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
                 }
@@ -250,8 +250,8 @@ class CompactValueConverter : ValueConverter {
                 Struct(schema).apply {
                   put("<elementId>", value.elementId())
                   put("<type>", value.type())
-                  put("<start.id>", value.startNodeElementId())
-                  put("<end.id>", value.endNodeElementId())
+                  put("<start.elementId>", value.startNodeElementId())
+                  put("<end.elementId>", value.endNodeElementId())
                   value
                       .asMap { it.asObject() }
                       .forEach { e -> put(e.key, value(schema.field(e.key).schema(), e.value)) }

@@ -238,8 +238,8 @@ class DynamicTypesCompactTest {
         SchemaBuilder.struct()
             .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
-            .field("<start.id>", Schema.STRING_SCHEMA)
-            .field("<end.id>", Schema.STRING_SCHEMA)
+            .field("<start.elementId>", Schema.STRING_SCHEMA)
+            .field("<end.elementId>", Schema.STRING_SCHEMA)
             .build()
     converter.schema(
         TestRelationship(
@@ -254,8 +254,8 @@ class DynamicTypesCompactTest {
         SchemaBuilder.struct()
             .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", SchemaBuilder.STRING_SCHEMA)
-            .field("<start.id>", Schema.STRING_SCHEMA)
-            .field("<end.id>", Schema.STRING_SCHEMA)
+            .field("<start.elementId>", Schema.STRING_SCHEMA)
+            .field("<end.elementId>", Schema.STRING_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
             .field("surname", Schema.STRING_SCHEMA)
             .build()
@@ -577,8 +577,8 @@ class DynamicTypesCompactTest {
     converted shouldBe
         Struct(schema)
             .put("<elementId>", "0")
-            .put("<start.id>", "1")
-            .put("<end.id>", "2")
+            .put("<start.elementId>", "1")
+            .put("<end.elementId>", "2")
             .put("<type>", "KNOWS")
             .put("name", "john")
             .put("surname", "doe")
@@ -587,8 +587,8 @@ class DynamicTypesCompactTest {
     reverted shouldBe
         mapOf(
             "<elementId>" to "0",
-            "<start.id>" to "1",
-            "<end.id>" to "2",
+            "<start.elementId>" to "1",
+            "<end.elementId>" to "2",
             "<type>" to "KNOWS",
             "name" to "john",
             "surname" to "doe",

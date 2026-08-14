@@ -586,8 +586,8 @@ class TypesTest {
             SchemaBuilder.struct()
                 .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<type>", Schema.STRING_SCHEMA)
-                .field("<start.id>", Schema.STRING_SCHEMA)
-                .field("<end.id>", Schema.STRING_SCHEMA)
+                .field("<start.elementId>", Schema.STRING_SCHEMA)
+                .field("<end.elementId>", Schema.STRING_SCHEMA)
                 .field("contractId", PropertyType.schema)
                 .field("since", PropertyType.schema)
                 .build()
@@ -596,8 +596,8 @@ class TypesTest {
             Struct(schema)
                 .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
-                .put("<start.id>", worksFor.startNodeElementId())
-                .put("<end.id>", worksFor.endNodeElementId())
+                .put("<start.elementId>", worksFor.startNodeElementId())
+                .put("<end.elementId>", worksFor.endNodeElementId())
                 .put("contractId", PropertyType.toConnectValue(5916L))
                 .put("since", PropertyType.toConnectValue(LocalDate.of(2000, 1, 5)))
 
@@ -605,8 +605,8 @@ class TypesTest {
             mapOf(
                 "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
-                "<start.id>" to worksFor.startNodeElementId(),
-                "<end.id>" to worksFor.endNodeElementId(),
+                "<start.elementId>" to worksFor.startNodeElementId(),
+                "<end.elementId>" to worksFor.endNodeElementId(),
                 "contractId" to 5916L,
                 "since" to LocalDate.of(2000, 1, 5),
             )
@@ -702,8 +702,8 @@ class TypesTest {
             SchemaBuilder.struct()
                 .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<type>", SimpleTypes.STRING.schema())
-                .field("<start.id>", SimpleTypes.STRING.schema())
-                .field("<end.id>", SimpleTypes.STRING.schema())
+                .field("<start.elementId>", SimpleTypes.STRING.schema())
+                .field("<end.elementId>", SimpleTypes.STRING.schema())
                 .field("contractId", SimpleTypes.LONG.schema())
                 .field("since", SimpleTypes.LOCALDATE.schema())
                 .build()
@@ -712,8 +712,8 @@ class TypesTest {
             Struct(schema)
                 .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
-                .put("<start.id>", worksFor.startNodeElementId())
-                .put("<end.id>", worksFor.endNodeElementId())
+                .put("<start.elementId>", worksFor.startNodeElementId())
+                .put("<end.elementId>", worksFor.endNodeElementId())
                 .put("contractId", 5916L)
                 .put("since", DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 5)))
 
@@ -721,8 +721,8 @@ class TypesTest {
             mapOf(
                 "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
-                "<start.id>" to worksFor.startNodeElementId(),
-                "<end.id>" to worksFor.endNodeElementId(),
+                "<start.elementId>" to worksFor.startNodeElementId(),
+                "<end.elementId>" to worksFor.endNodeElementId(),
                 "contractId" to 5916L,
                 "since" to LocalDate.of(2000, 1, 5),
             )

@@ -268,8 +268,8 @@ class ExtendedValueConverterTest {
         SchemaBuilder.struct()
             .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", Schema.STRING_SCHEMA)
-            .field("<start.id>", Schema.STRING_SCHEMA)
-            .field("<end.id>", Schema.STRING_SCHEMA)
+            .field("<start.elementId>", Schema.STRING_SCHEMA)
+            .field("<end.elementId>", Schema.STRING_SCHEMA)
             .build()
     converter.schema(
         TestRelationship(
@@ -284,8 +284,8 @@ class ExtendedValueConverterTest {
         SchemaBuilder.struct()
             .field("<elementId>", Schema.STRING_SCHEMA)
             .field("<type>", Schema.STRING_SCHEMA)
-            .field("<start.id>", Schema.STRING_SCHEMA)
-            .field("<end.id>", Schema.STRING_SCHEMA)
+            .field("<start.elementId>", Schema.STRING_SCHEMA)
+            .field("<end.elementId>", Schema.STRING_SCHEMA)
             .field("name", PropertyType.schema)
             .field("surname", PropertyType.schema)
             .build()
@@ -497,8 +497,8 @@ class ExtendedValueConverterTest {
     converted shouldBe
         Struct(schema)
             .put("<elementId>", "0")
-            .put("<start.id>", "1")
-            .put("<end.id>", "2")
+            .put("<start.elementId>", "1")
+            .put("<end.elementId>", "2")
             .put("<type>", "KNOWS")
             .put("name", PropertyType.toConnectValue("john"))
             .put("surname", PropertyType.toConnectValue("doe"))
@@ -507,8 +507,8 @@ class ExtendedValueConverterTest {
     reverted shouldBe
         mapOf(
             "<elementId>" to "0",
-            "<start.id>" to "1",
-            "<end.id>" to "2",
+            "<start.elementId>" to "1",
+            "<end.elementId>" to "2",
             "<type>" to "KNOWS",
             "name" to "john",
             "surname" to "doe",
