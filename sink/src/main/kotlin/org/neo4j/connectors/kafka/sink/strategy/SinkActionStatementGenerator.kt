@@ -24,7 +24,10 @@ import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.AliasedExpression
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.ExposesReturning
+import org.neo4j.cypherdsl.core.ExposesWith
 import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.IdentifiableElement
 import org.neo4j.cypherdsl.core.MapExpression
 import org.neo4j.cypherdsl.core.Node
 import org.neo4j.cypherdsl.core.PatternElement
@@ -35,9 +38,68 @@ import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.neo4j.driver.Query
 
+/**
+ * Opens a clause chain with a `WITH`. The static [Cypher.with] and the [ExposesWith.with] of a
+ * chain already under way have this exact shape, which is what lets a single [OpenStatement] serve
+ * both a statement of its own (`WITH $e AS _e ...`) and a branch hanging off a caller's own clauses
+ * (`WITH e WHERE e.q = $q0` followed by `WITH e.params AS _e ...`).
+ */
+fun interface WithStarter {
+
+  fun with(
+      vararg items: IdentifiableElement
+  ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere
+}
+
+/**
+ * One [SinkAction]'s clauses, not yet built into a [Statement]: [appendTo] runs the chain onto the
+ * `WITH` it is handed, leaving the caller to decide what those clauses hang off.
+ *
+ * A continuation rather than a cached [Statement] on purpose. An [AliasedExpression] renders its
+ * `AS` only the first time a render pass meets it, so handing one built [Statement] to two `UNION
+ * ALL` branches silently strips the aliases off the second. Rebuilding the chain per branch cannot
+ * hit that - which is also why this must not become a fragment cache.
+ */
+fun interface OpenStatement {
+
+  fun appendTo(start: WithStarter): OpenStatementEnd
+}
+
+/**
+ * Where an action's clause chain ends. Actions finish on different builders - a `SET` leaves
+ * [StatementBuilder.BuildableMatchAndUpdate], a `DELETE` leaves [StatementBuilder.OngoingUpdate] -
+ * and no Cypher-DSL type exposes both `build()` and `returning()`. Naming that intersection here is
+ * what lets it cross a function boundary, which generic bounds could not.
+ */
+interface OpenStatementEnd {
+
+  fun build(): Statement
+
+  /** Closes the chain with the `RETURN` a `UNION ALL` branch has to carry. */
+  fun returning(vararg expressions: Expression): Statement
+}
+
+/**
+ * A record's generated statement. [query] is the rendered form every consumer ultimately needs - as
+ * an `apoc.cypher.doIt` argument, as a query of its own, or as the key a batch deduplicates
+ * statements by - while [clauses] additionally offers the same statement unbuilt.
+ */
+class GeneratedStatement(
+    val query: Query,
+    /**
+     * `null` for [CypherSinkAction] alone: its query is opaque, operator-authored text, and the DSL
+     * offers no hole to append raw clauses into. A topic is assigned exactly one strategy, so a
+     * batch is either all [CypherSinkAction] or none of it.
+     */
+    val clauses: OpenStatement?,
+)
+
 interface SinkActionStatementGenerator {
 
-  fun buildStatement(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): Query
+  fun generate(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): GeneratedStatement
+
+  fun buildStatement(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): Query =
+      generate(data, eventVariable).query
 }
 
 /**
@@ -45,8 +107,9 @@ interface SinkActionStatementGenerator {
  * instance through [org.neo4j.caniuse.CanIUse], both to choose between available syntaxes and to
  * pick the rendering [org.neo4j.cypherdsl.core.renderer.Dialect] (see [CypherRenderer]).
  *
- * An action is composed as one [Statement] and rendered once: [buildStatement] runs per record, on
- * the hot path of every batch strategy.
+ * An action is composed as one [Statement] and rendered once: [generate] runs per record, on the
+ * hot path of every batch strategy. It hands back that rendered form together with the same chain
+ * left open, so a caller that wants to compose the action further does not pay a second render.
  *
  * Cypher does not allow a `WHERE` to follow a `MERGE`, so a lookup carrying a condition is read
  * with `MATCH` regardless of its [LookupMode]. Nodes never reach that case - only the id matchers
@@ -61,7 +124,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private val removeDynamicLabels = canIUse(CanIUseCypher.removeDynamicLabels()).withNeo4j(neo4j)
   private val renderer = CypherRenderer(neo4j)
 
-  override fun buildStatement(data: SinkAction, eventVariable: String): Query {
+  override fun generate(data: SinkAction, eventVariable: String): GeneratedStatement {
     return when (data) {
       is CreateNodeSinkAction -> buildNodeStatement(data, eventVariable)
       is UpdateNodeSinkAction -> buildNodeStatement(data, eventVariable)
@@ -75,20 +138,28 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     }
   }
 
-  private fun buildNodeStatement(action: CreateNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: CreateNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     val node = namedNode(action.labels, "n")
-    val statement =
-        Cypher.with(eventAlias(eventVariable))
-            .create(node)
-            .set(Cypher.mutate(node.requiredSymbolicName, EVENT_REF.property("properties")))
-            .build()
 
     val params = buildMap { this["properties"] = action.properties }
 
-    return buildQuery(statement, eventVariable, params)
+    return generated(eventVariable, params) { start ->
+      end(
+          start
+              .with(eventAlias(eventVariable))
+              .create(node)
+              .set(Cypher.mutate(node.requiredSymbolicName, EVENT_REF.property("properties")))
+      )
+    }
   }
 
-  private fun buildNodeStatement(action: UpdateNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: UpdateNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     return buildNodeUpdateStatement(
         LookupMode.MATCH,
         action.matcher,
@@ -100,7 +171,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     )
   }
 
-  private fun buildNodeStatement(action: MergeNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: MergeNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     return buildNodeUpdateStatement(
         LookupMode.MERGE,
         action.matcher,
@@ -120,23 +194,9 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       addLabels: Set<String>,
       removeLabels: Set<String>,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     val lookup = buildNodeLookup(matcher, mode, "n", "_e", setProperties, mutateProperties)
     val node = Cypher.anyNode().named("n")
-
-    // An update always carries mutateProperties, so the lookup always contributes at least one
-    // SET - which is what leaves a BuildableMatchAndUpdate for the label operations to chain onto.
-    var update = lookup.applyTo(Cypher.with(eventAlias(eventVariable))).set(lookup.operations)
-    if (setDynamicLabels) {
-      update = update.set(node, Cypher.allLabels(EVENT_REF.property("addLabels")))
-    } else if (addLabels.isNotEmpty()) {
-      update = update.set(node, addLabels.sorted())
-    }
-    if (removeDynamicLabels) {
-      update = update.remove(node, Cypher.allLabels(EVENT_REF.property("removeLabels")))
-    } else if (removeLabels.isNotEmpty()) {
-      update = update.remove(node, removeLabels.sorted())
-    }
 
     val params = buildMap {
       putAll(lookup.params)
@@ -148,30 +208,43 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       }
     }
 
-    return buildQuery(update.build(), eventVariable, params)
+    return generated(eventVariable, params) { start ->
+      // An update always carries mutateProperties, so the lookup always contributes at least one
+      // SET - which is what leaves a BuildableMatchAndUpdate for the label operations to chain
+      // onto.
+      var update = lookup.applyTo(start.with(eventAlias(eventVariable))).set(lookup.operations)
+      if (setDynamicLabels) {
+        update = update.set(node, Cypher.allLabels(EVENT_REF.property("addLabels")))
+      } else if (addLabels.isNotEmpty()) {
+        update = update.set(node, addLabels.sorted())
+      }
+      if (removeDynamicLabels) {
+        update = update.remove(node, Cypher.allLabels(EVENT_REF.property("removeLabels")))
+      } else if (removeLabels.isNotEmpty()) {
+        update = update.remove(node, removeLabels.sorted())
+      }
+      end(update)
+    }
   }
 
-  private fun buildNodeStatement(action: DeleteNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: DeleteNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     val lookup = buildNodeLookup(action.matcher, LookupMode.MATCH, "n", "_e")
-    val reading = lookup.matchIn(Cypher.with(eventAlias(eventVariable)))
-    val statement =
-        if (action.detach) reading.detachDelete(lookup.target).build()
-        else reading.delete(lookup.target).build()
 
-    return buildQuery(statement, eventVariable, lookup.params)
+    return generated(eventVariable, lookup.params) { start ->
+      val reading = lookup.matchIn(start.with(eventAlias(eventVariable)))
+      end(if (action.detach) reading.detachDelete(lookup.target) else reading.delete(lookup.target))
+    }
   }
 
   private fun buildRelationshipStatement(
       action: CreateRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     val nodes = buildNodeLookups(action.startNode, action.endNode)
     val rel = relationship(action.type)
-    val statement =
-        readEndpoints(eventVariable, nodes)
-            .create(rel)
-            .set(Cypher.mutate(rel.requiredSymbolicName, EVENT_REF.property("properties")))
-            .build()
 
     val params = buildMap {
       if (nodes.start.params.isNotEmpty()) {
@@ -183,13 +256,19 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       this["properties"] = action.properties
     }
 
-    return buildQuery(statement, eventVariable, params)
+    return generated(eventVariable, params) { start ->
+      end(
+          readEndpoints(start, eventVariable, nodes)
+              .create(rel)
+              .set(Cypher.mutate(rel.requiredSymbolicName, EVENT_REF.property("properties")))
+      )
+    }
   }
 
   private fun buildRelationshipStatement(
       action: UpdateRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     return buildRelationshipUpdateStatement(
         LookupMode.MATCH,
         action.startNode,
@@ -204,7 +283,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildRelationshipStatement(
       action: MergeRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     return buildRelationshipUpdateStatement(
         LookupMode.MERGE,
         action.startNode,
@@ -224,42 +303,39 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>?,
       mutateProperties: Map<String, Any?>,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     val nodes = buildNodeLookups(startNode, endNode)
     val lookup = buildRelationshipLookup(matcher, mode, setProperties, mutateProperties)
 
-    var point = lookup.applyTo(readEndpoints(eventVariable, nodes))
-    if (matcher.isKeyless) {
-      point = UpdatePoint.AfterReading(point.with(EVENT_VAR, lookup.target).limit(1))
+    return generated(eventVariable, relationshipParams(nodes, lookup)) { start ->
+      var point = lookup.applyTo(readEndpoints(start, eventVariable, nodes))
+      if (matcher.isKeyless) {
+        point = UpdatePoint.AfterReading(point.with(EVENT_VAR, lookup.target).limit(1))
+      }
+      end(point.set(lookup.operations))
     }
-
-    return buildQuery(
-        point.set(lookup.operations).build(),
-        eventVariable,
-        relationshipParams(nodes, lookup),
-    )
   }
 
   private fun buildRelationshipStatement(
       action: DeleteRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     val nodes = buildNodeLookups(action.startNode, action.endNode)
     val lookup = buildRelationshipLookup(action.matcher, LookupMode.MATCH)
 
-    var reading = lookup.matchIn(readEndpoints(eventVariable, nodes))
-    if (action.matcher.isKeyless) {
-      reading = reading.with(EVENT_VAR, lookup.target).limit(1)
+    return generated(eventVariable, relationshipParams(nodes, lookup)) { start ->
+      var reading = lookup.matchIn(readEndpoints(start, eventVariable, nodes))
+      if (action.matcher.isKeyless) {
+        reading = reading.with(EVENT_VAR, lookup.target).limit(1)
+      }
+      end(reading.delete(lookup.target))
     }
-
-    return buildQuery(
-        reading.delete(lookup.target).build(),
-        eventVariable,
-        relationshipParams(nodes, lookup),
-    )
   }
 
-  private fun buildCypherStatement(action: CypherSinkAction, eventVariable: String): Query {
+  private fun buildCypherStatement(
+      action: CypherSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     // action.query is opaque, operator-authored Cypher, so the only generated part is the
     // WITH-projection in front of it. That projection cannot come from the Cypher-DSL: Cypher.with
     // returns a builder with no build(), so a WITH-only statement is not renderable on its own.
@@ -271,7 +347,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
         }
     val stmt = "WITH $projection ${action.query}"
 
-    return buildQuery(stmt, eventVariable, action.params)
+    return GeneratedStatement(Query(stmt, wrapParams(eventVariable, action.params)), null)
   }
 
   // ---------- lookups ----------
@@ -539,28 +615,51 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
    * looked up in turn, each one widening the scope carried forward by one variable.
    */
   private fun readEndpoints(
+      start: WithStarter,
       eventVariable: String,
       nodes: NodeLookups,
   ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere =
       readNode(
-          readNode(Cypher.with(eventAlias(eventVariable)), nodes.start, EVENT_VAR, START_VAR),
+          readNode(start.with(eventAlias(eventVariable)), nodes.start, EVENT_VAR, START_VAR),
           nodes.end,
           EVENT_VAR,
           START_VAR,
           END_VAR,
       )
 
-  private fun wrapParams(eventVariable: String, params: Map<String, Any?>): Map<String, Any?> =
-      if (eventVariable == "\$$EVENT") mapOf(EVENT to params) else params
+  /**
+   * Type-erases the `build()`/`returning()` intersection that whichever builder an action happens
+   * to end on already has, so that [OpenStatement] can name one return type for all of them.
+   */
+  private fun <T> end(builder: T): OpenStatementEnd where
+  T : StatementBuilder.BuildableStatement<Statement>,
+  T : ExposesReturning =
+      object : OpenStatementEnd {
 
-  private fun buildQuery(
-      statement: Statement,
+        override fun build(): Statement = builder.build()
+
+        override fun returning(vararg expressions: Expression): Statement =
+            builder.returning(*expressions).build()
+      }
+
+  /**
+   * [clauses] rendered as a statement of its own, and kept open for callers that compose further.
+   */
+  private fun generated(
       eventVariable: String,
       params: Map<String, Any?>,
-  ): Query = buildQuery(renderer.render(statement), eventVariable, params)
+      clauses: OpenStatement,
+  ): GeneratedStatement =
+      GeneratedStatement(
+          Query(
+              renderer.render(clauses.appendTo(OWN_STATEMENT).build()),
+              wrapParams(eventVariable, params),
+          ),
+          clauses,
+      )
 
-  private fun buildQuery(stmt: String, eventVariable: String, params: Map<String, Any?>): Query =
-      Query(stmt, wrapParams(eventVariable, params))
+  private fun wrapParams(eventVariable: String, params: Map<String, Any?>): Map<String, Any?> =
+      if (eventVariable == "\$$EVENT") mapOf(EVENT to params) else params
 
   // ---------- Cypher-DSL helpers ----------
 
@@ -612,6 +711,11 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       Cypher.raw("elementId(\$E)", target).eq(event.property("matchElementId"))
 
   private companion object {
+    /**
+     * Opens an action that is a statement in its own right, rather than a branch of a larger one.
+     */
+    val OWN_STATEMENT = WithStarter { Cypher.with(*it) }
+
     /**
      * The variables every generated statement binds. `_e` is the event projection opened by
      * [eventAlias] and needs both forms: [EVENT_VAR] to name it in a `WITH`, [EVENT_REF] to read
