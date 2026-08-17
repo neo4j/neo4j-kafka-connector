@@ -56,7 +56,7 @@ class DbTransactionMetricsData(
           val explicitDatabaseName = databaseName.ifBlank { "neo4j" }
           val txId: Long =
               neo4jDriver.session().use { session ->
-                session.writeTransaction(
+                session.executeWrite(
                     { tx ->
                       tx.run(
                               "SHOW DATABASE ${"$"}dbName YIELD lastCommittedTxn RETURN lastCommittedTxn as txId",

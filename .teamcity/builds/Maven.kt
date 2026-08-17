@@ -15,10 +15,7 @@ open class Maven(
       this.id(id.toId())
       this.name = name
 
-      params {
-        text("env.JAVA_VERSION", javaVersion.version)
-        text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage)
-      }
+      params { text("env.NEO4J_TEST_IMAGE", neo4jVersion.dockerImage) }
 
       steps {
         if (neo4jVersion != Neo4jVersion.V_NONE) {
