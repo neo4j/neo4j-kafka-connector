@@ -2,7 +2,9 @@ package builds
 
 import jetbrains.buildServer.configs.kotlin.BuildStep
 import jetbrains.buildServer.configs.kotlin.BuildType
+import jetbrains.buildServer.configs.kotlin.buildSteps.ExecBuildStep
 import jetbrains.buildServer.configs.kotlin.buildSteps.ScriptBuildStep
+import jetbrains.buildServer.configs.kotlin.buildSteps.exec
 import jetbrains.buildServer.configs.kotlin.buildSteps.script
 import jetbrains.buildServer.configs.kotlin.toId
 
@@ -46,6 +48,7 @@ class IntegrationTests(
             }
 
             script {
+              this.name = "Start test environment"
               scriptContent =
                   """
                 #!/bin/bash -eu
@@ -60,7 +63,9 @@ class IntegrationTests(
               dockerImage = javaVersion.dockerImage
               dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
+
             commonMaven(javaVersion) {
+              this.name = "Run integration tests"
               this.goals = "verify"
               this.runnerArgs =
                   "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} -DskipUnitTests"
@@ -68,7 +73,9 @@ class IntegrationTests(
               dockerRunParameters =
                   "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
             }
+
             script {
+              this.name = "Backup diagnostics"
               scriptContent =
                   """
                 #!/bin/bash -eu
@@ -85,16 +92,13 @@ class IntegrationTests(
               dockerImage = javaVersion.dockerImage
               dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
-            script {
-              scriptContent =
-                  """
-                #!/bin/bash -eu
-                dip compose down --rmi local
-            """
-                      .trimIndent()
+
+            exec {
+              this.name = "Tear down test environment"
+              this.path = "scripts/tear-down-test-environment.sh"
               formatStderrAsError = true
               executionMode = BuildStep.ExecutionMode.ALWAYS
-              dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+              dockerImagePlatform = ExecBuildStep.ImagePlatform.Linux
               dockerImage = javaVersion.dockerImage
               dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
