@@ -27,8 +27,7 @@ open class Maven(
 
         commonMaven(javaVersion) {
           this.goals = goals
-          this.runnerArgs =
-              "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} ${args ?: ""}"
+          this.runnerArgs = "$MAVEN_DEFAULT_ARGS ${args ?: ""}"
         }
       }
 

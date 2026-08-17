@@ -30,7 +30,6 @@ import org.junit.jupiter.api.extension.ExtensionConfigurationException
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
-import org.junit.jupiter.api.extension.TestExecutionExceptionHandler
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4j
@@ -92,12 +91,7 @@ internal class Neo4jSourceExtension(
         { properties, topic ->
           ConsumerResolver.getSubscribedConsumer(properties, topic)
         },
-) :
-    ExecutionCondition,
-    BeforeEachCallback,
-    AfterEachCallback,
-    ParameterResolver,
-    TestExecutionExceptionHandler {
+) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(Neo4jSourceExtension::class.java)
@@ -122,7 +116,6 @@ internal class Neo4jSourceExtension(
       val resolvers: SourceAnnotationResolvers,
       private var driver: Driver? = null,
       var source: Neo4jSourceRegistration? = null,
-      var testFailed: Boolean = false,
   ) : AutoCloseable {
     @OptIn(ExperimentalAtomicApi::class) val dbCreated = AtomicBoolean(false)
     val topicRegistry = TopicRegistry()
@@ -181,10 +174,8 @@ internal class Neo4jSourceExtension(
     @OptIn(ExperimentalAtomicApi::class)
     override fun close() {
       source?.unregister()
-      if (!testFailed) {
-        if (dbCreated.load()) {
-          driver?.dropDatabase(neo4jDatabase)
-        }
+      if (dbCreated.load()) {
+        driver?.dropDatabase(neo4jDatabase)
       }
       driver?.close()
 
@@ -307,14 +298,6 @@ internal class Neo4jSourceExtension(
     )
     log.info("registered source connector with name {}", state.source!!.name)
     state.topicRegistry.log()
-
-    state.testFailed = false
-  }
-
-  override fun handleTestExecutionException(context: ExtensionContext, throwable: Throwable) {
-    val state = getState(context)
-    state.testFailed = true
-    throw throwable
   }
 
   override fun afterEach(context: ExtensionContext) {
