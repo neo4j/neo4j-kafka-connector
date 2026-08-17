@@ -126,3 +126,14 @@ fun Session.createRelationshipKeyConstraint(
     }
   }
 }
+
+fun createNeo4jContainer(): Neo4jContainer<*> =
+    Neo4jContainer(neo4jImage())
+        .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
+        // reduce transaction log disk footprint to account to multiple databases created by test
+        // extensions
+        .withNeo4jConfig("db.tx_log.preallocate", "false")
+        .withNeo4jConfig("db.tx_log.rotation.size", "1.00MiB")
+        .withExposedPorts(7687)
+        .withoutAuthentication()
+        .waitingFor(neo4jDatabase())
