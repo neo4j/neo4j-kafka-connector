@@ -59,8 +59,8 @@ class TestNode(val elementId: String, val labels: List<String>, props: Map<Strin
 
 class TestRelationship(
     val elementId: String,
-    val startId: String,
-    val endId: String,
+    val startElementId: String,
+    val endElementId: String,
     val type: String,
     props: Map<String, Value>,
 ) : Entity(props), Relationship {
@@ -79,7 +79,7 @@ class TestRelationship(
     )
   }
 
-  override fun startNodeElementId(): String = startId
+  override fun startNodeElementId(): String = startElementId
 
   @Deprecated("Use endNodeElementId() instead")
   override fun endNodeId(): Long {
@@ -88,7 +88,7 @@ class TestRelationship(
     )
   }
 
-  override fun endNodeElementId(): String = endId
+  override fun endNodeElementId(): String = endElementId
 
   override fun type(): String = type
 
