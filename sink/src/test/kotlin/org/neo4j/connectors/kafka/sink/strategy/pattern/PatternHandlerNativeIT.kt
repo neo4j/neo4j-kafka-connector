@@ -21,8 +21,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
+import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -34,13 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 abstract class PatternHandlerNativeIT(eosOffsetLabel: String) :
     PatternHandlerIT(eosOffsetLabel, NativeBatchStrategy::class) {
   companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+    @Container val container: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j
