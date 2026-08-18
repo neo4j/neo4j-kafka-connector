@@ -17,9 +17,13 @@
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.networknt.schema.InputFormat
 import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SchemaRegistryConfig
 import com.networknt.schema.SpecificationVersion
+import com.networknt.schema.path.PathType
+import java.io.IOException
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.cud.OperationType.CREATE
@@ -35,9 +39,24 @@ interface Operation {
   fun toAction(): SinkAction
 
   companion object {
-    private val SCHEMA: Schema =
-        SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12)
-            .getSchema(Operation::class.java.getResourceAsStream("cud.schema.v1.json"))
+    private val SCHEMA: Schema
+
+    init {
+      val registryConfig = SchemaRegistryConfig.builder().pathType(PathType.LEGACY).build()
+      val registry =
+          SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12) {
+              builder: SchemaRegistry.Builder? ->
+            builder!!.schemaRegistryConfig(registryConfig)
+          }
+      try {
+        Operation::class.java.getResourceAsStream("cud.schema.v1.json").use { schema ->
+          checkNotNull(schema) { "Cannot CUD JSON schema" }
+          SCHEMA = registry.getSchema(schema, InputFormat.JSON)
+        }
+      } catch (e: IOException) {
+        throw IllegalStateException("Cannot load CUD JSON schema", e)
+      }
+    }
 
     fun from(values: Map<String, Any?>): Operation {
       val type =
@@ -63,7 +82,7 @@ interface Operation {
 
       val mapper = JSONUtils.getObjectMapper()
       val node = mapper.valueToTree<JsonNode>(values)
-      val errors = SCHEMA.validate(node)
+      val errors = SCHEMA.validate(node.toString(), InputFormat.JSON)
       if (errors.isNotEmpty()) {
         throw InvalidDataException(
             errors.joinToString(", ") { "${it.evaluationPath}: ${it.message}" }

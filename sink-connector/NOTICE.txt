@@ -47,7 +47,7 @@ Apache Software License, Version 2.0
   Netty/Transport/Native/Unix/Common
   Non-Blocking Reactive Foundation for the JVM
   org.apiguardian:apiguardian-api
-  SnakeYAML
+  SnakeYAML Engine
 
 BSD License
   ANTLR 4 Runtime
