@@ -207,18 +207,30 @@ class Neo4jSourceExtensionTest {
 
     assertIs<Neo4j>(neo4j)
     assertEquals(
-        Neo4j(Neo4jVersion(5, 26, 0), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED),
+        Neo4j(
+            Neo4jVersion(5, 26, 0),
+            Neo4jEdition.ENTERPRISE,
+            Neo4jDeploymentType.SELF_MANAGED,
+            cypherVersions = setOf("5"),
+        ),
         neo4j,
     )
   }
 
   private fun setupDetectableDriver(): Pair<Driver, Session> {
-    val versionRecord =
-        mock<Record> {
-          on { get("version") } doReturn Values.value("5.26.0")
-          on { get("edition") } doReturn Values.value("enterprise")
-        }
-    val versionResult = mock<Result> { on { single() } doReturn versionRecord }
+    val versionRecords =
+        listOf(
+            mock<Record> {
+              on { get("name") } doReturn Values.value("Neo4j Kernel")
+              on { get("versions") } doReturn Values.value(listOf("5.26.0"))
+              on { get("edition") } doReturn Values.value("enterprise")
+            },
+            mock<Record> {
+              on { get("name") } doReturn Values.value("Cypher")
+              on { get("versions") } doReturn Values.value(listOf("5"))
+            },
+        )
+    val versionResult = mock<Result> { on { list() } doReturn versionRecords }
 
     val statusRecord = mock<Record> { on { get("currentStatus") } doReturn Values.value("online") }
     val statusResult = mock<Result> { on { single() } doReturn statusRecord }

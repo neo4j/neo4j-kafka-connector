@@ -593,7 +593,7 @@ class Neo4jQueryTaskTest {
                 when (v) {
                   is Node ->
                       buildMap {
-                        this["<id>"] = v.id()
+                        this["<elementId>"] = v.elementId()
                         this["<labels>"] = v.labels()
                         this.putAll(v.asMap())
                       }

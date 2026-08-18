@@ -13,7 +13,7 @@
     <description>Neo4j Connector for Kafka - Sink</description>
     <properties>
         <antlr4.version>4.13.2</antlr4.version>
-        <json-schema-validator.version>2.0.4</json-schema-validator.version>
+        <json-schema-validator.version>3.0.6</json-schema-validator.version>
     </properties>
     <dependencies>
         <dependency>
@@ -45,7 +45,7 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j.driver</groupId>
-            <artifactId>neo4j-java-driver-slim</artifactId>
+            <artifactId>neo4j-java-driver</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>

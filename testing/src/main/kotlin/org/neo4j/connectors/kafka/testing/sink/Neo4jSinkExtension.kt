@@ -47,7 +47,6 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Config
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
-import org.neo4j.driver.Logging
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
 import org.slf4j.Logger
@@ -87,7 +86,7 @@ internal class Neo4jSinkExtension(
     // visible for testing
     envAccessor: (String) -> String? = System::getenv,
     private val driverFactory: (String, AuthToken) -> Driver = { url, token ->
-      GraphDatabase.driver(url, token, Config.builder().withLogging(Logging.slf4j()).build())
+      GraphDatabase.driver(url, token, Config.builder().build())
     },
 ) : ExecutionCondition, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 

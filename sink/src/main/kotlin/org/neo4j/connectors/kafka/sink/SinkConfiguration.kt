@@ -96,7 +96,7 @@ class SinkConfiguration : Neo4jConfiguration {
     if (apocCypherDoItAvailable == null) {
       apocCypherDoItAvailable =
           this.driver.session(this.sessionConfig()).use { session ->
-            session.readTransaction { tx ->
+            session.executeRead { tx ->
               tx.run(
                       "SHOW PROCEDURES YIELD name WHERE name = 'apoc.cypher.doIt' RETURN count(*) > 0 AS available"
                   )
