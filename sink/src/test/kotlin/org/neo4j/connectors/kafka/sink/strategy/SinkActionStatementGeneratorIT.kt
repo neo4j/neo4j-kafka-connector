@@ -32,14 +32,14 @@ import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
+import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Query
 import org.neo4j.driver.Session
 import org.neo4j.driver.SessionConfig
+import org.neo4j.driver.internal.summary.InternalGqlNotification
 import org.neo4j.driver.summary.ResultSummary
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
@@ -49,13 +49,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class SinkActionStatementGeneratorIT {
 
   companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+    @Container val container: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j
@@ -1707,7 +1701,8 @@ class SinkActionStatementGeneratorIT {
   private fun executeAndVerifyNoDeprecations(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary
-        .notifications()
+        .gqlStatusObjects()
+        .filterIsInstance<InternalGqlNotification>()
         .filter {
           it.code()?.equals("Neo.ClientNotification.Statement.FeatureDeprecationWarning") ?: false
         }
@@ -1723,7 +1718,8 @@ class SinkActionStatementGeneratorIT {
   private fun executeAllowingIdDeprecation(query: Query): ResultSummary {
     val summary = session.run(query.text(), query.parameters()).consume()
     summary
-        .notifications()
+        .gqlStatusObjects()
+        .filterIsInstance<InternalGqlNotification>()
         .filter {
           it.code()?.equals("Neo.ClientNotification.Statement.FeatureDeprecationWarning") ?: false
         }

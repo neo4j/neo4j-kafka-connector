@@ -21,7 +21,7 @@ project {
 
   subProject(
       Build(
-          name = "6.0",
+          name = "main",
           neo4jVersions = setOf(Neo4jVersion.V_5, Neo4jVersion.V_CALVER),
           forPullRequests = false) {
             triggers {
