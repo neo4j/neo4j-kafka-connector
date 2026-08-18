@@ -155,58 +155,58 @@ class Neo4jValueConverterNestedStructTest {
 
     val data: String =
         """
-{
-  "eventId": "d70f306a-71d2-48d9-aea3-87b3808b764b",
-  "eventTimestamp": "2019-08-21T22:29:22.151Z",
-  "emails": [
-    {
-      "email": "century@gmail.com",
-      "preferences": [
         {
-          "preferenceType": "repair_subscription",
-          "endEffectiveDate": "2019-05-08T14:51:26.116Z"
-        },
-        {
-          "preferenceType": "ordering_subscription",
-          "endEffectiveDate": "2019-05-08T14:51:26.116Z"
-        },
-        {
-          "preferenceType": "marketing_subscription",
-          "endEffectiveDate": "2019-05-08T14:51:26.116Z"
+          "eventId": "d70f306a-71d2-48d9-aea3-87b3808b764b",
+          "eventTimestamp": "2019-08-21T22:29:22.151Z",
+          "emails": [
+            {
+              "email": "century@gmail.com",
+              "preferences": [
+                {
+                  "preferenceType": "repair_subscription",
+                  "endEffectiveDate": "2019-05-08T14:51:26.116Z"
+                },
+                {
+                  "preferenceType": "ordering_subscription",
+                  "endEffectiveDate": "2019-05-08T14:51:26.116Z"
+                },
+                {
+                  "preferenceType": "marketing_subscription",
+                  "endEffectiveDate": "2019-05-08T14:51:26.116Z"
+                }
+              ]
+            }
+          ],
+          "tns": [
+            {
+              "tn": "1122334455",
+              "preferences": [
+                {
+                  "preferenceType": "billing_subscription",
+                  "endEffectiveDate": "2019-10-22T14:51:26.116Z"
+                },
+                {
+                  "preferenceType": "repair_subscription",
+                  "endEffectiveDate": "2019-10-22T14:51:26.116Z"
+                },
+                {
+                  "preferenceType": "sms",
+                  "endEffectiveDate": "2019-10-22T14:51:26.116Z"
+                }
+              ]
+            },
+            {
+              "tn": "5544332211",
+              "preferences": [
+                {
+                  "preferenceType": "acct_lookup",
+                  "endEffectiveDate": "2019-10-22T14:51:26.116Z"
+                }
+              ]
+            }
+          ]
         }
-      ]
-    }
-  ],
-  "tns": [
-    {
-      "tn": "1122334455",
-      "preferences": [
-        {
-          "preferenceType": "billing_subscription",
-          "endEffectiveDate": "2019-10-22T14:51:26.116Z"
-        },
-        {
-          "preferenceType": "repair_subscription",
-          "endEffectiveDate": "2019-10-22T14:51:26.116Z"
-        },
-        {
-          "preferenceType": "sms",
-          "endEffectiveDate": "2019-10-22T14:51:26.116Z"
-        }
-      ]
-    },
-    {
-      "tn": "5544332211",
-      "preferences": [
-        {
-          "preferenceType": "acct_lookup",
-          "endEffectiveDate": "2019-10-22T14:51:26.116Z"
-        }
-      ]
-    }
-  ]
-}
-    """
+            """
             .trimIndent()
   }
 }

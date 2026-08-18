@@ -505,11 +505,11 @@ class TypesTest {
       val record =
           it.run(
                   """
-                CREATE (p:Person) SET p = ${'$'}person
-                CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
-                RETURN p, c, r
-              """
+                    CREATE (p:Person) SET p = ${'$'}person
+                    CREATE (c:Company) SET c =${'$'}company
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    RETURN p, c, r
+                  """
                       .trimIndent(),
                   mapOf(
                       "person" to
@@ -621,11 +621,11 @@ class TypesTest {
       val record =
           it.run(
                   """
-                CREATE (p:Person) SET p = ${'$'}person
-                CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
-                RETURN p, c, r
-              """
+                    CREATE (p:Person) SET p = ${'$'}person
+                    CREATE (c:Company) SET c =${'$'}company
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    RETURN p, c, r
+                  """
                       .trimIndent(),
                   mapOf(
                       "person" to
