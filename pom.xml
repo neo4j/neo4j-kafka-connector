@@ -41,7 +41,7 @@
     <properties>
         <annotations.version>26.1.0</annotations.version>
         <assertj-core.version>3.27.7</assertj-core.version>
-        <avro.version>1.12.1</avro.version>
+        <avro.version>1.12.2</avro.version>
         <awaitility.version>4.3.0</awaitility.version>
         <build-resources.version>2026.07.1</build-resources.version>
         <byte-buddy.version>1.18.11</byte-buddy.version>
@@ -62,7 +62,7 @@
         <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
         <!-- so we set the version to the first version that the vulnerability is resolved -->
         <kafka.version>4.3.1</kafka.version>
-        <kotest-assertions-core-jvm.version>6.2.2</kotest-assertions-core-jvm.version>
+        <kotest-assertions-core-jvm.version>6.2.4</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
         <kotlin.version>2.4.10</kotlin.version>
         <license-maven-plugin.version>5.1.1</license-maven-plugin.version>
