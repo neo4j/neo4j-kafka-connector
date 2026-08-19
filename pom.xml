@@ -90,7 +90,7 @@
         <reactor.version>2025.0.6</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.46.1</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencyManagement>
@@ -641,13 +641,13 @@
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
                         <ktfmt>
-                            <version>0.54</version>
+                            <version>0.58</version>
                             <style>META</style>
                             <blockIndent>2</blockIndent>
                             <continuationIndent>4</continuationIndent>
                             <removeUnusedImports>true</removeUnusedImports>
                             <maxWidth>100</maxWidth>
-                            <manageTrailingCommas>true</manageTrailingCommas>
+                            <trailingCommaManagementStrategy>COMPLETE</trailingCommaManagementStrategy>
                         </ktfmt>
                     </kotlin>
                     <java>

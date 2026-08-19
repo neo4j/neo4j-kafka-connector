@@ -99,8 +99,7 @@ class NativeBatchStrategyTest {
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties
         |  RETURN 1 AS x
         |}
-        |RETURN COUNT(1) AS total
-        """
+        |RETURN COUNT(1) AS total"""
             .trimMargin()
 
     private fun callSubqueryWithVariableScope(): String =
@@ -116,8 +115,7 @@ class NativeBatchStrategyTest {
         |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  RETURN 1 AS x
         |}
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     private fun callSubqueryWithConditionals(): String =
@@ -133,8 +131,7 @@ class NativeBatchStrategyTest {
         |    WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(
@@ -218,8 +215,7 @@ class NativeBatchStrategyTest {
         |  RETURN 1 AS x
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |RETURN COUNT(1) AS total
-        """
+        |RETURN COUNT(1) AS total"""
             .trimMargin()
 
     private fun callSubqueryWithVariableScope(): String =
@@ -238,8 +234,7 @@ class NativeBatchStrategyTest {
         |  RETURN 1 AS x
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     private fun callSubqueryWithConditionals(): String =
@@ -258,8 +253,7 @@ class NativeBatchStrategyTest {
         |  }
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(
