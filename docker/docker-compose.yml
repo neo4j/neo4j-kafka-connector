@@ -59,7 +59,7 @@ services:
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "9092" ]
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9092" ]
       start_period: 5m
       start_interval: 10s
       interval: 1m
@@ -79,7 +79,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "8081" ]
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8081" ]
       start_period: 5m
       start_interval: 10s
       interval: 1m
@@ -121,7 +121,7 @@ services:
       - |
         /etc/confluent/docker/run
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "8083" ]
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8083" ]
       start_period: 5m
       start_interval: 10s
       interval: 1m
@@ -151,7 +151,7 @@ services:
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9021" ]
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9021" ]
       start_period: 5m
       start_interval: 10s
       interval: 1m
