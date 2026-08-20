@@ -105,8 +105,7 @@ class NativeBatchStrategyTest {
         |    WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(
@@ -194,8 +193,7 @@ class NativeBatchStrategyTest {
         |  }
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(

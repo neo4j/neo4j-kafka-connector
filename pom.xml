@@ -57,11 +57,11 @@
         <!-- keep the next two in sync: https://docs.confluent.io/platform/current/installation/versions-interoperability.html -->
         <!-- as well as versions in the docker-compose.yml file -->
         <!-- refer to https://www.confluent.io/previous-versions/ for previous versions of Confluent Platform -->
-        <kafka-schema-registry.version>7.8.9</kafka-schema-registry.version>
+        <kafka-schema-registry.version>8.3.1</kafka-schema-registry.version>
         <!-- although our baseline version is 3.1, kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
         <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
         <!-- so we set the version to the first version that the vulnerability is resolved -->
-        <kafka.version>3.9.2</kafka.version>
+        <kafka.version>4.3.1</kafka.version>
         <kotest-assertions-core-jvm.version>6.2.4</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
         <kotlin.version>2.4.10</kotlin.version>
@@ -85,12 +85,12 @@
         <neo4j-java-driver.version>6.2.1</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
-        <protobuf.version>3.25.5</protobuf.version>
+        <protobuf.version>4.35.1</protobuf.version>
         <reactivestreams.version>1.0.4</reactivestreams.version>
         <reactor.version>2025.0.6</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>2.46.1</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencyManagement>
@@ -641,13 +641,13 @@
                             <include>src/test/kotlin/**/*.kt</include>
                         </includes>
                         <ktfmt>
-                            <version>0.54</version>
+                            <version>0.58</version>
                             <style>META</style>
                             <blockIndent>2</blockIndent>
                             <continuationIndent>4</continuationIndent>
                             <removeUnusedImports>true</removeUnusedImports>
                             <maxWidth>100</maxWidth>
-                            <manageTrailingCommas>true</manageTrailingCommas>
+                            <trailingCommaManagementStrategy>COMPLETE</trailingCommaManagementStrategy>
                         </ktfmt>
                     </kotlin>
                     <java>

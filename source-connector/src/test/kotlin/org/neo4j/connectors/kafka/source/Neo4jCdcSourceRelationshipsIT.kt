@@ -74,10 +74,10 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   ) {
     session
         .run(
-            """CREATE (s:TestSource {name: 'Bob'})
+            """
+            |CREATE (s:TestSource {name: 'Bob'})
             |CREATE (t:TestSource {name: 'Alice'})
-            |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)
-    """
+            |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)"""
                 .trimMargin()
         )
         .consume()
@@ -140,10 +140,10 @@ abstract class Neo4jCdcSourceRelationshipsIT {
   ) {
     session
         .run(
-            """CREATE (s:TestSource {name: 'Bob'})
+            """
+            |CREATE (s:TestSource {name: 'Bob'})
             |CREATE (t:TestSource {name: 'Alice'})
-            |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)
-    """
+            |CREATE (s)-[:RELIES_TO {weight: 1, rate: 42}]->(t)"""
                 .trimMargin()
         )
         .consume()
