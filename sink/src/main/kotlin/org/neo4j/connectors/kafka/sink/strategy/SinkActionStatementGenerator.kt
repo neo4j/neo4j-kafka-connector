@@ -631,9 +631,8 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
    * Type-erases the `build()`/`returning()` intersection that whichever builder an action happens
    * to end on already has, so that [OpenStatement] can name one return type for all of them.
    */
-  private fun <T> end(builder: T): OpenStatementEnd where
-  T : StatementBuilder.BuildableStatement<Statement>,
-  T : ExposesReturning =
+  private fun <T> end(builder: T): OpenStatementEnd
+      where T : StatementBuilder.BuildableStatement<Statement>, T : ExposesReturning =
       object : OpenStatementEnd {
 
         override fun build(): Statement = builder.build()
