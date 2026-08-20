@@ -505,11 +505,11 @@ class TypesTest {
       val record =
           it.run(
                   """
-                CREATE (p:Person) SET p = ${'$'}person
-                CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
-                RETURN p, c, r
-              """
+                    CREATE (p:Person) SET p = ${'$'}person
+                    CREATE (c:Company) SET c =${'$'}company
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    RETURN p, c, r
+                  """
                       .trimIndent(),
                   mapOf(
                       "person" to
@@ -529,7 +529,7 @@ class TypesTest {
       schemaAndValue(payloadMode, person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                 .field("name", PropertyType.schema)
                 .field("surname", PropertyType.schema)
@@ -538,7 +538,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", person.id())
+                .put("<elementId>", person.elementId())
                 .put("<labels>", person.labels().toList())
                 .put("name", PropertyType.toConnectValue("john"))
                 .put("surname", PropertyType.toConnectValue("doe"))
@@ -546,7 +546,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to person.id(),
+                "<elementId>" to person.elementId(),
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
@@ -558,7 +558,7 @@ class TypesTest {
       schemaAndValue(payloadMode, company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<labels>", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
                 .field("name", PropertyType.schema)
                 .field("est", PropertyType.schema)
@@ -566,14 +566,14 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", company.id())
+                .put("<elementId>", company.elementId())
                 .put("<labels>", company.labels().toList())
                 .put("name", PropertyType.toConnectValue("acme corp"))
                 .put("est", PropertyType.toConnectValue(LocalDate.of(1980, 1, 1)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to company.id(),
+                "<elementId>" to company.elementId(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
                 "est" to LocalDate.of(1980, 1, 1),
@@ -584,29 +584,29 @@ class TypesTest {
       schemaAndValue(payloadMode, worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", Schema.INT64_SCHEMA)
+                .field("<elementId>", Schema.STRING_SCHEMA)
                 .field("<type>", Schema.STRING_SCHEMA)
-                .field("<start.id>", Schema.INT64_SCHEMA)
-                .field("<end.id>", Schema.INT64_SCHEMA)
+                .field("<start.elementId>", Schema.STRING_SCHEMA)
+                .field("<end.elementId>", Schema.STRING_SCHEMA)
                 .field("contractId", PropertyType.schema)
                 .field("since", PropertyType.schema)
                 .build()
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", worksFor.id())
+                .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
-                .put("<start.id>", worksFor.startNodeId())
-                .put("<end.id>", worksFor.endNodeId())
+                .put("<start.elementId>", worksFor.startNodeElementId())
+                .put("<end.elementId>", worksFor.endNodeElementId())
                 .put("contractId", PropertyType.toConnectValue(5916L))
                 .put("since", PropertyType.toConnectValue(LocalDate.of(2000, 1, 5)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to worksFor.id(),
+                "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
-                "<start.id>" to worksFor.startNodeId(),
-                "<end.id>" to worksFor.endNodeId(),
+                "<start.elementId>" to worksFor.startNodeElementId(),
+                "<end.elementId>" to worksFor.endNodeElementId(),
                 "contractId" to 5916L,
                 "since" to LocalDate.of(2000, 1, 5),
             )
@@ -621,11 +621,11 @@ class TypesTest {
       val record =
           it.run(
                   """
-                CREATE (p:Person) SET p = ${'$'}person
-                CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
-                RETURN p, c, r
-              """
+                    CREATE (p:Person) SET p = ${'$'}person
+                    CREATE (c:Company) SET c =${'$'}company
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    RETURN p, c, r
+                  """
                       .trimIndent(),
                   mapOf(
                       "person" to
@@ -645,7 +645,7 @@ class TypesTest {
       schemaAndValue(payloadMode, person).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
                 .field("surname", SimpleTypes.STRING.schema())
@@ -654,7 +654,7 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", person.id())
+                .put("<elementId>", person.elementId())
                 .put("<labels>", person.labels().toList())
                 .put("name", "john")
                 .put("surname", "doe")
@@ -662,7 +662,7 @@ class TypesTest {
 
         reverted shouldBe
             mapOf(
-                "<id>" to person.id(),
+                "<elementId>" to person.elementId(),
                 "<labels>" to person.labels().toList(),
                 "name" to "john",
                 "surname" to "doe",
@@ -674,7 +674,7 @@ class TypesTest {
       schemaAndValue(payloadMode, company).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
                 .field("name", SimpleTypes.STRING.schema())
                 .field("est", SimpleTypes.LOCALDATE.schema())
@@ -682,14 +682,14 @@ class TypesTest {
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", company.id())
+                .put("<elementId>", company.elementId())
                 .put("<labels>", company.labels().toList())
                 .put("name", "acme corp")
                 .put("est", DateTimeFormatter.ISO_DATE.format(LocalDate.of(1980, 1, 1)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to company.id(),
+                "<elementId>" to company.elementId(),
                 "<labels>" to company.labels().toList(),
                 "name" to "acme corp",
                 "est" to LocalDate.of(1980, 1, 1),
@@ -700,29 +700,29 @@ class TypesTest {
       schemaAndValue(payloadMode, worksFor).also { (schema, converted, reverted) ->
         schema shouldBe
             SchemaBuilder.struct()
-                .field("<id>", SimpleTypes.LONG.schema())
+                .field("<elementId>", SimpleTypes.STRING.schema())
                 .field("<type>", SimpleTypes.STRING.schema())
-                .field("<start.id>", SimpleTypes.LONG.schema())
-                .field("<end.id>", SimpleTypes.LONG.schema())
+                .field("<start.elementId>", SimpleTypes.STRING.schema())
+                .field("<end.elementId>", SimpleTypes.STRING.schema())
                 .field("contractId", SimpleTypes.LONG.schema())
                 .field("since", SimpleTypes.LOCALDATE.schema())
                 .build()
 
         converted shouldBe
             Struct(schema)
-                .put("<id>", worksFor.id())
+                .put("<elementId>", worksFor.elementId())
                 .put("<type>", worksFor.type())
-                .put("<start.id>", worksFor.startNodeId())
-                .put("<end.id>", worksFor.endNodeId())
+                .put("<start.elementId>", worksFor.startNodeElementId())
+                .put("<end.elementId>", worksFor.endNodeElementId())
                 .put("contractId", 5916L)
                 .put("since", DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 5)))
 
         reverted shouldBe
             mapOf(
-                "<id>" to worksFor.id(),
+                "<elementId>" to worksFor.elementId(),
                 "<type>" to worksFor.type(),
-                "<start.id>" to worksFor.startNodeId(),
-                "<end.id>" to worksFor.endNodeId(),
+                "<start.elementId>" to worksFor.startNodeElementId(),
+                "<end.elementId>" to worksFor.endNodeElementId(),
                 "contractId" to 5916L,
                 "since" to LocalDate.of(2000, 1, 5),
             )

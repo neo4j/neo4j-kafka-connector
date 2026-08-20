@@ -68,8 +68,7 @@ class ApocBatchStrategyTest {
         |CALL { WITH e
         |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
-        |RETURN COUNT(1) AS total
-        """
+        |RETURN COUNT(1) AS total"""
             .trimMargin()
 
     private fun callSubqueryWithVariableScope(): String =
@@ -79,8 +78,7 @@ class ApocBatchStrategyTest {
         |CALL (e) {
         |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(
@@ -136,8 +134,7 @@ class ApocBatchStrategyTest {
         |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |RETURN COUNT(1) AS total
-        """
+        |RETURN COUNT(1) AS total"""
             .trimMargin()
 
     private fun callSubqueryWithVariableScope(): String =
@@ -150,8 +147,7 @@ class ApocBatchStrategyTest {
         |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH
-        """
+        |FINISH"""
             .trimMargin()
 
     override fun provideArguments(

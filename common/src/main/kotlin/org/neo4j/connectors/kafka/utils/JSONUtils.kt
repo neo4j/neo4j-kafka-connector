@@ -129,17 +129,17 @@ class TemporalAccessorSerializer : JsonSerializer<TemporalAccessor>() {
 
 fun Node.asStreamsMap(): Map<String, Any?> {
   val nodeMap = this.asMap().toMutableMap()
-  nodeMap["<id>"] = this.id()
+  nodeMap["<id>"] = this.elementId()
   nodeMap["<labels>"] = this.labels()
   return nodeMap
 }
 
 fun Relationship.asStreamsMap(): Map<String, Any?> {
   val relMap = this.asMap().toMutableMap()
-  relMap["<id>"] = this.id()
+  relMap["<id>"] = this.elementId()
   relMap["<type>"] = this.type()
-  relMap["<source.id>"] = this.startNodeId()
-  relMap["<target.id>"] = this.endNodeId()
+  relMap["<source.id>"] = this.startNodeElementId()
+  relMap["<target.id>"] = this.endNodeElementId()
   return relMap
 }
 

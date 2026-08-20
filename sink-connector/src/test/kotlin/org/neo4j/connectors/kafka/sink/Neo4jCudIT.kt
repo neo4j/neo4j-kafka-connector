@@ -392,10 +392,10 @@ abstract class Neo4jCudIT {
     session.createNodeKeyConstraint(neo4j, "foo_id", "Foo", "id")
     session.run(
         """
-      CREATE (f:Foo) SET f = ${'$'}foo
-      CREATE (b:Bar) SET b = ${'$'}bar
-      CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-    """
+          CREATE (f:Foo) SET f = ${'$'}foo
+          CREATE (b:Bar) SET b = ${'$'}bar
+          CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+        """
             .trimIndent(),
         mapOf(
             "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -759,9 +759,9 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -964,10 +964,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -1034,10 +1034,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -1106,10 +1106,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -1315,10 +1315,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -1389,10 +1389,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),
@@ -1452,10 +1452,10 @@ abstract class Neo4jCudIT {
     session
         .run(
             """
-                CREATE (f:Foo) SET f = ${'$'}foo
-                CREATE (b:Bar) SET b = ${'$'}bar
-                CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
-              """
+              CREATE (f:Foo) SET f = ${'$'}foo
+              CREATE (b:Bar) SET b = ${'$'}bar
+              CREATE (f)-[r:RELATED_TO]->(b) SET r = ${'$'}r
+            """
                 .trimIndent(),
             mapOf(
                 "foo" to mapOf("id" to 1L, "foo" to "foo-value"),

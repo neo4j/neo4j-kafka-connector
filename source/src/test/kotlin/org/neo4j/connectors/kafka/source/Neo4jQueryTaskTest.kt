@@ -43,8 +43,7 @@ import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
+import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -61,13 +60,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class Neo4jQueryTaskTest {
 
   companion object {
-    @Container
-    val neo4j: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+    @Container val neo4j: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
 
@@ -107,21 +100,20 @@ class Neo4jQueryTaskTest {
 
   private val sourceQuery =
       """
-        |MATCH (n:Test)
-        |WHERE n.timestamp > ${'$'}lastCheck
-        |RETURN n.name AS name,
-        |   n.timestamp AS timestamp,
-        |   n.point AS point,
-        |   n.array AS array,
-        |   n.datetime AS datetime,
-        |   n.boolean AS boolean,
-        |   {
-        |       key1: "value1",
-        |       key2: "value2"
-        |   } AS map,
-        |   n AS node
-        |ORDER BY n.timestamp
-      """
+      |MATCH (n:Test)
+      |WHERE n.timestamp > ${'$'}lastCheck
+      |RETURN n.name AS name,
+      |   n.timestamp AS timestamp,
+      |   n.point AS point,
+      |   n.array AS array,
+      |   n.datetime AS datetime,
+      |   n.boolean AS boolean,
+      |   {
+      |       key1: "value1",
+      |       key2: "value2"
+      |   } AS map,
+      |   n AS node
+      |ORDER BY n.timestamp"""
           .trimMargin()
 
   @Test
@@ -396,18 +388,17 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "1s"
     props[SourceConfiguration.QUERY] =
         """
-                |RETURN {
-                |   prop1: 1,
-                |   prop2: "string",
-                |   prop3: true,
-                |   prop4: null,
-                |   prop5: {
-                |       prop: null
-                |   },
-                |   prop6: [1],
-                |   prop7: [null]
-                |} AS data, 1717773205 AS timestamp
-            """
+        |RETURN {
+        |   prop1: 1,
+        |   prop2: "string",
+        |   prop3: true,
+        |   prop4: null,
+        |   prop5: {
+        |       prop: null
+        |   },
+        |   prop6: [1],
+        |   prop7: [null]
+        |} AS data, 1717773205 AS timestamp"""
             .trimMargin()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
@@ -445,17 +436,16 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
     props[SourceConfiguration.QUERY] =
         """
-                |WITH
-                |{
-                |   id: 'ROOT_ID',
-                |   root: [
-                |       { children: [] },
-                |       { children: [{ name: "child" }] }
-                |   ],
-                |   arr: [null, {foo: "bar"}]
-                |} AS data
-                |RETURN data, data.id AS id, 123456789 as timestamp
-            """
+        |WITH
+        |{
+        |   id: 'ROOT_ID',
+        |   root: [
+        |       { children: [] },
+        |       { children: [{ name: "child" }] }
+        |   ],
+        |   arr: [null, {foo: "bar"}]
+        |} AS data
+        |RETURN data, data.id AS id, 123456789 as timestamp"""
             .trimMargin()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
@@ -500,14 +490,13 @@ class Neo4jQueryTaskTest {
     props[SourceConfiguration.PAYLOAD_MODE] = PayloadMode.RAW_JSON_STRING.toString()
     props[SourceConfiguration.QUERY] =
         """
-          |WITH {
-          |id: 'ROOT_ID', 
-          |list: [
-          |      {property1: 'property1', subList: [{subListProperty1: 'subListProperty1'}]}, 
-          |      {property2: 'property2', subList: [{subListProperty1: 'subListProperty2'}]}
-          |]} AS data 
-          |RETURN data, data.id AS guid, 123456789 AS timestamp
-            """
+        |WITH {
+        |id: 'ROOT_ID', 
+        |list: [
+        |      {property1: 'property1', subList: [{subListProperty1: 'subListProperty1'}]}, 
+        |      {property2: 'property2', subList: [{subListProperty1: 'subListProperty2'}]}
+        |]} AS data 
+        |RETURN data, data.id AS guid, 123456789 AS timestamp"""
             .trimMargin()
     props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
 
@@ -600,7 +589,7 @@ class Neo4jQueryTaskTest {
                 when (v) {
                   is Node ->
                       buildMap {
-                        this["<id>"] = v.id()
+                        this["<elementId>"] = v.elementId()
                         this["<labels>"] = v.labels()
                         this.putAll(v.asMap())
                       }
