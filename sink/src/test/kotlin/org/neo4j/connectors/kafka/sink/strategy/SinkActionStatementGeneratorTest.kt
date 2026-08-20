@@ -101,9 +101,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
@@ -182,9 +182,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
@@ -236,9 +236,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, dynamicLabelsQuery()),
@@ -302,9 +302,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, dynamicLabelsQuery()),
@@ -365,9 +365,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, dynamicLabelsQuery()),
@@ -431,9 +431,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, dynamicLabelsQuery()),
@@ -519,9 +519,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
@@ -600,9 +600,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
@@ -685,9 +685,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, setRemoveDynamicLabelsQuery()),
@@ -738,9 +738,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -769,9 +769,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -803,9 +803,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -857,9 +857,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -891,9 +891,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -926,9 +926,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1015,9 +1015,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1104,9 +1104,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1189,9 +1189,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1274,9 +1274,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1367,9 +1367,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1458,9 +1458,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1546,9 +1546,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1640,9 +1640,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1742,9 +1742,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1855,9 +1855,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -1948,9 +1948,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2041,9 +2041,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2132,9 +2132,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2223,9 +2223,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2325,9 +2325,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2419,9 +2419,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2532,9 +2532,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2622,9 +2622,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2712,9 +2712,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2799,9 +2799,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2886,9 +2886,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -2973,9 +2973,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3060,9 +3060,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3147,9 +3147,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3231,9 +3231,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3315,9 +3315,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3387,9 +3387,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3484,9 +3484,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3556,9 +3556,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3659,9 +3659,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3733,9 +3733,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3832,9 +3832,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -3906,9 +3906,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -4011,9 +4011,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -4085,9 +4085,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -4184,9 +4184,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -4345,9 +4345,9 @@ class SinkActionStatementGeneratorTest {
       }
 
       override fun provideArguments(
-          parameters: ParameterDeclarations?,
-          context: ExtensionContext?,
-      ): Stream<out Arguments?>? {
+          parameters: ParameterDeclarations,
+          context: ExtensionContext,
+      ): Stream<out Arguments> {
         return Stream.of(
             Arguments.of(neo4j4_4, standardCypherQuery()),
             Arguments.of(neo4j5_26, standardCypherQuery()),
@@ -4359,9 +4359,9 @@ class SinkActionStatementGeneratorTest {
     }
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, standardCypherQuery()),
           Arguments.of(neo4j5_26, standardCypherQuery()),

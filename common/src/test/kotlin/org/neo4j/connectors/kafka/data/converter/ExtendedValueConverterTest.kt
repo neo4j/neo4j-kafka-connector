@@ -73,9 +73,9 @@ class ExtendedValueConverterTest {
 
   object PropertyTypedValueProvider : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of("null", null, null),
           Arguments.of("byte", 8.toByte(), 8L),
@@ -339,9 +339,9 @@ class ExtendedValueConverterTest {
 
   object PropertyTypedCollectionProvider : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(
               "list of mixed simple types",
@@ -387,9 +387,9 @@ class ExtendedValueConverterTest {
 
   object PropertyTypedMapProvider : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of("string to int", mapOf("a" to 1, "b" to 2, "c" to 3)),
           Arguments.of("string to string", mapOf("a" to "a", "b" to "b", "c" to "c")),

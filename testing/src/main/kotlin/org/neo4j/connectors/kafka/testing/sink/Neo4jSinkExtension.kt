@@ -206,7 +206,7 @@ internal class Neo4jSinkExtension(
 
   private fun getState(context: ExtensionContext): TestState {
     return getStore(context)
-        .getOrComputeIfAbsent(
+        .computeIfAbsent(
             "state",
             {
               TestState(
@@ -322,7 +322,7 @@ internal class Neo4jSinkExtension(
     log.info(
         "Using database {} for test {}",
         state.neo4jDatabase,
-        "${context.testClass?.getOrNull()?.simpleName}#${context.displayName}",
+        "${context.testClass.getOrNull()?.simpleName}#${context.displayName}",
     )
     state.driver().verifyConnectivity()
 

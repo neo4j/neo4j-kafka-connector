@@ -81,9 +81,9 @@ class PropertyTypeTest {
 
   object PropertyTypedValues : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of("null", null, null, null),
           Arguments.of("boolean", true, getPropertyStruct(BOOLEAN, true), true),

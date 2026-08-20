@@ -138,9 +138,9 @@ class NativeBatchStrategyTest {
             .trimMargin()
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, callSubqueryImportWith()),
           Arguments.of(neo4j5_18, callSubqueryImportWith()),
@@ -263,9 +263,9 @@ class NativeBatchStrategyTest {
             .trimMargin()
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(neo4j4_4, callSubqueryImportWith()),
           Arguments.of(neo4j5_18, callSubqueryImportWith()),
@@ -361,9 +361,9 @@ class NativeBatchStrategyTest {
 
   object EosEnabledProvider : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(Arguments.of(true), Arguments.of(false))
     }
   }

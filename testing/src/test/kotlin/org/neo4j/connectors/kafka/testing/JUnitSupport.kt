@@ -56,7 +56,7 @@ internal object JUnitSupport {
       on { testClass } doReturn Optional.ofNullable(method.javaMethod!!.declaringClass)
       on { requiredTestClass } doReturn method.javaMethod!!.declaringClass
       on { testMethod } doReturn Optional.ofNullable(method.javaMethod)
-      on { requiredTestMethod } doReturn method.javaMethod
+      on { requiredTestMethod } doReturn method.javaMethod!!
       on { displayName } doReturn method.name
       on { getStore(any()) } doReturn store
     }
