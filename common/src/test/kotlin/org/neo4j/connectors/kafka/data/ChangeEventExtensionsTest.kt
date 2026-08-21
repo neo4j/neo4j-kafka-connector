@@ -2720,9 +2720,9 @@ class ChangeEventExtensionsTest {
 
   object PayloadModeValues : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of("extended", PayloadMode.EXTENDED),
           Arguments.of("compact", PayloadMode.COMPACT),
