@@ -62,24 +62,10 @@ class ApocBatchStrategyTest {
 
   object CypherProvider : ArgumentsProvider {
     private fun callSubqueryImportWith(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |WITH e ORDER BY e.offset ASC
-        |CALL { WITH e
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
-        |}
-        |RETURN COUNT(1) AS total"""
-            .trimMargin()
+        "UNWIND ${'$'}events AS e WITH e ORDER BY e.offset ASC CALL {WITH e CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN count(1) AS total} RETURN count(1) AS total"
 
     private fun callSubqueryWithVariableScope(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |WITH e ORDER BY e.offset ASC
-        |CALL (e) {
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
-        |}
-        |FINISH"""
-            .trimMargin()
+        "UNWIND ${'$'}events AS e WITH e ORDER BY e.offset ASC CALL (e) {CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN count(1) AS total} FINISH"
 
     override fun provideArguments(
         parameters: ParameterDeclarations,
@@ -125,30 +111,10 @@ class ApocBatchStrategyTest {
 
   object CypherWithEOSOffsetLabelProvider : ArgumentsProvider {
     private fun callSubqueryImportWith(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
-        |WITH k, e WHERE e.offset > k.offset
-        |WITH k, e ORDER BY e.offset ASC
-        |CALL { WITH e
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
-        |}
-        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |RETURN COUNT(1) AS total"""
-            .trimMargin()
+        "UNWIND ${'$'}events AS e MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1 WITH k, e WHERE e.offset > k.offset WITH k, e ORDER BY e.offset ASC CALL {WITH e CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN count(1) AS total} WITH k, max(e.offset) AS newOffset SET k.offset = newOffset RETURN count(1) AS total"
 
     private fun callSubqueryWithVariableScope(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
-        |WITH k, e WHERE e.offset > k.offset
-        |WITH k, e ORDER BY e.offset ASC
-        |CALL (e) {
-        |  CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN COUNT(1) AS total
-        |}
-        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH"""
-            .trimMargin()
+        "UNWIND ${'$'}events AS e MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1 WITH k, e WHERE e.offset > k.offset WITH k, e ORDER BY e.offset ASC CALL (e) {CALL apoc.cypher.doIt(e.stmt, e.params) YIELD value RETURN count(1) AS total} WITH k, max(e.offset) AS newOffset SET k.offset = newOffset FINISH"
 
     override fun provideArguments(
         parameters: ParameterDeclarations,
