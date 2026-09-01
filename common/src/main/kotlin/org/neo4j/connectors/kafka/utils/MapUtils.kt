@@ -48,7 +48,7 @@ object MapUtils {
                       "Keys of '$key' is not an instance of ${K::class.simpleName}"
                   )
                 }
-                if (!V::class.isInstance(it.value)) {
+                if (it.value != null && !V::class.isInstance(it.value)) {
                   throw InvalidDataException(
                       "Values of '$key' is not an instance of ${V::class.simpleName}"
                   )
