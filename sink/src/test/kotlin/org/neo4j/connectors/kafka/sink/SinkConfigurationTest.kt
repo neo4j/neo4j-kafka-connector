@@ -42,7 +42,6 @@ import org.neo4j.connectors.kafka.sink.strategy.cypher.CypherEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePattern
 import org.neo4j.connectors.kafka.sink.strategy.pattern.NodePatternEventTransformer
 import org.neo4j.connectors.kafka.sink.strategy.pattern.PropertyMapping
-import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.TransactionConfig
 
 class SinkConfigurationTest {
@@ -60,13 +59,7 @@ class SinkConfigurationTest {
               "${SinkConfiguration.CYPHER_TOPIC_PREFIX}foo" to
                   "CREATE (p:Person{name: event.firstName})",
           )
-      val config =
-          SinkConfiguration(
-              originals,
-              Renderer.getDefaultRenderer(),
-              apocCypherDoItAvailable = false,
-              neo4j = neo4j5_26,
-          )
+      val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
       val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
       config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'bar' is not assigned a sink strategy"
@@ -87,13 +80,7 @@ class SinkConfigurationTest {
               SinkConfiguration.CDC_SOURCE_ID_TOPICS to "foo",
           )
 
-      val config =
-          SinkConfiguration(
-              originals,
-              Renderer.getDefaultRenderer(),
-              apocCypherDoItAvailable = false,
-              neo4j = neo4j5_26,
-          )
+      val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
       val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
       config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'foo' has multiple strategies defined"
@@ -111,13 +98,7 @@ class SinkConfigurationTest {
             SinkConfiguration.BATCH_SIZE to "10",
             Neo4jConfiguration.DATABASE to "customers",
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     config.batchSize shouldBe 10
 
@@ -147,7 +128,6 @@ class SinkConfigurationTest {
     val config =
         SinkConfiguration(
             originals,
-            Renderer.getDefaultRenderer(),
             neo4j = neo4jTarget,
             apocCypherDoItAvailable = apocDoItAvailable,
         )
@@ -192,19 +172,13 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar,foo",
             SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     config.eosOffsetLabel shouldBe ""
   }
 
   @Test
-  fun `should return configured exactly once offset label escaped`() {
+  fun `should return configured exactly once offset label`() {
     val originals =
         mapOf(
             Neo4jConfiguration.URI to "bolt://neo4j:7687",
@@ -213,15 +187,9 @@ class SinkConfigurationTest {
             SinkConfiguration.EOS_OFFSET_LABEL to "__MyKafkaOffset",
             SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
-    config.eosOffsetLabel shouldBe "`__MyKafkaOffset`"
+    config.eosOffsetLabel shouldBe "__MyKafkaOffset"
   }
 
   @Test
@@ -237,13 +205,7 @@ class SinkConfigurationTest {
             SinkConfiguration.CDC_SOURCE_ID_LABEL_NAME to testLabel,
             SinkConfiguration.CDC_SOURCE_ID_PROPERTY_NAME to testId,
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers shouldHaveKey "foo"
@@ -266,7 +228,6 @@ class SinkConfigurationTest {
     val config =
         SinkConfiguration(
             originals,
-            Renderer.getDefaultRenderer(),
             neo4j = neo4jTarget,
             apocCypherDoItAvailable = apocDoItAvailable,
         )
@@ -296,7 +257,6 @@ class SinkConfigurationTest {
     val config =
         SinkConfiguration(
             originals,
-            Renderer.getDefaultRenderer(),
             neo4j = neo4jTarget,
             apocCypherDoItAvailable = apocDoItAvailable,
         )
@@ -328,13 +288,7 @@ class SinkConfigurationTest {
               else -> throw IllegalArgumentException(strategy.name)
             } to "bar",
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     config.userAgentComment() shouldBe strategy.description
     config.txConfig() shouldBe
@@ -350,7 +304,7 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar",
             SinkConfiguration.CYPHER_TOPIC_PREFIX + "bar" to "RETURN 1",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals)
 
     config.userAgentComment() shouldBe "cypher"
     config.txConfig() shouldBe
@@ -366,7 +320,7 @@ class SinkConfigurationTest {
             SinkConnector.TOPICS_CONFIG to "bar",
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to "Label{!id}",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals)
 
     config.userAgentComment() shouldBe "node-pattern"
     config.txConfig() shouldBe
@@ -383,7 +337,7 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
-    val config = SinkConfiguration(originals, Renderer.getDefaultRenderer())
+    val config = SinkConfiguration(originals)
 
     config.userAgentComment() shouldBe "relationship-pattern"
     config.txConfig() shouldBe
@@ -402,13 +356,7 @@ class SinkConfigurationTest {
             SinkConfiguration.PATTERN_TOPIC_PREFIX + "bar" to
                 "LabelA{!id} REL_TYPE{id} LabelB{!targetId}",
         )
-    val config =
-        SinkConfiguration(
-            originals,
-            Renderer.getDefaultRenderer(),
-            apocCypherDoItAvailable = false,
-            neo4j = neo4j5_26,
-        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     config.userAgentComment() shouldBe "cdc-source-id; cud; relationship-pattern"
     config.txConfig() shouldBe

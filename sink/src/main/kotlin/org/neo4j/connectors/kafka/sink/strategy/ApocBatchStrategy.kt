@@ -16,12 +16,13 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
-import org.neo4j.caniuse.CanIUse
-import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
+import org.neo4j.connectors.kafka.utils.CypherRenderer
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -29,11 +30,13 @@ import org.slf4j.LoggerFactory
 class ApocBatchStrategy(
     private val neo4j: Neo4j,
     private val batchSize: Int,
-    private val eosOffsetLabel: String,
+    eosOffsetLabel: String,
     private val strategy: SinkStrategy,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val renderer = CypherRenderer(neo4j)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -63,30 +66,8 @@ class ApocBatchStrategy(
   }
 
   private fun batchedStatement(topic: String, partition: Int, events: List<MessageToEvent>): Query {
-    val termination =
-        if (CanIUse.canIUse(Cypher.finishClause()).withNeo4j(neo4j)) "FINISH"
-        else "RETURN COUNT(1) AS total"
-
-    val query = buildString {
-      appendLine("UNWIND \$events AS ${EVENT}")
-      if (eosOffsetLabel.isNotBlank()) {
-        appendLine(
-            "MERGE (k:$eosOffsetLabel {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1"
-        )
-        appendLine("WITH k, ${EVENT} WHERE ${EVENT}.offset > k.offset")
-        appendLine("WITH k, ${EVENT} ORDER BY ${EVENT}.offset ASC")
-      } else {
-        appendLine("WITH ${EVENT} ORDER BY ${EVENT}.offset ASC")
-      }
-      appendCallSubquery()
-      if (eosOffsetLabel.isNotBlank()) {
-        appendLine("WITH k, max(${EVENT}.offset) AS newOffset SET k.offset = newOffset")
-      }
-      append(termination)
-    }
-
     return Query(
-        query,
+        renderer.render(envelope.around(applyRecordStatement())),
         buildMap {
           put(
               "events",
@@ -107,13 +88,14 @@ class ApocBatchStrategy(
     )
   }
 
-  private fun StringBuilder.appendCallSubquery() {
-    if (CanIUse.canIUse(Cypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j))
-        appendLine("CALL (${EVENT}) {")
-    else appendLine("CALL { WITH ${EVENT}")
-    appendLine(
-        "  CALL apoc.cypher.doIt(${EVENT}.stmt, ${EVENT}.params) YIELD value RETURN COUNT(1) AS total"
-    )
-    appendLine("}")
-  }
+  /**
+   * The batch's per-event body: the record's own statement, which travels as a `stmt`/`params` pair
+   * on the event rather than as code, handed to `apoc.cypher.doIt` to run.
+   */
+  private fun applyRecordStatement(): Statement =
+      Cypher.call("apoc.cypher.doIt")
+          .withArgs(envelope.event.property("stmt"), envelope.event.property("params"))
+          .yield("value")
+          .returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total"))
+          .build()
 }

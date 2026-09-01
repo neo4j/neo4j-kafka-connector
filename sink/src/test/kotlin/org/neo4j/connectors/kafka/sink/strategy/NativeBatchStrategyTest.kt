@@ -84,39 +84,13 @@ class NativeBatchStrategyTest {
   }
 
   object CypherProvider : ArgumentsProvider {
+    // The UNION ALL envelopes are one Cypher-DSL statement, so they render on a single line, while
+    // the conditional one is still assembled as text and keeps its hand-written layout.
     private fun callSubqueryImportWith(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |WITH e ORDER BY e.offset ASC
-        |CALL {
-        |  WITH e
-        |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
-        |  RETURN 0 AS x
-        |  UNION ALL
-        |  WITH e
-        |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties
-        |  RETURN 1 AS x
-        |}
-        |RETURN COUNT(1) AS total"""
-            .trimMargin()
+        "UNWIND \$events AS e WITH e ORDER BY e.offset ASC CALL {WITH e WITH e WHERE e.q = \$q0 WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties RETURN 0 AS x UNION ALL WITH e WITH e WHERE e.q = \$q1 WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties RETURN 1 AS x} RETURN count(1) AS total"
 
     private fun callSubqueryWithVariableScope(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |WITH e ORDER BY e.offset ASC
-        |CALL (e) {
-        |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
-        |  RETURN 0 AS x
-        |  UNION ALL
-        |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
-        |  RETURN 1 AS x
-        |}
-        |FINISH"""
-            .trimMargin()
+        "UNWIND \$events AS e WITH e ORDER BY e.offset ASC CALL (e) {WITH e WHERE e.q = \$q0 WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties RETURN 0 AS x UNION ALL WITH e WHERE e.q = \$q1 WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels) RETURN 1 AS x} FINISH"
 
     private fun callSubqueryWithConditionals(): String =
         """
@@ -125,10 +99,10 @@ class NativeBatchStrategyTest {
         |WITH e ORDER BY e.offset ASC
         |CALL (e) {
         |  WHEN e.q = ${'$'}q0 THEN {
-        |    WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
+        |    WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties
         |  }
         |  WHEN e.q = ${'$'}q1 THEN {
-        |    WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |    WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
         |FINISH"""
@@ -198,58 +172,24 @@ class NativeBatchStrategyTest {
 
   object CypherWithEOSOffsetLabelProvider : ArgumentsProvider {
     private fun callSubqueryImportWith(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
-        |WITH k, e WHERE e.offset > k.offset
-        |WITH k, e ORDER BY e.offset ASC
-        |CALL {
-        |  WITH e
-        |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
-        |  RETURN 0 AS x
-        |  UNION ALL
-        |  WITH e
-        |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties
-        |  RETURN 1 AS x
-        |}
-        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |RETURN COUNT(1) AS total"""
-            .trimMargin()
+        "UNWIND \$events AS e MERGE (k:`__KafkaOffset` {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1 WITH k, e WHERE e.offset > k.offset WITH k, e ORDER BY e.offset ASC CALL {WITH e WITH e WHERE e.q = \$q0 WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties RETURN 0 AS x UNION ALL WITH e WITH e WHERE e.q = \$q1 WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties RETURN 1 AS x} WITH k, max(e.offset) AS newOffset SET k.offset = newOffset RETURN count(1) AS total"
 
     private fun callSubqueryWithVariableScope(): String =
-        """
-        |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
-        |WITH k, e WHERE e.offset > k.offset
-        |WITH k, e ORDER BY e.offset ASC
-        |CALL (e) {
-        |  WITH e WHERE e.q = ${'$'}q0
-        |  WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
-        |  RETURN 0 AS x
-        |  UNION ALL
-        |  WITH e WHERE e.q = ${'$'}q1
-        |  WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
-        |  RETURN 1 AS x
-        |}
-        |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
-        |FINISH"""
-            .trimMargin()
+        "UNWIND \$events AS e MERGE (k:`__KafkaOffset` {strategy: \$strategy, topic: \$topic, partition: \$partition}) ON CREATE SET k.offset = -1 WITH k, e WHERE e.offset > k.offset WITH k, e ORDER BY e.offset ASC CALL (e) {WITH e WHERE e.q = \$q0 WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties RETURN 0 AS x UNION ALL WITH e WHERE e.q = \$q1 WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels) RETURN 1 AS x} WITH k, max(e.offset) AS newOffset SET k.offset = newOffset FINISH"
 
     private fun callSubqueryWithConditionals(): String =
         """
         |CYPHER 25
         |UNWIND ${'$'}events AS e
-        |MERGE (k:__KafkaOffset {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
+        |MERGE (k:`__KafkaOffset` {strategy: ${'$'}strategy, topic: ${'$'}topic, partition: ${'$'}partition}) ON CREATE SET k.offset = -1
         |WITH k, e WHERE e.offset > k.offset
         |WITH k, e ORDER BY e.offset ASC
         |CALL (e) {
         |  WHEN e.q = ${'$'}q0 THEN {
-        |    WITH e.params AS _e MATCH (start:`Person` {`id`: _e.start.matchProperties.`id`}) WITH _e, start MATCH (end:`Person` {`id`: _e.end.matchProperties.`id`}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {`id`: _e.matchProperties.`id`}]->(end) SET r += _e.mutateProperties
+        |    WITH e.params AS _e MATCH (start:`Person` {id: _e.start.matchProperties.id}) WITH _e, start MATCH (end:`Person` {id: _e.end.matchProperties.id}) WITH _e, start, end MERGE (start)-[r:`KNOWS` {id: _e.matchProperties.id}]->(end) SET r += _e.mutateProperties
         |  }
         |  WHEN e.q = ${'$'}q1 THEN {
-        |    WITH e.params AS _e MERGE (n:`Person` {`id`: _e.matchProperties.`id`}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
+        |    WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties SET n:$(_e.addLabels) REMOVE n:$(_e.removeLabels)
         |  }
         |}
         |WITH k, max(e.offset) AS newOffset SET k.offset = newOffset
@@ -267,6 +207,51 @@ class NativeBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithConditionals()),
+      )
+    }
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(SingleStatementProvider::class)
+  fun `should generate correct statement for a single distinct statement`(
+      neo4j: Neo4j,
+      expectedQuery: String,
+  ) {
+    val strategy = NativeBatchStrategy(neo4j, 2, 1000, "", SinkStrategy.CDC_SCHEMA)
+    val transformer = CdcSchemaEventTransformer("my-topic")
+
+    val result =
+        strategy.handle(
+            listOf(
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 1), 0, 0, 0)
+            )
+        ) {
+          transformer.transform(it)
+        }
+
+    val changeQuery = result.first().first()
+    changeQuery.query.text() shouldBe expectedQuery
+    changeQuery.query.parameters().asMap() shouldContain ("q0" to 0L)
+  }
+
+  /** A `UNION ALL` takes at least two operands, so one distinct statement is its own shape. */
+  object SingleStatementProvider : ArgumentsProvider {
+    private const val MERGE_PERSON =
+        "WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties"
+
+    override fun provideArguments(
+        parameters: ParameterDeclarations?,
+        context: ExtensionContext?,
+    ): Stream<out Arguments?>? {
+      return Stream.of(
+          Arguments.of(
+              neo4j5_18,
+              "UNWIND \$events AS e WITH e ORDER BY e.offset ASC CALL {WITH e WITH e WHERE e.q = \$q0 $MERGE_PERSON RETURN 0 AS x} RETURN count(1) AS total",
+          ),
+          Arguments.of(
+              neo4j5_26,
+              "UNWIND \$events AS e WITH e ORDER BY e.offset ASC CALL (e) {WITH e WHERE e.q = \$q0 $MERGE_PERSON SET n:\$(_e.addLabels) REMOVE n:\$(_e.removeLabels) RETURN 0 AS x} FINISH",
+          ),
       )
     }
   }
