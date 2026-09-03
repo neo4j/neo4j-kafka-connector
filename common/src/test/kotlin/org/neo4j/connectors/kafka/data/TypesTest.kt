@@ -134,9 +134,9 @@ class TypesTest {
   object SimpleDriverValues : ArgumentsProvider {
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(
               Named.of("null-extended", null),

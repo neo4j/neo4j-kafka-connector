@@ -76,9 +76,9 @@ class Neo4jCdcKeyStrategyTest {
 
 class KeySchemaSerializationArgument : ArgumentsProvider {
   override fun provideArguments(
-      parameters: ParameterDeclarations?,
-      context: ExtensionContext?,
-  ): Stream<out Arguments?>? {
+      parameters: ParameterDeclarations,
+      context: ExtensionContext,
+  ): Stream<out Arguments> {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
         Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.schema()),
@@ -94,9 +94,9 @@ class KeySchemaSerializationArgument : ArgumentsProvider {
 
 class KeyValueSerializationArgument : ArgumentsProvider {
   override fun provideArguments(
-      parameters: ParameterDeclarations?,
-      context: ExtensionContext?,
-  ): Stream<out Arguments?>? {
+      parameters: ParameterDeclarations,
+      context: ExtensionContext,
+  ): Stream<out Arguments> {
     return Stream.of(
         Arguments.of(TestData.nodeChange, SKIP, null),
         Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.value()),

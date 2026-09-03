@@ -18,22 +18,113 @@ package org.neo4j.connectors.kafka.sink.strategy
 
 import kotlin.collections.buildMap
 import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
+import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
+import org.neo4j.connectors.kafka.utils.CypherRenderer
+import org.neo4j.cypherdsl.core.AliasedExpression
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.ExposesReturning
+import org.neo4j.cypherdsl.core.ExposesWith
+import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.IdentifiableElement
+import org.neo4j.cypherdsl.core.MapExpression
+import org.neo4j.cypherdsl.core.Node
+import org.neo4j.cypherdsl.core.PatternElement
+import org.neo4j.cypherdsl.core.Relationship
+import org.neo4j.cypherdsl.core.Statement
+import org.neo4j.cypherdsl.core.StatementBuilder
+import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.neo4j.driver.Query
 
-interface SinkActionStatementGenerator {
+/**
+ * Opens a clause chain with a `WITH`. The static [Cypher.with] and the [ExposesWith.with] of a
+ * chain already under way have this exact shape, which is what lets a single [OpenStatement] serve
+ * both a statement of its own (`WITH $e AS _e ...`) and a branch hanging off a caller's own clauses
+ * (`WITH e WHERE e.q = $q0` followed by `WITH e.params AS _e ...`).
+ */
+fun interface WithStarter {
 
-  fun buildStatement(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): Query
+  fun with(
+      vararg items: IdentifiableElement
+  ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere
 }
 
-class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
-  private val supportsDynamicLabelsWithPropertyIndices = false
-  private val setDynamicLabels = canIUse(Cypher.setDynamicLabels()).withNeo4j(neo4j)
-  private val removeDynamicLabels = canIUse(Cypher.removeDynamicLabels()).withNeo4j(neo4j)
+/**
+ * One [SinkAction]'s clauses, not yet built into a [Statement]: [appendTo] runs the chain onto the
+ * `WITH` it is handed, leaving the caller to decide what those clauses hang off.
+ *
+ * A continuation rather than a cached [Statement] on purpose. An [AliasedExpression] renders its
+ * `AS` only the first time a render pass meets it, so handing one built [Statement] to two `UNION
+ * ALL` branches silently strips the aliases off the second. Rebuilding the chain per branch cannot
+ * hit that - which is also why this must not become a fragment cache.
+ */
+fun interface OpenStatement {
 
-  override fun buildStatement(data: SinkAction, eventVariable: String): Query {
+  fun appendTo(start: WithStarter): OpenStatementEnd
+}
+
+/**
+ * Where an action's clause chain ends. Actions finish on different builders - a `SET` leaves
+ * [StatementBuilder.BuildableMatchAndUpdate], a `DELETE` leaves [StatementBuilder.OngoingUpdate] -
+ * and no Cypher-DSL type exposes both `build()` and `returning()`. Naming that intersection here is
+ * what lets it cross a function boundary, which generic bounds could not.
+ */
+interface OpenStatementEnd {
+
+  fun build(): Statement
+
+  /** Closes the chain with the `RETURN` a `UNION ALL` branch has to carry. */
+  fun returning(vararg expressions: Expression): Statement
+}
+
+/**
+ * A record's generated statement. [query] is the rendered form every consumer ultimately needs - as
+ * an `apoc.cypher.doIt` argument, as a query of its own, or as the key a batch deduplicates
+ * statements by - while [clauses] additionally offers the same statement unbuilt.
+ */
+class GeneratedStatement(
+    val query: Query,
+    /**
+     * `null` for [CypherSinkAction] alone: its query is opaque, operator-authored text, and the DSL
+     * offers no hole to append raw clauses into. A topic is assigned exactly one strategy, so a
+     * batch is either all [CypherSinkAction] or none of it.
+     */
+    val clauses: OpenStatement?,
+)
+
+interface SinkActionStatementGenerator {
+
+  fun generate(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): GeneratedStatement
+
+  fun buildStatement(data: SinkAction, eventVariable: String = "${'$'}$EVENT"): Query =
+      generate(data, eventVariable).query
+}
+
+/**
+ * Builds the Cypher statement for a single [SinkAction]. Server capabilities are resolved once per
+ * instance through [org.neo4j.caniuse.CanIUse], both to choose between available syntaxes and to
+ * pick the rendering [org.neo4j.cypherdsl.core.renderer.Dialect] (see [CypherRenderer]).
+ *
+ * An action is composed as one [Statement] and rendered once: [generate] runs per record, on the
+ * hot path of every batch strategy. It hands back that rendered form together with the same chain
+ * left open, so a caller that wants to compose the action further does not pay a second render.
+ *
+ * Cypher does not allow a `WHERE` to follow a `MERGE`, so a lookup carrying a condition is read
+ * with `MATCH` regardless of its [LookupMode]. Nodes never reach that case - only the id matchers
+ * produce a condition, and both [SinkActionNodeReference] and [MergeNodeSinkAction] reject anything
+ * but [NodeMatcher.ByLabelsAndProperties] under [LookupMode.MERGE]. Relationships do reach it,
+ * through [RelationshipMatcher.ById]/[RelationshipMatcher.ByElementId] under [LookupMode.MERGE],
+ * where `MATCH` is also the only meaningful reading: a relationship cannot be created with a
+ * caller-chosen internal id, so there is nothing for a `MERGE` to create.
+ */
+class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
+  private val setDynamicLabels = canIUse(CanIUseCypher.setDynamicLabels()).withNeo4j(neo4j)
+  private val removeDynamicLabels = canIUse(CanIUseCypher.removeDynamicLabels()).withNeo4j(neo4j)
+  private val renderer = CypherRenderer(neo4j)
+
+  override fun generate(data: SinkAction, eventVariable: String): GeneratedStatement {
     return when (data) {
       is CreateNodeSinkAction -> buildNodeStatement(data, eventVariable)
       is UpdateNodeSinkAction -> buildNodeStatement(data, eventVariable)
@@ -47,21 +138,28 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     }
   }
 
-  private fun buildNodeStatement(action: CreateNodeSinkAction, eventVariable: String): Query {
-    val labels = buildLabelPattern(action.labels, "_e", "labels")
-    val stmt = "WITH $eventVariable AS _e CREATE (n$labels) SET n += _e.properties"
+  private fun buildNodeStatement(
+      action: CreateNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
+    val node = namedNode(action.labels, "n")
 
-    val params = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["labels"] = action.labels
-      }
-      this["properties"] = action.properties
+    val params = buildMap { this["properties"] = action.properties }
+
+    return generated(eventVariable, params) { start ->
+      end(
+          start
+              .with(eventAlias(eventVariable))
+              .create(node)
+              .set(Cypher.mutate(node.requiredSymbolicName, EVENT_REF.property("properties")))
+      )
     }
-
-    return buildQuery(stmt, eventVariable, params)
   }
 
-  private fun buildNodeStatement(action: UpdateNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: UpdateNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     return buildNodeUpdateStatement(
         LookupMode.MATCH,
         action.matcher,
@@ -73,7 +171,10 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
     )
   }
 
-  private fun buildNodeStatement(action: MergeNodeSinkAction, eventVariable: String): Query {
+  private fun buildNodeStatement(
+      action: MergeNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
     return buildNodeUpdateStatement(
         LookupMode.MERGE,
         action.matcher,
@@ -93,32 +194,12 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       addLabels: Set<String>,
       removeLabels: Set<String>,
       eventVariable: String,
-  ): Query {
-    val matchFragment = buildNodeFragment(matcher, mode, "n", "_e", setProperties, mutateProperties)
-    val setLabelsClause =
-        if (setDynamicLabels) {
-          " SET n:\$(_e.addLabels)"
-        } else if (addLabels.isNotEmpty()) {
-          " SET n" + buildLabels(addLabels)
-        } else {
-          ""
-        }
-    val removeLabelsClause =
-        if (removeDynamicLabels) {
-          " REMOVE n:\$(_e.removeLabels)"
-        } else if (removeLabels.isNotEmpty()) {
-          " REMOVE n" + buildLabels(removeLabels)
-        } else {
-          ""
-        }
-    val stmt =
-        "WITH $eventVariable AS _e ${matchFragment.clause}$setLabelsClause$removeLabelsClause"
+  ): GeneratedStatement {
+    val lookup = buildNodeLookup(matcher, mode, "n", "_e", setProperties, mutateProperties)
+    val node = Cypher.anyNode().named("n")
+
     val params = buildMap {
-      this.putAll(matchFragment.params)
-      if (setProperties != null) {
-        this["setProperties"] = setProperties
-      }
-      this["mutateProperties"] = mutateProperties
+      putAll(lookup.params)
       if (setDynamicLabels) {
         this["addLabels"] = addLabels
       }
@@ -127,46 +208,67 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       }
     }
 
-    return buildQuery(stmt, eventVariable, params)
+    return generated(eventVariable, params) { start ->
+      // An update always carries mutateProperties, so the lookup always contributes at least one
+      // SET - which is what leaves a BuildableMatchAndUpdate for the label operations to chain
+      // onto.
+      var update = lookup.applyTo(start.with(eventAlias(eventVariable))).set(lookup.operations)
+      if (setDynamicLabels) {
+        update = update.set(node, Cypher.allLabels(EVENT_REF.property("addLabels")))
+      } else if (addLabels.isNotEmpty()) {
+        update = update.set(node, addLabels.sorted())
+      }
+      if (removeDynamicLabels) {
+        update = update.remove(node, Cypher.allLabels(EVENT_REF.property("removeLabels")))
+      } else if (removeLabels.isNotEmpty()) {
+        update = update.remove(node, removeLabels.sorted())
+      }
+      end(update)
+    }
   }
 
-  private fun buildNodeStatement(action: DeleteNodeSinkAction, eventVariable: String): Query {
-    val matchFragment = buildNodeFragment(action.matcher, LookupMode.MATCH, "n", "_e")
-    val deleteClause = if (action.detach) "DETACH DELETE n" else "DELETE n"
-    val stmt = "WITH $eventVariable AS _e ${matchFragment.clause} $deleteClause"
-    val params = matchFragment.params
+  private fun buildNodeStatement(
+      action: DeleteNodeSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
+    val lookup = buildNodeLookup(action.matcher, LookupMode.MATCH, "n", "_e")
 
-    return buildQuery(stmt, eventVariable, params)
+    return generated(eventVariable, lookup.params) { start ->
+      val reading = lookup.matchIn(start.with(eventAlias(eventVariable)))
+      end(if (action.detach) reading.detachDelete(lookup.target) else reading.delete(lookup.target))
+    }
   }
 
   private fun buildRelationshipStatement(
       action: CreateRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
-    val nodeFragments = buildNodeFragments(action.startNode, action.endNode, "_e")
-    val typePattern = buildTypePattern(action.type, "_e", "type")
+  ): GeneratedStatement {
+    val nodes = buildNodeLookups(action.startNode, action.endNode)
+    val rel = relationship(action.type)
 
-    val stmt =
-        "WITH $eventVariable AS _e ${nodeFragments.start.clause} WITH _e, start ${nodeFragments.end.clause} WITH _e, start, end CREATE (start)-[r:$typePattern]->(end) SET r += _e.properties"
     val params = buildMap {
-      if (nodeFragments.start.params.isNotEmpty()) {
-        this["start"] = nodeFragments.start.params
+      if (nodes.start.params.isNotEmpty()) {
+        this["start"] = nodes.start.params
       }
-      if (nodeFragments.end.params.isNotEmpty()) {
-        this["end"] = nodeFragments.end.params
-      }
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["type"] = action.type
+      if (nodes.end.params.isNotEmpty()) {
+        this["end"] = nodes.end.params
       }
       this["properties"] = action.properties
     }
-    return buildQuery(stmt, eventVariable, params)
+
+    return generated(eventVariable, params) { start ->
+      end(
+          readEndpoints(start, eventVariable, nodes)
+              .create(rel)
+              .set(Cypher.mutate(rel.requiredSymbolicName, EVENT_REF.property("properties")))
+      )
+    }
   }
 
   private fun buildRelationshipStatement(
       action: UpdateRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     return buildRelationshipUpdateStatement(
         LookupMode.MATCH,
         action.startNode,
@@ -181,7 +283,7 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
   private fun buildRelationshipStatement(
       action: MergeRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
+  ): GeneratedStatement {
     return buildRelationshipUpdateStatement(
         LookupMode.MERGE,
         action.startNode,
@@ -201,385 +303,427 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       setProperties: Map<String, Any?>?,
       mutateProperties: Map<String, Any?>,
       eventVariable: String,
-  ): Query {
-    val matchFragment = buildRelationshipFragment(matcher, mode, startNode, endNode, "r", "_e")
-    val operation = buildString {
-      if (setProperties != null) {
-        append("SET r = _e.setProperties ")
-      }
-      append("SET r += _e.mutateProperties")
-    }
-    val stmt =
-        buildRelationshipStatementWithKeylessHandling(
-            matcher,
-            eventVariable,
-            matchFragment.clause,
-            operation,
-        )
-    val params = buildMap {
-      putAll(matchFragment.params)
-      if (setProperties != null) {
-        this["setProperties"] = setProperties
-      }
-      this["mutateProperties"] = mutateProperties
-    }
+  ): GeneratedStatement {
+    val nodes = buildNodeLookups(startNode, endNode)
+    val lookup = buildRelationshipLookup(matcher, mode, setProperties, mutateProperties)
 
-    return buildQuery(stmt, eventVariable, params)
+    return generated(eventVariable, relationshipParams(nodes, lookup)) { start ->
+      var point = lookup.applyTo(readEndpoints(start, eventVariable, nodes))
+      if (matcher.isKeyless) {
+        point = UpdatePoint.AfterReading(point.with(EVENT_VAR, lookup.target).limit(1))
+      }
+      end(point.set(lookup.operations))
+    }
   }
 
   private fun buildRelationshipStatement(
       action: DeleteRelationshipSinkAction,
       eventVariable: String,
-  ): Query {
-    val matchFragment =
-        buildRelationshipFragment(
-            action.matcher,
-            LookupMode.MATCH,
-            action.startNode,
-            action.endNode,
-            "r",
-            "_e",
-        )
-    val stmt =
-        buildRelationshipStatementWithKeylessHandling(
-            action.matcher,
-            eventVariable,
-            matchFragment.clause,
-            "DELETE r",
-        )
-    val params = matchFragment.params
+  ): GeneratedStatement {
+    val nodes = buildNodeLookups(action.startNode, action.endNode)
+    val lookup = buildRelationshipLookup(action.matcher, LookupMode.MATCH)
 
-    return buildQuery(stmt, eventVariable, params)
+    return generated(eventVariable, relationshipParams(nodes, lookup)) { start ->
+      var reading = lookup.matchIn(readEndpoints(start, eventVariable, nodes))
+      if (action.matcher.isKeyless) {
+        reading = reading.with(EVENT_VAR, lookup.target).limit(1)
+      }
+      end(reading.delete(lookup.target))
+    }
   }
 
-  private fun buildCypherStatement(action: CypherSinkAction, eventVariable: String): Query {
+  private fun buildCypherStatement(
+      action: CypherSinkAction,
+      eventVariable: String,
+  ): GeneratedStatement {
+    // action.query is opaque, operator-authored Cypher, so the only generated part is the
+    // WITH-projection in front of it. That projection cannot come from the Cypher-DSL: Cypher.with
+    // returns a builder with no build(), so a WITH-only statement is not renderable on its own.
+    // It is assembled as text instead, with each alias run through the same sanitizer the DSL
+    // applies to every other identifier here.
     val projection =
         action.aliasProjection.joinToString(", ") { (alias, source) ->
           "$eventVariable.$source AS ${SchemaNames.sanitize(alias, true).orElseThrow()}"
         }
     val stmt = "WITH $projection ${action.query}"
 
-    return buildQuery(stmt, eventVariable, action.params)
+    return GeneratedStatement(Query(stmt, wrapParams(eventVariable, action.params)), null)
   }
 
-  data class Fragment(val clause: String, val params: Map<String, Any>)
+  // ---------- lookups ----------
 
-  private fun buildNodeFragment(
+  /**
+   * How one node or relationship is looked up, as unrendered Cypher-DSL objects. Keeping the parts
+   * addressable lets a caller splice them into a surrounding chain - a `WITH` between two lookups,
+   * a `LIMIT` before the write - which rendered text would not allow.
+   */
+  private data class Lookup(
+      val mode: LookupMode,
+      val pattern: PatternElement,
+      /** Non-null only for the `ById`/`ByElementId` matchers. */
+      val condition: Condition?,
+      val target: SymbolicName,
+      /** The `SET`s belonging to this lookup, from its `setProperties`/`mutateProperties`. */
+      val operations: List<Expression> = emptyList(),
+      /** The slice of the event payload this lookup reads, keyed as the statement addresses it. */
+      val params: Map<String, Any>,
+  )
+
+  /**
+   * Attaches the property writes a matched node or relationship carries. Split from the matcher
+   * itself because both are identical for every matcher, while the pattern and condition are not.
+   */
+  private fun Lookup.withWrites(
+      event: Expression,
+      setProperties: Map<String, Any?>?,
+      mutateProperties: Map<String, Any?>?,
+  ): Lookup =
+      copy(
+          operations =
+              buildList {
+                if (setProperties != null) {
+                  add(Cypher.set(target, event.property("setProperties")))
+                }
+                if (mutateProperties != null) {
+                  add(Cypher.mutate(target, event.property("mutateProperties")))
+                }
+              },
+          params =
+              buildMap {
+                putAll(params)
+                if (setProperties != null) {
+                  this["setProperties"] = setProperties
+                }
+                if (mutateProperties != null) {
+                  this["mutateProperties"] = mutateProperties
+                }
+              },
+      )
+
+  private fun buildNodeLookup(
       matcher: NodeMatcher,
       mode: LookupMode,
       alias: String,
       eventVariable: String,
       setProperties: Map<String, Any?>? = null,
       mutateProperties: Map<String, Any?>? = null,
-  ): Fragment {
+  ): Lookup {
+    val event = rawEvent(eventVariable)
+
     return when (matcher) {
-      is NodeMatcher.ByLabelsAndProperties ->
-          buildByLabelsAndPropertiesFragment(
-              matcher,
-              mode,
-              alias,
-              eventVariable,
-              setProperties,
-              mutateProperties,
-          )
+      is NodeMatcher.ByLabelsAndProperties -> {
+        val node = namedNode(matcher.labels, alias)
+        val properties = matchPropertiesExpression(matcher.properties, event)
+        Lookup(
+            mode = mode,
+            pattern = if (properties != null) node.withProperties(properties) else node,
+            // Matching on the pattern needs no WHERE, which makes this the only node matcher whose
+            // LookupMode.MERGE can be honoured as a MERGE.
+            condition = null,
+            target = node.requiredSymbolicName,
+            params = mapOf("matchProperties" to matcher.properties),
+        )
+      }
 
-      is NodeMatcher.ById ->
-          buildByIdFragment(matcher, mode, alias, eventVariable, setProperties, mutateProperties)
+      // The id matchers only ever arrive with LookupMode.MATCH (see the class-level comment), so
+      // for nodes their condition never has to override the requested mode.
+      is NodeMatcher.ById -> {
+        val node = Cypher.anyNode().named(alias)
+        Lookup(
+            mode = mode,
+            pattern = node,
+            condition = idCondition(node.requiredSymbolicName, event),
+            target = node.requiredSymbolicName,
+            params = mapOf("matchId" to matcher.id),
+        )
+      }
 
-      is NodeMatcher.ByElementId ->
-          buildByElementIdFragment(
-              matcher,
-              mode,
-              alias,
-              eventVariable,
-              setProperties,
-              mutateProperties,
-          )
-    }
+      is NodeMatcher.ByElementId -> {
+        val node = Cypher.anyNode().named(alias)
+        Lookup(
+            mode = mode,
+            pattern = node,
+            condition = elementIdCondition(node.requiredSymbolicName, event),
+            target = node.requiredSymbolicName,
+            params = mapOf("matchElementId" to matcher.elementId),
+        )
+      }
+    }.withWrites(event, setProperties, mutateProperties)
   }
 
-  private fun buildByLabelsAndPropertiesFragment(
-      matcher: NodeMatcher.ByLabelsAndProperties,
-      mode: LookupMode,
-      alias: String,
-      eventVariable: String,
-      setProperties: Map<String, Any?>? = null,
-      mutateProperties: Map<String, Any?>? = null,
-  ): Fragment {
-    val matchLabelsPattern = buildLabelPattern(matcher.labels, eventVariable, "matchLabels")
-    val matchPropsPattern = buildMatchProps(matcher.properties, eventVariable, "matchProperties")
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
-
-    return Fragment(
-        "$mode ($alias$matchLabelsPattern$matchPropsPattern)$updatePropertiesClause",
-        buildMap {
-          if (supportsDynamicLabelsWithPropertyIndices) {
-            this["matchLabels"] = matcher.labels
-          }
-          this["matchProperties"] = matcher.properties
-          if (setProperties != null) {
-            this["setProperties"] = setProperties
-          }
-          if (mutateProperties != null) {
-            this["mutateProperties"] = mutateProperties
-          }
-        },
-    )
-  }
-
-  private fun buildByIdFragment(
-      matcher: NodeMatcher.ById,
-      mode: LookupMode,
-      alias: String,
-      eventVariable: String,
-      setProperties: Map<String, Any?>? = null,
-      mutateProperties: Map<String, Any?>? = null,
-  ): Fragment {
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
-
-    return Fragment(
-        "$mode ($alias) WHERE id($alias) = $eventVariable.matchId$updatePropertiesClause",
-        buildMap {
-          this["matchId"] = matcher.id
-          if (setProperties != null) {
-            this["setProperties"] = setProperties
-          }
-          if (mutateProperties != null) {
-            this["mutateProperties"] = mutateProperties
-          }
-        },
-    )
-  }
-
-  private fun buildByElementIdFragment(
-      matcher: NodeMatcher.ByElementId,
-      mode: LookupMode,
-      alias: String,
-      eventVariable: String,
-      setProperties: Map<String, Any?>? = null,
-      mutateProperties: Map<String, Any?>? = null,
-  ): Fragment {
-    val updatePropertiesClause = buildString {
-      if (setProperties != null) {
-        append(" SET $alias = $eventVariable.setProperties")
-      }
-      if (mutateProperties != null) {
-        append(" SET $alias += $eventVariable.mutateProperties")
-      }
-    }
-
-    return Fragment(
-        "$mode ($alias) WHERE elementId($alias) = $eventVariable.matchElementId$updatePropertiesClause",
-        buildMap {
-          this["matchElementId"] = matcher.elementId
-          if (setProperties != null) {
-            this["setProperties"] = setProperties
-          }
-          if (mutateProperties != null) {
-            this["mutateProperties"] = mutateProperties
-          }
-        },
-    )
-  }
-
-  @Suppress("SameParameterValue")
-  private fun buildRelationshipFragment(
+  private fun buildRelationshipLookup(
       matcher: RelationshipMatcher,
       mode: LookupMode,
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      alias: String,
-      eventVariable: String,
-  ): Fragment {
+      setProperties: Map<String, Any?>? = null,
+      mutateProperties: Map<String, Any?>? = null,
+  ): Lookup {
     return when (matcher) {
-      is RelationshipMatcher.ByTypeAndProperties ->
-          buildByTypeAndPropertiesFragment(matcher, mode, startNode, endNode, alias, eventVariable)
+      is RelationshipMatcher.ByTypeAndProperties -> {
+        val rel = relationship(matcher.type)
+        val properties = matchPropertiesExpression(matcher.properties, EVENT_REF)
+        Lookup(
+            mode = mode,
+            pattern = if (properties != null) rel.withProperties(properties) else rel,
+            condition = null,
+            target = rel.requiredSymbolicName,
+            params =
+                if (properties == null) emptyMap()
+                else mapOf("matchProperties" to matcher.properties),
+        )
+      }
 
-      is RelationshipMatcher.ById ->
-          buildByIdFragment(matcher, mode, startNode, endNode, alias, eventVariable)
+      is RelationshipMatcher.ById -> {
+        val rel = relationship(null)
+        Lookup(
+            mode = mode,
+            pattern = rel,
+            condition = idCondition(rel.requiredSymbolicName, EVENT_REF),
+            target = rel.requiredSymbolicName,
+            params = mapOf("matchId" to matcher.id),
+        )
+      }
 
-      is RelationshipMatcher.ByElementId ->
-          buildByElementIdFragment(matcher, mode, startNode, endNode, alias, eventVariable)
+      is RelationshipMatcher.ByElementId -> {
+        val rel = relationship(null)
+        Lookup(
+            mode = mode,
+            pattern = rel,
+            condition = elementIdCondition(rel.requiredSymbolicName, EVENT_REF),
+            target = rel.requiredSymbolicName,
+            params = mapOf("matchElementId" to matcher.elementId),
+        )
+      }
+    }.withWrites(EVENT_REF, setProperties, mutateProperties)
+  }
+
+  private data class NodeLookups(val start: Lookup, val end: Lookup)
+
+  private fun buildNodeLookups(
+      startNode: SinkActionNodeReference,
+      endNode: SinkActionNodeReference,
+  ): NodeLookups =
+      NodeLookups(
+          start = buildNodeLookup(startNode, "start"),
+          end = buildNodeLookup(endNode, "end"),
+      )
+
+  /**
+   * An endpoint of a relationship action. The alias doubles as the path into the event payload, so
+   * `start` is matched from `_e.start` and `end` from `_e.end`.
+   */
+  private fun buildNodeLookup(reference: SinkActionNodeReference, alias: String): Lookup =
+      buildNodeLookup(
+          reference.matcher,
+          reference.lookupMode,
+          alias,
+          "_e.$alias",
+          reference.setProperties,
+          reference.mutateProperties,
+      )
+
+  private fun relationshipParams(nodes: NodeLookups, relationship: Lookup): Map<String, Any> =
+      buildMap {
+        this["start"] = nodes.start.params
+        this["end"] = nodes.end.params
+        putAll(relationship.params)
+      }
+
+  /**
+   * Whether the matcher has no key properties to identify a single relationship by. Such a matcher
+   * can match many relationships, so the write that follows it is capped with a `WITH ... LIMIT 1`
+   * to keep one record from updating an unbounded number of rows.
+   */
+  private val RelationshipMatcher.isKeyless: Boolean
+    get() = this is RelationshipMatcher.ByTypeAndProperties && !hasKeys
+
+  // ---------- composition ----------
+
+  /**
+   * A point in a chain where `SET` or `WITH` can be attached, whichever clause got the chain here.
+   *
+   * Both the after-`MATCH` builder ([StatementBuilder.OngoingReading]) and the after-`MERGE` one
+   * ([StatementBuilder.OngoingMerge]) accept the two, but inherit them from separate `Exposes*`
+   * interfaces with no common supertype, and Kotlin cannot express that intersection as a type.
+   * Naming it here keeps a chain that reads either way written once instead of once per
+   * [LookupMode].
+   *
+   * `DELETE` is absent because no chain needs it here: every deleting action pins its lookups to
+   * [LookupMode.MATCH], so those chains stay in [StatementBuilder.OngoingReading] throughout and
+   * can call the DSL directly.
+   */
+  private sealed class UpdatePoint {
+
+    abstract fun set(operations: List<Expression>): StatementBuilder.BuildableMatchAndUpdate
+
+    abstract fun with(
+        vararg variables: SymbolicName
+    ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere
+
+    /** Covers a `WITH` as well as a `MATCH`: the DSL treats both as an ongoing reading. */
+    class AfterReading(private val reading: StatementBuilder.OngoingReading) : UpdatePoint() {
+
+      override fun set(operations: List<Expression>) = reading.set(operations)
+
+      override fun with(vararg variables: SymbolicName) = reading.with(*variables)
+    }
+
+    class AfterMerge(private val merge: StatementBuilder.OngoingMerge) : UpdatePoint() {
+
+      override fun set(operations: List<Expression>) = merge.set(operations)
+
+      override fun with(vararg variables: SymbolicName) = merge.with(*variables)
     }
   }
 
-  private fun buildRelationshipFragmentWithNodes(
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      eventVariable: String,
-      relationshipPattern: String,
-      additionalParams: Map<String, Any>,
-  ): Fragment {
-    val nodeFragments = buildNodeFragments(startNode, endNode, eventVariable)
-    return Fragment(
-        buildString {
-          append(nodeFragments.start.clause).append(" WITH _e, start ")
-          append(nodeFragments.end.clause).append(" WITH _e, start, end ")
-          append(relationshipPattern)
-        },
-        buildMap {
-          this["start"] = nodeFragments.start.params
-          this["end"] = nodeFragments.end.params
-          putAll(additionalParams)
-        },
-    )
+  /**
+   * Reads this lookup with `MATCH`, applying its [Lookup.condition] as a `WHERE`. Callers that must
+   * keep the chain in [StatementBuilder.OngoingReading] - the deleting ones - use this directly;
+   * [applyTo] also routes here for any lookup a `MERGE` could not express.
+   */
+  private fun Lookup.matchIn(
+      reading: StatementBuilder.OngoingReading
+  ): StatementBuilder.OngoingReading {
+    val matched = reading.match(pattern)
+    return if (condition != null) matched.where(condition) else matched
   }
 
-  private fun buildByTypeAndPropertiesFragment(
-      matcher: RelationshipMatcher.ByTypeAndProperties,
-      mode: LookupMode,
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      alias: String,
-      eventVariable: String,
-  ): Fragment {
-    val matchTypePattern = buildTypePattern(matcher.type, eventVariable, "matchType")
-    val matchPropsPattern = buildMatchProps(matcher.properties, eventVariable, "matchProperties")
-    val relationshipPattern = "$mode (start)-[$alias:$matchTypePattern$matchPropsPattern]->(end)"
+  /**
+   * Appends this lookup to [reading], as a `MERGE` when its [Lookup.mode] asks for one and no
+   * [Lookup.condition] rules it out - see the class-level comment.
+   */
+  private fun Lookup.applyTo(reading: StatementBuilder.OngoingReading): UpdatePoint =
+      if (mode == LookupMode.MATCH || condition != null) UpdatePoint.AfterReading(matchIn(reading))
+      else UpdatePoint.AfterMerge(reading.merge(pattern))
 
-    val additionalParams = buildMap {
-      if (supportsDynamicLabelsWithPropertyIndices) {
-        this["matchType"] = matcher.type
+  /**
+   * [lookup], its own `SET`s, then a `WITH` narrowing the scope down to [scope]. The `WITH` is what
+   * lets the next clause be another `MATCH`/`MERGE`, which the DSL will not accept straight after a
+   * `SET`.
+   */
+  private fun readNode(
+      reading: StatementBuilder.OngoingReading,
+      lookup: Lookup,
+      vararg scope: SymbolicName,
+  ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
+    val point = lookup.applyTo(reading)
+    return if (lookup.operations.isEmpty()) point.with(*scope)
+    else point.set(lookup.operations).with(*scope)
+  }
+
+  /**
+   * The read side shared by every relationship action: the event projection, then each endpoint
+   * looked up in turn, each one widening the scope carried forward by one variable.
+   */
+  private fun readEndpoints(
+      start: WithStarter,
+      eventVariable: String,
+      nodes: NodeLookups,
+  ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere =
+      readNode(
+          readNode(start.with(eventAlias(eventVariable)), nodes.start, EVENT_VAR, START_VAR),
+          nodes.end,
+          EVENT_VAR,
+          START_VAR,
+          END_VAR,
+      )
+
+  /**
+   * Type-erases the `build()`/`returning()` intersection that whichever builder an action happens
+   * to end on already has, so that [OpenStatement] can name one return type for all of them.
+   */
+  private fun <T> end(builder: T): OpenStatementEnd
+      where T : StatementBuilder.BuildableStatement<Statement>, T : ExposesReturning =
+      object : OpenStatementEnd {
+
+        override fun build(): Statement = builder.build()
+
+        override fun returning(vararg expressions: Expression): Statement =
+            builder.returning(*expressions).build()
       }
-      if (matcher.properties.isNotEmpty()) {
-        this["matchProperties"] = matcher.properties
-      }
-    }
 
-    return buildRelationshipFragmentWithNodes(
-        startNode,
-        endNode,
-        eventVariable,
-        relationshipPattern,
-        additionalParams,
-    )
-  }
-
-  private fun buildByIdFragment(
-      matcher: RelationshipMatcher.ById,
-      mode: LookupMode,
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      alias: String,
+  /**
+   * [clauses] rendered as a statement of its own, and kept open for callers that compose further.
+   */
+  private fun generated(
       eventVariable: String,
-  ): Fragment {
-    val relationshipPattern =
-        "$mode (start)-[$alias]->(end) WHERE id($alias) = $eventVariable.matchId"
-    return buildRelationshipFragmentWithNodes(
-        startNode,
-        endNode,
-        eventVariable,
-        relationshipPattern,
-        mapOf("matchId" to matcher.id),
-    )
-  }
-
-  private fun buildByElementIdFragment(
-      matcher: RelationshipMatcher.ByElementId,
-      mode: LookupMode,
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      alias: String,
-      eventVariable: String,
-  ): Fragment {
-    val relationshipPattern =
-        "$mode (start)-[$alias]->(end) WHERE elementId($alias) = $eventVariable.matchElementId"
-    return buildRelationshipFragmentWithNodes(
-        startNode,
-        endNode,
-        eventVariable,
-        relationshipPattern,
-        mapOf("matchElementId" to matcher.elementId),
-    )
-  }
-
-  private data class NodeFragments(val start: Fragment, val end: Fragment)
-
-  private fun buildNodeFragments(
-      startNode: SinkActionNodeReference,
-      endNode: SinkActionNodeReference,
-      eventVariable: String,
-  ): NodeFragments {
-    return NodeFragments(
-        start =
-            buildNodeFragment(
-                startNode.matcher,
-                startNode.lookupMode,
-                "start",
-                "$eventVariable.start",
-                startNode.setProperties,
-                startNode.mutateProperties,
-            ),
-        end =
-            buildNodeFragment(
-                endNode.matcher,
-                endNode.lookupMode,
-                "end",
-                "$eventVariable.end",
-                endNode.setProperties,
-                endNode.mutateProperties,
-            ),
-    )
-  }
+      params: Map<String, Any?>,
+      clauses: OpenStatement,
+  ): GeneratedStatement =
+      GeneratedStatement(
+          Query(
+              renderer.render(clauses.appendTo(OWN_STATEMENT).build()),
+              wrapParams(eventVariable, params),
+          ),
+          clauses,
+      )
 
   private fun wrapParams(eventVariable: String, params: Map<String, Any?>): Map<String, Any?> =
       if (eventVariable == "\$$EVENT") mapOf(EVENT to params) else params
 
-  private fun buildQuery(stmt: String, eventVariable: String, params: Map<String, Any?>): Query =
-      Query(stmt, wrapParams(eventVariable, params))
+  // ---------- Cypher-DSL helpers ----------
 
-  private fun buildLabelPattern(
-      labels: Set<String>,
-      eventVariable: String,
-      paramName: String,
-  ): String =
-      if (supportsDynamicLabelsWithPropertyIndices) ":\$($eventVariable.$paramName)"
-      else buildLabels(labels)
+  /**
+   * A raw expression referencing [eventVariable] verbatim. [eventVariable] is not always a simple
+   * identifier - it can be a top-level parameter reference like `$e`, or a nested property path
+   * like `_e.start` - so it is lifted into the DSL as-is rather than parsed.
+   */
+  private fun rawEvent(eventVariable: String): Expression = Cypher.raw(eventVariable)
 
-  private fun buildTypePattern(type: String, eventVariable: String, paramName: String): String =
-      if (supportsDynamicLabelsWithPropertyIndices) "\$($eventVariable.$paramName)"
-      else SchemaNames.sanitize(type, true).orElseThrow()
+  /** The `<eventVariable> AS _e` projection every generated statement opens with. */
+  private fun eventAlias(eventVariable: String): AliasedExpression =
+      rawEvent(eventVariable).`as`(EVENT_VAR)
 
-  private fun buildRelationshipStatementWithKeylessHandling(
-      matcher: RelationshipMatcher,
-      eventVariable: String,
-      matchClause: String,
-      operation: String,
-  ): String {
-    val needsLimit = matcher is RelationshipMatcher.ByTypeAndProperties && !matcher.hasKeys
-    return if (needsLimit) "WITH $eventVariable AS _e $matchClause WITH _e, r LIMIT 1 $operation"
-    else "WITH $eventVariable AS _e $matchClause $operation"
+  /**
+   * A map-expression selecting a `matchProperties` bag out of [event], or `null` when the bag is
+   * empty - an empty map constrains nothing, so the pattern is left without a `{...}` suffix rather
+   * than carrying an empty one. Keys are sorted so that equal actions render to equal text.
+   */
+  private fun matchPropertiesExpression(
+      properties: Map<String, Any?>,
+      event: Expression,
+  ): MapExpression? {
+    if (properties.isEmpty()) return null
+    val keysAndValues =
+        properties.keys.flatMap { key -> listOf(key, event.property("matchProperties", key)) }
+    return Cypher.sortedMapOf(*keysAndValues.toTypedArray())
   }
 
-  companion object {
-    private fun buildMatchProps(
-        matchProperties: Map<String, Any?>,
-        eventVariable: String,
-        paramsPath: String,
-    ): String =
-        if (matchProperties.isEmpty()) ""
-        else
-            matchProperties
-                .map { SchemaNames.sanitize(it.key, true).orElseThrow() }
-                .sorted()
-                .joinToString(", ", " {", "}") { "$it: $eventVariable.${paramsPath}.$it" }
+  /** `(<alias>:<labels>)`, or an unlabelled `(<alias>)` when [labels] is empty. */
+  private fun namedNode(labels: Set<String>, alias: String): Node {
+    val sorted = labels.sorted()
+    return if (sorted.isEmpty()) Cypher.anyNode().named(alias)
+    else Cypher.node(sorted.first(), sorted.drop(1)).named(alias)
+  }
 
-    private fun buildLabels(labels: Set<String>): String =
-        if (labels.isEmpty()) ""
-        else labels.sorted().joinToString(":", ":") { SchemaNames.sanitize(it, true).orElseThrow() }
+  /** `(start)-[r:<type>]->(end)`, untyped when [type] is `null`. */
+  private fun relationship(type: String?): Relationship {
+    val start = Cypher.anyNode().named("start")
+    val end = Cypher.anyNode().named("end")
+    val rel = if (type != null) start.relationshipTo(end, type) else start.relationshipTo(end)
+    return rel.named("r")
+  }
+
+  private fun idCondition(target: SymbolicName, event: Expression): Condition =
+      Cypher.raw("id(\$E)", target).eq(event.property("matchId"))
+
+  private fun elementIdCondition(target: SymbolicName, event: Expression): Condition =
+      Cypher.raw("elementId(\$E)", target).eq(event.property("matchElementId"))
+
+  private companion object {
+    /**
+     * Opens an action that is a statement in its own right, rather than a branch of a larger one.
+     */
+    val OWN_STATEMENT = WithStarter { Cypher.with(*it) }
+
+    /**
+     * The variables every generated statement binds. `_e` is the event projection opened by
+     * [eventAlias] and needs both forms: [EVENT_VAR] to name it in a `WITH`, [EVENT_REF] to read
+     * properties off it.
+     */
+    val EVENT_VAR: SymbolicName = Cypher.name("_e")
+    val EVENT_REF: Expression = Cypher.raw("_e")
+
+    val START_VAR: SymbolicName = Cypher.name("start")
+    val END_VAR: SymbolicName = Cypher.name("end")
   }
 }

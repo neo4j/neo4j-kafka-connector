@@ -40,12 +40,6 @@ class TelemetryTest {
   }
 
   @Test
-  @EnabledOnJre(JRE.JAVA_11)
-  fun `should return jre information on jre 11`() {
-    jreInformation() shouldStartWith "Java/11"
-  }
-
-  @Test
   @EnabledOnJre(JRE.JAVA_17)
   fun `should return jre information on jre 17`() {
     jreInformation() shouldStartWith "Java/17"
@@ -55,6 +49,12 @@ class TelemetryTest {
   @EnabledOnJre(JRE.JAVA_21)
   fun `should return jre information on jre 21`() {
     jreInformation() shouldStartWith "Java/21"
+  }
+
+  @Test
+  @EnabledOnJre(JRE.JAVA_25)
+  fun `should return jre information on jre 25`() {
+    jreInformation() shouldStartWith "Java/25"
   }
 
   @Test
