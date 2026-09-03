@@ -94,7 +94,7 @@ class Neo4jCdcTaskTest {
   fun after() {
     if (this::db.isInitialized) driver.dropDatabase(db)
     if (this::session.isInitialized) session.close()
-    if (this::task.isInitialized) task.stop()
+    if (this::task.isInitialized) runCatching { task.stop() }
   }
 
   @BeforeEach
@@ -604,6 +604,7 @@ class Neo4jCdcTaskTest {
             Neo4jConfiguration.URI to container.boltUrl,
             Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
             Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
             Neo4jConfiguration.TASK_ID to "0",
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
