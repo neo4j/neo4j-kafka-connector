@@ -725,10 +725,10 @@ class DynamicTypesCompactTest {
 
     val elementSchema = schema.valueSchema()
     elementSchema.fields().map { it.name() } shouldBe listOf("name", "addr", "age")
-    elementSchema.field("name").schema() shouldBe Schema.STRING_SCHEMA
+    elementSchema.field("name").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
     elementSchema.field("addr").schema().type() shouldBe Schema.Type.STRUCT
     elementSchema.field("addr").schema().isOptional shouldBe true
-    elementSchema.field("age").schema() shouldBe Schema.INT64_SCHEMA
+    elementSchema.field("age").schema() shouldBe Schema.OPTIONAL_INT64_SCHEMA
 
     val addrSchema = elementSchema.field("addr").schema()
     val expected =
@@ -757,9 +757,9 @@ class DynamicTypesCompactTest {
     schema.type() shouldBe Schema.Type.ARRAY
     val elementSchema = schema.valueSchema()
     elementSchema.type() shouldBe Schema.Type.STRUCT
-    elementSchema.field("name").schema() shouldBe Schema.STRING_SCHEMA
+    elementSchema.field("name").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
     elementSchema.field("nickname").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
-    elementSchema.field("age").schema() shouldBe Schema.INT64_SCHEMA
+    elementSchema.field("age").schema() shouldBe Schema.OPTIONAL_INT64_SCHEMA
 
     val expected =
         listOf(

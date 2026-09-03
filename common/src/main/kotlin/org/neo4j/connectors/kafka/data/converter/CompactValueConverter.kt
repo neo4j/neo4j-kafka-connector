@@ -345,7 +345,6 @@ class CompactValueConverter : ValueConverter {
     for (fieldName in firstFieldNames) {
       val fieldSchemas = schemas.map { it.field(fieldName).schema() }.toSet()
       val nonNullFieldSchemas = fieldSchemas.filterNot { it == nullSchema }.toSet()
-      val hasNullSchema = nonNullFieldSchemas.size < fieldSchemas.size
 
       val resolvedSchema =
           when {
@@ -356,7 +355,7 @@ class CompactValueConverter : ValueConverter {
             else -> return null
           }
 
-      builder.field(fieldName, if (hasNullSchema) makeOptional(resolvedSchema) else resolvedSchema)
+      builder.field(fieldName, makeOptional(resolvedSchema))
     }
     return builder.build()
   }
