@@ -703,4 +703,162 @@ class DynamicTypesCompactTest {
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"),
         )
   }
+
+  @Test
+  fun `collection of maps with differing key sets should merge into array of struct`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    val element = schema.valueSchema()
+    element.type() shouldBe Schema.Type.STRUCT
+    element.fields().map { it.name() }.toSet() shouldBe setOf("name", "age", "address")
+    element.field("name").schema().isOptional shouldBe false
+    element.field("age").schema().isOptional shouldBe false
+    element.field("address").schema().isOptional shouldBe true
+
+    val addressSchema = element.field("address").schema()
+    converted shouldBe
+        listOf(
+            Struct(element).put("name", "john").put("age", 21L).put("address", null),
+            Struct(element)
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", Struct(addressSchema).put("city", "london").put("zip", 10001L)),
+        )
+  }
+
+  @Test
+  fun `collection mixing homogeneous map and heterogeneous map should not drop keys`() {
+    // Element A produces MAP<String,String> (all values strings); element B produces a
+    // STRUCT<x,z> (mixed value types). Earlier merge logic dropped MAP-typed schemas and
+    // therefore lost A's `y` key entirely. After the fix, every key from every element is
+    // preserved and round-trips through value().
+    val a = mapOf("x" to "s1", "y" to "s2")
+    val b = mapOf("x" to "s", "z" to 123)
+    val coll = listOf(a, b)
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    val element = schema.valueSchema()
+    element.fields().map { it.name() }.toSet() shouldBe setOf("x", "y", "z")
+    element.field("x").schema().isOptional shouldBe false
+    element.field("y").schema().isOptional shouldBe true
+    element.field("z").schema().isOptional shouldBe true
+
+    converted shouldBe
+        listOf(
+            Struct(element).put("x", "s1").put("y", "s2").put("z", null),
+            Struct(element).put("x", "s").put("y", null).put("z", 123L),
+        )
+  }
+
+  @Test
+  fun `collection of three maps with varying key sets should merge and round-trip`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf("name" to "jane", "employed" to true),
+            mapOf("name" to "bob", "age" to 30, "employed" to false),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    val element = schema.valueSchema()
+    element.field("name").schema().isOptional shouldBe false
+    element.field("age").schema().isOptional shouldBe true
+    element.field("employed").schema().isOptional shouldBe true
+
+    converted shouldBe
+        listOf(
+            Struct(element).put("name", "john").put("age", 21L).put("employed", null),
+            Struct(element).put("name", "jane").put("age", null).put("employed", true),
+            Struct(element).put("name", "bob").put("age", 30L).put("employed", false),
+        )
+  }
+
+  @Test
+  fun `collection of maps with conflicting non-null types should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), mapOf("name" to 42))
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+  }
+
+  @Test
+  fun `collection mixing maps and non-maps should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), "a string")
+    val schema = converter.schema(coll, false)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+  }
+
+  @Test
+  fun `nested map field with differing key sets across elements should merge recursively`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "address" to mapOf("city" to "london", "zip" to 10001)),
+            mapOf(
+                "name" to "jane",
+                "address" to mapOf("city" to "paris", "zip" to 75001, "country" to "fr"),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    val element = schema.valueSchema()
+    val addressSchema = element.field("address").schema()
+    addressSchema.type() shouldBe Schema.Type.STRUCT
+    addressSchema.field("country").schema().isOptional shouldBe true
+
+    converted shouldBe
+        listOf(
+            Struct(element)
+                .put("name", "john")
+                .put(
+                    "address",
+                    Struct(addressSchema)
+                        .put("city", "london")
+                        .put("zip", 10001L)
+                        .put("country", null),
+                ),
+            Struct(element)
+                .put("name", "jane")
+                .put(
+                    "address",
+                    Struct(addressSchema)
+                        .put("city", "paris")
+                        .put("zip", 75001L)
+                        .put("country", "fr"),
+                ),
+        )
+  }
+
+  @Test
+  fun `merged collection with optional flag set should mark element schema optional`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf("name" to "jane", "age" to 25, "address" to mapOf("city" to "london")),
+        )
+    val schema = converter.schema(coll, true)
+
+    schema.type() shouldBe Schema.Type.ARRAY
+    schema.isOptional shouldBe true
+    schema.valueSchema().isOptional shouldBe true
+  }
 }
