@@ -29,7 +29,6 @@ import javax.management.MBeanServer
 import javax.management.ObjectName
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
-import kotlinx.coroutines.delay
 import org.apache.kafka.connect.source.SourceTaskContext
 import org.apache.kafka.connect.storage.OffsetStorageReader
 import org.assertj.core.api.SoftAssertions.assertSoftly
@@ -95,7 +94,7 @@ class Neo4jCdcTaskTest {
   fun after() {
     if (this::db.isInitialized) driver.dropDatabase(db)
     if (this::session.isInitialized) session.close()
-    if (this::task.isInitialized) task.stop()
+    if (this::task.isInitialized) runCatching { task.stop() }
   }
 
   @BeforeEach
@@ -522,41 +521,67 @@ class Neo4jCdcTaskTest {
   }
 
   @Test
-  fun `should expose cdc time delta metrics`() = runTest {
-    val sleepSeconds = 1L
+  fun `should measure cdc commit age against the clock when the server has no commit time`() =
+      runTest {
+        Assumptions.assumeFalse(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
 
-    // start a task with a set connector name and task ID so we can re-fetch it
-    task.start(
-        mapOf(
-            Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
-            Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
-            Neo4jConfiguration.TASK_ID to "0",
-            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
-            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
-            "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
-        )
-    )
+        val sleepSeconds = 1L
 
-    // poll for initial state before any CDC event
+        // start a task with a set connector name and task ID so we can re-fetch it
+        startTaskWithMetrics()
+
+        // poll for initial state before any CDC event
+        task.poll()
+        val commitAge = commitAgeGauge()
+
+        commitAge() shouldBe -1L
+
+        // run a transaction and then delay to increase commit age
+        session
+            .run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})")
+            .consume()
+        task.poll()
+
+        task.poll()
+        commitAge() shouldBeGreaterThanOrEqual sleepSeconds
+      }
+
+  @Test
+  fun `should report zero cdc commit age when source db is idle`() = runTest {
+    Assumptions.assumeTrue(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
+
+    startTaskWithMetrics()
     task.poll()
-    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
-    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
-    val initialDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
 
-    initialDelta shouldBe -1L
+    val commitAge = commitAgeGauge()
 
-    // run a transaction and then delay to increase commit age
+    commitAge() shouldBe -1L
+
     session.run("UNWIND RANGE(1, 10) AS n CREATE (:Person {id: n, name: 'person ' + n})").consume()
-
-    delay(sleepSeconds.seconds)
-
     task.poll()
-    val newDelta = mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long
-    newDelta shouldBeGreaterThanOrEqual sleepSeconds
+
+    // so this poll finds no changes and proves we are caught up
+    task.poll()
+    commitAge() shouldBe 0L
   }
+
+  @Test
+  fun `should report zero cdc commit age when the source db has only unselected changes`() =
+      runTest {
+        Assumptions.assumeTrue(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
+
+        startTaskWithMetrics(nodePattern = "(:Person)")
+        task.poll()
+        val commitAge = commitAgeGauge()
+
+        session.run("CREATE (:Person {name: 'selected'})").consume()
+        task.poll()
+
+        session.run("UNWIND RANGE(1, 10) AS n CREATE (:Order {id: n})").consume()
+        task.poll()
+
+        commitAge() shouldBe 0L
+      }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
     return newTaskContextWithOffset(mapOf("value" to currentChangeId()))
@@ -571,6 +596,28 @@ class Neo4jCdcTaskTest {
         }
 
     return mock<SourceTaskContext> { on { offsetStorageReader() } doReturn offsetStorageReader }
+  }
+
+  private fun startTaskWithMetrics(nodePattern: String = "()") {
+    task.start(
+        mapOf(
+            Neo4jConfiguration.URI to container.boltUrl,
+            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.DATABASE to db,
+            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
+            Neo4jConfiguration.TASK_ID to "0",
+            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
+            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
+            "neo4j.cdc.topic.nodes.patterns" to nodePattern,
+            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
+        )
+    )
+  }
+
+  private fun commitAgeGauge(): () -> Long {
+    val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+    val objectName = ObjectName("kafka.connect:type=plugins,connector=my-connector,task=0")
+    return { mbs.getAttribute(objectName, "last_cdc_tx_commit_age") as Long }
   }
 
   fun currentChangeId(): String {
