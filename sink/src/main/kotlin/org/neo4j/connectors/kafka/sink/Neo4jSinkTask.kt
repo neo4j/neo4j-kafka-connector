@@ -18,10 +18,12 @@ package org.neo4j.connectors.kafka.sink
 
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
+import org.apache.kafka.connect.errors.DataException
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.VisibleForTesting
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.metrics.MetricsFactory
 import org.slf4j.Logger
@@ -69,6 +71,12 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     }
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
+
+  /**
+   * Whether the failure is attributable to the record's own content, which is the only reason to
+   * divert a record to the dead letter queue.
+   */
+  private fun isRecordFault(e: Throwable): Boolean = e is InvalidDataException || e is DataException
 
   private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
     val handled = mutableSetOf<SinkMessage>()
@@ -123,17 +131,20 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       }
 
       val reporter = context.errantRecordReporter()
-      if (reporter != null) {
-        log.warn("DLQ is enabled, will try to identify offending message", e)
-        val unhandled = messages.minus(handled)
-
-        if (unhandled.size > 1) {
-          unhandled.forEach { m -> processMessages(handler, listOf(m)) }
-        } else {
-          unhandled.forEach { m -> reporter.report(m.record, e).get() }
-        }
-      } else {
+      // Not a record-content failure, so raise it and let Connect retry and alert.
+      // `reporter == null` is the existing "no DLQ configured" path, which fails the task the same
+      // way.
+      if (reporter == null || !isRecordFault(e)) {
         throw e
+      }
+
+      log.warn("DLQ is enabled, will try to identify offending message", e)
+      val unhandled = messages.minus(handled)
+
+      if (unhandled.size > 1) {
+        unhandled.forEach { m -> processMessages(handler, listOf(m)) }
+      } else {
+        unhandled.forEach { m -> reporter.report(m.record, e).get() }
       }
     }
   }

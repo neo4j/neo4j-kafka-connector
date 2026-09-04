@@ -112,11 +112,12 @@ abstract class Neo4jSinkErrorIT {
   }
 
   @Neo4jSink(
-      cypher =
+      nodePattern =
           [
-              CypherStrategy(
+              NodePatternStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+                  "(:Person{!id, name, surname})",
+                  mergeNodeProperties = false,
               )
           ],
       errorDlqTopic = DLQ_TOPIC,
@@ -131,15 +132,18 @@ abstract class Neo4jSinkErrorIT {
   ) {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
 
-    val schemaWithMissingSurname =
+    // the record is missing the key the pattern requires. Only a fault in the record's own content
+    // reaches the DLQ, so a Neo4j-side rejection can no longer be used to trigger this.
+    val schemaWithMissingId =
         SchemaBuilder.struct()
-            .field("id", Schema.INT64_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
+            .field("surname", Schema.STRING_SCHEMA)
             .build()
-    val struct = Struct(schemaWithMissingSurname)
-    struct.put("id", 1L)
+    val struct = Struct(schemaWithMissingId)
     struct.put("name", "John")
-    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+    struct.put("surname", "Doe")
+    val messageToFail = KafkaMessage(valueSchema = schemaWithMissingId, value = struct)
+    producer.publish(messageToFail)
 
     TopicVerifier.createForMap(errorConsumer)
         .assertMessage(schemaTopic = producer.topic) {
@@ -154,24 +158,25 @@ abstract class Neo4jSinkErrorIT {
           errorHeaders.getValue(ErrorHeaders.CLASS_NAME) shouldBe
               "org.apache.kafka.connect.sink.SinkTask"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders
               .getValue(ErrorHeaders.EXCEPTION_MESSAGE)
               .shouldBeInstanceOf<String>() shouldContain
-              """Cannot merge the following node because of null property value for 'surname': (:Person {surname: null})"""
+              "Key 'id' could not be located in the message."
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_STACKTRACE) shouldNotBe null
 
-          it.value shouldBe mapOf("id" to 1L, "name" to "John")
+          it.value shouldBe mapOf("name" to "John", "surname" to "Doe")
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
 
   @Neo4jSink(
-      cypher =
+      nodePattern =
           [
-              CypherStrategy(
+              NodePatternStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+                  "(:Person{!id, name, surname})",
+                  mergeNodeProperties = false,
               )
           ],
       errorDlqTopic = DLQ_TOPIC,
@@ -187,14 +192,17 @@ abstract class Neo4jSinkErrorIT {
       neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
-    val schemaWithMissingSurname =
+    // a record fault, so that it is the error tolerance being tested rather than the
+    // record-versus-infrastructure classification
+    val schemaWithMissingId =
         SchemaBuilder.struct()
-            .field("id", Schema.INT64_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
+            .field("surname", Schema.STRING_SCHEMA)
             .build()
-    val struct = Struct(schemaWithMissingSurname)
-    struct.put("id", 1L)
+    val struct = Struct(schemaWithMissingId)
     struct.put("name", "John")
+    struct.put("surname", "Doe")
+    val messageToFail = KafkaMessage(valueSchema = schemaWithMissingId, value = struct)
 
     // before the failure
     eventually(30.seconds) {
@@ -203,11 +211,12 @@ abstract class Neo4jSinkErrorIT {
       tasks.get(0).get("state").asText() shouldBe "RUNNING"
     }
 
-    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+    producer.publish(messageToFail)
 
+    // the dlq message is deserialised into a map, so it cannot be compared to the struct
     TopicVerifier.createForMap(errorConsumer)
         .assertMessageValue(schemaTopic = producer.topic) {
-          it shouldBe mapOf("id" to 1L, "name" to "John")
+          it shouldBe mapOf("name" to "John", "surname" to "Doe")
         }
         .verifyWithin(Duration.ofSeconds(30))
 
@@ -220,11 +229,12 @@ abstract class Neo4jSinkErrorIT {
   }
 
   @Neo4jSink(
-      cypher =
+      nodePattern =
           [
-              CypherStrategy(
+              NodePatternStrategy(
                   TOPIC,
-                  "MERGE (p:Person {id: event.id, name: event.name, surname: event.surname})",
+                  "(:Person{!id, name, surname})",
+                  mergeNodeProperties = false,
               )
           ],
       errorDlqTopic = DLQ_TOPIC,
@@ -240,14 +250,17 @@ abstract class Neo4jSinkErrorIT {
       neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
-    val schemaWithMissingSurname =
+    // a record fault, so that it is the error tolerance being tested rather than the
+    // record-versus-infrastructure classification
+    val schemaWithMissingId =
         SchemaBuilder.struct()
-            .field("id", Schema.INT64_SCHEMA)
             .field("name", Schema.STRING_SCHEMA)
+            .field("surname", Schema.STRING_SCHEMA)
             .build()
-    val struct = Struct(schemaWithMissingSurname)
-    struct.put("id", 1L)
+    val struct = Struct(schemaWithMissingId)
     struct.put("name", "John")
+    struct.put("surname", "Doe")
+    val messageToFail = KafkaMessage(valueSchema = schemaWithMissingId, value = struct)
 
     // before the failure
     eventually(30.seconds) {
@@ -256,11 +269,11 @@ abstract class Neo4jSinkErrorIT {
       tasks.get(0).get("state").asText() shouldBe "RUNNING"
     }
 
-    producer.publish(valueSchema = schemaWithMissingSurname, value = struct)
+    producer.publish(messageToFail)
 
     TopicVerifier.createForMap(errorConsumer)
         .assertMessageValue(schemaTopic = producer.topic) {
-          it shouldBe mapOf("id" to 1L, "name" to "John")
+          it shouldBe mapOf("name" to "John", "surname" to "Doe")
         }
         .verifyWithin(Duration.ofSeconds(30))
 
@@ -281,14 +294,14 @@ abstract class Neo4jSinkErrorIT {
               )
           ],
       errorDlqTopic = DLQ_TOPIC,
-      errorTolerance = "all",
+      errorTolerance = "none",
       enableErrorHeaders = true,
   )
   @Test
-  fun `should report failed events with cypher strategy`(
+  fun `should fail the task when neo4j rejects a record with the cypher strategy`(
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
-      @TopicConsumer(topic = DLQ_TOPIC, offset = "earliest") errorConsumer: ConvertingKafkaConsumer,
       session: Session,
+      sink: Neo4jSinkRegistration,
       neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
@@ -328,42 +341,10 @@ abstract class Neo4jSinkErrorIT {
     )
 
     eventually(30.seconds) {
-      session.run("MATCH (n) RETURN n", emptyMap()).list().map {
-        it.get("n").asNode().let { n -> (n.labels() to n.asMap()) }
-      } shouldContainExactlyInAnyOrder
-          listOf(
-              (listOf("Person") to mapOf("id" to 1L, "name" to "John", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 3L, "name" to "Mary", "surname" to "Doe")),
-              (listOf("Person") to mapOf("id" to 5L, "name" to "Sue", "surname" to "Doe")),
-          )
+      val tasks = sink.getConnectorTasksForStatusCheck()
+      tasks shouldHaveSize 1
+      tasks.get(0).get("state").asText() shouldBe "FAILED"
     }
-
-    TopicVerifier.createForMap(errorConsumer)
-        .assertMessage(schemaTopic = producer.topic) { msg ->
-          val errorHeaders = ErrorHeaders(msg.raw.headers())
-          errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String> {
-            it shouldContain
-                "Cannot merge the following node because of null property value for 'name': (:Person {name: null})"
-          }
-
-          msg.value shouldBe mapOf("id" to 2L, "surname" to "Doe")
-        }
-        .assertMessage(schemaTopic = producer.topic) { msg ->
-          val errorHeaders = ErrorHeaders(msg.raw.headers())
-          errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 3
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.neo4j.driver.exceptions.ClientException"
-          errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE).shouldBeInstanceOf<String> {
-            it shouldContain
-                "Cannot merge the following node because of null property value for 'surname': (:Person {surname: null})"
-          }
-
-          msg.value shouldBe mapOf("id" to 4L, "name" to "Martin")
-        }
-        .verifyWithin(Duration.ofSeconds(30))
   }
 
   @Neo4jSink(
@@ -431,7 +412,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 1
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.apache.kafka.connect.errors.ConnectException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "Message value must be convertible to a Map."
 
@@ -560,7 +541,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.apache.kafka.connect.errors.ConnectException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "Message value must be convertible to a Map."
 
@@ -687,7 +668,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 0
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "Unsupported data type ('null') for CUD file operation"
 
@@ -697,7 +678,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.OFFSET) shouldBe 2
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "org.apache.kafka.connect.errors.ConnectException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "Message value must be convertible to a Map."
 
@@ -1089,7 +1070,7 @@ abstract class Neo4jSinkErrorIT {
           val errorHeaders = ErrorHeaders(it.raw.headers())
           errorHeaders.getValue(ErrorHeaders.TOPIC) shouldBe producer1.topic
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_CLASS_NAME) shouldBe
-              "java.lang.IllegalArgumentException"
+              "org.neo4j.connectors.kafka.exceptions.InvalidDataException"
           errorHeaders.getValue(ErrorHeaders.EXCEPTION_MESSAGE) shouldBe
               "Unsupported data type ('null') for CUD file operation"
 
