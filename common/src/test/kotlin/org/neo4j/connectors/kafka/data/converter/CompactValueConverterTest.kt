@@ -805,6 +805,42 @@ class DynamicTypesCompactTest {
   }
 
   @Test
+  fun `nested collections with conflicting non-null field types should fall back to indexed struct schema`() {
+    // Same field sets at every level, but the deeply nested "lat" entry has conflicting non-null
+    // types, so the recursive merge must decline and the whole collection falls back.
+    val coll =
+        listOf(
+            mapOf(
+                "name" to "alice",
+                "addr" to
+                    mapOf(
+                        "city" to "tokyo",
+                        "geo" to mapOf("lat" to 35.6, "place" to "shibuya"),
+                        "zip" to 100L,
+                    ),
+                "age" to 30L,
+            ),
+            mapOf(
+                "name" to "bob",
+                "addr" to
+                    mapOf(
+                        "city" to "osaka",
+                        "geo" to mapOf("lat" to "34.7", "place" to "namba"),
+                        "zip" to 200L,
+                    ),
+                "age" to 25L,
+            ),
+        )
+
+    val schema = converter.schema(coll, false)
+    val actualValue = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+    actualValue.shouldBeInstanceOf<Struct>()
+  }
+
+  @Test
   fun `nested null vs struct values should merge recursively`() {
     // Both elements' "addr" entries are forced to STRUCT (mixed value types) so the merge
     // recurses on identical field sets and only resolves NULL vs STRUCT at the "geo" field.
