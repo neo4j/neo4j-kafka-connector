@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.sink.strategy.pattern
 
 import java.time.Instant
 import java.time.ZoneOffset
-import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.kafka.data.ConstraintData
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
@@ -53,7 +52,7 @@ abstract class PatternEventTransformer<T : Pattern>(
             this[bindValueAs] =
                 when (val value = message.valueFromConnectValue()) {
                   is Map<*, *> -> value as Map<String, Any?>
-                  else -> throw ConnectException("Message value must be convertible to a Map.")
+                  else -> throw InvalidDataException("Message value must be convertible to a Map.")
                 }
           }
         }
