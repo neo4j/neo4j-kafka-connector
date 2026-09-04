@@ -75,15 +75,6 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
   /**
    * Whether the failure is attributable to the record's own content, which is the only reason to
    * divert a record to the dead letter queue.
-   *
-   * Deliberately narrow: a wrongly-failed task is recoverable, whereas a wrongly-diverted record is
-   * data loss, since its offsets are committed while the task stays healthy. Anything shared by the
-   * whole topic -- an unreachable database, a bad Cypher template, a wrong constraint -- must fail
-   * loudly instead, or the entire topic drains into the DLQ behind a green health check.
-   *
-   * Every type listed here is raised while parsing record content, before any write, so the
-   * batch-level exception is the same one a single record would produce. That is what makes it safe
-   * to classify before narrowing down to the offending record.
    */
   private fun isRecordFault(e: Throwable): Boolean = e is InvalidDataException || e is DataException
 
