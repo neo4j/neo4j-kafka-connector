@@ -129,7 +129,19 @@ class CompactValueConverter : ValueConverter {
                   .apply { if (optional) optional() }
                   .build()
 
-          else ->
+          else -> {
+            // When element schemas differ only because the same key has a null value
+            // in some elements (yielding OPTIONAL_STRING from schema(null)) and a
+            // concrete type in others, merge them into a single STRUCT with the
+            // affected fields marked optional. This avoids the indexed-struct
+            // {e0, e1, ...} fallback and the DataException raised when value()
+            // tries to coerce the concrete value against the OPTIONAL_STRING schema.
+            val merged = mergeNullableStructSchemas(nonEmptyElementTypes.toSet())
+            if (merged != null) {
+              SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
+                  .apply { if (optional) optional() }
+                  .build()
+            } else {
               SchemaBuilder.struct()
                   .apply {
                     value.forEachIndexed { i, v ->
@@ -138,6 +150,8 @@ class CompactValueConverter : ValueConverter {
                   }
                   .apply { if (optional) optional() }
                   .build()
+            }
+          }
         }
       }
 
@@ -302,6 +316,65 @@ class CompactValueConverter : ValueConverter {
           }
 
       else -> value
+    }
+  }
+
+  /**
+   * Attempts to merge multiple STRUCT schemas where the only difference is that some elements have
+   * a null-typed schema (from [schema] called with `null`, which yields [SimpleTypes.NULL]) at a
+   * field where other elements have a concrete type. All schemas must share the identical set of
+   * field names. Returns `null` when schemas have differing field name sets or have conflicting
+   * non-null field types so the caller can fall back to the existing indexed-struct representation.
+   *
+   * This intentionally does not handle the broader case of differing field name sets across
+   * elements — doing so would require [value] to tolerate keys that are absent from some Map
+   * elements, and merging Map-typed elements with Struct-typed ones would silently drop keys
+   * present only in the Map element.
+   */
+  private fun mergeNullableStructSchemas(schemas: Set<Schema>): Schema? {
+    if (schemas.any { it.type() != Schema.Type.STRUCT }) return null
+
+    val nullSchema = SimpleTypes.NULL.schema(true)
+    val firstFieldNames = schemas.first().fields().map { it.name() }
+    val firstFieldNameSet = firstFieldNames.toSet()
+    if (schemas.any { s -> s.fields().map { it.name() }.toSet() != firstFieldNameSet }) {
+      return null
+    }
+
+    val builder = SchemaBuilder.struct()
+    for (fieldName in firstFieldNames) {
+      val fieldSchemas = schemas.map { it.field(fieldName).schema() }.toSet()
+      val nonNullFieldSchemas = fieldSchemas.filterNot { it == nullSchema }.toSet()
+      val hasNullSchema = nonNullFieldSchemas.size < fieldSchemas.size
+
+      val resolvedSchema =
+          when {
+            nonNullFieldSchemas.isEmpty() -> nullSchema
+            nonNullFieldSchemas.size == 1 -> nonNullFieldSchemas.first()
+            nonNullFieldSchemas.all { it.type() == Schema.Type.STRUCT } ->
+                mergeNullableStructSchemas(nonNullFieldSchemas) ?: return null
+            else -> return null
+          }
+
+      builder.field(fieldName, if (hasNullSchema) makeOptional(resolvedSchema) else resolvedSchema)
+    }
+    return builder.build()
+  }
+
+  private fun makeOptional(schema: Schema): Schema {
+    if (schema.isOptional) return schema
+    return when (schema.type()) {
+      Schema.Type.STRUCT ->
+          SchemaBuilder.struct()
+              .apply {
+                schema.fields().forEach { field(it.name(), it.schema()) }
+                optional()
+              }
+              .build()
+      Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema()).optional().build()
+      Schema.Type.MAP ->
+          SchemaBuilder.map(schema.keySchema(), schema.valueSchema()).optional().build()
+      else -> SchemaBuilder.type(schema.type()).optional().build()
     }
   }
 }
