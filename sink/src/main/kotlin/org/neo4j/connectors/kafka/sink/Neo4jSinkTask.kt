@@ -18,10 +18,12 @@ package org.neo4j.connectors.kafka.sink
 
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
+import org.apache.kafka.connect.errors.DataException
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.VisibleForTesting
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.metrics.MetricsFactory
 import org.slf4j.Logger
@@ -69,6 +71,21 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     }
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
+
+  /**
+   * Whether the failure is attributable to the record's own content, which is the only reason to
+   * divert a record to the dead letter queue.
+   *
+   * Deliberately narrow: a wrongly-failed task is recoverable, whereas a wrongly-diverted record is
+   * data loss, since its offsets are committed while the task stays healthy. Anything shared by the
+   * whole topic -- an unreachable database, a bad Cypher template, a wrong constraint -- must fail
+   * loudly instead, or the entire topic drains into the DLQ behind a green health check.
+   *
+   * Every type listed here is raised while parsing record content, before any write, so the
+   * batch-level exception is the same one a single record would produce. That is what makes it safe
+   * to classify before narrowing down to the offending record.
+   */
+  private fun isRecordFault(e: Throwable): Boolean = e is InvalidDataException || e is DataException
 
   private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
     val handled = mutableSetOf<SinkMessage>()
@@ -123,17 +140,20 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       }
 
       val reporter = context.errantRecordReporter()
-      if (reporter != null) {
-        log.warn("DLQ is enabled, will try to identify offending message", e)
-        val unhandled = messages.minus(handled)
-
-        if (unhandled.size > 1) {
-          unhandled.forEach { m -> processMessages(handler, listOf(m)) }
-        } else {
-          unhandled.forEach { m -> reporter.report(m.record, e).get() }
-        }
-      } else {
+      // Not a record-content failure, so raise it and let Connect retry and alert.
+      // `reporter == null` is the existing "no DLQ configured" path, which fails the task the same
+      // way.
+      if (reporter == null || !isRecordFault(e)) {
         throw e
+      }
+
+      log.warn("DLQ is enabled, will try to identify offending message", e)
+      val unhandled = messages.minus(handled)
+
+      if (unhandled.size > 1) {
+        unhandled.forEach { m -> processMessages(handler, listOf(m)) }
+      } else {
+        unhandled.forEach { m -> reporter.report(m.record, e).get() }
       }
     }
   }
