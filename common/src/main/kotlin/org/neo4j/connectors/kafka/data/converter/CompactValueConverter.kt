@@ -132,10 +132,10 @@ class CompactValueConverter : ValueConverter {
           else -> {
             // When element schemas differ only because the same key has a null value
             // in some elements (yielding OPTIONAL_STRING from schema(null)) and a
-            // concrete type in others, merge them into a single STRUCT with the
-            // affected fields marked optional. This avoids the indexed-struct
-            // {e0, e1, ...} fallback and the DataException raised when value()
-            // tries to coerce the concrete value against the OPTIONAL_STRING schema.
+            // concrete type in others, merge them into a single STRUCT with all
+            // fields marked optional. This avoids the indexed-struct {e0, e1, ...}
+            // fallback and the DataException raised when value() tries to coerce
+            // the concrete value against the OPTIONAL_STRING schema.
             val merged = mergeNullableStructSchemas(nonEmptyElementTypes.toSet())
             if (merged != null) {
               SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
@@ -326,6 +326,10 @@ class CompactValueConverter : ValueConverter {
    * field names. Returns `null` when schemas have differing field name sets or have conflicting
    * non-null field types so the caller can fall back to the existing indexed-struct representation.
    *
+   * Every field of the merged schema is marked optional, regardless of whether a null was actually
+   * observed for it, so that subsequent messages missing a value for any of these fields remain
+   * compatible with the merged schema.
+   *
    * This intentionally does not handle the broader case of differing field name sets across
    * elements — doing so would require [value] to tolerate keys that are absent from some Map
    * elements, and merging Map-typed elements with Struct-typed ones would silently drop keys
@@ -345,7 +349,6 @@ class CompactValueConverter : ValueConverter {
     for (fieldName in firstFieldNames) {
       val fieldSchemas = schemas.map { it.field(fieldName).schema() }.toSet()
       val nonNullFieldSchemas = fieldSchemas.filterNot { it == nullSchema }.toSet()
-      val hasNullSchema = nonNullFieldSchemas.size < fieldSchemas.size
 
       val resolvedSchema =
           when {
@@ -356,7 +359,7 @@ class CompactValueConverter : ValueConverter {
             else -> return null
           }
 
-      builder.field(fieldName, if (hasNullSchema) makeOptional(resolvedSchema) else resolvedSchema)
+      builder.field(fieldName, makeOptional(resolvedSchema))
     }
     return builder.build()
   }

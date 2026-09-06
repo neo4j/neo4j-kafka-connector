@@ -725,10 +725,11 @@ class DynamicTypesCompactTest {
 
     val elementSchema = schema.valueSchema()
     elementSchema.fields().map { it.name() } shouldBe listOf("name", "addr", "age")
-    elementSchema.field("name").schema() shouldBe Schema.STRING_SCHEMA
+    // every merged field is optional, even those that never held a null value
+    elementSchema.field("name").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
     elementSchema.field("addr").schema().type() shouldBe Schema.Type.STRUCT
     elementSchema.field("addr").schema().isOptional shouldBe true
-    elementSchema.field("age").schema() shouldBe Schema.INT64_SCHEMA
+    elementSchema.field("age").schema() shouldBe Schema.OPTIONAL_INT64_SCHEMA
 
     val addrSchema = elementSchema.field("addr").schema()
     val expected =
@@ -757,9 +758,9 @@ class DynamicTypesCompactTest {
     schema.type() shouldBe Schema.Type.ARRAY
     val elementSchema = schema.valueSchema()
     elementSchema.type() shouldBe Schema.Type.STRUCT
-    elementSchema.field("name").schema() shouldBe Schema.STRING_SCHEMA
+    elementSchema.field("name").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
     elementSchema.field("nickname").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
-    elementSchema.field("age").schema() shouldBe Schema.INT64_SCHEMA
+    elementSchema.field("age").schema() shouldBe Schema.OPTIONAL_INT64_SCHEMA
 
     val expected =
         listOf(
@@ -805,6 +806,29 @@ class DynamicTypesCompactTest {
   }
 
   @Test
+  fun `nested values with same field names but conflicting types should fall back to indexed struct schema`() {
+    // Both "addr" entries are forced to STRUCT (mixed value types) and share the same field names,
+    // but "city" and "zip" have conflicting non-null types across elements. The recursive merge
+    // must decline so the value() conversion stays consistent with the schema.
+    val coll =
+        listOf(
+            mapOf(
+                "name" to "alice",
+                "addr" to mapOf("city" to "tokyo", "zip" to 100L),
+                "age" to 30L,
+            ),
+            mapOf("name" to "bob", "addr" to mapOf("city" to 1L, "zip" to "200"), "age" to 25L),
+        )
+
+    val schema = converter.schema(coll, false)
+    val actualValue = converter.value(schema, coll)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+    actualValue.shouldBeInstanceOf<Struct>()
+  }
+
+  @Test
   fun `nested null vs struct values should merge recursively`() {
     // Both elements' "addr" entries are forced to STRUCT (mixed value types) so the merge
     // recurses on identical field sets and only resolves NULL vs STRUCT at the "geo" field.
@@ -836,6 +860,9 @@ class DynamicTypesCompactTest {
 
     val addrSchema = elementSchema.field("addr").schema()
     addrSchema.type() shouldBe Schema.Type.STRUCT
+    addrSchema.isOptional shouldBe true
+    addrSchema.field("city").schema() shouldBe Schema.OPTIONAL_STRING_SCHEMA
+    addrSchema.field("zip").schema() shouldBe Schema.OPTIONAL_INT64_SCHEMA
     val geoSchema = addrSchema.field("geo").schema()
     geoSchema.type() shouldBe Schema.Type.STRUCT
     geoSchema.isOptional shouldBe true
