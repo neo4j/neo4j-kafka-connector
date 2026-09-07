@@ -240,9 +240,9 @@ class NativeBatchStrategyTest {
         "WITH e.params AS _e MERGE (n:`Person` {id: _e.matchProperties.id}) SET n += _e.mutateProperties"
 
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(
               neo4j5_18,
