@@ -16,8 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy.cud
 
-import org.apache.kafka.connect.errors.ConnectException
 import org.apache.kafka.connect.errors.DataException
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
@@ -28,7 +28,7 @@ class CudEventTransformer : SinkEventTransformer {
     val value =
         when (val value = message.valueFromConnectValue()) {
           is Map<*, *> -> value as Map<String, Any?>
-          else -> throw ConnectException("Message value must be convertible to a Map.")
+          else -> throw InvalidDataException("Message value must be convertible to a Map.")
         }
     val cud = Operation.from(value)
     return try {
