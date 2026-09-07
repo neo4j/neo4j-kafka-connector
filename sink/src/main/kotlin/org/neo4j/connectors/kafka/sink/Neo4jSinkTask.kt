@@ -72,11 +72,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
 
-  /**
-   * Whether the failure is attributable to the record's own content, which is the only reason to
-   * divert a record to the dead letter queue.
-   */
-  private fun isRecordFault(e: Throwable): Boolean = e is InvalidDataException || e is DataException
+  private fun isDataException(e: Throwable): Boolean = e is InvalidDataException || e is DataException
 
   private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
     val handled = mutableSetOf<SinkMessage>()
