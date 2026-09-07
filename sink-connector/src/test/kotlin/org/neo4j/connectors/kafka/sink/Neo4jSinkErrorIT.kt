@@ -192,8 +192,7 @@ abstract class Neo4jSinkErrorIT {
       neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
-    // a record fault, so that it is the error tolerance being tested rather than the
-    // record-versus-infrastructure classification
+    // a bad record, so this test stays about error tolerance
     val schemaWithMissingId =
         SchemaBuilder.struct()
             .field("name", Schema.STRING_SCHEMA)
@@ -213,7 +212,6 @@ abstract class Neo4jSinkErrorIT {
 
     producer.publish(messageToFail)
 
-    // the dlq message is deserialised into a map, so it cannot be compared to the struct
     TopicVerifier.createForMap(errorConsumer)
         .assertMessageValue(schemaTopic = producer.topic) {
           it shouldBe mapOf("name" to "John", "surname" to "Doe")
@@ -250,8 +248,7 @@ abstract class Neo4jSinkErrorIT {
       neo4j: Neo4j,
   ) = runTest {
     session.createNodeKeyConstraint(neo4j, "person_id", "Person", "id")
-    // a record fault, so that it is the error tolerance being tested rather than the
-    // record-versus-infrastructure classification
+    // a bad record, so this test stays about error tolerance
     val schemaWithMissingId =
         SchemaBuilder.struct()
             .field("name", Schema.STRING_SCHEMA)
