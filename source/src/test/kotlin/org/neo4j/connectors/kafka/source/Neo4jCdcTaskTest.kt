@@ -485,19 +485,7 @@ class Neo4jCdcTaskTest {
         listOf("last_cdc_tx_commit_timestamp", "last_cdc_tx_start_timestamp", "last_cdc_tx_id")
 
     // start a task with a set connector name and task ID so we can re-fetch it
-    task.start(
-        mapOf(
-            Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
-            Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
-            Neo4jConfiguration.TASK_ID to "0",
-            SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
-            SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
-            "neo4j.cdc.topic.nodes.patterns" to "()",
-            "neo4j.cdc.topic.relationships.patterns" to "()-[]-()",
-        )
-    )
+    startTaskWithMetrics()
 
     // poll for initial state before any CDC event
     task.poll()

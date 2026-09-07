@@ -83,8 +83,6 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
 
     metrics = metricsFactory.createMetrics(config)
 
-    // db.cdc.current only yields txCommitTime under Cypher 25,
-    // and an unprefixed statement runs under the database's default language.
     val supportsTxCommitTime =
         canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(Neo4jDetector.detect(config.driver))
     val cypherVersion = if (supportsTxCommitTime) "25" else null
