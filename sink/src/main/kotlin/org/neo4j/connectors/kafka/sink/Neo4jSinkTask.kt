@@ -72,7 +72,8 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     log.info("processed {} records in {} ms", records?.size ?: 0, duration.inWholeMilliseconds)
   }
 
-  private fun isDataException(e: Throwable): Boolean = e is InvalidDataException || e is DataException
+  private fun isDataException(e: Throwable): Boolean =
+      e is InvalidDataException || e is DataException
 
   private fun processMessages(handler: SinkStrategyHandler, messages: List<SinkMessage>) {
     val handled = mutableSetOf<SinkMessage>()
@@ -130,7 +131,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       // Not a record-content failure, so raise it and let Connect retry and alert.
       // `reporter == null` is the existing "no DLQ configured" path, which fails the task the same
       // way.
-      if (reporter == null || !isRecordFault(e)) {
+      if (reporter == null || !isDataException(e)) {
         throw e
       }
 
