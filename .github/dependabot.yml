@@ -10,17 +10,6 @@ updates:
       default-days: 3
     open-pull-requests-limit: 15
     target-branch: "main"
-    ignore:
-      # requires JVM 17
-      - dependency-name: "org.junit.jupiter:junit-jupiter"
-        versions: "[6.0.1,)"
-      # requires JVM 17
-      - dependency-name: "com.diffplug.spotless:spotless-maven-plugin"
-        versions: "[3.0.0,)"
-      # pin 4.1.x for compatibility with Neo4j Kafka Connector v5
-      - dependency-name: "io.netty:netty-bom"
-        versions: "[4.2.15.Final,)"
-
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
@@ -31,29 +20,34 @@ updates:
       default-days: 3
     open-pull-requests-limit: 15
     target-branch: "6.0"
-
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+      time: "07:00"
+      timezone: "Etc/GMT"
     cooldown:
       default-days: 3
-    groups:
-      dev-deps:
-        dependency-type: "development"
+    open-pull-requests-limit: 10
     target-branch: "main"
-
+    commit-message:
+      prefix: "build(repo)"
+      prefix-development: "build(repo)"
+      include: "scope"
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+      time: "07:00"
+      timezone: "Etc/GMT"
     cooldown:
       default-days: 3
-    groups:
-      dev-deps:
-        dependency-type: "development"
+    open-pull-requests-limit: 10
     target-branch: "6.0"
-
+    commit-message:
+      prefix: "build(repo)"
+      prefix-development: "build(repo)"
+      include: "scope"
   - package-ecosystem: "bundler"
     directory: "/"
     schedule:
@@ -61,7 +55,6 @@ updates:
     cooldown:
       default-days: 3
     target-branch: "main"
-
   - package-ecosystem: "bundler"
     directory: "/"
     schedule:
