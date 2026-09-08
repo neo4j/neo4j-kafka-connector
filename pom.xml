@@ -85,7 +85,7 @@
         <neo4j-java-driver.version>6.2.1</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
-        <protobuf.version>4.36.0</protobuf.version>
+        <protobuf.version>4.36.1</protobuf.version>
         <reactivestreams.version>1.0.4</reactivestreams.version>
         <reactor.version>2025.0.7</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
