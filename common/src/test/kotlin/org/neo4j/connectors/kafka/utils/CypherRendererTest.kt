@@ -52,9 +52,9 @@ class CypherRendererTest {
 
   object BelowThresholdParams : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(
               Neo4j(Neo4jVersion(4, 4), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
@@ -74,9 +74,9 @@ class CypherRendererTest {
 
   object AtOrAboveThresholdParams : ArgumentsProvider {
     override fun provideArguments(
-        parameters: ParameterDeclarations?,
-        context: ExtensionContext?,
-    ): Stream<out Arguments?>? {
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
       return Stream.of(
           Arguments.of(
               Neo4j(Neo4jVersion(5, 23), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
