@@ -164,4 +164,38 @@ object TestUtils {
           )
     }
   }
+
+  /**
+   * Verifies one offset node per partition. Each partition must have its own independently tracked
+   * watermark.
+   *
+   * @param expectedOffsets partition number to expected offset
+   */
+  fun verifyEosOffsetsPerPartitionIfEnabled(
+      session: Session,
+      strategy: SinkStrategy,
+      offsetLabel: String,
+      expectedOffsets: Map<Int, Long>,
+  ) {
+    if (offsetLabel.isEmpty()) {
+      return
+    }
+
+    val actual =
+        session.run("MATCH (n:$offsetLabel) RETURN n{.*} AS n ORDER BY n.partition").list().map {
+          it.get("n").asMap()
+        }
+
+    actual shouldBe
+        expectedOffsets.entries
+            .sortedBy { it.key }
+            .map {
+              mapOf(
+                  "strategy" to strategy.name,
+                  "topic" to "my-topic",
+                  "partition" to it.key.toLong(),
+                  "offset" to it.value,
+              )
+            }
+  }
 }

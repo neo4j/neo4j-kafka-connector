@@ -101,7 +101,8 @@ object DatabaseSupport {
     if (database == DEFAULT_DATABASE) {
       return this
     }
-    this.run("DROP DATABASE \$db_name WAIT 30 SECONDS", mapOf("db_name" to database)).consume()
+    this.run("DROP DATABASE \$db_name IF EXISTS WAIT 30 SECONDS", mapOf("db_name" to database))
+        .consume()
     return this
   }
 }

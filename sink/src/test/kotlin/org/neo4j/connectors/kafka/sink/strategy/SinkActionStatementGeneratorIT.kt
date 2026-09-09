@@ -32,8 +32,7 @@ import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
+import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
@@ -49,13 +48,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class SinkActionStatementGeneratorIT {
 
   companion object {
-    @Container
-    val container: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+    @Container val container: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
     private lateinit var neo4j: Neo4j

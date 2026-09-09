@@ -43,8 +43,7 @@ import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
-import org.neo4j.connectors.kafka.testing.neo4jDatabase
-import org.neo4j.connectors.kafka.testing.neo4jImage
+import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -61,13 +60,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 class Neo4jQueryTaskTest {
 
   companion object {
-    @Container
-    val neo4j: Neo4jContainer<*> =
-        Neo4jContainer(neo4jImage())
-            .withEnv("NEO4J_ACCEPT_LICENSE_AGREEMENT", "yes")
-            .withExposedPorts(7687)
-            .withoutAuthentication()
-            .waitingFor(neo4jDatabase())
+    @Container val neo4j: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
 

@@ -48,5 +48,5 @@ interaction:
 
 provision:
   - dip build-package
-  - dip compose down --rmi local
+  - dip compose down --rmi local --volumes
   - dip compose up -d neo4j zookeeper broker schema-registry control-center

@@ -44,7 +44,7 @@ mvn verify
 ```
 
 You'll find the connector archive
-at `packaging/target/neo4j-kafka-connect-{version}.zip`.
+at `packaging/target/neo4j-kafka-connect-neo4j-{version}.zip`.
 
 ### Code Format
 

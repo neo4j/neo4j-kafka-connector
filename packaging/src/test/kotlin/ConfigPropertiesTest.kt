@@ -36,9 +36,6 @@ import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
-import org.neo4j.connectors.kafka.sink.strategy.CypherHandler
-import org.neo4j.connectors.kafka.sink.strategy.NodePatternHandler
-import org.neo4j.connectors.kafka.sink.strategy.RelationshipPatternHandler
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
 import org.neo4j.connectors.kafka.source.SourceConfiguration
 import org.neo4j.connectors.kafka.source.SourceType
@@ -127,37 +124,60 @@ class ConfigPropertiesTest {
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(
+          properties,
+          Renderer.getDefaultRenderer(),
+          neo4j = neo4j5_26,
+          apocCypherDoItAvailable = true,
+      )
+    }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
     topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<CypherHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.CYPHER
+    }
   }
 
-  @Test
-  fun `sink pattern node quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlers")
+  fun `sink pattern node quick start config should be valid`(
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
+  ) {
     val properties = loadConfigProperties("sink-pattern-node-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
+    }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers.keys shouldBe setOf("people")
-    topicHandlers["people"].shouldBeInstanceOf<NodePatternHandler>()
+    topicHandlers["people"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.NODE_PATTERN
+    }
   }
 
-  @Test
-  fun `sink pattern relationship quick start config should be valid`() {
+  @ParameterizedTest
+  @MethodSource("sinkHandlers")
+  fun `sink pattern relationship quick start config should be valid`(
+      apocDoITAvailable: Boolean,
+      neo4j: Neo4j?,
+  ) {
     val properties = loadConfigProperties("sink-pattern-relationship-quickstart.properties")
 
     properties["connector.class"] shouldBe "org.neo4j.connectors.kafka.sink.Neo4jConnector"
 
-    val config = shouldNotThrowAny { SinkConfiguration(properties, Renderer.getDefaultRenderer()) }
+    val config = shouldNotThrowAny {
+      SinkConfiguration(properties, Renderer.getDefaultRenderer(), neo4j, apocDoITAvailable)
+    }
 
     val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
-    topicHandlers.keys shouldBe setOf("knows")
-    topicHandlers["knows"].shouldBeInstanceOf<RelationshipPatternHandler>()
+    topicHandlers["knows"].shouldBeInstanceOf<SinkHandler>().should {
+      it.strategy() shouldBe SinkStrategy.RELATIONSHIP_PATTERN
+    }
   }
 
   @Test
@@ -175,6 +195,7 @@ class ConfigPropertiesTest {
         listOf("person") -> {
           selector.shouldBeInstanceOf<NodeSelector>()
         }
+
         listOf("works_for") -> {
           selector.shouldBeInstanceOf<RelationshipSelector>()
         }

@@ -1,5 +1,6 @@
 package builds
 
+import builds.Neo4jKafkaConnectorVcs.branchSpec
 import jetbrains.buildServer.configs.kotlin.BuildFeatures
 import jetbrains.buildServer.configs.kotlin.BuildSteps
 import jetbrains.buildServer.configs.kotlin.BuildType
@@ -51,6 +52,7 @@ const val SLACK_CHANNEL = "#team-connectors-feed"
 // Look into Root Project's settings -> Connections
 const val ECR_CONNECTION_ID_ENG = "PROJECT_EXT_124"
 const val ECR_CONNECTION_ID_BUILD = "PROJECT_EXT_107"
+val DOCKER_REGISTRIES = sequenceOf(ECR_CONNECTION_ID_ENG, ECR_CONNECTION_ID_BUILD)
 
 enum class LinuxSize(val value: String) {
   SMALL("small"),
@@ -99,8 +101,13 @@ fun Requirements.runOnLinux(size: LinuxSize = LinuxSize.SMALL) {
   startsWith("cloud.amazon.agent-name-prefix", "linux-${size.value}")
 }
 
-fun BuildType.thisVcs() = vcs {
+fun BuildType.thisVcs(forBranch: String) = vcs {
   root(Neo4jKafkaConnectorVcs)
+
+  branchSpec = buildString {
+    appendLine("-:*")
+    appendLine("+:$forBranch")
+  }
 
   cleanCheckout = true
 }
@@ -118,6 +125,10 @@ fun BuildFeatures.enablePullRequests() = pullRequests {
   provider = github {
     authType = token { token = "%github-pull-request-token%" }
     filterAuthorRole = PullRequests.GitHubRoleFilter.EVERYBODY
+    filterTargetBranch = buildString {
+      appendLine("+:$DEFAULT_BRANCH")
+      appendLine("+:refs/heads/$DEFAULT_BRANCH")
+    }
   }
 }
 
@@ -128,8 +139,7 @@ fun BuildFeatures.requireDiskSpace(size: String = "3gb") = freeDiskSpace {
 
 fun BuildFeatures.loginToECR() = dockerRegistryConnections {
   cleanupPushedImages = true
-  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID_ENG }
-  loginToRegistry = on { dockerRegistryId = ECR_CONNECTION_ID_BUILD }
+  loginToRegistry = on { dockerRegistryId = DOCKER_REGISTRIES.joinToString(",") }
 }
 
 fun BuildFeatures.buildCache(javaVersion: JavaVersion) = buildCache {

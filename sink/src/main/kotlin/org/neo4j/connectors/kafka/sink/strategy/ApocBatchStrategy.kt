@@ -39,6 +39,9 @@ class ApocBatchStrategy(
       messages: Iterable<SinkMessage>,
       eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>> {
+    val partitions = messages.map { it.record.kafkaPartition() }.distinct()
+    require(partitions.size <= 1) { "batch must not span partitions, got $partitions" }
+
     val (topic, partition) =
         messages.firstOrNull()?.let { it.record.topic() to it.record.kafkaPartition() }
             ?: return emptyList()
