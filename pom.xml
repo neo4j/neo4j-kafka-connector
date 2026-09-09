@@ -546,7 +546,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <includes>
-                        <include>**/*Test.*</include>
+                        <include>**/*Test</include>
                     </includes>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
@@ -684,9 +684,16 @@
                     <name>skipUnitTests</name>
                 </property>
             </activation>
-            <properties>
-                <surefire.includes>^$</surefire.includes>
-            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>skip-integration-tests</id>
@@ -695,9 +702,16 @@
                     <name>skipIntegrationTests</name>
                 </property>
             </activation>
-            <properties>
-                <failsafe.includes>^$</failsafe.includes>
-            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
         <profile>
