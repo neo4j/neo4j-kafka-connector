@@ -557,8 +557,9 @@
                 <configuration>
                     <forkCount>4</forkCount>
                     <includes>
-                        <include>**/*IT.*</include>
+                        <include>**/*IT</include>
                     </includes>
+                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
                 <executions>
                     <execution>
