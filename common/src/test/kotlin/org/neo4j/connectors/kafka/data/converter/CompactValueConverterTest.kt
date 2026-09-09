@@ -703,4 +703,263 @@ class DynamicTypesCompactTest {
                 mapOf("2000" to "birth", "2005" to "school", "2017" to "college"),
         )
   }
+
+  @Test
+  fun `collection of maps where one key set is a superset of the other should merge into array of struct`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf(
+                "name" to "jane",
+                "age" to 25,
+                "address" to mapOf("city" to "london", "zip" to 10001),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema =
+        SchemaBuilder.struct()
+            .field("city", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("zip", Schema.OPTIONAL_INT64_SCHEMA)
+            .optional()
+            .build()
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("address", addressSchema)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("name", "john").put("age", 21L).put("address", null),
+            Struct(elementSchema)
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", Struct(addressSchema).put("city", "london").put("zip", 10001L)),
+        )
+  }
+
+  @Test
+  fun `collection of maps with no common keys should merge into array of struct`() {
+    val coll = listOf(mapOf("name" to "john"), mapOf("age" to 21))
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("name", "john").put("age", null),
+            Struct(elementSchema).put("name", null).put("age", 21L),
+        )
+  }
+
+  @Test
+  fun `collection of a map inferred as MAP schema and a map inferred as STRUCT schema should keep all keys`() {
+    // On its own, `a` is inferred as MAP<STRING, STRING> (all values share a type) whereas `b` is
+    // inferred as a STRUCT (mixed value types). Merging must work from the raw keys of both
+    // elements so that `y`, which only exists in the MAP-typed element, is not dropped.
+    val a = mapOf("x" to "s1", "y" to "s2")
+    val b = mapOf("x" to "s", "z" to 123)
+    val coll = listOf(a, b)
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("x", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("y", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("z", Schema.OPTIONAL_INT64_SCHEMA)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("x", "s1").put("y", "s2").put("z", null),
+            Struct(elementSchema).put("x", "s").put("y", null).put("z", 123L),
+        )
+  }
+
+  @Test
+  fun `collection of three maps with varying key sets should merge and round-trip`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf("name" to "jane", "employed" to true),
+            mapOf("name" to "bob", "age" to 30, "employed" to false),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("employed", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("name", "john").put("age", 21L).put("employed", null),
+            Struct(elementSchema).put("name", "jane").put("age", null).put("employed", true),
+            Struct(elementSchema).put("name", "bob").put("age", 30L).put("employed", false),
+        )
+  }
+
+  @Test
+  fun `collection of maps with conflicting non-null types should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), mapOf("name" to 42))
+    val schema = converter.schema(coll, false)
+
+    schema shouldBe
+        SchemaBuilder.struct()
+            .field("e0", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build())
+            .field("e1", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT64_SCHEMA).build())
+            .build()
+  }
+
+  @Test
+  fun `collection mixing maps and non-maps should fall back to indexed struct`() {
+    val coll = listOf(mapOf("name" to "john"), "a string")
+    val schema = converter.schema(coll, false)
+
+    schema shouldBe
+        SchemaBuilder.struct()
+            .field("e0", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.STRING_SCHEMA).build())
+            .field("e1", Schema.STRING_SCHEMA)
+            .build()
+  }
+
+  @Test
+  fun `collection of maps with differing key sets should still enforce string map keys`() {
+    shouldThrow<IllegalArgumentException> {
+      converter.schema(listOf(mapOf("name" to "john"), mapOf(1 to 5, "a" to "b")), false)
+    } shouldHaveMessage ("unsupported map key type java.lang.Integer")
+  }
+
+  @Test
+  fun `nested map field with differing key sets across elements should merge recursively`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "address" to mapOf("city" to "london", "zip" to 10001)),
+            mapOf(
+                "name" to "jane",
+                "address" to mapOf("city" to "paris", "zip" to 75001, "country" to "fr"),
+            ),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema =
+        SchemaBuilder.struct()
+            .field("city", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("zip", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("country", Schema.OPTIONAL_STRING_SCHEMA)
+            .optional()
+            .build()
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("address", addressSchema)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema)
+                .put("name", "john")
+                .put(
+                    "address",
+                    Struct(addressSchema)
+                        .put("city", "london")
+                        .put("zip", 10001L)
+                        .put("country", null),
+                ),
+            Struct(elementSchema)
+                .put("name", "jane")
+                .put(
+                    "address",
+                    Struct(addressSchema)
+                        .put("city", "paris")
+                        .put("zip", 75001L)
+                        .put("country", "fr"),
+                ),
+        )
+  }
+
+  @Test
+  fun `nested maps with single typed values should keep their map schema when merging`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "tags" to mapOf("a" to "x")),
+            mapOf("name" to "jane", "tags" to mapOf("a" to "y"), "age" to 21),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field(
+                "tags",
+                SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional()
+                    .build(),
+            )
+            .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema)
+                .put("name", "john")
+                .put("tags", mapOf("a" to "x"))
+                .put("age", null),
+            Struct(elementSchema).put("name", "jane").put("tags", mapOf("a" to "y")).put("age", 21L),
+        )
+  }
+
+  @Test
+  fun `merged collection with optional flag set should mark element schema optional`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "age" to 21),
+            mapOf("name" to "jane", "age" to 25, "address" to mapOf("city" to "london")),
+        )
+    val schema = converter.schema(coll, true)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("age", Schema.OPTIONAL_INT64_SCHEMA)
+            .field(
+                "address",
+                SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional()
+                    .build(),
+            )
+            .optional()
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).optional().build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("name", "john").put("age", 21L).put("address", null),
+            Struct(elementSchema)
+                .put("name", "jane")
+                .put("age", 25L)
+                .put("address", mapOf("city" to "london")),
+        )
+  }
 }

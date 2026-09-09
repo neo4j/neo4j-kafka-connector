@@ -129,7 +129,21 @@ class CompactValueConverter : ValueConverter {
                   .apply { if (optional) optional() }
                   .build()
 
-          else ->
+          else -> {
+            val nonEmptyElements = value.filter { it.notNullOrEmpty() }
+            val merged =
+                if (nonEmptyElements.all { it is Map<*, *> }) {
+                  @Suppress("UNCHECKED_CAST")
+                  mergeMapElementSchemas(
+                      nonEmptyElements as List<Map<*, *>>,
+                      optional,
+                      forceMapsAsStruct,
+                  )
+                } else null
+
+            if (merged != null) {
+              SchemaBuilder.array(merged).apply { if (optional) optional() }.build()
+            } else {
               SchemaBuilder.struct()
                   .apply {
                     value.forEachIndexed { i, v ->
@@ -138,6 +152,8 @@ class CompactValueConverter : ValueConverter {
                   }
                   .apply { if (optional) optional() }
                   .build()
+            }
+          }
         }
       }
 
@@ -303,5 +319,57 @@ class CompactValueConverter : ValueConverter {
 
       else -> value
     }
+  }
+
+  /**
+   * Builds a merged STRUCT schema covering the union of keys across all element Maps.
+   *
+   * Every field of the merged schema is marked optional, regardless of whether it is present in all
+   * elements, so that subsequent messages missing a value for any of these fields remain compatible
+   * with the merged schema. The merged STRUCT itself is optional only when [optional] is set,
+   * mirroring how single-typed collection elements are handled.
+   *
+   * Field schemas are re-inferred from the raw values rather than from the already computed element
+   * schemas, so a key that is inferred as MAP in one element (homogeneously typed values) and as
+   * STRUCT in another (mixed value types) still contributes all of its keys to the merged result.
+   * Nested Maps whose key sets differ across elements are merged recursively.
+   *
+   * Returns null when any key has multiple incompatible non-null value types across elements, so
+   * the caller falls back to the indexed `{e0, e1, ...}` representation.
+   *
+   * Callers must have already validated the elements through [schema], which rejects non-String map
+   * keys.
+   */
+  private fun mergeMapElementSchemas(
+      elements: List<Map<*, *>>,
+      optional: Boolean,
+      forceMapsAsStruct: Boolean,
+  ): Schema? {
+    val allKeys = linkedSetOf<String>()
+    elements.forEach { element -> element.keys.forEach { allKeys.add(it as String) } }
+
+    val builder = SchemaBuilder.struct()
+    for (key in allKeys) {
+      val fieldValues = elements.map { it[key] }.filter { it.notNullOrEmpty() }
+
+      val fieldSchema =
+          if (fieldValues.isEmpty()) {
+            SimpleTypes.NULL.schema(true)
+          } else {
+            val fieldSchemas = fieldValues.map { schema(it, true, forceMapsAsStruct) }.toSet()
+            when {
+              fieldSchemas.size == 1 -> fieldSchemas.first()
+              fieldValues.all { it is Map<*, *> } -> {
+                @Suppress("UNCHECKED_CAST")
+                mergeMapElementSchemas(fieldValues as List<Map<*, *>>, true, forceMapsAsStruct)
+                    ?: return null
+              }
+              else -> return null
+            }
+          }
+
+      builder.field(key, fieldSchema)
+    }
+    return builder.apply { if (optional) optional() }.build()
   }
 }
