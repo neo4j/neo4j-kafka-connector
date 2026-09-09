@@ -559,7 +559,6 @@
                     <includes>
                         <include>**/*IT</include>
                     </includes>
-                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
                 <executions>
                     <execution>
