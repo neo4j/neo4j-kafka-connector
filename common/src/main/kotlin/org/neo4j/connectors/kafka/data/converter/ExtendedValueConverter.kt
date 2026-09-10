@@ -66,6 +66,7 @@ class ExtendedValueConverter : ValueConverter {
       is Point,
       is CharArray,
       is CharSequence,
+      is java.util.UUID,
       is ByteBuffer,
       is ByteArray,
       is ShortArray,

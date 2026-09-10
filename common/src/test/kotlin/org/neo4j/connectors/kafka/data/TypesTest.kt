@@ -198,6 +198,22 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
+          java.util.UUID.fromString("9969ed81-ee37-483e-96dc-b398dd522b69").let {
+            Arguments.of(
+                Named.of("uuid-extended", it),
+                PayloadMode.EXTENDED,
+                PropertyType.schema,
+                PropertyType.toConnectValue(it),
+            )
+          },
+          java.util.UUID.fromString("9635c147-0ab9-4d72-bc7c-9505bdd2de70").let {
+            Arguments.of(
+                Named.of("uuid-compact", it),
+                PayloadMode.COMPACT,
+                SimpleTypes.UUID.schema,
+                it.toString(),
+            )
+          },
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date-extended", it),
@@ -507,7 +523,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -623,7 +639,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -754,7 +770,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(
@@ -831,7 +847,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(
