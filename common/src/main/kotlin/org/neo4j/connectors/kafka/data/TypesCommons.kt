@@ -49,6 +49,7 @@ enum class SimpleTypes(builder: () -> SchemaBuilder) {
   LONG({ SchemaBuilder.int64() }),
   FLOAT({ SchemaBuilder.float64() }),
   STRING({ SchemaBuilder.string() }),
+  UUID({ SchemaBuilder.string().namespaced("UUID") }),
   BYTES({ SchemaBuilder.bytes() }),
   LOCALDATE({ SchemaBuilder.string().namespaced("LocalDate") }),
   LOCALDATETIME({ SchemaBuilder.string().namespaced("LocalDateTime") }),

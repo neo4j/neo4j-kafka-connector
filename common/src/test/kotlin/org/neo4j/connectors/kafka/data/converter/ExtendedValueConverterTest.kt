@@ -85,6 +85,7 @@ class ExtendedValueConverterTest {
           Arguments.of("float", 8.toFloat(), 8.toDouble()),
           Arguments.of("double", 8.toDouble(), null),
           Arguments.of("string", "a string", null),
+          Arguments.of("uuid", java.util.UUID.randomUUID(), null),
           Arguments.of("char array", "a char array".toCharArray(), "a char array"),
           Arguments.of("string builder", StringBuilder("a string builder"), "a string builder"),
           Arguments.of("string buffer", StringBuilder("a string buffer"), "a string buffer"),

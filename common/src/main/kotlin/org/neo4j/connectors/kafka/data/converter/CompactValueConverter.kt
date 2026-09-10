@@ -56,9 +56,12 @@ class CompactValueConverter : ValueConverter {
       is Double -> SimpleTypes.FLOAT.schema(optional)
 
       is Number -> SimpleTypes.LONG.schema(optional)
+
       is Char,
       is CharArray,
       is CharSequence -> SimpleTypes.STRING.schema(optional)
+
+      is java.util.UUID -> SimpleTypes.UUID.schema(optional)
 
       is ByteBuffer,
       is ByteArray -> SimpleTypes.BYTES.schema(optional)
@@ -299,6 +302,7 @@ class CompactValueConverter : ValueConverter {
             is ZonedDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
             is OffsetTime -> DateTimeFormatter.ISO_TIME.format(value)
             is String -> value
+            is java.util.UUID -> value.toString()
             is Char -> value.toString()
             is CharArray -> String(value)
             else ->
