@@ -28,6 +28,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -45,6 +46,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
@@ -80,6 +82,7 @@ class TypesTest {
             .withoutAuthentication()
 
     private lateinit var driver: Driver
+    private val version by lazy { Neo4jDetector.detect(driver) }
 
     @BeforeAll
     @JvmStatic
@@ -119,6 +122,8 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
+    if (input is UUID) Assumptions.assumeTrue(canIUse(Cypher.uuidType()).withNeo4j(version))
+
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
       val schema = payloadMode.schema(returned)
@@ -198,7 +203,7 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
-          java.util.UUID.fromString("9969ed81-ee37-483e-96dc-b398dd522b69").let {
+          UUID.fromString("9969ed81-ee37-483e-96dc-b398dd522b69").let {
             Arguments.of(
                 Named.of("uuid-extended", it),
                 PayloadMode.EXTENDED,
@@ -206,7 +211,7 @@ class TypesTest {
                 PropertyType.toConnectValue(it),
             )
           },
-          java.util.UUID.fromString("9635c147-0ab9-4d72-bc7c-9505bdd2de70").let {
+          UUID.fromString("9635c147-0ab9-4d72-bc7c-9505bdd2de70").let {
             Arguments.of(
                 Named.of("uuid-compact", it),
                 PayloadMode.COMPACT,
