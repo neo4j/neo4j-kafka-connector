@@ -45,6 +45,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
@@ -80,6 +81,7 @@ class TypesTest {
             .withoutAuthentication()
 
     private lateinit var driver: Driver
+    private val version by lazy { Neo4jDetector.detect(driver) }
 
     @BeforeAll
     @JvmStatic
@@ -119,6 +121,8 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
+    if (input is UUID) Assumptions.assumeTrue(canIUse(Cypher.uuidType()).withNeo4j(version))
+
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
       val schema = payloadMode.schema(returned)
