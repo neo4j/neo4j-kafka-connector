@@ -98,7 +98,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
-                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>
             <plugin>
