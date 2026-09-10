@@ -549,6 +549,7 @@
                         <include>**/*Test</include>
                     </includes>
                     <trimStackTrace>false</trimStackTrace>
+                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -559,6 +560,7 @@
                     <includes>
                         <include>**/*IT</include>
                     </includes>
+                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
                 <executions>
                     <execution>
