@@ -224,6 +224,8 @@ object PropertyType {
       Float::class -> getPropertyStruct(FLOAT_LIST, (value as List<Float>).map { it.toDouble() })
       Double::class -> getPropertyStruct(FLOAT_LIST, value)
       String::class -> getPropertyStruct(STRING_LIST, value)
+      java.util.UUID::class ->
+          getPropertyStruct(UUID_LIST, (value as List<java.util.UUID>).map { it.toString() })
       LocalDate::class ->
           getPropertyStruct(
               LOCAL_DATE_LIST,
@@ -337,6 +339,7 @@ object PropertyType {
             LONG_LIST,
             FLOAT_LIST,
             STRING_LIST -> fieldValue as List<*>
+            UUID_LIST -> (fieldValue as List<String>).map { s -> java.util.UUID.fromString(s) }
             LOCAL_DATE_LIST -> (fieldValue as List<String>).map { s -> parseLocalDate(s) }
             LOCAL_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalTime(s) }
             LOCAL_DATE_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalDateTime(s) }

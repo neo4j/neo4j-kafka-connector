@@ -46,9 +46,10 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.caniuse.CanIUse.canIUse
-import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.caniuse.Neo4jPredicate
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.CDCClient
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
@@ -122,7 +123,10 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
-    if (input is UUID) Assumptions.assumeTrue(canIUse(Cypher.uuidType()).withNeo4j(version))
+    if (input is UUID)
+        Assumptions.assumeTrue(
+            canIUse(Neo4jPredicate { it.version >= Neo4jVersion(2026, 7, 0) }).withNeo4j(version)
+        )
 
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
@@ -203,7 +207,7 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
-          UUID.fromString("9969ed81-ee37-483e-96dc-b398dd522b69").let {
+          UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-extended", it),
                 PayloadMode.EXTENDED,
@@ -211,7 +215,7 @@ class TypesTest {
                 PropertyType.toConnectValue(it),
             )
           },
-          UUID.fromString("9635c147-0ab9-4d72-bc7c-9505bdd2de70").let {
+          UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-compact", it),
                 PayloadMode.COMPACT,

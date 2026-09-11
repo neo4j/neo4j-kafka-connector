@@ -23,6 +23,7 @@ import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.OffsetTime
 import java.time.ZonedDateTime
+import java.util.UUID
 import kotlin.reflect.KClass
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -66,7 +67,7 @@ class ExtendedValueConverter : ValueConverter {
       is Point,
       is CharArray,
       is CharSequence,
-      is java.util.UUID,
+      is UUID,
       is ByteBuffer,
       is ByteArray,
       is ShortArray,
@@ -291,6 +292,7 @@ class ExtendedValueConverter : ValueConverter {
         Float::class,
         Double::class,
         String::class,
+        UUID::class,
         LocalDate::class,
         LocalDateTime::class,
         LocalTime::class,

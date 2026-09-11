@@ -57,6 +57,8 @@ import org.neo4j.connectors.kafka.data.PropertyType.POINT
 import org.neo4j.connectors.kafka.data.PropertyType.POINT_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.STRING
 import org.neo4j.connectors.kafka.data.PropertyType.STRING_LIST
+import org.neo4j.connectors.kafka.data.PropertyType.UUID
+import org.neo4j.connectors.kafka.data.PropertyType.UUID_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.getPropertyStruct
@@ -118,6 +120,9 @@ class PropertyTypeTest {
               getPropertyStruct(STRING, "string"),
               "string",
           ),
+          java.util.UUID.randomUUID().let {
+            Arguments.of("uuid", it, getPropertyStruct(UUID, it.toString()), it)
+          },
           Arguments.of(
               "local date",
               LocalDate.of(1999, 1, 1),
@@ -347,6 +352,22 @@ class PropertyTypeTest {
               getPropertyStruct(STRING_LIST, listOf("a", "b")),
               listOf("a", "b"),
           ),
+          java.util.UUID.randomUUID().let { uuid ->
+            Arguments.of(
+                "array (uuid)",
+                Array(1) { uuid },
+                getPropertyStruct(UUID_LIST, listOf(uuid.toString())),
+                listOf(uuid),
+            )
+          },
+          java.util.UUID.randomUUID().let {
+            Arguments.of(
+                "list (uuid)",
+                listOf(it),
+                getPropertyStruct(UUID_LIST, listOf(it.toString())),
+                listOf(it),
+            )
+          },
           Arguments.of(
               "array (local date)",
               Array(1) { LocalDate.of(1999, 1, 1) },

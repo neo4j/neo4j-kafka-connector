@@ -295,6 +295,7 @@ class CompactValueConverter : ValueConverter {
 
       Schema.Type.STRING ->
           when (value) {
+            is java.util.UUID -> value.toString()
             is LocalDate -> DateTimeFormatter.ISO_DATE.format(value)
             is LocalDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
             is LocalTime -> DateTimeFormatter.ISO_TIME.format(value)
@@ -302,7 +303,6 @@ class CompactValueConverter : ValueConverter {
             is ZonedDateTime -> DateTimeFormatter.ISO_DATE_TIME.format(value)
             is OffsetTime -> DateTimeFormatter.ISO_TIME.format(value)
             is String -> value
-            is java.util.UUID -> value.toString()
             is Char -> value.toString()
             is CharArray -> String(value)
             else ->
