@@ -1225,12 +1225,12 @@ class DynamicTypesCompactTest {
     val coll =
         listOf(
             TestNode(
-                "0",
+                0,
                 listOf("Person"),
                 mapOf("name" to Values.value("john"), "age" to Values.value(21L)),
             ),
             TestNode(
-                "1",
+                1,
                 listOf("Person"),
                 mapOf("name" to Values.value("jane"), "age" to Values.NULL),
             ),
@@ -1263,7 +1263,7 @@ class DynamicTypesCompactTest {
   fun `collection mixing nodes and maps should fall back to indexed struct`() {
     val coll =
         listOf(
-            TestNode("0", listOf("Person"), mapOf("name" to Values.value("john"))),
+            TestNode(0, listOf("Person"), mapOf("name" to Values.value("john"))),
             mapOf("name" to "jane", "age" to 21L),
         )
 
