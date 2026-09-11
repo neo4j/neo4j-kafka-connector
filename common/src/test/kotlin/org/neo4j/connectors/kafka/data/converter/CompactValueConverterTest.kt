@@ -1247,12 +1247,12 @@ class DynamicTypesCompactTest {
     converter.value(schema, coll) shouldBe
         listOf(
             Struct(elementSchema)
-                .put("<elementId>", "0")
+                .put("<id>", 0L)
                 .put("<labels>", listOf("Person"))
                 .put("name", "john")
                 .put("age", 21L),
             Struct(elementSchema)
-                .put("<elementId>", "1")
+                .put("<id>", 1L)
                 .put("<labels>", listOf("Person"))
                 .put("name", "jane")
                 .put("age", null),
