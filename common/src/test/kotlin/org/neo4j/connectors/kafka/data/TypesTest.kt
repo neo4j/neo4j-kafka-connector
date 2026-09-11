@@ -203,7 +203,7 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
-          UUID.fromString("9969ed81-ee37-483e-96dc-b398dd522b69").let {
+          UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-extended", it),
                 PayloadMode.EXTENDED,
@@ -211,7 +211,7 @@ class TypesTest {
                 PropertyType.toConnectValue(it),
             )
           },
-          UUID.fromString("9635c147-0ab9-4d72-bc7c-9505bdd2de70").let {
+          UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-compact", it),
                 PayloadMode.COMPACT,

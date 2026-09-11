@@ -241,7 +241,7 @@ object DynamicTypes {
       is Char -> parsedValue.toString()
       is CharArray -> parsedValue.concatToString()
       is CharSequence -> parsedValue.toString()
-      is java.util.UUID -> parsedValue
+      is java.util.UUID -> parsedValue // caniuse?
       is LocalDate -> parsedValue
       is LocalTime -> parsedValue
       is LocalDateTime -> parsedValue

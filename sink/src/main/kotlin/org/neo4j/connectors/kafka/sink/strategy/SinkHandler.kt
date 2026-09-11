@@ -20,6 +20,9 @@ import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.SinkStrategyHandler
+import org.neo4j.driver.Value
+import org.neo4j.driver.Values
+import org.neo4j.driver.types.TypeSystem
 
 open class SinkHandler(
     private val strategy: SinkStrategy,
@@ -39,6 +42,22 @@ interface SinkBatchStrategy {
       messages: Iterable<SinkMessage>,
       eventTransformer: (SinkMessage) -> SinkAction,
   ): Iterable<Iterable<ChangeQuery>>
+
+  /**
+   * In case the target Neo4j DB does not support the UUID type introduced in 2026.08, we need to
+   * convert the UUID values to Strings.
+   */
+  fun stringifyUuids(types: TypeSystem, value: Value): Value =
+      when (value.type()) {
+        types.UUID() -> Values.value(value.asUUID().toString())
+
+        types.MAP() ->
+            Values.value(value.asMap { stringifyUuids(types, it) } as Map<String?, Any?>?)
+
+        types.LIST() -> Values.value(value.asList { stringifyUuids(types, it) } as List<Any?>?)
+
+        else -> value
+      }
 }
 
 interface SinkEventTransformer {

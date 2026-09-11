@@ -169,7 +169,7 @@ class SinkConfiguration : Neo4jConfiguration {
     fun validate(config: Config) {
       Neo4jConfiguration.validate(config)
 
-      // cypher bind variables
+      // Cypher bind variables
       val cypherAliasForTimestamp = config.value<String>(CYPHER_BIND_TIMESTAMP_AS).isNullOrEmpty()
       val cypherAliasForHeader = config.value<String>(CYPHER_BIND_HEADER_AS).isNullOrEmpty()
       val cypherAliasForKey = config.value<String>(CYPHER_BIND_KEY_AS).isNullOrEmpty()

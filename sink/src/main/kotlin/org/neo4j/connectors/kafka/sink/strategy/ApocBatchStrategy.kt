@@ -16,6 +16,8 @@
  */
 package org.neo4j.connectors.kafka.sink.strategy
 
+import org.neo4j.caniuse.CanIUse
+import org.neo4j.caniuse.Cypher as CanIUseCypher
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.connectors.kafka.sink.ChangeQuery
 import org.neo4j.connectors.kafka.sink.SinkMessage
@@ -24,6 +26,7 @@ import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
+import org.neo4j.driver.types.TypeSystem
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -37,6 +40,7 @@ class ApocBatchStrategy(
   private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
   private val renderer = CypherRenderer(neo4j)
   private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
+  private val withUuidType = CanIUse.canIUse(CanIUseCypher.uuidType()).withNeo4j(neo4j)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -77,7 +81,12 @@ class ApocBatchStrategy(
                 mapOf(
                     "offset" to it.message.record.kafkaOffset(),
                     "stmt" to query.text(),
-                    "params" to query.parameters(),
+                    "params" to
+                        if (withUuidType) {
+                          query.parameters()
+                        } else {
+                          stringifyUuids(TypeSystem.getDefault(), query.parameters())
+                        },
                 )
               },
           )

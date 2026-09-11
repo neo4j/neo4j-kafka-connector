@@ -161,6 +161,10 @@ class DynamicTypesCompactTest {
     converter.schema(Array(1) { "a" }, true) shouldBe
         SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build()
 
+    // UUID
+    converter.schema(java.util.UUID.randomUUID(), false) shouldBe SimpleTypes.UUID.schema()
+    converter.schema(java.util.UUID.randomUUID(), true) shouldBe SimpleTypes.UUID.schema(true)
+
     // Temporal Types
     converter.schema(LocalDate.of(1999, 12, 31), optional = false) shouldBe
         SimpleTypes.LOCALDATE.schema()

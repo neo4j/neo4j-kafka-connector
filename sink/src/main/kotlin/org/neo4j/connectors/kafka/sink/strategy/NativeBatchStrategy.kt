@@ -26,6 +26,7 @@ import org.neo4j.connectors.kafka.utils.CypherRenderer
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.driver.Query
+import org.neo4j.driver.types.TypeSystem
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -44,6 +45,7 @@ class NativeBatchStrategy(
   private val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
   private val withVariableScope =
       CanIUse.canIUse(CanIUseCypher.callSubqueryWithVariableScopeClause()).withNeo4j(neo4j)
+  private val withUuidType = CanIUse.canIUse(CanIUseCypher.uuidType()).withNeo4j(neo4j)
 
   /**
    * One of a batch's distinct statements: the [id] its records carry in their `q` field, and the
@@ -113,7 +115,12 @@ class NativeBatchStrategy(
           mapOf(
               "q" to queryId,
               "offset" to event.message.record.kafkaOffset(),
-              "params" to generated.query.parameters(),
+              "params" to
+                  if (withUuidType) {
+                    generated.query.parameters()
+                  } else {
+                    stringifyUuids(TypeSystem.getDefault(), generated.query.parameters())
+                  },
           )
       )
       currentMessages.add(event.message)
