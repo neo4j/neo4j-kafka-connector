@@ -28,6 +28,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -47,6 +48,8 @@ import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
+import org.neo4j.caniuse.Neo4jPredicate
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.CDCClient
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
@@ -80,6 +83,7 @@ class TypesTest {
             .withoutAuthentication()
 
     private lateinit var driver: Driver
+    private val version by lazy { Neo4jDetector.detect(driver) }
 
     @BeforeAll
     @JvmStatic
@@ -119,6 +123,11 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
+    if (input is UUID)
+        Assumptions.assumeTrue(
+            canIUse(Neo4jPredicate { it.version >= Neo4jVersion(2026, 7, 0) }).withNeo4j(version)
+        )
+
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
       val schema = payloadMode.schema(returned)
@@ -198,6 +207,22 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
+          UUID.randomUUID().let {
+            Arguments.of(
+                Named.of("uuid-extended", it),
+                PayloadMode.EXTENDED,
+                PropertyType.schema,
+                PropertyType.toConnectValue(it),
+            )
+          },
+          UUID.randomUUID().let {
+            Arguments.of(
+                Named.of("uuid-compact", it),
+                PayloadMode.COMPACT,
+                SimpleTypes.UUID.schema,
+                it.toString(),
+            )
+          },
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date-extended", it),
@@ -507,7 +532,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -623,7 +648,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -754,7 +779,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(
@@ -831,7 +856,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(

@@ -199,6 +199,8 @@ object DynamicTypes {
   private fun fromString(schema: Schema, value: Any): Any {
     val parsedValue =
         when {
+          SimpleTypes.UUID.matches(schema) -> java.util.UUID.fromString(value as String)
+
           SimpleTypes.LOCALDATE.matches(schema) ->
               (value as String?)?.let {
                 DateTimeFormatter.ISO_DATE.parse(it) { parsed -> LocalDate.from(parsed) }
@@ -233,11 +235,13 @@ object DynamicTypes {
 
           else -> value
         }
+
     return when (parsedValue) {
       is String -> parsedValue
       is Char -> parsedValue.toString()
       is CharArray -> parsedValue.concatToString()
       is CharSequence -> parsedValue.toString()
+      is java.util.UUID -> parsedValue // caniuse?
       is LocalDate -> parsedValue
       is LocalTime -> parsedValue
       is LocalDateTime -> parsedValue

@@ -8,7 +8,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - ./conf:/tmp/conf
+      - ./conf:/tmp/conf:Z
     environment:
       NEO4J_PLUGINS: "[ \"apoc\" ]"
       NEO4J_AUTH: neo4j/password
@@ -97,7 +97,7 @@ services:
       - "8083:8083"
       - "5005:5005"
     volumes:
-      - ./plugins:/tmp/connect-plugins
+      - ./plugins:/tmp/connect-plugins:Z
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
       CONNECT_REST_ADVERTISED_HOST_NAME: connect

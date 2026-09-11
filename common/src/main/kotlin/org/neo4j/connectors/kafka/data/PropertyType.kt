@@ -46,6 +46,8 @@ object PropertyType {
   internal const val FLOAT_LIST = "LF64"
   internal const val STRING = "S"
   internal const val STRING_LIST = "LS"
+  internal const val UUID = "UI"
+  internal const val UUID_LIST = "LUI"
   internal const val BYTES = "BA"
   internal const val LOCAL_DATE = "TLD"
   internal const val LOCAL_DATE_LIST = "LTLD"
@@ -68,6 +70,7 @@ object PropertyType {
           LONG,
           FLOAT,
           STRING,
+          UUID,
           BYTES,
           LOCAL_DATE,
           LOCAL_DATE_TIME,
@@ -83,6 +86,7 @@ object PropertyType {
           LONG_LIST,
           FLOAT_LIST,
           STRING_LIST,
+          UUID_LIST,
           LOCAL_DATE_LIST,
           LOCAL_DATE_TIME_LIST,
           LOCAL_TIME_LIST,
@@ -119,6 +123,7 @@ object PropertyType {
           .field(LONG, Schema.OPTIONAL_INT64_SCHEMA)
           .field(FLOAT, Schema.OPTIONAL_FLOAT64_SCHEMA)
           .field(STRING, Schema.OPTIONAL_STRING_SCHEMA)
+          .field(UUID, Schema.OPTIONAL_STRING_SCHEMA)
           .field(BYTES, Schema.OPTIONAL_BYTES_SCHEMA)
           .field(LOCAL_DATE, Schema.OPTIONAL_STRING_SCHEMA)
           .field(LOCAL_DATE_TIME, Schema.OPTIONAL_STRING_SCHEMA)
@@ -131,6 +136,7 @@ object PropertyType {
           .field(LONG_LIST, SchemaBuilder.array(Schema.INT64_SCHEMA).optional().build())
           .field(FLOAT_LIST, SchemaBuilder.array(Schema.FLOAT64_SCHEMA).optional().build())
           .field(STRING_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+          .field(UUID_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
           .field(LOCAL_DATE_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
           .field(LOCAL_DATE_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
           .field(LOCAL_TIME_LIST, SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
@@ -153,6 +159,7 @@ object PropertyType {
       is CharArray -> getPropertyStruct(STRING, String(value))
       is CharSequence ->
           getPropertyStruct(STRING, value.codePoints().toArray().let { String(it, 0, it.size) })
+      is java.util.UUID -> getPropertyStruct(UUID, value.toString())
       is ByteArray -> getPropertyStruct(BYTES, value)
       is ByteBuffer -> getPropertyStruct(BYTES, value.array())
       is LocalDate -> getPropertyStruct(LOCAL_DATE, DateTimeFormatter.ISO_DATE.format(value))
@@ -217,6 +224,8 @@ object PropertyType {
       Float::class -> getPropertyStruct(FLOAT_LIST, (value as List<Float>).map { it.toDouble() })
       Double::class -> getPropertyStruct(FLOAT_LIST, value)
       String::class -> getPropertyStruct(STRING_LIST, value)
+      java.util.UUID::class ->
+          getPropertyStruct(UUID_LIST, (value as List<java.util.UUID>).map { it.toString() })
       LocalDate::class ->
           getPropertyStruct(
               LOCAL_DATE_LIST,
@@ -297,6 +306,7 @@ object PropertyType {
           LONG -> it.getWithoutDefault(LONG) as Long
           FLOAT -> it.getWithoutDefault(FLOAT) as Double
           STRING -> it.getWithoutDefault(STRING) as String
+          UUID -> java.util.UUID.fromString(it.getWithoutDefault(UUID) as String)
           BYTES -> {
             when (val bytes = it.getWithoutDefault(BYTES)) {
               is ByteArray -> bytes
@@ -329,6 +339,7 @@ object PropertyType {
             LONG_LIST,
             FLOAT_LIST,
             STRING_LIST -> fieldValue as List<*>
+            UUID_LIST -> (fieldValue as List<String>).map { s -> java.util.UUID.fromString(s) }
             LOCAL_DATE_LIST -> (fieldValue as List<String>).map { s -> parseLocalDate(s) }
             LOCAL_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalTime(s) }
             LOCAL_DATE_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalDateTime(s) }
