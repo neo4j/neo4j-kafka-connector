@@ -30,6 +30,7 @@ class CdcMetricsData(
   private val lastTxCommitTs: AtomicLong = AtomicLong(0L)
   private val lastTxStartTs: AtomicLong = AtomicLong(0L)
   private val lastTxId: AtomicLong = AtomicLong(0L)
+  private val lastDbTxCommitTs: AtomicLong = AtomicLong(0L)
 
   init {
     metrics.addGauge(
@@ -45,8 +46,11 @@ class CdcMetricsData(
         tags,
     ) {
       val timeStamp = lastTxCommitTs.get()
-      if (timeStamp == 0L) -1L // no tx to compare to
-      else Clock.System.now().epochSeconds - timeStamp
+      when {
+        timeStamp == 0L -> -1L // no tx to compare to
+        lastDbTxCommitTs.get() >= timeStamp -> 0L
+        else -> Clock.System.now().epochSeconds - timeStamp
+      }
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
@@ -70,6 +74,10 @@ class CdcMetricsData(
       lastTxStartTs.set(it.txStartTime.toEpochSecond())
     }
     lastTxId.set(event.txId)
+  }
+
+  fun updateLastDbTxCommitTs(sourceDbCommitTimestamp: Long) {
+    lastDbTxCommitTs.updateAndGet { current -> maxOf(current, sourceDbCommitTimestamp) }
   }
 
   companion object {

@@ -30,6 +30,9 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
+import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Dbms
+import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
 import org.neo4j.cdc.client.CDCService
 import org.neo4j.cdc.client.model.ChangeEvent
@@ -80,12 +83,21 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
 
     metrics = metricsFactory.createMetrics(config)
 
+    val supportsTxCommitTime =
+        canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(Neo4jDetector.detect(config.driver))
+    val cypherVersion = if (supportsTxCommitTime) "25" else null
+    log.info(
+        "cdc transaction commit time is {}available on this server",
+        if (cypherVersion == null) "not " else "",
+    )
+
     cdc =
         CDCClient(
             config.driver,
             { sessionConfig },
             { transactionConfig },
             config.cdcPollingInterval.toJavaDuration(),
+            cypherVersion,
             *config.cdcSelectors.toTypedArray(),
         )
     log.debug("constructed cdc client")
@@ -131,7 +143,12 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
       val limit = start + config.cdcPollingDuration
 
       while (limit.hasNotPassedNow()) {
-        cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
+        cdc.query(ChangeIdentifier(offset.get())) { lastKnownId ->
+              offset.set(lastKnownId.id)
+              lastKnownId.txCommitTime?.let {
+                metricsData.updateLastDbTxCommitTs(it.toEpochSecond())
+              }
+            }
             .take(config.batchSize.toLong(), true)
             .asFlow()
             .onEach { lastChangeEvent = it }
