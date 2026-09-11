@@ -130,15 +130,33 @@ class CompactValueConverter : ValueConverter {
                   .build()
 
           else -> {
-            // When element schemas differ only because the same key has a null value
-            // in some elements (yielding OPTIONAL_STRING from schema(null)) and a
-            // concrete type in others, merge them into a single STRUCT with all
-            // fields marked optional. This avoids the indexed-struct {e0, e1, ...}
-            // fallback and the DataException raised when value() tries to coerce
-            // the concrete value against the OPTIONAL_STRING schema.
-            val merged = mergeNullableStructSchemas(nonEmptyElementTypes.toSet())
-            if (merged != null) {
-              SchemaBuilder.array(if (optional) makeOptional(merged) else merged)
+            // Elements whose schemas differ merge into a single STRUCT covering the
+            // union of their keys, so the collection stays an array rather than
+            // collapsing into the indexed-struct {e0, e1, ...} form below.
+            //
+            // Only Maps and Nodes/Relationships may merge. nonEmptyElementTypes leaves out
+            // elements that notNullOrEmpty() calls empty,
+            // but value() converts every element. So merging a type that can be left out
+            // would convert it against a schema inferred without it. Nodes and
+            // Relationships are never left out. Maps can be, which is why
+            // mergeMapElementSchemas re-reads them from value.
+            val nonNullElements = value.filterNotNull()
+            val mergedSchema =
+                when {
+                  nonNullElements.all { it is Map<*, *> } ->
+                      mergeMapElementSchemas(
+                          nonNullElements.filterIsInstance<Map<*, *>>(),
+                          forceMapsAsStruct,
+                      )
+
+                  nonNullElements.all { it is Node || it is Relationship } ->
+                      mergeNullableStructSchemas(nonEmptyElementTypes.toSet())
+
+                  else -> null
+                }
+            if (mergedSchema != null) {
+              // An optional element schema keeps null elements valid.
+              SchemaBuilder.array(makeOptional(mergedSchema))
                   .apply { if (optional) optional() }
                   .build()
             } else {
@@ -320,20 +338,14 @@ class CompactValueConverter : ValueConverter {
   }
 
   /**
-   * Attempts to merge multiple STRUCT schemas where the only difference is that some elements have
-   * a null-typed schema (from [schema] called with `null`, which yields [SimpleTypes.NULL]) at a
-   * field where other elements have a concrete type. All schemas must share the identical set of
-   * field names. Returns `null` when schemas have differing field name sets or have conflicting
-   * non-null field types so the caller can fall back to the existing indexed-struct representation.
+   * Merges STRUCT schemas sharing an identical set of field names, resolving fields that are
+   * [SimpleTypes.NULL] in some schemas and concrete in others to the concrete type. Every field is
+   * optional, so later messages may omit any of them. Returns `null` for differing field name sets
+   * or conflicting non-null types, leaving the caller on the indexed-struct fallback.
    *
-   * Every field of the merged schema is marked optional, regardless of whether a null was actually
-   * observed for it, so that subsequent messages missing a value for any of these fields remain
-   * compatible with the merged schema.
-   *
-   * This intentionally does not handle the broader case of differing field name sets across
-   * elements — doing so would require [value] to tolerate keys that are absent from some Map
-   * elements, and merging Map-typed elements with Struct-typed ones would silently drop keys
-   * present only in the Map element.
+   * Reads the element schemas, so it suits [Node] and [Relationship], whose shape they capture in
+   * full. Maps go through [mergeMapElementSchemas], which reads the raw values and can therefore
+   * also merge differing key sets.
    */
   private fun mergeNullableStructSchemas(schemas: Set<Schema>): Schema? {
     if (schemas.any { it.type() != Schema.Type.STRUCT }) return null
@@ -364,20 +376,85 @@ class CompactValueConverter : ValueConverter {
     return builder.build()
   }
 
+  /**
+   * Merges Map elements into a single STRUCT schema covering the union of their keys, recursing
+   * into nested Maps. Every field is optional, so later messages may omit any of them. Returns
+   * `null` when a key holds incompatible non-null types, leaving the caller on the indexed-struct
+   * fallback.
+   *
+   * Keys are sorted, so element order cannot change the resulting [Schema] and spawn redundant
+   * schema versions downstream.
+   *
+   * Field schemas come from the raw values rather than the elements' own schemas, so a key inferred
+   * as MAP in one element (uniformly typed values) and STRUCT in another (mixed) still contributes
+   * every key. A value counts as absent only when `null`: an empty Collection or Map is a real type
+   * at that key, and skipping it would build a schema [value] cannot coerce its element against.
+   */
+  private fun mergeMapElementSchemas(
+      elements: List<Map<*, *>>,
+      forceMapsAsStruct: Boolean,
+  ): Schema? {
+    val allKeys = sortedSetOf<String>()
+    elements.forEach { element ->
+      element.keys.forEach { key ->
+        allKeys.add(
+            key as? String
+                ?: throw IllegalArgumentException(
+                    "unsupported map key type ${key?.javaClass?.name}"
+                )
+        )
+      }
+    }
+
+    val builder = SchemaBuilder.struct()
+    for (key in allKeys) {
+      val fieldValues = elements.mapNotNull { it[key] }
+
+      val fieldSchema =
+          if (fieldValues.isEmpty()) {
+            SimpleTypes.NULL.schema(true)
+          } else {
+            val fieldSchemas = fieldValues.map { schema(it, true, forceMapsAsStruct) }.toSet()
+            when {
+              fieldSchemas.size == 1 -> fieldSchemas.first()
+              fieldValues.all { it is Map<*, *> } ->
+                  mergeMapElementSchemas(
+                      fieldValues.filterIsInstance<Map<*, *>>(),
+                      forceMapsAsStruct,
+                  ) ?: return null
+
+              else -> return null
+            }
+          }
+
+      builder.field(key, makeOptional(fieldSchema))
+    }
+    return builder.build()
+  }
+
   private fun makeOptional(schema: Schema): Schema {
     if (schema.isOptional) return schema
-    return when (schema.type()) {
-      Schema.Type.STRUCT ->
-          SchemaBuilder.struct()
-              .apply {
+    val builder =
+        when (schema.type()) {
+          Schema.Type.STRUCT ->
+              SchemaBuilder.struct().apply {
                 schema.fields().forEach { field(it.name(), it.schema()) }
-                optional()
               }
-              .build()
-      Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema()).optional().build()
-      Schema.Type.MAP ->
-          SchemaBuilder.map(schema.keySchema(), schema.valueSchema()).optional().build()
-      else -> SchemaBuilder.type(schema.type()).optional().build()
-    }
+
+          Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema())
+          Schema.Type.MAP -> SchemaBuilder.map(schema.keySchema(), schema.valueSchema())
+          else -> SchemaBuilder.type(schema.type())
+        }
+    // name() carries the Neo4j logical type marker Schema.matches() keys off, so it and the rest
+    // of the metadata have to survive the rebuild.
+    return builder
+        .name(schema.name())
+        .version(schema.version())
+        .doc(schema.doc())
+        .apply {
+          schema.parameters()?.let { parameters(it) }
+          optional()
+        }
+        .build()
   }
 }
