@@ -317,14 +317,17 @@ class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT() {
           "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp",
   )
   @Test
-  fun `serializes list of heterogeneous objects as map by default`(
+  fun `serializes list of heterogeneous objects as merged list by default`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
   ) = runTest {
     TopicVerifier.createForMap(consumer)
         .assertMessageValue { value ->
           val list = (value["data"] as Map<*, *>)["list"]
           list shouldBe
-              mapOf("e0" to mapOf("property1" to "value1"), "e1" to mapOf("property2" to "value2"))
+              listOf(
+                  mapOf("property1" to "value1", "property2" to null),
+                  mapOf("property1" to null, "property2" to "value2"),
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
