@@ -102,14 +102,17 @@ class DynamicTypesTest {
   }
 
   @Test
-  fun `should stringify UUID when not supported`() {
+  fun `should stringify UUID when not supported or support not provided`() {
     val uuidValue = UUID.randomUUID()
     val uuidString = uuidValue.toString()
 
-    val result =
-        DynamicTypes.fromConnectValue(SimpleTypes.UUID.schema, uuidString, supportsUuidType = false)
+    DynamicTypes.fromConnectValue(SimpleTypes.UUID.schema, uuidString) shouldBe uuidString
 
-    result shouldBe uuidString
+    DynamicTypes.fromConnectValue(
+        SimpleTypes.UUID.schema,
+        uuidString,
+        supportsUuidType = false,
+    ) shouldBe uuidString
   }
 
   @Test

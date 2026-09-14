@@ -297,7 +297,7 @@ object PropertyType {
     }
   }
 
-  fun fromConnectValue(value: Struct?): Any? {
+  fun fromConnectValue(value: Struct?, supportsUuidType: Boolean = false): Any? {
     return value?.let {
       val fieldType = it.getString(TYPE)
       if (SIMPLE_TYPE_FIELDS.contains(fieldType)) {
@@ -306,7 +306,12 @@ object PropertyType {
           LONG -> it.getWithoutDefault(LONG) as Long
           FLOAT -> it.getWithoutDefault(FLOAT) as Double
           STRING -> it.getWithoutDefault(STRING) as String
-          UUID -> java.util.UUID.fromString(it.getWithoutDefault(UUID) as String)
+          UUID ->
+              if (supportsUuidType) {
+                java.util.UUID.fromString(it.getWithoutDefault(UUID) as String)
+              } else {
+                it.getWithoutDefault(UUID) as String
+              }
           BYTES -> {
             when (val bytes = it.getWithoutDefault(BYTES)) {
               is ByteArray -> bytes
@@ -339,7 +344,14 @@ object PropertyType {
             LONG_LIST,
             FLOAT_LIST,
             STRING_LIST -> fieldValue as List<*>
-            UUID_LIST -> (fieldValue as List<String>).map { s -> java.util.UUID.fromString(s) }
+            UUID_LIST ->
+                (fieldValue as List<String>).map { s ->
+                  if (supportsUuidType) {
+                    java.util.UUID.fromString(s)
+                  } else {
+                    s
+                  }
+                }
             LOCAL_DATE_LIST -> (fieldValue as List<String>).map { s -> parseLocalDate(s) }
             LOCAL_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalTime(s) }
             LOCAL_DATE_TIME_LIST -> (fieldValue as List<String>).map { s -> parseLocalDateTime(s) }

@@ -52,7 +52,7 @@ object DynamicTypes {
       schema: Schema,
       value: Any?,
       skipNullValuesInMaps: Boolean = false,
-      supportsUuidType: Boolean = true,
+      supportsUuidType: Boolean = false,
   ): Any? {
     if (value == null) {
       return null
@@ -79,9 +79,9 @@ object DynamicTypes {
             Schema.Type.FLOAT64 -> value as Double?
             Schema.Type.BYTES -> fromBytes(value)
             Schema.Type.STRING -> fromString(schema, value, supportsUuidType)
-            Schema.Type.STRUCT -> fromStruct(schema, value, skipNullValuesInMaps)
-            Schema.Type.ARRAY -> fromArray(value, schema, skipNullValuesInMaps)
-            Schema.Type.MAP -> fromMap(value, schema, skipNullValuesInMaps)
+            Schema.Type.STRUCT -> fromStruct(schema, value, skipNullValuesInMaps, supportsUuidType)
+            Schema.Type.ARRAY -> fromArray(value, schema, skipNullValuesInMaps, supportsUuidType)
+            Schema.Type.MAP -> fromMap(value, schema, skipNullValuesInMaps, supportsUuidType)
             else ->
                 throw IllegalArgumentException(
                     "unsupported schema ($schema) and value type (${value.javaClass.name})"
@@ -94,6 +94,7 @@ object DynamicTypes {
       value: Any,
       schema: Schema,
       skipNullValuesInMaps: Boolean,
+      supportsUuidType: Boolean,
   ): MutableMap<String, Any?> {
     val result = mutableMapOf<String, Any?>()
     val map = value as Map<*, *>
@@ -106,13 +107,23 @@ object DynamicTypes {
       }
 
       result[entry.key as String] =
-          fromConnectValue(schema.valueSchema(), entry.value, skipNullValuesInMaps)
+          fromConnectValue(
+              schema.valueSchema(),
+              entry.value,
+              skipNullValuesInMaps,
+              supportsUuidType,
+          )
     }
 
     return result
   }
 
-  private fun fromArray(value: Any, schema: Schema, skipNullValuesInMaps: Boolean): List<Any?> {
+  private fun fromArray(
+      value: Any,
+      schema: Schema,
+      skipNullValuesInMaps: Boolean,
+      supportsUuidType: Boolean,
+  ): List<Any?> {
     val result = mutableListOf<Any?>()
 
     when {
@@ -123,6 +134,7 @@ object DynamicTypes {
                     schema.valueSchema(),
                     java.lang.reflect.Array.get(value, i),
                     skipNullValuesInMaps,
+                    supportsUuidType,
                 )
             )
           }
@@ -138,9 +150,15 @@ object DynamicTypes {
     return result.toList()
   }
 
-  private fun fromStruct(schema: Schema, value: Any, skipNullValuesInMaps: Boolean): Any? =
+  private fun fromStruct(
+      schema: Schema,
+      value: Any,
+      skipNullValuesInMaps: Boolean,
+      supportsUuidType: Boolean = false,
+  ): Any? =
       when {
-        PropertyType.schema.matches(schema) -> PropertyType.fromConnectValue(value as Struct?)
+        PropertyType.schema.matches(schema) ->
+            PropertyType.fromConnectValue(value as Struct?, supportsUuidType)
         SimpleTypes.POINT.matches(schema) ->
             (value as Struct?)
                 ?.let {

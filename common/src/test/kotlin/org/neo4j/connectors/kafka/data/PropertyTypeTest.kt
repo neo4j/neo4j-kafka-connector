@@ -77,7 +77,7 @@ class PropertyTypeTest {
     val converted = PropertyType.toConnectValue(value)
     converted shouldBe expectedConverted
 
-    val reverted = PropertyType.fromConnectValue(converted)
+    val reverted = PropertyType.fromConnectValue(converted, supportsUuidType = true)
     reverted shouldBe expectedReverted
   }
 
@@ -568,6 +568,18 @@ class PropertyTypeTest {
           ),
       )
     }
+  }
+
+  @Test
+  fun `should stringify UUID parameters when not supported or not provided`() {
+    val uuidValue = java.util.UUID.randomUUID()
+    val uuidString = uuidValue.toString()
+
+    PropertyType.fromConnectValue(
+        getPropertyStruct(UUID, uuidString),
+        supportsUuidType = false,
+    ) shouldBe uuidString
+    PropertyType.fromConnectValue(getPropertyStruct(UUID, uuidString)) shouldBe uuidString
   }
 
   @Test
