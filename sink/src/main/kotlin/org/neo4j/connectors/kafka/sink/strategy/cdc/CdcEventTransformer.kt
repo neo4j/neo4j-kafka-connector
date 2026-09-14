@@ -23,6 +23,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.data.StreamsTransactionEventExtensions.toChangeEvent
 import org.neo4j.connectors.kafka.data.toChangeEvent
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkEventTransformer
@@ -42,16 +43,16 @@ interface CdcEventTransformer : SinkEventTransformer {
             EntityOperation.CREATE -> transformCreate(e)
             EntityOperation.UPDATE -> transformUpdate(e)
             EntityOperation.DELETE -> transformDelete(e)
-            else -> throw IllegalArgumentException("unknown operation ${e.operation}")
+            else -> throw InvalidDataException("unknown operation ${e.operation}")
           }
       is RelationshipEvent ->
           when (e.operation) {
             EntityOperation.CREATE -> transformCreate(e)
             EntityOperation.UPDATE -> transformUpdate(e)
             EntityOperation.DELETE -> transformDelete(e)
-            else -> throw IllegalArgumentException("unknown operation ${e.operation}")
+            else -> throw InvalidDataException("unknown operation ${e.operation}")
           }
-      else -> throw IllegalArgumentException("unsupported event type ${e.eventType}")
+      else -> throw InvalidDataException("unsupported event type ${e.eventType}")
     }
   }
 
@@ -78,7 +79,7 @@ internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
     when (val value = message.value) {
       is Struct -> value.toChangeEvent()
       else ->
-          throw IllegalArgumentException(
+          throw InvalidDataException(
               "unexpected message value type ${value?.javaClass?.name} in $message"
           )
     }
@@ -86,7 +87,7 @@ internal fun parseCdcChangeEvent(message: SinkMessage): ChangeEvent =
 internal fun parseStreamsChangeEvent(message: SinkMessage): ChangeEvent {
   val event =
       message.record.toStreamsSinkEntity().toStreamsTransactionEvent { _ -> true }
-          ?: throw IllegalArgumentException("unsupported change event message in $message")
+          ?: throw InvalidDataException("unsupported change event message in $message")
 
   return event.toChangeEvent()
 }

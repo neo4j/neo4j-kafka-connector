@@ -44,8 +44,8 @@
         <avro.version>1.12.2</avro.version>
         <awaitility.version>4.3.0</awaitility.version>
         <build-resources.version>2026.07.1</build-resources.version>
-        <byte-buddy.version>1.18.12</byte-buddy.version>
-        <caniuse-neo4j-detection.version>1.4.1</caniuse-neo4j-detection.version>
+        <byte-buddy.version>1.18.13</byte-buddy.version>
+        <caniuse-neo4j-detection.version>1.4.2</caniuse-neo4j-detection.version>
         <cdc.version>2.0.2</cdc.version>
         <commons-collections4.version>4.6.0</commons-collections4.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
@@ -62,35 +62,35 @@
         <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
         <!-- so we set the version to the first version that the vulnerability is resolved -->
         <kafka.version>4.3.1</kafka.version>
-        <kotest-assertions-core-jvm.version>6.2.4</kotest-assertions-core-jvm.version>
+        <kotest-assertions-core-jvm.version>6.2.5</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
-        <kotlin.version>2.4.10</kotlin.version>
+        <kotlin.version>2.4.20</kotlin.version>
         <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
         <licensing-maven-plugin.version>1.7.12</licensing-maven-plugin.version>
         <licensing.prepend.text>/license/neo4j_apache_v2/notice.txt</licensing.prepend.text>
         <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
-        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
         <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
-        <maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
+        <maven-failsafe-plugin.version>3.6.0</maven-failsafe-plugin.version>
         <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
         <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
         <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven-site-plugin.version>3.22.0</maven-site-plugin.version>
-        <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
         <mockito-kotlin.version>6.3.0</mockito-kotlin.version>
         <mockito.version>5.23.0</mockito.version>
         <neo4j-cypher-dsl.version>2025.3.0</neo4j-cypher-dsl.version>
         <neo4j-java-driver.version>6.2.1</neo4j-java-driver.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- to match what is shipped with the Kafka Connect version used in our integration test environment -->
-        <protobuf.version>4.36.0</protobuf.version>
+        <protobuf.version>4.36.1</protobuf.version>
         <reactivestreams.version>1.0.4</reactivestreams.version>
         <reactor.version>2025.0.7</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>3.10.1</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.2</spotless-maven-plugin.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencyManagement>
@@ -546,7 +546,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <includes>
-                        <include>**/*Test.*</include>
+                        <include>**/*Test</include>
                     </includes>
                     <trimStackTrace>false</trimStackTrace>
                 </configuration>
@@ -557,7 +557,7 @@
                 <configuration>
                     <forkCount>4</forkCount>
                     <includes>
-                        <include>**/*IT.*</include>
+                        <include>**/*IT</include>
                     </includes>
                 </configuration>
                 <executions>
@@ -684,9 +684,16 @@
                     <name>skipUnitTests</name>
                 </property>
             </activation>
-            <properties>
-                <surefire.includes>^$</surefire.includes>
-            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <profile>
             <id>skip-integration-tests</id>
@@ -695,9 +702,16 @@
                     <name>skipIntegrationTests</name>
                 </property>
             </activation>
-            <properties>
-                <failsafe.includes>^$</failsafe.includes>
-            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
         <!-- Only generate NOTICE and LICENSES files for projects with src/ directory -->
         <profile>

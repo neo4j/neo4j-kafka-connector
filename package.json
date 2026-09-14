@@ -4,11 +4,12 @@
     "@commitlint/config-conventional": "^21.2.2",
     "@commitlint/lint": "^21.2.2",
     "@commitlint/load": "^21.2.2",
-    "danger": "^13.0.10",
-    "husky": "^9.1.7"
+    "danger": "^14.0.7",
+    "husky": "^9.1.7",
+    "undici": "^7.29.1"
   },
   "scripts": {
     "prepare": "husky"
   },
-  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
+  "packageManager": "pnpm@12.3.4"
 }
