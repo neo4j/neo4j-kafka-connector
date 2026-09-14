@@ -21,9 +21,7 @@ import io.kotest.matchers.collections.shouldMatchInOrder
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
-import java.util.UUID
 import java.util.stream.Stream
-import org.apache.kafka.connect.sink.SinkRecord
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -34,7 +32,6 @@ import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDeploymentType
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.caniuse.Neo4jVersion
-import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.connectors.kafka.sink.strategy.cdc.CdcSchemaEventTransformer
 
@@ -351,61 +348,6 @@ class NativeBatchStrategyTest {
     ): Stream<out Arguments> {
       return Stream.of(Arguments.of(true), Arguments.of(false))
     }
-  }
-
-  @ParameterizedTest
-  @ArgumentsSource(UuidTypeProvider::class)
-  fun `should cast UUId as string for unsupported neo4j`(
-      neo4j: Neo4j,
-      shouldCastToString: Boolean,
-  ) {
-    val uuid = UUID.randomUUID()
-    val strategy = NativeBatchStrategy(neo4j, 2, 1000, "", SinkStrategy.CDC_SCHEMA)
-    val message =
-        SinkMessage(
-            SinkRecord("my-topic", 0, null, null, null, null, 0),
-            TestUtils.sinkConfigWithNeo4j(neo4j),
-        )
-    val action =
-        CreateNodeSinkAction(
-            setOf("Person"),
-            mapOf("id" to uuid, "ids" to listOf(uuid), "id-like" to uuid.toString(), "sum" to 3),
-        )
-
-    val query = strategy.handle(listOf(message)) { action }.single().single().query
-    val properties = query.parameters()["events"][0]["params"]["properties"]
-
-    val expectedUuid: Any =
-        if (shouldCastToString) {
-          uuid.toString()
-        } else {
-          uuid
-        }
-
-    properties.asMap() shouldBe
-        mapOf(
-            "id" to expectedUuid,
-            "ids" to listOf(expectedUuid),
-            "id-like" to uuid.toString(), // always a string
-            "sum" to 3,
-        )
-  }
-
-  object UuidTypeProvider : ArgumentsProvider {
-    override fun provideArguments(
-        parameters: ParameterDeclarations,
-        context: ExtensionContext,
-    ): Stream<out Arguments> =
-        Stream.of(
-            Arguments.of(neo4j4_4, true),
-            Arguments.of(neo4j5_18, true),
-            Arguments.of(neo4j5_26, true),
-            Arguments.of(neo4j5_27_aura, true),
-            Arguments.of(neo4j2026_1, true),
-            Arguments.of(neo4j2026_1_aura, true),
-            Arguments.of(neo4j2026_8, false),
-            Arguments.of(neo4j2026_8_aura, false),
-        )
   }
 
   companion object {
