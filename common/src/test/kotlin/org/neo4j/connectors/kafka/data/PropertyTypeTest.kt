@@ -571,7 +571,7 @@ class PropertyTypeTest {
   }
 
   @Test
-  fun `should stringify UUID parameters when not supported or not provided`() {
+  fun `should stringify UUID properties when not supported or not provided`() {
     val uuidValue = java.util.UUID.randomUUID()
     val uuidString = uuidValue.toString()
 
@@ -579,6 +579,7 @@ class PropertyTypeTest {
         getPropertyStruct(UUID, uuidString),
         supportsUuidType = false,
     ) shouldBe uuidString
+
     PropertyType.fromConnectValue(getPropertyStruct(UUID, uuidString)) shouldBe uuidString
   }
 

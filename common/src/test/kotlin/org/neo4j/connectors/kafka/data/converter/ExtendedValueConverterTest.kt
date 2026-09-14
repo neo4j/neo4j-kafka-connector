@@ -261,6 +261,7 @@ class ExtendedValueConverterTest {
 
     val reverted =
         DynamicTypes.fromConnectValue(PropertyType.schema, converted, supportsUuidType = false)
+
     reverted shouldBe (expectedIfDifferent ?: value)
   }
 
