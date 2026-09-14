@@ -48,7 +48,12 @@ object DynamicTypes {
 
   private const val PROTOBUF_TIMESTAMP_TYPE = "google.protobuf.Timestamp"
 
-  fun fromConnectValue(schema: Schema, value: Any?, skipNullValuesInMaps: Boolean = false): Any? {
+  fun fromConnectValue(
+      schema: Schema,
+      value: Any?,
+      skipNullValuesInMaps: Boolean = false,
+      supportsUuidType: Boolean = true,
+  ): Any? {
     if (value == null) {
       return null
     }
@@ -73,7 +78,7 @@ object DynamicTypes {
             Schema.Type.FLOAT32 -> value as Float?
             Schema.Type.FLOAT64 -> value as Double?
             Schema.Type.BYTES -> fromBytes(value)
-            Schema.Type.STRING -> fromString(schema, value)
+            Schema.Type.STRING -> fromString(schema, value, supportsUuidType)
             Schema.Type.STRUCT -> fromStruct(schema, value, skipNullValuesInMaps)
             Schema.Type.ARRAY -> fromArray(value, schema, skipNullValuesInMaps)
             Schema.Type.MAP -> fromMap(value, schema, skipNullValuesInMaps)
@@ -196,10 +201,11 @@ object DynamicTypes {
         }
       }
 
-  private fun fromString(schema: Schema, value: Any): Any {
+  private fun fromString(schema: Schema, value: Any, supportsUuidType: Boolean): Any {
     val parsedValue =
         when {
-          SimpleTypes.UUID.matches(schema) -> java.util.UUID.fromString(value as String)
+          SimpleTypes.UUID.matches(schema) && supportsUuidType ->
+              java.util.UUID.fromString(value as String)
 
           SimpleTypes.LOCALDATE.matches(schema) ->
               (value as String?)?.let {
@@ -241,7 +247,7 @@ object DynamicTypes {
       is Char -> parsedValue.toString()
       is CharArray -> parsedValue.concatToString()
       is CharSequence -> parsedValue.toString()
-      is java.util.UUID -> parsedValue // caniuse?
+      is java.util.UUID -> parsedValue
       is LocalDate -> parsedValue
       is LocalTime -> parsedValue
       is LocalDateTime -> parsedValue

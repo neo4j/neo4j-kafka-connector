@@ -121,6 +121,8 @@ class NativeBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithConditionals()),
       )
     }
   }
@@ -209,6 +211,8 @@ class NativeBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithConditionals()),
       )
     }
   }
@@ -357,7 +361,11 @@ class NativeBatchStrategyTest {
   ) {
     val uuid = UUID.randomUUID()
     val strategy = NativeBatchStrategy(neo4j, 2, 1000, "", SinkStrategy.CDC_SCHEMA)
-    val message = SinkMessage(SinkRecord("my-topic", 0, null, null, null, null, 0))
+    val message =
+        SinkMessage(
+            SinkRecord("my-topic", 0, null, null, null, null, 0),
+            TestUtils.sinkConfigWithNeo4j(neo4j),
+        )
     val action =
         CreateNodeSinkAction(
             setOf("Person"),

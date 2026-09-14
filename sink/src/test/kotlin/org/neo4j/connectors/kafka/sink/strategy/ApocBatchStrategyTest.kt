@@ -81,6 +81,8 @@ class ApocBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithVariableScope()),
       )
     }
   }
@@ -187,7 +189,11 @@ class ApocBatchStrategyTest {
   ) {
     val uuid = UUID.randomUUID()
     val strategy = ApocBatchStrategy(neo4j, 2, "", SinkStrategy.CDC_SCHEMA)
-    val message = SinkMessage(SinkRecord("my-topic", 0, null, null, null, null, 0))
+    val message =
+        SinkMessage(
+            SinkRecord("my-topic", 0, null, null, null, null, 0),
+            TestUtils.sinkConfigWithNeo4j(neo4j),
+        )
 
     val action =
         CreateNodeSinkAction(
