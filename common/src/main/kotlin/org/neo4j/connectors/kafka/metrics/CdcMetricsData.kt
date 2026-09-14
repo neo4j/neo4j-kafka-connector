@@ -46,10 +46,14 @@ class CdcMetricsData(
         tags,
     ) {
       val timeStamp = lastTxCommitTs.get()
+      val dbTimeStamp = lastDbTxCommitTs.get()
       when {
         timeStamp == 0L -> -1L // no tx to compare to
-        lastDbTxCommitTs.get() >= timeStamp -> 0L
-        else -> Clock.System.now().epochSeconds - timeStamp
+        // the source database never told us where it stands
+        // or this is the sink, which has no source database to ask
+        dbTimeStamp == 0L -> Clock.System.now().epochSeconds - timeStamp
+        // both timestamps come from the same source database
+        else -> maxOf(0L, dbTimeStamp - timeStamp)
       }
     }
     metrics.addGauge(

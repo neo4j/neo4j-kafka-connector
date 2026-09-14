@@ -554,22 +554,41 @@ class Neo4jCdcTaskTest {
   }
 
   @Test
-  fun `should report zero cdc commit age when the source db has only unselected changes`() =
-      runTest {
-        Assumptions.assumeTrue(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
+  fun `should report cdc commit age against unselected changes`() = runTest {
+    Assumptions.assumeTrue(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
 
-        startTaskWithMetrics(nodePattern = "(:Person)")
-        task.poll()
-        val commitAge = commitAgeGauge()
+    startTaskWithMetrics(nodePattern = "(:Person)")
+    task.poll()
+    val commitAge = commitAgeGauge()
 
-        session.run("CREATE (:Person {name: 'selected'})").consume()
-        task.poll()
+    session.run("CREATE (:Person {name: 'selected'})").consume()
+    task.poll()
+    commitAge() shouldBe 0L
 
-        session.run("UNWIND RANGE(1, 10) AS n CREATE (:Order {id: n})").consume()
-        task.poll()
+    // empty poll that gives some measurable delay
+    task.poll()
 
-        commitAge() shouldBe 0L
-      }
+    session.run("UNWIND RANGE(1, 10) AS n CREATE (:Order {id: n})").consume()
+    task.poll()
+
+    commitAge() shouldBeGreaterThanOrEqual 1L
+  }
+
+  @Test
+  fun `should report zero cdc commit age when every poll returns selected changes`() = runTest {
+    Assumptions.assumeTrue(canIUse(Dbms.cdcTransactionCommitTime()).withNeo4j(neo4j))
+
+    startTaskWithMetrics(nodePattern = "(:Person)")
+    task.poll()
+    val commitAge = commitAgeGauge()
+
+    repeat(3) { i ->
+      session.run("CREATE (:Person {name: 'person $i'})").consume()
+      task.poll()
+    }
+
+    commitAge() shouldBe 0L
+  }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
     return newTaskContextWithOffset(mapOf("value" to currentChangeId()))

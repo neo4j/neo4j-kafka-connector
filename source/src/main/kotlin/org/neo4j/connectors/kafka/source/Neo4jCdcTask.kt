@@ -143,12 +143,15 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
       val limit = start + config.cdcPollingDuration
 
       while (limit.hasNotPassedNow()) {
-        cdc.query(ChangeIdentifier(offset.get())) { lastKnownId ->
-              offset.set(lastKnownId.id)
-              lastKnownId.txCommitTime?.let {
-                metricsData.updateLastDbTxCommitTs(it.toEpochSecond())
-              }
-            }
+        cdc.query(
+                ChangeIdentifier(offset.get()),
+                { lastKnownId -> offset.set(lastKnownId.id) },
+                { current ->
+                  current.txCommitTime?.let {
+                    metricsData.updateLastDbTxCommitTs(it.toEpochSecond())
+                  }
+                },
+            )
             .take(config.batchSize.toLong(), true)
             .asFlow()
             .onEach { lastChangeEvent = it }
