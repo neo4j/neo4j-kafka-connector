@@ -28,7 +28,6 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -60,6 +59,7 @@ import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.LONG_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.OFFSET_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.POINT
+import org.neo4j.connectors.kafka.data.PropertyType.UUID
 import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -122,13 +122,16 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
-    if (input is UUID) Assumptions.assumeTrue(canIUse(Cypher.uuidType()).withNeo4j(version))
+    val supportsUuidType = canIUse(Cypher.uuidType()).withNeo4j(version)
+    if (input is java.util.UUID) Assumptions.assumeTrue(supportsUuidType)
 
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
       val schema = payloadMode.schema(returned)
       val converted = payloadMode.value(schema, returned)
-      val reverted = DynamicTypes.fromConnectValue(schema, converted)
+
+      val reverted =
+          DynamicTypes.fromConnectValue(schema, converted, supportsUuidType = supportsUuidType)
 
       schema shouldBe expectedSchema
       converted shouldBe expectedValue
@@ -203,15 +206,15 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
-          UUID.randomUUID().let {
+          java.util.UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-extended", it),
                 PayloadMode.EXTENDED,
                 PropertyType.schema,
-                PropertyType.toConnectValue(it),
+                PropertyType.getPropertyStruct(UUID, it.toString()),
             )
           },
-          UUID.randomUUID().let {
+          java.util.UUID.randomUUID().let {
             Arguments.of(
                 Named.of("uuid-compact", it),
                 PayloadMode.COMPACT,
