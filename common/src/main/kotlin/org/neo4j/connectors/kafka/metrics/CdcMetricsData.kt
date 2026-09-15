@@ -30,6 +30,7 @@ class CdcMetricsData(
   private val lastTxCommitTs: AtomicLong = AtomicLong(0L)
   private val lastTxStartTs: AtomicLong = AtomicLong(0L)
   private val lastTxId: AtomicLong = AtomicLong(0L)
+  private val lastDbTxCommitTs: AtomicLong = AtomicLong(0L)
 
   init {
     metrics.addGauge(
@@ -45,8 +46,15 @@ class CdcMetricsData(
         tags,
     ) {
       val timeStamp = lastTxCommitTs.get()
-      if (timeStamp == 0L) -1L // no tx to compare to
-      else Clock.System.now().epochSeconds - timeStamp
+      val dbTimeStamp = lastDbTxCommitTs.get()
+      when {
+        timeStamp == 0L -> -1L // no tx to compare to
+        // the source database never told us where it stands
+        // or this is the sink, which has no source database to ask
+        dbTimeStamp == 0L -> Clock.System.now().epochSeconds - timeStamp
+        // both timestamps come from the same source database
+        else -> maxOf(0L, dbTimeStamp - timeStamp)
+      }
     }
     metrics.addGauge(
         "last_cdc_tx_start_timestamp",
@@ -70,6 +78,10 @@ class CdcMetricsData(
       lastTxStartTs.set(it.txStartTime.toEpochSecond())
     }
     lastTxId.set(event.txId)
+  }
+
+  fun updateLastDbTxCommitTs(sourceDbCommitTimestamp: Long) {
+    lastDbTxCommitTs.updateAndGet { current -> maxOf(current, sourceDbCommitTimestamp) }
   }
 
   companion object {
