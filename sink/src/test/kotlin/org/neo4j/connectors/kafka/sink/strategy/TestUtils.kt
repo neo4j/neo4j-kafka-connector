@@ -48,7 +48,7 @@ import org.neo4j.driver.Session
 
 object TestUtils {
 
-  // for tests when config (and neo4j version) irrelevant
+  // for tests when config/neo4j is irrelevant
   val sinkConfigStub =
       sinkConfigWithNeo4j(
           Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
