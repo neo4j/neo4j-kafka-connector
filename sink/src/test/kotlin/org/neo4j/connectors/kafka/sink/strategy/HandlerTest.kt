@@ -21,6 +21,7 @@ import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.header.Header
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 
 open class HandlerTest {
@@ -31,6 +32,7 @@ open class HandlerTest {
       keySchema: Schema? = null,
       key: Any? = null,
       headers: Iterable<Header> = emptyList(),
+      config: SinkConfiguration = TestUtils.sinkConfigStub,
   ): SinkMessage {
     return SinkMessage(
         SinkRecord(
@@ -44,7 +46,8 @@ open class HandlerTest {
             TIMESTAMP,
             TimestampType.CREATE_TIME,
             headers,
-        )
+        ),
+        config,
     )
   }
 

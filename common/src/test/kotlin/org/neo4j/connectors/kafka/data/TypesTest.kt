@@ -45,6 +45,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.caniuse.CanIUse.canIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
@@ -58,6 +59,7 @@ import org.neo4j.connectors.kafka.data.PropertyType.LOCAL_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.LONG_LIST
 import org.neo4j.connectors.kafka.data.PropertyType.OFFSET_TIME
 import org.neo4j.connectors.kafka.data.PropertyType.POINT
+import org.neo4j.connectors.kafka.data.PropertyType.UUID
 import org.neo4j.connectors.kafka.data.PropertyType.ZONED_DATE_TIME
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -80,6 +82,7 @@ class TypesTest {
             .withoutAuthentication()
 
     private lateinit var driver: Driver
+    private val version by lazy { Neo4jDetector.detect(driver) }
 
     @BeforeAll
     @JvmStatic
@@ -119,11 +122,16 @@ class TypesTest {
       expectedSchema: Schema,
       expectedValue: Any?,
   ) {
+    val supportsUuidType = canIUse(Cypher.uuidType()).withNeo4j(version)
+    if (input is java.util.UUID) Assumptions.assumeTrue(supportsUuidType)
+
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
       val schema = payloadMode.schema(returned)
       val converted = payloadMode.value(schema, returned)
-      val reverted = DynamicTypes.fromConnectValue(schema, converted)
+
+      val reverted =
+          DynamicTypes.fromConnectValue(schema, converted, supportsUuidType = supportsUuidType)
 
       schema shouldBe expectedSchema
       converted shouldBe expectedValue
@@ -198,6 +206,22 @@ class TypesTest {
               SimpleTypes.STRING.schema,
               "a string",
           ),
+          java.util.UUID.randomUUID().let {
+            Arguments.of(
+                Named.of("uuid-extended", it),
+                PayloadMode.EXTENDED,
+                PropertyType.schema,
+                PropertyType.getPropertyStruct(UUID, it.toString()),
+            )
+          },
+          java.util.UUID.randomUUID().let {
+            Arguments.of(
+                Named.of("uuid-compact", it),
+                PayloadMode.COMPACT,
+                SimpleTypes.UUID.schema,
+                it.toString(),
+            )
+          },
           LocalDate.of(1999, 12, 31).let {
             Arguments.of(
                 Named.of("local date-extended", it),
@@ -507,7 +531,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -623,7 +647,7 @@ class TypesTest {
                   """
                     CREATE (p:Person) SET p = ${'$'}person
                     CREATE (c:Company) SET c =${'$'}company
-                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                    CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
                     RETURN p, c, r
                   """
                       .trimIndent(),
@@ -754,7 +778,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(
@@ -831,7 +855,7 @@ class TypesTest {
               """
                 CREATE (p:Person) SET p = ${'$'}person
                 CREATE (c:Company) SET c =${'$'}company
-                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for 
+                CREATE (p)-[r:WORKS_FOR]->(c) SET r = ${'$'}works_for
               """
                   .trimIndent(),
               mapOf(

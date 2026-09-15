@@ -64,7 +64,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
     log.info("received {} records", records?.size ?: 0)
     val duration = measureTime {
       records
-          ?.map { SinkMessage(it) }
+          ?.map { SinkMessage(it, config) }
           ?.groupBy { it.topic }
           ?.mapKeys { topicHandlers.getValue(it.key) }
           ?.forEach { (handler, messages) -> processMessages(handler, messages) }

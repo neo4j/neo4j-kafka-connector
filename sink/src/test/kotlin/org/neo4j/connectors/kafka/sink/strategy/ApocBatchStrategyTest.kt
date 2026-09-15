@@ -78,6 +78,8 @@ class ApocBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithVariableScope()),
       )
     }
   }
@@ -127,6 +129,8 @@ class ApocBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1, callSubqueryWithVariableScope()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8, callSubqueryWithVariableScope()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithVariableScope()),
       )
     }
   }
@@ -187,5 +191,9 @@ class ApocBatchStrategyTest {
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j2026_1_aura =
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)
+    private val neo4j2026_8 =
+        Neo4j(Neo4jVersion(2026, 8), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2026_8_aura =
+        Neo4j(Neo4jVersion(2026, 8), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)
   }
 }

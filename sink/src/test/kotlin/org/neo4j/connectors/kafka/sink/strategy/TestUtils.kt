@@ -22,6 +22,10 @@ import java.util.UUID
 import kotlin.random.Random
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jDeploymentType
+import org.neo4j.caniuse.Neo4jEdition
+import org.neo4j.caniuse.Neo4jVersion
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
@@ -33,14 +37,26 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.ChangeEventConverter
 import org.neo4j.connectors.kafka.data.Headers
+import org.neo4j.connectors.kafka.sink.SinkConfiguration
 import org.neo4j.connectors.kafka.sink.SinkMessage
 import org.neo4j.connectors.kafka.sink.SinkStrategy
 import org.neo4j.driver.Session
 
 object TestUtils {
+
+  // for tests when config/neo4j is irrelevant
+  val sinkConfigStub =
+      sinkConfigWithNeo4j(
+          Neo4j(Neo4jVersion(5, 26), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+      )
+
+  fun sinkConfigWithNeo4j(neo4j: Neo4j) =
+      SinkConfiguration(mapOf(Neo4jConfiguration.URI to "bolt://required-field"), neo4j, false)
+
   private val random = Random(System.currentTimeMillis())
 
   fun <T : Event> newChangeEventMessage(event: T, txId: Long, seq: Int, offset: Long): SinkMessage {
@@ -79,7 +95,8 @@ object TestUtils {
             System.currentTimeMillis(),
             TimestampType.CREATE_TIME,
             Headers.from(change),
-        )
+        ),
+        sinkConfigStub,
     )
   }
 

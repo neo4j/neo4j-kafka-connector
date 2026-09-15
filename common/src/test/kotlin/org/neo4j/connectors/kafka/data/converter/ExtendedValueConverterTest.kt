@@ -32,6 +32,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import java.util.stream.Stream
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
@@ -67,7 +68,9 @@ class ExtendedValueConverterTest {
     val converted = converter.value(PropertyType.schema, value)
     converted shouldBe PropertyType.toConnectValue(value)
 
-    val reverted = DynamicTypes.fromConnectValue(PropertyType.schema, converted)
+    val reverted =
+        DynamicTypes.fromConnectValue(PropertyType.schema, converted, supportsUuidType = true)
+
     reverted shouldBe (expectedIfDifferent ?: value)
   }
 
@@ -85,6 +88,7 @@ class ExtendedValueConverterTest {
           Arguments.of("float", 8.toFloat(), 8.toDouble()),
           Arguments.of("double", 8.toDouble(), null),
           Arguments.of("string", "a string", null),
+          Arguments.of("uuid", UUID.randomUUID(), null),
           Arguments.of("char array", "a char array".toCharArray(), "a char array"),
           Arguments.of("string builder", StringBuilder("a string builder"), "a string builder"),
           Arguments.of("string buffer", StringBuilder("a string buffer"), "a string buffer"),
@@ -155,6 +159,9 @@ class ExtendedValueConverterTest {
           Arguments.of("array (string)", Array(1) { "a" }, null),
           Arguments.of("list (string)", listOf("a"), null),
           Arguments.of("empty list (string)", emptyList<String>(), null),
+          Arguments.of("array (uuid)", Array(1) { UUID.randomUUID() }, null),
+          Arguments.of("list (uuid)", listOf(UUID.randomUUID()), null),
+          Arguments.of("empty list (uuid)", emptyList<UUID>(), null),
           Arguments.of("array (local date)", Array(1) { LocalDate.of(1999, 12, 31) }, null),
           Arguments.of("list (local date)", listOf(LocalDate.of(1999, 12, 31)), null),
           Arguments.of("empty list (local date)", emptyList<LocalDate>(), null),
@@ -235,6 +242,47 @@ class ExtendedValueConverterTest {
               null,
           ),
           Arguments.of("empty list (point)", emptyList<Point>(), null),
+      )
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PropertyTypedValueProviderUuidFilter::class)
+  fun `should string cast uuid values only when instructed`(
+      name: String,
+      value: Any?,
+      expectedIfDifferent: Any?,
+  ) {
+    converter.schema(value, false) shouldBe PropertyType.schema
+    converter.schema(value, true) shouldBe PropertyType.schema
+
+    val converted = converter.value(PropertyType.schema, value)
+    converted shouldBe PropertyType.toConnectValue(value)
+
+    val reverted =
+        DynamicTypes.fromConnectValue(PropertyType.schema, converted, supportsUuidType = false)
+
+    reverted shouldBe (expectedIfDifferent ?: value)
+  }
+
+  object PropertyTypedValueProviderUuidFilter : ArgumentsProvider {
+    override fun provideArguments(
+        parameters: ParameterDeclarations,
+        context: ExtensionContext,
+    ): Stream<out Arguments> {
+      return Stream.concat(
+          PropertyTypedValueProvider.provideArguments(parameters, context).filter {
+            !(it.get()[0] as String).contains("uuid")
+          },
+          Stream.of(
+              UUID.randomUUID().let { uuid -> Arguments.of("uuid", uuid, uuid.toString()) },
+              UUID.randomUUID().let { uuid ->
+                Arguments.of("array (uuid)", Array(1) { uuid }, listOf(uuid.toString()))
+              },
+              UUID.randomUUID().let { uuid ->
+                Arguments.of("list (uuid)", listOf(uuid), listOf(uuid.toString()))
+              },
+          ),
       )
     }
   }
@@ -408,7 +456,8 @@ class ExtendedValueConverterTest {
                   "b" to true,
                   "c" to "string",
                   "d" to 4.toFloat(),
-                  "e" to Array(1) { LocalDate.of(1999, 1, 1) },
+                  "e" to UUID.randomUUID(),
+                  "f" to Array(1) { LocalDate.of(1999, 1, 1) },
               ),
           ),
       )

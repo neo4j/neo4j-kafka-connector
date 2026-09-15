@@ -21,6 +21,8 @@ import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.header.Header
 import org.apache.kafka.connect.sink.SinkRecord
+import org.neo4j.caniuse.CanIUse
+import org.neo4j.caniuse.Cypher
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.cdcTxId
 import org.neo4j.connectors.kafka.data.cdcTxSeq
@@ -43,7 +45,7 @@ import org.neo4j.connectors.kafka.sink.strategy.pattern.RelationshipPatternEvent
 import org.neo4j.connectors.kafka.utils.JSONUtils
 import org.neo4j.driver.Query
 
-data class SinkMessage(val record: SinkRecord) {
+data class SinkMessage(val record: SinkRecord, val config: SinkConfiguration) {
   val topic
     get(): String = record.topic()
 
@@ -83,9 +85,11 @@ data class SinkMessage(val record: SinkRecord) {
   }
 
   private fun fromConnectValue(schema: Schema?, value: Any?): Any? {
+    val supportsUuidType = CanIUse.canIUse(Cypher.uuidType()).withNeo4j(config.neo4j())
+
     return schema?.let {
-      DynamicTypes.fromConnectValue(it, value)?.let {
-        // if incoming schema is a built-in BYTES or STRING, then we try a json parsing for backward
+      DynamicTypes.fromConnectValue(it, value, supportsUuidType = supportsUuidType)?.let {
+        // if incoming schema is a built-in BYTES or STRING, then we try a JSON parsing for backward
         // compatibility
         if (
             schema.name().isNullOrEmpty() &&
