@@ -22,7 +22,6 @@ import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
 import java.util.stream.Stream
-import kotlin.text.get
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -119,6 +118,8 @@ class NativeBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithConditionals()),
       )
     }
   }
@@ -207,6 +208,8 @@ class NativeBatchStrategyTest {
           Arguments.of(neo4j5_27_aura, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1, callSubqueryWithConditionals()),
           Arguments.of(neo4j2026_1_aura, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8, callSubqueryWithConditionals()),
+          Arguments.of(neo4j2026_8_aura, callSubqueryWithConditionals()),
       )
     }
   }
@@ -360,5 +363,9 @@ class NativeBatchStrategyTest {
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
     private val neo4j2026_1_aura =
         Neo4j(Neo4jVersion(2026, 1), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)
+    private val neo4j2026_8 =
+        Neo4j(Neo4jVersion(2026, 8), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.SELF_MANAGED)
+    private val neo4j2026_8_aura =
+        Neo4j(Neo4jVersion(2026, 8), Neo4jEdition.ENTERPRISE, Neo4jDeploymentType.AURA)
   }
 }
