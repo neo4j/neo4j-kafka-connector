@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.testing.source
 
 import java.net.URI
 import java.time.Duration
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.randomizedName
 import org.neo4j.connectors.kafka.testing.RegistrationSupport.registerConnector
@@ -50,7 +51,7 @@ internal class Neo4jSourceRegistration(
     cdcKeySerializations: Map<String, String>,
     cdcValueSerializations: Map<String, String>,
     payloadMode: PayloadMode,
-    forceMapsAsStruct: Boolean,
+    mapEncoding: MapEncoding,
 ) {
 
   val name: String = randomizedName("Neo4jSourceConnector")
@@ -93,7 +94,7 @@ internal class Neo4jSourceRegistration(
       if (strategy == QUERY) {
         put("neo4j.query.topic", topic)
         put("neo4j.query", query)
-        put("neo4j.query.force-maps-as-struct", forceMapsAsStruct)
+        put("neo4j.query.map-encoding", mapEncoding.name)
         put("neo4j.query.streaming-property", streamingProperty)
         put("neo4j.query.poll-interval", "${pollInterval.toMillis()}ms")
         put("neo4j.query.poll-duration", "${pollDuration.toMillis()}ms")

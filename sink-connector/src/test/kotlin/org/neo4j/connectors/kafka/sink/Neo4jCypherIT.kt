@@ -451,7 +451,10 @@ abstract class Neo4jCypherIT {
       @TopicProducer(TOPIC) producer: ConvertingKafkaProducer,
       session: Session,
   ) = runTest {
-    producer.publish(valueSchema = schema, value = PayloadMode.EXTENDED.value(schema, value))
+    producer.publish(
+        valueSchema = schema,
+        value = PayloadMode.EXTENDED.converter().value(schema, value),
+    )
 
     eventually(30.seconds) { session.run("MATCH (n:Data) RETURN n.value", emptyMap()).single() }
         .get(0)
@@ -630,12 +633,13 @@ abstract class Neo4jCypherIT {
             "dob" to LocalDate.of(1999, 1, 1),
             "siblings" to 3,
         )
-    PayloadMode.EXTENDED.schema(value).let { mapSchema ->
+    PayloadMode.EXTENDED.converter().schema(value).let { mapSchema ->
       // Protobuf does not support top level MAP values, so we are wrapping it inside a struct
       SchemaBuilder.struct().field("map", mapSchema).build().let { wrapper ->
         producer.publish(
             valueSchema = wrapper,
-            value = Struct(wrapper).put("map", PayloadMode.EXTENDED.value(mapSchema, value)),
+            value =
+                Struct(wrapper).put("map", PayloadMode.EXTENDED.converter().value(mapSchema, value)),
         )
       }
     }

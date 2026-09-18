@@ -184,13 +184,7 @@ internal class Neo4jSourceExtension(
   }
 
   private fun getStore(context: ExtensionContext): ExtensionContext.Store {
-    return context.getStore(
-        ExtensionContext.Namespace.create(
-            javaClass,
-            context.requiredTestClass,
-            context.requiredTestMethod,
-        )
-    )
+    return context.getStore(ExtensionContext.Namespace.create(javaClass, context.uniqueId))
   }
 
   private fun getState(context: ExtensionContext): TestState {
@@ -262,7 +256,7 @@ internal class Neo4jSourceExtension(
             startFrom = state.sourceAnnotation.startFrom,
             startFromValue = state.sourceAnnotation.startFromValue,
             query = state.sourceAnnotation.query,
-            forceMapsAsStruct = state.sourceAnnotation.forceMapsAsStruct,
+            mapEncoding = state.sourceAnnotation.mapEncoding,
             strategy = state.sourceAnnotation.strategy,
             keyConverter =
                 annotationResolvers.keyValueConverterResolver.resolveKeyConverter(context),

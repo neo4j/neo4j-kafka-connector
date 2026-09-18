@@ -122,14 +122,13 @@ abstract class Neo4jNodePatternIT {
                       .put("surname", "doe")
                       .put(
                           "dob",
-                          PayloadMode.EXTENDED.value(PropertyType.schema, LocalDate.of(1995, 1, 1)),
+                          PayloadMode.EXTENDED.converter()
+                              .value(PropertyType.schema, LocalDate.of(1995, 1, 1)),
                       )
                       .put(
                           "place",
-                          PayloadMode.EXTENDED.value(
-                              PropertyType.schema,
-                              Values.point(7203, 1.0, 2.5).asPoint(),
-                          ),
+                          PayloadMode.EXTENDED.converter()
+                              .value(PropertyType.schema, Values.point(7203, 1.0, 2.5).asPoint()),
                       ),
           )
         }

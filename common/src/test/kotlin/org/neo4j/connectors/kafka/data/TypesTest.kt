@@ -49,6 +49,7 @@ import org.neo4j.caniuse.Cypher
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4jDetector
 import org.neo4j.cdc.client.CDCClient
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.PropertyType.BOOLEAN
 import org.neo4j.connectors.kafka.data.PropertyType.DURATION
@@ -127,8 +128,8 @@ class TypesTest {
 
     driver.session().use {
       val returned = it.run("RETURN \$value", mapOf("value" to input)).single().get(0).asObject()
-      val schema = payloadMode.schema(returned)
-      val converted = payloadMode.value(schema, returned)
+      val schema = payloadMode.converter().schema(returned)
+      val converted = payloadMode.converter().value(schema, returned)
 
       val reverted =
           DynamicTypes.fromConnectValue(schema, converted, supportsUuidType = supportsUuidType)
@@ -140,6 +141,14 @@ class TypesTest {
   }
 
   object SimpleDriverValues : ArgumentsProvider {
+
+    /** A map's struct in EXTENDED payload mode: sorted fields, each an optional property type. */
+    private fun extendedMapStruct(vararg names: String): Schema =
+        SchemaBuilder.struct()
+            .apply {
+              names.sorted().forEach { field(it, Schemas.makeOptional(PropertyType.schema)) }
+            }
+            .build()
 
     override fun provideArguments(
         parameters: ParameterDeclarations,
@@ -469,18 +478,30 @@ class TypesTest {
                   mapOf("a" to 1, "b" to 2, "c" to 3),
               ),
               PayloadMode.EXTENDED,
-              SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-              mapOf(
-                  "a" to PropertyType.toConnectValue(1L),
-                  "b" to PropertyType.toConnectValue(2L),
-                  "c" to PropertyType.toConnectValue(3L),
-              ),
+              extendedMapStruct("a", "b", "c"),
+              Struct(extendedMapStruct("a", "b", "c"))
+                  .put("a", PropertyType.toConnectValue(1L))
+                  .put("b", PropertyType.toConnectValue(2L))
+                  .put("c", PropertyType.toConnectValue(3L)),
           ),
           Arguments.of(
               Named.of("map - uniformly typed values-compact", mapOf("a" to 1, "b" to 2, "c" to 3)),
               PayloadMode.COMPACT,
-              SchemaBuilder.map(SimpleTypes.STRING.schema(), SimpleTypes.LONG.schema()).build(),
-              mapOf("a" to 1L, "b" to 2L, "c" to 3L),
+              SchemaBuilder.struct()
+                  .field("a", SimpleTypes.LONG.schema(true))
+                  .field("b", SimpleTypes.LONG.schema(true))
+                  .field("c", SimpleTypes.LONG.schema(true))
+                  .build(),
+              Struct(
+                      SchemaBuilder.struct()
+                          .field("a", SimpleTypes.LONG.schema(true))
+                          .field("b", SimpleTypes.LONG.schema(true))
+                          .field("c", SimpleTypes.LONG.schema(true))
+                          .build()
+                  )
+                  .put("a", 1L)
+                  .put("b", 2L)
+                  .put("c", 3L),
           ),
           Arguments.of(
               Named.of(
@@ -488,12 +509,11 @@ class TypesTest {
                   mapOf("a" to 1, "b" to true, "c" to 3.0),
               ),
               PayloadMode.EXTENDED,
-              SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-              mapOf(
-                  "a" to PropertyType.toConnectValue(1L),
-                  "b" to PropertyType.getPropertyStruct(BOOLEAN, true),
-                  "c" to PropertyType.getPropertyStruct(FLOAT, 3.0),
-              ),
+              extendedMapStruct("a", "b", "c"),
+              Struct(extendedMapStruct("a", "b", "c"))
+                  .put("a", PropertyType.toConnectValue(1L))
+                  .put("b", PropertyType.getPropertyStruct(BOOLEAN, true))
+                  .put("c", PropertyType.getPropertyStruct(FLOAT, 3.0)),
           ),
           Arguments.of(
               Named.of(
@@ -502,15 +522,15 @@ class TypesTest {
               ),
               PayloadMode.COMPACT,
               SchemaBuilder.struct()
-                  .field("a", SimpleTypes.LONG.schema())
-                  .field("b", SimpleTypes.BOOLEAN.schema())
-                  .field("c", SimpleTypes.FLOAT.schema())
+                  .field("a", SimpleTypes.LONG.schema(true))
+                  .field("b", SimpleTypes.BOOLEAN.schema(true))
+                  .field("c", SimpleTypes.FLOAT.schema(true))
                   .build(),
               Struct(
                       SchemaBuilder.struct()
-                          .field("a", SimpleTypes.LONG.schema())
-                          .field("b", SimpleTypes.BOOLEAN.schema())
-                          .field("c", SimpleTypes.FLOAT.schema())
+                          .field("a", SimpleTypes.LONG.schema(true))
+                          .field("b", SimpleTypes.BOOLEAN.schema(true))
+                          .field("c", SimpleTypes.FLOAT.schema(true))
                           .build()
                   )
                   .put("a", 1L)
@@ -964,9 +984,20 @@ class TypesTest {
                             .build(),
                     )
                     .field("id", PropertyType.schema)
+                    // in EXTENDED mode an empty list is described by the property type while a
+                    // list of maps is described by an array, so the two elements of `root` have no
+                    // shared schema and the collection keeps one field per position
                     .field(
                         "root",
-                        SchemaBuilder.array(
+                        SchemaBuilder.struct()
+                            .field(
+                                "e0",
+                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
+                                    .optional()
+                                    .build(),
+                            )
+                            .field(
+                                "e1",
                                 SchemaBuilder.map(
                                         Schema.STRING_SCHEMA,
                                         SchemaBuilder.array(
@@ -981,7 +1012,7 @@ class TypesTest {
                                             .build(),
                                     )
                                     .optional()
-                                    .build()
+                                    .build(),
                             )
                             .optional()
                             .build(),
@@ -991,10 +1022,10 @@ class TypesTest {
             )
             .optional()
             .build()
-    val schema = payloadMode.schema(returned, optional = true)
+    val schema = payloadMode.converter(MapEncoding.LEGACY).rowSchema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = payloadMode.value(schema, returned)
+    val converted = payloadMode.converter(MapEncoding.LEGACY).value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", PropertyType.toConnectValue("ROOT_ID"))
@@ -1013,13 +1044,20 @@ class TypesTest {
                     .put("id", PropertyType.toConnectValue("ROOT_ID"))
                     .put(
                         "root",
-                        listOf(
-                            mapOf("children" to listOf<Any>()),
-                            mapOf(
-                                "children" to
-                                    listOf(mapOf("name" to PropertyType.toConnectValue("child")))
+                        Struct(schema.field("data").schema().field("root").schema())
+                            .put(
+                                "e0",
+                                mapOf("children" to PropertyType.toConnectValue(listOf<Any>())),
+                            )
+                            .put(
+                                "e1",
+                                mapOf(
+                                    "children" to
+                                        listOf(
+                                            mapOf("name" to PropertyType.toConnectValue("child"))
+                                        )
+                                ),
                             ),
-                        ),
                     ),
             )
 
@@ -1128,10 +1166,10 @@ class TypesTest {
             )
             .optional()
             .build()
-    val schema = payloadMode.schema(returned, optional = true)
+    val schema = payloadMode.converter(MapEncoding.LEGACY).rowSchema(returned, optional = true)
     schema shouldBe expectedSchema
 
-    val converted = payloadMode.value(schema, returned)
+    val converted = payloadMode.converter(MapEncoding.LEGACY).value(schema, returned)
     converted shouldBe
         Struct(schema)
             .put("id", "ROOT_ID")
@@ -1161,8 +1199,8 @@ class TypesTest {
   }
 
   private fun schemaAndValue(payloadMode: PayloadMode, value: Any): Triple<Schema, Any?, Any?> {
-    val schema = payloadMode.schema(value)
-    val converted = payloadMode.value(schema, value)
+    val schema = payloadMode.converter().schema(value)
+    val converted = payloadMode.converter().value(schema, value)
     val reverted = DynamicTypes.fromConnectValue(schema, converted)
     return Triple(schema, converted, reverted)
   }

@@ -376,13 +376,4 @@ object DynamicTypes {
                 "unsupported Kafka Connect date type ${value.javaClass.name}"
             )
       }
-
-  internal fun Any?.notNullOrEmpty(): Boolean =
-      when (val value = this) {
-        null -> false
-        is Collection<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
-        is Array<*> -> value.isNotEmpty() && value.any { it.notNullOrEmpty() }
-        is Map<*, *> -> value.isNotEmpty() && value.values.any { it.notNullOrEmpty() }
-        else -> true
-      }
 }

@@ -22,9 +22,11 @@ import org.neo4j.connectors.kafka.utils.JSONUtils
 
 class RawJsonStringValueConverter : ValueConverter {
 
-  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema {
+  override fun schema(value: Any?, optional: Boolean): Schema {
     return Schema.STRING_SCHEMA
   }
+
+  override fun rowSchema(row: Map<String, Any?>, optional: Boolean): Schema = Schema.STRING_SCHEMA
 
   override fun value(schema: Schema, value: Any?): Any? {
     if (value == null) {

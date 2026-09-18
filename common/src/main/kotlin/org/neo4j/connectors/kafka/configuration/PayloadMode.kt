@@ -16,19 +16,21 @@
  */
 package org.neo4j.connectors.kafka.configuration
 
-import org.apache.kafka.connect.data.Schema
 import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.data.converter.CompactValueConverter
 import org.neo4j.connectors.kafka.data.converter.ExtendedValueConverter
 import org.neo4j.connectors.kafka.data.converter.RawJsonStringValueConverter
 
-enum class PayloadMode(private val converter: ValueConverter) : ValueConverter {
-  EXTENDED(ExtendedValueConverter()),
-  COMPACT(CompactValueConverter()),
-  RAW_JSON_STRING(RawJsonStringValueConverter());
+enum class PayloadMode {
+  EXTENDED,
+  COMPACT,
+  RAW_JSON_STRING;
 
-  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema =
-      converter.schema(value, optional, forceMapsAsStruct)
-
-  override fun value(schema: Schema, value: Any?): Any? = converter.value(schema, value)
+  /** The value converter for this payload mode, describing Neo4j maps as [mapEncoding] says. */
+  fun converter(mapEncoding: MapEncoding = MapEncoding.STRUCT): ValueConverter =
+      when (this) {
+        EXTENDED -> ExtendedValueConverter(mapEncoding)
+        COMPACT -> CompactValueConverter(mapEncoding)
+        RAW_JSON_STRING -> RawJsonStringValueConverter()
+      }
 }

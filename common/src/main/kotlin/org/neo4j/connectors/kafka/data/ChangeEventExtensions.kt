@@ -31,9 +31,15 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.cdc.client.model.RelationshipState
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 
 class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EXTENDED) {
+
+  // Change data capture always describes a Neo4j map as a STRUCT, whatever map encoding is
+  // configured: the schemas it builds for the keys of an event need every list element to have the
+  // same shape.
+  private val converter = payloadMode.converter(MapEncoding.STRUCT)
 
   fun toConnectValue(changeEvent: ChangeEvent): SchemaAndValue {
     val schema = toConnectSchema(changeEvent)
@@ -80,15 +86,10 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
               if (payloadMode == PayloadMode.EXTENDED) PropertyType.schema
               else SimpleTypes.ZONEDDATETIME.schema,
           )
-          .field(
-              "txMetadata",
-              payloadMode
-                  .schema(metadata.txMetadata, optional = true, forceMapsAsStruct = true)
-                  .schema(),
-          )
+          .field("txMetadata", converter.schema(metadata.txMetadata, optional = true).schema())
           .also {
             metadata.additionalEntries.forEach { entry ->
-              it.field(entry.key, payloadMode.schema(entry.value, optional = true))
+              it.field(entry.key, converter.schema(entry.value, optional = true))
             }
           }
           .build()
@@ -104,19 +105,19 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         it.put("captureMode", metadata.captureMode.name)
         it.put(
             "txStartTime",
-            payloadMode.value(schema.field("txStartTime").schema(), metadata.txStartTime),
+            converter.value(schema.field("txStartTime").schema(), metadata.txStartTime),
         )
         it.put(
             "txCommitTime",
-            payloadMode.value(schema.field("txCommitTime").schema(), metadata.txCommitTime),
+            converter.value(schema.field("txCommitTime").schema(), metadata.txCommitTime),
         )
         it.put(
             "txMetadata",
-            payloadMode.value(schema.field("txMetadata").schema(), metadata.txMetadata),
+            converter.value(schema.field("txMetadata").schema(), metadata.txMetadata),
         )
 
         metadata.additionalEntries.forEach { entry ->
-          it.put(entry.key, payloadMode.value(schema.field(entry.key).schema(), entry.value))
+          it.put(entry.key, converter.value(schema.field(entry.key).schema(), entry.value))
         }
       }
 
@@ -149,7 +150,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
 
   internal fun nodeEventToConnectValue(nodeEvent: NodeEvent, schema: Schema): Struct =
       Struct(schema).also {
-        val keys = payloadMode.value(schema.field("keys").schema(), nodeEvent.keys)
+        val keys = converter.value(schema.field("keys").schema(), nodeEvent.keys)
 
         it.put("elementId", nodeEvent.elementId)
         it.put("eventType", nodeEvent.eventType.name)
@@ -182,7 +183,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
       schema: Schema,
   ): Struct =
       Struct(schema).also {
-        val keys = payloadMode.value(schema.field("keys").schema(), relationshipEvent.keys)
+        val keys = converter.value(schema.field("keys").schema(), relationshipEvent.keys)
 
         it.put("elementId", relationshipEvent.elementId)
         it.put("eventType", relationshipEvent.eventType.name)
@@ -213,7 +214,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
       Struct(schema).also {
         it.put("elementId", node.elementId)
         it.put("labels", node.labels)
-        it.put("keys", payloadMode.value(schema.field("keys").schema(), node.keys))
+        it.put("keys", converter.value(schema.field("keys").schema(), node.keys))
       }
 
   private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>?): Schema {
@@ -234,10 +235,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                   keys?.forEach { key ->
                     key.forEach {
                       if (addedFields.add(it.key)) {
-                        field(
-                            it.key,
-                            payloadMode.schema(it.value, optional = true, forceMapsAsStruct = true),
-                        )
+                        field(it.key, converter.schema(it.value, optional = true))
                       }
                     }
                   }
@@ -265,10 +263,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                                 (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
                             combinedProperties.toSortedMap().forEach { entry ->
                               if (it.field(entry.key) == null) {
-                                it.field(
-                                    entry.key,
-                                    payloadMode.schema(entry.value, optional = true),
-                                )
+                                it.field(entry.key, converter.schema(entry.value, optional = true))
                               }
                             }
                           }
@@ -292,13 +287,10 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                     "properties",
                     if (payloadMode == PayloadMode.EXTENDED)
                         before.properties.mapValues { e ->
-                          payloadMode.value(PropertyType.schema, e.value)
+                          converter.value(PropertyType.schema, e.value)
                         }
                     else
-                        payloadMode.value(
-                            it.schema().field("properties").schema(),
-                            before.properties,
-                        ),
+                        converter.value(it.schema().field("properties").schema(), before.properties),
                 )
               },
           )
@@ -313,13 +305,9 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                     "properties",
                     if (payloadMode == PayloadMode.EXTENDED)
                         after.properties.mapValues { e ->
-                          payloadMode.value(PropertyType.schema, e.value)
+                          converter.value(PropertyType.schema, e.value)
                         }
-                    else
-                        payloadMode.value(
-                            it.schema().field("properties").schema(),
-                            after.properties,
-                        ),
+                    else converter.value(it.schema().field("properties").schema(), after.properties),
                 )
               },
           )
@@ -344,10 +332,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                                 (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
                             combinedProperties.toSortedMap().forEach { entry ->
                               if (it.field(entry.key) == null) {
-                                it.field(
-                                    entry.key,
-                                    payloadMode.schema(entry.value, optional = true),
-                                )
+                                it.field(entry.key, converter.schema(entry.value, optional = true))
                               }
                             }
                           }
@@ -374,13 +359,10 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                     "properties",
                     if (payloadMode == PayloadMode.EXTENDED)
                         before.properties.mapValues { e ->
-                          payloadMode.value(PropertyType.schema, e.value)
+                          converter.value(PropertyType.schema, e.value)
                         }
                     else
-                        payloadMode.value(
-                            it.schema().field("properties").schema(),
-                            before.properties,
-                        ),
+                        converter.value(it.schema().field("properties").schema(), before.properties),
                 )
               },
           )
@@ -394,13 +376,9 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                     "properties",
                     if (payloadMode == PayloadMode.EXTENDED)
                         after.properties.mapValues { e ->
-                          payloadMode.value(PropertyType.schema, e.value)
+                          converter.value(PropertyType.schema, e.value)
                         }
-                    else
-                        payloadMode.value(
-                            it.schema().field("properties").schema(),
-                            after.properties,
-                        ),
+                    else converter.value(it.schema().field("properties").schema(), after.properties),
                 )
               },
           )

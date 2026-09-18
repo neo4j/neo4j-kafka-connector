@@ -14,21 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.neo4j.connectors.kafka.data
+package org.neo4j.connectors.kafka.configuration
 
-import org.apache.kafka.connect.data.Schema
-
-interface ValueConverter {
-
-  /** The schema of a single Neo4j value. */
-  fun schema(value: Any?, optional: Boolean = false): Schema
+/**
+ * How a Neo4j map is described in a Kafka Connect schema. The row a query returns is always a
+ * STRUCT with one field per column, whatever this says.
+ */
+enum class MapEncoding {
+  /** Every Neo4j map becomes a STRUCT with one field per key. */
+  STRUCT,
 
   /**
-   * The schema of one row, whose keys are the columns a query returns. Always a STRUCT with one
-   * field per column, in the order the query returned them, whatever map encoding the converter
-   * carries.
+   * Every Neo4j map becomes a MAP. A map whose values have no shared schema has no valid MAP schema
+   * and is rejected.
    */
-  fun rowSchema(row: Map<String, Any?>, optional: Boolean = false): Schema
+  MAP,
 
-  fun value(schema: Schema, value: Any?): Any?
+  /**
+   * A Neo4j map becomes a MAP when its values have a shared schema, and a STRUCT otherwise, so the
+   * encoding depends on the data rather than on the configuration.
+   */
+  LEGACY,
 }

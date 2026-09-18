@@ -44,6 +44,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.support.ParameterDeclarations
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.PropertyType
 import org.neo4j.driver.Values
@@ -53,6 +54,8 @@ class ExtendedValueConverterTest {
 
   companion object {
     val converter = ExtendedValueConverter()
+    // describes a map as a MAP when its values share a schema, and as a STRUCT otherwise
+    val legacyConverter = ExtendedValueConverter(MapEncoding.LEGACY)
   }
 
   @ParameterizedTest(name = "{0}")
@@ -427,9 +430,9 @@ class ExtendedValueConverterTest {
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(PropertyTypedMapProvider::class)
   fun `maps with property typed values should map to a map schema`(name: String, value: Any?) {
-    converter.schema(value, false) shouldBe
+    legacyConverter.schema(value, false) shouldBe
         SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
-    converter.schema(value, true) shouldBe
+    legacyConverter.schema(value, true) shouldBe
         SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).optional().build()
   }
 
@@ -491,8 +494,8 @@ class ExtendedValueConverterTest {
         )
         .forEach { (value, expected) ->
           withClue(value) {
-            val schema = converter.schema(value, false)
-            val converted = converter.value(schema, value)
+            val schema = legacyConverter.schema(value, false)
+            val converted = legacyConverter.value(schema, value)
 
             converted shouldBe expected
 
@@ -574,8 +577,8 @@ class ExtendedValueConverterTest {
             "employed" to true,
             "nullable" to null,
         )
-    val schema = converter.schema(map, false)
-    val converted = converter.value(schema, map)
+    val schema = legacyConverter.schema(map, false)
+    val converted = legacyConverter.value(schema, map)
 
     converted shouldBe
         mapOf(

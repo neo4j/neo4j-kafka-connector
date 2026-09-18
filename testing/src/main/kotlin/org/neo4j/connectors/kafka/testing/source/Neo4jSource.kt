@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.source
 
 import org.junit.jupiter.api.extension.ExtendWith
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
@@ -40,7 +41,7 @@ annotation class Neo4jSource(
     val topic: String = "",
     val streamingProperty: String = "",
     val query: String = "",
-    val forceMapsAsStruct: Boolean = true,
+    val mapEncoding: MapEncoding = MapEncoding.STRUCT,
 
     // CDC strategy
     val cdc: CdcSource = CdcSource(),
