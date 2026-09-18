@@ -35,6 +35,7 @@ import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.connectors.kafka.configuration.AuthenticationType
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.source.SourceConfiguration.Companion.CDC_METRIC_LAST_TX_ID_ENABLED
@@ -753,6 +754,44 @@ class SourceConfigurationTest {
         .also {
           it shouldHaveMessage
               "CDC strategy does not support 'RAW_JSON_STRING' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
+        }
+  }
+
+  @Test
+  fun `map encoding should default to STRUCT`() {
+    SourceConfiguration(
+            mapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                SourceConfiguration.STRATEGY to "QUERY",
+                SourceConfiguration.QUERY to "MATCH (n) RETURN n",
+                SourceConfiguration.QUERY_TOPIC to "my-topic",
+                SourceConfiguration.START_FROM to "EARLIEST",
+            )
+        )
+        .mapEncoding shouldBe MapEncoding.STRUCT
+  }
+
+  @Test
+  fun `fail if a map encoding other than STRUCT is set for RAW_JSON_STRING payload mode`() {
+    assertFailsWith(ConfigException::class) {
+          SourceConfiguration(
+                  mapOf(
+                      Neo4jConfiguration.URI to "neo4j://localhost",
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      SourceConfiguration.STRATEGY to "QUERY",
+                      SourceConfiguration.QUERY to "MATCH (n) RETURN n",
+                      SourceConfiguration.QUERY_TOPIC to "my-topic",
+                      SourceConfiguration.START_FROM to "EARLIEST",
+                      SourceConfiguration.PAYLOAD_MODE to PayloadMode.RAW_JSON_STRING.name,
+                      SourceConfiguration.QUERY_MAP_ENCODING to MapEncoding.LEGACY.name,
+                  )
+              )
+              .validate()
+        }
+        .also {
+          it shouldHaveMessage
+              "'RAW_JSON_STRING' payload mode describes every value as a string, so it does not support 'neo4j.query.map-encoding=LEGACY'. Please use 'neo4j.query.map-encoding=STRUCT'."
         }
   }
 

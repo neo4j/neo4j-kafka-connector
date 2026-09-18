@@ -22,6 +22,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.testing.MapSupport.excludingKeys
 import org.neo4j.connectors.kafka.testing.TestSupport.runTest
@@ -338,12 +339,12 @@ class Neo4jSourceJsonRawCompactIT : Neo4jSourceQueryIT() {
       streamingProperty = "timestamp",
       startFrom = "USER_PROVIDED",
       startFromValue = "1704067200000", // 2024-01-01T00:00:00
-      forceMapsAsStruct = false,
+      mapEncoding = MapEncoding.LEGACY,
       query =
           "WITH {id: 'ROOT_ID', list: [{ property1: 'value1' }, { property2: 'value2' }]} AS data RETURN data, data.id AS guid, dateTime().epochMillis AS timestamp",
   )
   @Test
-  fun `serializes list of heterogeneous objects as list when not forcing structs for map values with homogeneous value types`(
+  fun `serializes list of heterogeneous objects as list with legacy map encoding`(
       @TopicConsumer(topic = TOPIC, offset = "earliest") consumer: ConvertingKafkaConsumer
   ) = runTest {
     TopicVerifier.createForMap(consumer)

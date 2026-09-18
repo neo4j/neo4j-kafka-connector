@@ -27,13 +27,14 @@ import java.time.format.DateTimeFormatter
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.data.DAYS
 import org.neo4j.connectors.kafka.data.DIMENSION
-import org.neo4j.connectors.kafka.data.DynamicTypes.notNullOrEmpty
 import org.neo4j.connectors.kafka.data.MONTHS
 import org.neo4j.connectors.kafka.data.NANOS
 import org.neo4j.connectors.kafka.data.SECONDS
 import org.neo4j.connectors.kafka.data.SR_ID
+import org.neo4j.connectors.kafka.data.Schemas
 import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.connectors.kafka.data.THREE_D
 import org.neo4j.connectors.kafka.data.TWO_D
@@ -41,14 +42,19 @@ import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.data.X
 import org.neo4j.connectors.kafka.data.Y
 import org.neo4j.connectors.kafka.data.Z
+import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.types.IsoDuration
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Point
 import org.neo4j.driver.types.Relationship
 
-class CompactValueConverter : ValueConverter {
+class CompactValueConverter(private val mapEncoding: MapEncoding = MapEncoding.STRUCT) :
+    ValueConverter {
 
-  override fun schema(value: Any?, optional: Boolean, forceMapsAsStruct: Boolean): Schema {
+  override fun rowSchema(row: Map<String, Any?>, optional: Boolean): Schema =
+      structSchema(row.mapValues { schema(it.value, optional) }, optional, sortFields = false)
+
+  override fun schema(value: Any?, optional: Boolean): Schema {
     return when (value) {
       null -> SimpleTypes.NULL.schema(true)
       is Boolean -> SimpleTypes.BOOLEAN.schema(optional)
@@ -78,11 +84,7 @@ class CompactValueConverter : ValueConverter {
       is BooleanArray ->
           SchemaBuilder.array(Schema.BOOLEAN_SCHEMA).apply { if (optional) optional() }.build()
 
-      is Array<*> -> {
-        val first = value.firstOrNull { it.notNullOrEmpty() }
-        val schema = schema(first, optional, forceMapsAsStruct)
-        SchemaBuilder.array(schema).apply { if (optional) optional() }.build()
-      }
+      is Array<*> -> elementsSchema(value.asList(), optional)
 
       is LocalDate -> SimpleTypes.LOCALDATE.schema(optional)
       is LocalDateTime -> SimpleTypes.LOCALDATETIME.schema(optional)
@@ -97,9 +99,7 @@ class CompactValueConverter : ValueConverter {
               .apply {
                 field("<elementId>", SimpleTypes.STRING.schema())
                 field("<labels>", SchemaBuilder.array(SimpleTypes.STRING.schema()).build())
-                value.keys().forEach {
-                  field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
-                }
+                value.keys().forEach { field(it, schema(value.get(it).asObject(), optional)) }
                 if (optional) optional()
               }
               .build()
@@ -111,117 +111,116 @@ class CompactValueConverter : ValueConverter {
                 field("<type>", SimpleTypes.STRING.schema())
                 field("<start.elementId>", SimpleTypes.STRING.schema())
                 field("<end.elementId>", SimpleTypes.STRING.schema())
-                value.keys().forEach {
-                  field(it, schema(value.get(it).asObject(), optional, forceMapsAsStruct))
-                }
+                value.keys().forEach { field(it, schema(value.get(it).asObject(), optional)) }
                 if (optional) optional()
               }
               .build()
 
-      is Collection<*> -> {
-        val nonEmptyElementTypes =
-            value.filter { it.notNullOrEmpty() }.map { schema(it, optional, forceMapsAsStruct) }
-        when (nonEmptyElementTypes.toSet().size) {
-          0 ->
-              SchemaBuilder.array(SimpleTypes.NULL.schema(true))
-                  .apply { if (optional) optional() }
-                  .build()
+      is Collection<*> -> elementsSchema(value.toList(), optional)
 
-          1 ->
-              SchemaBuilder.array(nonEmptyElementTypes.first())
-                  .apply { if (optional) optional() }
-                  .build()
-
-          else -> {
-            // Elements whose schemas differ merge into a single STRUCT covering the
-            // union of their keys, so the collection stays an array rather than
-            // collapsing into the indexed-struct {e0, e1, ...} form below.
-            //
-            // Only Maps and Nodes/Relationships may merge. nonEmptyElementTypes leaves out
-            // elements that notNullOrEmpty() calls empty,
-            // but value() converts every element. So merging a type that can be left out
-            // would convert it against a schema inferred without it. Nodes and
-            // Relationships are never left out. Maps can be, which is why
-            // mergeMapElementSchemas re-reads them from value.
-            val nonNullElements = value.filterNotNull()
-            val mergedSchema =
-                when {
-                  nonNullElements.all { it is Map<*, *> } ->
-                      mergeMapElementSchemas(
-                          nonNullElements.filterIsInstance<Map<*, *>>(),
-                          forceMapsAsStruct,
-                      )
-
-                  nonNullElements.all { it is Node || it is Relationship } ->
-                      mergeNullableStructSchemas(nonEmptyElementTypes.toSet())
-
-                  else -> null
-                }
-            if (mergedSchema != null) {
-              // An optional element schema keeps null elements valid.
-              SchemaBuilder.array(makeOptional(mergedSchema))
-                  .apply { if (optional) optional() }
-                  .build()
-            } else {
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEachIndexed { i, v ->
-                      this.field("e${i}", schema(v, optional, forceMapsAsStruct))
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-            }
-          }
-        }
-      }
-
-      is Map<*, *> -> {
-        val elementTypes =
-            value
-                .mapKeys {
-                  when (val key = it.key) {
-                    is String -> key
-                    else ->
-                        throw IllegalArgumentException(
-                            "unsupported map key type ${key?.javaClass?.name}"
-                        )
-                  }
-                }
-                .filter { e -> e.value.notNullOrEmpty() }
-                .mapValues { e -> schema(e.value, optional, forceMapsAsStruct) }
-        val valueSet = elementTypes.values.toSet()
-        when {
-          valueSet.isEmpty() ->
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEach {
-                      this.field(it.key as String, schema(it.value, optional, forceMapsAsStruct))
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-
-          valueSet.singleOrNull() != null && !forceMapsAsStruct ->
-              SchemaBuilder.map(Schema.STRING_SCHEMA, elementTypes.values.first())
-                  .apply { if (optional) optional() }
-                  .build()
-
-          else ->
-              SchemaBuilder.struct()
-                  .apply {
-                    value.forEach {
-                      this.field(it.key as String, schema(it.value, optional, forceMapsAsStruct))
-                    }
-                  }
-                  .apply { if (optional) optional() }
-                  .build()
-        }
-      }
+      is Map<*, *> -> mapSchema(value, optional)
 
       else -> throw IllegalArgumentException("unsupported type ${value.javaClass.name}")
     }
   }
+
+  /**
+   * An array of the one schema every element fits. Elements with no shared schema fall back to a
+   * STRUCT with one field per position, so that a collection of unrelated values is still
+   * representable.
+   */
+  private fun elementsSchema(elements: List<Any?>, optional: Boolean): Schema {
+    val elementSchemas = elements.map { schema(it, optional) }.distinct()
+    if (elementSchemas.size <= 1) {
+      // With one schema there is nothing to combine, and with none there is nothing to describe:
+      // an empty collection is described the way a collection of nulls is.
+      return array(elementSchemas.singleOrNull() ?: Schemas.UNKNOWN, optional)
+    }
+
+    // One schema now stands for several elements, so everything it describes is optional: a later
+    // element may leave out a key, and a null element has to stay valid.
+    val combined = Schemas.combineAll(elements.map { schema(it, optional = true) }.distinct())
+    if (combined == null) {
+      return SchemaBuilder.struct()
+          .apply {
+            elements.forEachIndexed { index, element ->
+              field("e${index}", schema(element, optional))
+            }
+            if (optional) optional()
+          }
+          .build()
+    }
+
+    return array(Schemas.makeOptional(Schemas.normalize(combined)), optional)
+  }
+
+  private fun array(elementSchema: Schema, optional: Boolean): Schema =
+      SchemaBuilder.array(elementSchema).apply { if (optional) optional() }.build()
+
+  /** Describes a Neo4j map as the configured [MapEncoding] says, at every level of nesting. */
+  private fun mapSchema(value: Map<*, *>, optional: Boolean): Schema {
+    val entries = value.mapKeys { stringKey(it.key) }.mapValues { schema(it.value, optional) }
+
+    return when (mapEncoding) {
+      MapEncoding.STRUCT -> structSchema(entries, optional, sortFields = true)
+      MapEncoding.MAP ->
+          kafkaMap(
+              Schemas.combineAll(entries.values) ?: throw noSharedValueSchema(entries),
+              optional,
+          )
+
+      // A map whose values have no shared schema, an empty map and a map holding only nulls
+      // leave no value type for a MAP to carry, so they become STRUCTs.
+      MapEncoding.LEGACY -> {
+        val valueSchema = Schemas.combineAll(entries.values)
+        if (
+            valueSchema == null || Schemas.isUnknown(valueSchema) || value.values.all { it == null }
+        ) {
+          structSchema(entries, optional, sortFields = true)
+        } else {
+          kafkaMap(valueSchema, optional)
+        }
+      }
+    }
+  }
+
+  private fun kafkaMap(valueSchema: Schema, optional: Boolean): Schema =
+      SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema)
+          .apply { if (optional) optional() }
+          .build()
+
+  /**
+   * Every field is optional, so a later record may omit any key. The fields of a Neo4j map are
+   * sorted by name, so the order the keys arrived in cannot spawn a second schema for the same
+   * data; the columns of a row keep the order the query returned them in.
+   */
+  private fun structSchema(
+      fields: Map<String, Schema>,
+      optional: Boolean,
+      sortFields: Boolean,
+  ): Schema {
+    val names = if (sortFields) fields.keys.sorted() else fields.keys.toList()
+    return SchemaBuilder.struct()
+        .apply {
+          names.forEach { field(it, Schemas.makeOptional(fields.getValue(it))) }
+          if (optional) optional()
+        }
+        .build()
+  }
+
+  private fun noSharedValueSchema(entries: Map<String, Schema>): InvalidDataException =
+      InvalidDataException(
+          "unable to describe a map as a MAP, because its values have no shared type: " +
+              entries.entries.joinToString(", ") { "'${it.key}' is ${describe(it.value)}" } +
+              ". Use 'neo4j.query.map-encoding' of 'STRUCT' or 'LEGACY', or a 'neo4j.payload-mode' of " +
+              "'EXTENDED' or 'RAW_JSON_STRING'."
+      )
+
+  private fun describe(schema: Schema): String = schema.name() ?: schema.type().name
+
+  private fun stringKey(key: Any?): String =
+      key as? String
+          ?: throw IllegalArgumentException("unsupported map key type ${key?.javaClass?.name}")
 
   override fun value(schema: Schema, value: Any?): Any? {
     if (value == null) {
@@ -339,126 +338,5 @@ class CompactValueConverter : ValueConverter {
 
       else -> value
     }
-  }
-
-  /**
-   * Merges STRUCT schemas sharing an identical set of field names, resolving fields that are
-   * [SimpleTypes.NULL] in some schemas and concrete in others to the concrete type. Every field is
-   * optional, so later messages may omit any of them. Returns `null` for differing field name sets
-   * or conflicting non-null types, leaving the caller on the indexed-struct fallback.
-   *
-   * Reads the element schemas, so it suits [Node] and [Relationship], whose shape they capture in
-   * full. Maps go through [mergeMapElementSchemas], which reads the raw values and can therefore
-   * also merge differing key sets.
-   */
-  private fun mergeNullableStructSchemas(schemas: Set<Schema>): Schema? {
-    if (schemas.any { it.type() != Schema.Type.STRUCT }) return null
-
-    val nullSchema = SimpleTypes.NULL.schema(true)
-    val firstFieldNames = schemas.first().fields().map { it.name() }
-    val firstFieldNameSet = firstFieldNames.toSet()
-    if (schemas.any { s -> s.fields().map { it.name() }.toSet() != firstFieldNameSet }) {
-      return null
-    }
-
-    val builder = SchemaBuilder.struct()
-    for (fieldName in firstFieldNames) {
-      val fieldSchemas = schemas.map { it.field(fieldName).schema() }.toSet()
-      val nonNullFieldSchemas = fieldSchemas.filterNot { it == nullSchema }.toSet()
-
-      val resolvedSchema =
-          when {
-            nonNullFieldSchemas.isEmpty() -> nullSchema
-            nonNullFieldSchemas.size == 1 -> nonNullFieldSchemas.first()
-            nonNullFieldSchemas.all { it.type() == Schema.Type.STRUCT } ->
-                mergeNullableStructSchemas(nonNullFieldSchemas) ?: return null
-            else -> return null
-          }
-
-      builder.field(fieldName, makeOptional(resolvedSchema))
-    }
-    return builder.build()
-  }
-
-  /**
-   * Merges Map elements into a single STRUCT schema covering the union of their keys, recursing
-   * into nested Maps. Every field is optional, so later messages may omit any of them. Returns
-   * `null` when a key holds incompatible non-null types, leaving the caller on the indexed-struct
-   * fallback.
-   *
-   * Keys are sorted, so element order cannot change the resulting [Schema] and spawn redundant
-   * schema versions downstream.
-   *
-   * Field schemas come from the raw values rather than the elements' own schemas, so a key inferred
-   * as MAP in one element (uniformly typed values) and STRUCT in another (mixed) still contributes
-   * every key. A value counts as absent only when `null`: an empty Collection or Map is a real type
-   * at that key, and skipping it would build a schema [value] cannot coerce its element against.
-   */
-  private fun mergeMapElementSchemas(
-      elements: List<Map<*, *>>,
-      forceMapsAsStruct: Boolean,
-  ): Schema? {
-    val allKeys = sortedSetOf<String>()
-    elements.forEach { element ->
-      element.keys.forEach { key ->
-        allKeys.add(
-            key as? String
-                ?: throw IllegalArgumentException(
-                    "unsupported map key type ${key?.javaClass?.name}"
-                )
-        )
-      }
-    }
-
-    val builder = SchemaBuilder.struct()
-    for (key in allKeys) {
-      val fieldValues = elements.mapNotNull { it[key] }
-
-      val fieldSchema =
-          if (fieldValues.isEmpty()) {
-            SimpleTypes.NULL.schema(true)
-          } else {
-            val fieldSchemas = fieldValues.map { schema(it, true, forceMapsAsStruct) }.toSet()
-            when {
-              fieldSchemas.size == 1 -> fieldSchemas.first()
-              fieldValues.all { it is Map<*, *> } ->
-                  mergeMapElementSchemas(
-                      fieldValues.filterIsInstance<Map<*, *>>(),
-                      forceMapsAsStruct,
-                  ) ?: return null
-
-              else -> return null
-            }
-          }
-
-      builder.field(key, makeOptional(fieldSchema))
-    }
-    return builder.build()
-  }
-
-  private fun makeOptional(schema: Schema): Schema {
-    if (schema.isOptional) return schema
-    val builder =
-        when (schema.type()) {
-          Schema.Type.STRUCT ->
-              SchemaBuilder.struct().apply {
-                schema.fields().forEach { field(it.name(), it.schema()) }
-              }
-
-          Schema.Type.ARRAY -> SchemaBuilder.array(schema.valueSchema())
-          Schema.Type.MAP -> SchemaBuilder.map(schema.keySchema(), schema.valueSchema())
-          else -> SchemaBuilder.type(schema.type())
-        }
-    // name() carries the Neo4j logical type marker Schema.matches() keys off, so it and the rest
-    // of the metadata have to survive the rebuild.
-    return builder
-        .name(schema.name())
-        .version(schema.version())
-        .doc(schema.doc())
-        .apply {
-          schema.parameters()?.let { parameters(it) }
-          optional()
-        }
-        .build()
   }
 }
