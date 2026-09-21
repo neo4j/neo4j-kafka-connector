@@ -38,24 +38,6 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
-/**
- * Cypher treats "matched zero rows" as an ordinary outcome, so a CDC update aimed at a node the
- * target database does not have succeeds while changing nothing. No exception reaches the task, so
- * neither the dead letter queue routing nor the driver's retry can notice, and the sink carries on
- * widening the gap between source and target.
- *
- * Before any strict mode is built, we need to know whether the server gives us a signal at all.
- * `ResultSummary.counters()` is the only candidate, and [Neo4jSinkTask] currently discards it. The
- * tests here run the real generated statements against a real database and keep the summary, to
- * establish what that signal actually looks like.
- *
- * Spike: `docs/SPIKE-cdc-sink-strict-mode.md`, specs in `docs/SPIKE-strict-mode-test-specs.md`.
- * This class covers T1 and spec A-1.
- *
- * Note this container has no APOC, so
- * [org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy] is the path under test. Option C's
- * prototype will need an APOC-enabled container.
- */
 @Testcontainers
 class Neo4jSinkStrictModeIT {
   companion object {
