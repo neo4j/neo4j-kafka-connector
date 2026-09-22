@@ -2,4 +2,4 @@
 
 source "https://rubygems.org"
 
-gem "dip", "~> 8.3.0"
+gem "dip", "~> 8.4.0"
