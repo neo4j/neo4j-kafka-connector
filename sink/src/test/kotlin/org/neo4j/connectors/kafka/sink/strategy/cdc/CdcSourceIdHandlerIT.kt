@@ -87,17 +87,6 @@ abstract class CdcSourceIdHandlerIT(
         "sourceId",
     )
 
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.createNodeKeyConstraint(
-          neo4j(),
-          "eos_offset_key",
-          eosOffsetLabel,
-          "strategy",
-          "topic",
-          "partition",
-      )
-    }
-
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
@@ -107,9 +96,9 @@ abstract class CdcSourceIdHandlerIT(
           this["neo4j.uri"] = container().boltUrl
           this["neo4j.authentication.type"] = "NONE"
           this["neo4j.cdc.source-id.topics"] = "my-topic"
-
           if (eosOffsetLabel.isNotEmpty()) {
             this["neo4j.eos-offset-label"] = eosOffsetLabel
+            this["neo4j.eos-offset-auto-constraint"] = "true"
           }
         }
     )

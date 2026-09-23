@@ -83,17 +83,6 @@ abstract class PatternHandlerIT(
       mergeNodeProperties: Boolean = true,
       mergeRelationshipProperties: Boolean = true,
   ) {
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.createNodeKeyConstraint(
-          neo4j(),
-          "eos_offset_key",
-          eosOffsetLabel,
-          "strategy",
-          "topic",
-          "partition",
-      )
-    }
-
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
@@ -108,6 +97,7 @@ abstract class PatternHandlerIT(
               mergeRelationshipProperties.toString()
           if (eosOffsetLabel.isNotEmpty()) {
             this["neo4j.eos-offset-label"] = eosOffsetLabel
+            this["neo4j.eos-offset-auto-constraint"] = "true"
           }
         }
     )
