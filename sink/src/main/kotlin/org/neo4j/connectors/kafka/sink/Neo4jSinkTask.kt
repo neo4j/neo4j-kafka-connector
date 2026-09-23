@@ -18,14 +18,18 @@ package org.neo4j.connectors.kafka.sink
 
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
+import org.apache.kafka.connect.errors.ConnectException
 import org.apache.kafka.connect.errors.DataException
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.VisibleForTesting
+import org.neo4j.caniuse.Neo4j
+import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.metrics.MetricsFactory
+import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -44,6 +48,7 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
 
     settings = props!!
     config = SinkConfiguration(settings)
+    ensureNeo4jEosConstraint(config)
 
     metrics = metricsFactory.createMetrics(config)
     topicHandlers = SinkStrategyHandler.createFrom(config, metrics)
@@ -143,6 +148,63 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       } else {
         unhandled.forEach { m -> reporter.report(m.record, e).get() }
       }
+    }
+  }
+
+  companion object {
+    private const val CHECK_EOS_QUERY =
+        $$"""
+          SHOW CONSTRAINTS YIELD type, entityType, labelsOrTypes, properties
+          WHERE entityType = 'NODE'
+            AND labelsOrTypes = [$label]
+            AND type IN ['NODE_KEY', 'UNIQUENESS', 'NODE_PROPERTY_UNIQUENESS']
+            AND size(properties) = 3
+            AND all(p IN ['strategy', 'topic', 'partition'] WHERE p IN properties)
+          RETURN count(*) > 0 AS hit
+          """
+
+    private const val CREATE_EOS_CONSTRAINT =
+        $$"""
+          CREATE CONSTRAINT kafka_eos_offset_key IF NOT EXISTS
+          FOR (n:$label)
+          REQUIRE (n.strategy, n.topic, n.partition) IS
+          """
+
+    fun ensureNeo4jEosConstraint(config: SinkConfiguration) {
+      if (config.eosOffsetLabel.isBlank()) return // eos mode is off
+      val escapedLabel = SchemaNames.sanitize(config.eosOffsetLabel).orElseThrow()
+
+      config.driver.session(config.sessionConfig()).use { session ->
+        val alreadyThere =
+            session
+                .run(CHECK_EOS_QUERY.trimIndent(), mapOf("label" to escapedLabel))
+                .single()
+                .get("hit")
+                .asBoolean()
+
+        if (alreadyThere) return
+        val constraintQuery = constraintQuery(config.neo4j())
+
+        if (config.eosOffsetLabelAutoConstraint) {
+          session.run(constraintQuery, mapOf("label" to escapedLabel))
+        } else {
+          throw ConnectException(
+              "Missing EOS offset constraint for label $escapedLabel. " +
+                  "Create it in the sink database by running:\n" +
+                  constraintQuery.replace($$"$label", escapedLabel)
+          )
+        }
+      }
+    }
+
+    private fun constraintQuery(neo4j: Neo4j): String {
+      val constraintType =
+          when (neo4j.edition) {
+            Neo4jEdition.COMMUNITY -> "UNIQUE"
+            Neo4jEdition.ENTERPRISE -> "NODE KEY"
+          }
+
+      return "${CREATE_EOS_CONSTRAINT.trimIndent()} $constraintType"
     }
   }
 }
