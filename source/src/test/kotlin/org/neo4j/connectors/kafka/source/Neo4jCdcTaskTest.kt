@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.source
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -588,6 +589,23 @@ class Neo4jCdcTaskTest {
     }
 
     commitAge() shouldBe 0L
+  }
+
+  @Test
+  fun `stop should not throw if config is not initialized`() {
+    val uninitializedTask = Neo4jCdcTask()
+    uninitializedTask.stop()
+  }
+
+  @Test
+  fun `stop should not throw if start failed midway`() {
+    val faultyTask = Neo4jCdcTask()
+    faultyTask.initialize(newTaskContextWithOffset())
+
+    shouldThrow<Exception> { faultyTask.start(emptyMap()) }
+
+    // Now stop() should still work even if start() failed
+    faultyTask.stop()
   }
 
   private fun newTaskContextWithCurrentChangeId(): SourceTaskContext {
