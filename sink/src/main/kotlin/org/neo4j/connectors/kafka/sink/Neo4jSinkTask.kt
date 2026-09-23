@@ -186,14 +186,15 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
         val constraintQuery = constraintQuery(config.neo4j())
 
         if (config.eosOffsetLabelAutoConstraint) {
-          session.run(constraintQuery, mapOf("label" to escapedLabel))
-        } else {
-          throw ConnectException(
-              "Missing EOS offset constraint for label $escapedLabel. " +
-                  "Create it in the sink database by running:\n" +
-                  constraintQuery.replace($$"$label", escapedLabel)
-          )
+          val summary = session.run(constraintQuery, mapOf("label" to escapedLabel)).consume()
+          if (summary.counters().constraintsAdded() > 0) return
         }
+
+        throw ConnectException(
+            "Missing EOS offset constraint for label $escapedLabel. " +
+                "Create it in the sink database by running:\n" +
+                constraintQuery.replace($$"$label", escapedLabel)
+        )
       }
     }
 
