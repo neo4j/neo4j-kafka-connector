@@ -36,6 +36,7 @@ import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.junit.jupiter.api.Test
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.data.DynamicTypes
 import org.neo4j.connectors.kafka.data.SimpleTypes
 import org.neo4j.driver.Values
@@ -44,6 +45,8 @@ class DynamicTypesCompactTest {
 
   companion object {
     val converter = CompactValueConverter()
+    // describes a map as a MAP when its values share a schema, and as a STRUCT otherwise
+    val legacyConverter = CompactValueConverter(MapEncoding.LEGACY)
   }
 
   @Test
@@ -336,7 +339,7 @@ class DynamicTypesCompactTest {
         )
         .forEach { (map, valueSchema) ->
           withClue("not optional: $map") {
-            converter.schema(map, false) shouldBe
+            legacyConverter.schema(map, false) shouldBe
                 SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).build()
           }
         }
@@ -348,7 +351,7 @@ class DynamicTypesCompactTest {
         )
         .forEach { (map, valueSchema) ->
           withClue("optional: $map") {
-            converter.schema(map, true) shouldBe
+            legacyConverter.schema(map, true) shouldBe
                 SchemaBuilder.map(Schema.STRING_SCHEMA, valueSchema).optional().build()
           }
         }
@@ -361,10 +364,10 @@ class DynamicTypesCompactTest {
         false,
     ) shouldBe
         SchemaBuilder.struct()
-            .field("a", Schema.INT64_SCHEMA)
-            .field("b", Schema.BOOLEAN_SCHEMA)
-            .field("c", Schema.STRING_SCHEMA)
-            .field("d", Schema.FLOAT64_SCHEMA)
+            .field("a", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("b", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+            .field("c", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("d", Schema.OPTIONAL_FLOAT64_SCHEMA)
             .build()
 
     converter.schema(
@@ -490,8 +493,8 @@ class DynamicTypesCompactTest {
         )
         .forEach { (value, expected) ->
           withClue(value) {
-            val schema = converter.schema(value, false)
-            val converted = converter.value(schema, value)
+            val schema = legacyConverter.schema(value, false)
+            val converted = legacyConverter.value(schema, value)
 
             converted shouldBe expected
 
@@ -1000,7 +1003,7 @@ class DynamicTypesCompactTest {
   @Test
   fun `collection of maps with conflicting non-null types should fall back to indexed struct`() {
     val coll = listOf(mapOf("name" to "john"), mapOf("name" to 42))
-    val schema = converter.schema(coll, false)
+    val schema = legacyConverter.schema(coll, false)
 
     schema shouldBe
         SchemaBuilder.struct()
@@ -1012,7 +1015,7 @@ class DynamicTypesCompactTest {
   @Test
   fun `collection mixing maps and non-maps should fall back to indexed struct`() {
     val coll = listOf(mapOf("name" to "john"), "a string")
-    val schema = converter.schema(coll, false)
+    val schema = legacyConverter.schema(coll, false)
 
     schema shouldBe
         SchemaBuilder.struct()
@@ -1086,8 +1089,8 @@ class DynamicTypesCompactTest {
             mapOf("name" to "john", "tags" to mapOf("a" to "x")),
             mapOf("name" to "jane", "tags" to mapOf("a" to "y"), "age" to 21),
         )
-    val schema = converter.schema(coll, false)
-    val converted = converter.value(schema, coll)
+    val schema = legacyConverter.schema(coll, false)
+    val converted = legacyConverter.value(schema, coll)
 
     val elementSchema =
         SchemaBuilder.struct()
@@ -1163,7 +1166,7 @@ class DynamicTypesCompactTest {
     // {"a": null} is invisible to notNullOrEmpty(), so the key union comes from the raw elements
     val coll = listOf(mapOf("a" to null), mapOf("b" to 2L), mapOf("c" to 3L))
 
-    val schema = converter.schema(coll, true, forceMapsAsStruct = true)
+    val schema = converter.schema(coll, true)
 
     schema.type() shouldBe Schema.Type.ARRAY
     schema.valueSchema().fields().map { it.name() } shouldBe listOf("a", "b", "c")
@@ -1172,11 +1175,7 @@ class DynamicTypesCompactTest {
   @Test
   fun `collection element whose values are all null should still enforce string map keys`() {
     shouldThrow<IllegalArgumentException> {
-      converter.schema(
-          listOf(mapOf(1 to null), mapOf("b" to 2L), mapOf("c" to 3L)),
-          true,
-          forceMapsAsStruct = true,
-      )
+      converter.schema(listOf(mapOf(1 to null), mapOf("b" to 2L), mapOf("c" to 3L)), true)
     } shouldHaveMessage ("unsupported map key type java.lang.Integer")
   }
 
@@ -1192,7 +1191,7 @@ class DynamicTypesCompactTest {
   fun `merged collection should tolerate a null element`() {
     val coll = listOf(null, mapOf("b" to 1L), mapOf("c" to 2L))
 
-    val schema = converter.schema(coll, true, forceMapsAsStruct = true)
+    val schema = converter.schema(coll, true)
     val elementSchema =
         SchemaBuilder.struct()
             .field("b", Schema.OPTIONAL_INT64_SCHEMA)

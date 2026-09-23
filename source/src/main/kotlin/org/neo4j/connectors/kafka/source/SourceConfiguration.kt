@@ -25,6 +25,7 @@ import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigDef.Importance
 import org.apache.kafka.common.config.ConfigDef.Range
 import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigValue
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.pattern.Pattern
 import org.neo4j.cdc.client.pattern.PatternException
@@ -34,6 +35,7 @@ import org.neo4j.cdc.client.selector.RelationshipSelector
 import org.neo4j.cdc.client.selector.Selector
 import org.neo4j.connectors.kafka.configuration.ConnectorType
 import org.neo4j.connectors.kafka.configuration.Groups
+import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigKeyBuilder
@@ -61,8 +63,8 @@ enum class StartFrom {
 class SourceConfiguration(originals: Map<*, *>) :
     Neo4jConfiguration(config(), originals, ConnectorType.SOURCE) {
 
-  val forceMapsAsStruct: Boolean
-    get(): Boolean = getBoolean(QUERY_FORCE_MAPS_AS_STRUCT)
+  val mapEncoding
+    get(): MapEncoding = MapEncoding.valueOf(getString(QUERY_MAP_ENCODING))
 
   val startFrom
     get(): StartFrom = StartFrom.valueOf(getString(START_FROM))
@@ -491,7 +493,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     const val QUERY_POLL_DURATION = "neo4j.query.poll-duration"
     const val QUERY_TIMEOUT = "neo4j.query.timeout"
     const val QUERY_TOPIC = "neo4j.query.topic"
-    const val QUERY_FORCE_MAPS_AS_STRUCT = "neo4j.query.force-maps-as-struct"
+    const val QUERY_MAP_ENCODING = "neo4j.query.map-encoding"
     const val CDC_USE_LEADER = "neo4j.cdc.use-leader"
     const val CDC_POLL_INTERVAL = "neo4j.cdc.poll-interval"
     const val CDC_POLL_DURATION = "neo4j.cdc.poll-duration"
@@ -530,7 +532,6 @@ class SourceConfiguration(originals: Map<*, *>) :
     private val DEFAULT_QUERY_POLL_DURATION = 5.seconds
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_QUERY_TIMEOUT = 0.seconds
-    private const val DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT = true
 
     private const val DEFAULT_CDC_USE_LEADER = false
     private val DEFAULT_CDC_POLL_INTERVAL = 1.seconds
@@ -540,6 +541,11 @@ class SourceConfiguration(originals: Map<*, *>) :
     private const val METADATA_KEY_AUTHENTICATED_USER = "authenticatedUser"
     private const val METADATA_KEY_EXECUTING_USER = "executingUser"
     private const val METADATA_KEY_TX_METADATA = "txMetadata"
+
+    private fun mapEncodingOtherThanStruct(mapEncoding: ConfigValue?): Boolean {
+      val value = mapEncoding?.value() as? String ?: return false
+      return value.isNotBlank() && value != MapEncoding.STRUCT.name
+    }
 
     fun validate(config: Config, originals: Map<String, String>) {
       validate(config)
@@ -560,9 +566,19 @@ class SourceConfiguration(originals: Map<*, *>) :
       config.validateNonEmptyIfVisible(CDC_POLL_INTERVAL)
 
       val configList = config.configValues().toList()
+      val mapEncoding = configList.find { it.name() == QUERY_MAP_ENCODING }
       val strategy = configList.find { it.name() == STRATEGY }
+      val payloadMode = configList.find { it.name() == PAYLOAD_MODE }
+      if (
+          payloadMode?.value() == PayloadMode.RAW_JSON_STRING.name &&
+              mapEncodingOtherThanStruct(mapEncoding)
+      ) {
+        mapEncoding?.addErrorMessage(
+            "'${PayloadMode.RAW_JSON_STRING.name}' payload mode describes every value as a string, so it does not support '$QUERY_MAP_ENCODING=${mapEncoding.value()}'. Please use '$QUERY_MAP_ENCODING=${MapEncoding.STRUCT.name}'."
+        )
+      }
+
       if (strategy?.value() == SourceType.CDC.name) {
-        val payloadMode = configList.find { it.name() == PAYLOAD_MODE }
         if (payloadMode?.value() == PayloadMode.RAW_JSON_STRING.name) {
           strategy.addErrorMessage(
               "CDC strategy does not support '${PayloadMode.RAW_JSON_STRING.name}' payload mode. Please use either 'EXTENDED' or 'COMPACT' modes."
@@ -708,15 +724,6 @@ class SourceConfiguration(originals: Map<*, *>) :
                 }
             )
             .define(
-                ConfigKeyBuilder.of(QUERY_FORCE_MAPS_AS_STRUCT, ConfigDef.Type.BOOLEAN) {
-                  importance = ConfigDef.Importance.LOW
-                  defaultValue = DEFAULT_QUERY_FORCE_MAPS_AS_STRUCT
-                  group = Groups.CONNECTOR_ADVANCED.title
-                  recommender =
-                      Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name))
-                }
-            )
-            .define(
                 ConfigKeyBuilder.of(BATCH_SIZE, ConfigDef.Type.INT) {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = DEFAULT_BATCH_SIZE
@@ -762,6 +769,19 @@ class SourceConfiguration(originals: Map<*, *>) :
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.enum(PayloadMode::class.java)
                   recommender = Recommenders.enum(PayloadMode::class.java)
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(QUERY_MAP_ENCODING, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.LOW
+                  defaultValue = MapEncoding.STRUCT.name
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.enum(MapEncoding::class.java)
+                  recommender =
+                      Recommenders.and(
+                          Recommenders.enum(MapEncoding::class.java),
+                          Recommenders.visibleIf(STRATEGY, Predicate.isEqual(SourceType.QUERY.name)),
+                      )
                 }
             )
             .define(

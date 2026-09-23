@@ -84,8 +84,8 @@ class ChangeEventExtensionsTest {
             .field(
                 "txMetadata",
                 SchemaBuilder.struct()
-                    .field("user", PropertyType.schema)
                     .field("app", PropertyType.schema)
+                    .field("user", PropertyType.schema)
                     .optional()
                     .build(),
             )
@@ -154,8 +154,8 @@ class ChangeEventExtensionsTest {
             .field(
                 "txMetadata",
                 SchemaBuilder.struct()
-                    .field("user", Schema.OPTIONAL_STRING_SCHEMA)
                     .field("app", Schema.OPTIONAL_STRING_SCHEMA)
+                    .field("user", Schema.OPTIONAL_STRING_SCHEMA)
                     .optional()
                     .build(),
             )

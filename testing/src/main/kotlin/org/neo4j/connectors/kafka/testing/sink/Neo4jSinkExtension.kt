@@ -194,13 +194,7 @@ internal class Neo4jSinkExtension(
   }
 
   private fun getStore(context: ExtensionContext): ExtensionContext.Store {
-    return context.getStore(
-        ExtensionContext.Namespace.create(
-            javaClass,
-            context.requiredTestClass,
-            context.requiredTestMethod,
-        )
-    )
+    return context.getStore(ExtensionContext.Namespace.create(javaClass, context.uniqueId))
   }
 
   private fun getState(context: ExtensionContext): TestState {

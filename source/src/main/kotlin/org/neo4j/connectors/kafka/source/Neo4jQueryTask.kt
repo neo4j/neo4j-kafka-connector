@@ -26,6 +26,7 @@ import kotlinx.coroutines.runBlocking
 import org.apache.kafka.connect.source.SourceRecord
 import org.apache.kafka.connect.source.SourceTask
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
+import org.neo4j.connectors.kafka.data.ValueConverter
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.driver.Record
 import org.neo4j.driver.reactivestreams.ReactiveSession
@@ -38,6 +39,7 @@ class Neo4jQueryTask : SourceTask() {
 
   private lateinit var settings: Map<String, String>
   private lateinit var config: SourceConfiguration
+  private lateinit var converter: ValueConverter
   private lateinit var offset: AtomicLong
 
   override fun version(): String = VersionUtil.version(this.javaClass as Class<*>)
@@ -47,6 +49,7 @@ class Neo4jQueryTask : SourceTask() {
 
     settings = props!!
     config = SourceConfiguration(settings)
+    converter = config.payloadMode.converter(config.mapEncoding)
 
     offset = AtomicLong(resumeFrom(config))
     log.info("resuming from offset: ${offset.get()}")
@@ -100,13 +103,8 @@ class Neo4jQueryTask : SourceTask() {
 
   private fun build(record: Record): SourceRecord {
     val recordAsMap = record.asMap()
-    val schema =
-        config.payloadMode.schema(
-            recordAsMap,
-            optional = true,
-            forceMapsAsStruct = config.forceMapsAsStruct,
-        )
-    val value = config.payloadMode.value(schema, recordAsMap)
+    val schema = converter.rowSchema(recordAsMap, optional = true)
+    val value = converter.value(schema, recordAsMap)
 
     return SourceRecord(
         config.partition,
