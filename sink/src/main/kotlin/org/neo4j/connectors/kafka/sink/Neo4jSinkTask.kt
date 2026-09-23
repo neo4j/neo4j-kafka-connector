@@ -23,7 +23,6 @@ import org.apache.kafka.connect.errors.DataException
 import org.apache.kafka.connect.sink.SinkRecord
 import org.apache.kafka.connect.sink.SinkTask
 import org.jetbrains.annotations.VisibleForTesting
-import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jEdition
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
@@ -152,22 +151,17 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
   }
 
   companion object {
+    private const val LABEL = "parameterized_label"
+
     private const val CHECK_EOS_QUERY =
         $$"""
           SHOW CONSTRAINTS YIELD type, entityType, labelsOrTypes, properties
           WHERE entityType = 'NODE'
-            AND labelsOrTypes = [$label]
+            AND labelsOrTypes = [$parameterized_label]
             AND type IN ['NODE_KEY', 'UNIQUENESS', 'NODE_PROPERTY_UNIQUENESS']
             AND size(properties) = 3
             AND all(p IN ['strategy', 'topic', 'partition'] WHERE p IN properties)
-          RETURN count(*) > 0 AS hit
-          """
-
-    private const val CREATE_EOS_CONSTRAINT =
-        $$"""
-          CREATE CONSTRAINT kafka_eos_offset_key IF NOT EXISTS
-          FOR (n:$label)
-          REQUIRE (n.strategy, n.topic, n.partition) IS
+          RETURN count(*) > 0 AS hasConstraint
           """
 
     fun ensureNeo4jEosConstraint(config: SinkConfiguration) {
@@ -177,35 +171,32 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
       config.driver.session(config.sessionConfig()).use { session ->
         val alreadyThere =
             session
-                .run(CHECK_EOS_QUERY.trimIndent(), mapOf("label" to escapedLabel))
+                .run(CHECK_EOS_QUERY.trimIndent(), mapOf(LABEL to escapedLabel))
                 .single()
-                .get("hit")
+                .get("hasConstraint")
                 .asBoolean()
 
         if (alreadyThere) return
-        val constraintQuery = constraintQuery(config.neo4j())
+
+        val query =
+            "CREATE CONSTRAINT kafka_eos_offset_key IF NOT EXISTS\n" +
+                "FOR (n:$escapedLabel) REQUIRE (n.strategy, n.topic, n.partition) " +
+                when (config.neo4j().edition) {
+                  Neo4jEdition.COMMUNITY -> "IS UNIQUE"
+                  Neo4jEdition.ENTERPRISE -> "IS NODE KEY"
+                }
 
         if (config.eosOffsetLabelAutoConstraint) {
-          val summary = session.run(constraintQuery, mapOf("label" to escapedLabel)).consume()
-          if (summary.counters().constraintsAdded() > 0) return
+          val resultSummary = session.run(query).consume()
+          if (resultSummary.counters().constraintsAdded() > 0) return
         }
 
         throw ConnectException(
             "Missing EOS offset constraint for label $escapedLabel. " +
                 "Create it in the sink database by running:\n" +
-                constraintQuery.replace($$"$label", escapedLabel)
+                query
         )
       }
-    }
-
-    private fun constraintQuery(neo4j: Neo4j): String {
-      val constraintType =
-          when (neo4j.edition) {
-            Neo4jEdition.COMMUNITY -> "UNIQUE"
-            Neo4jEdition.ENTERPRISE -> "NODE KEY"
-          }
-
-      return "${CREATE_EOS_CONSTRAINT.trimIndent()} $constraintType"
     }
   }
 }
