@@ -54,6 +54,9 @@ class SinkConfiguration : Neo4jConfiguration {
   val eosOffsetLabel
     get(): String = getString(EOS_OFFSET_LABEL).takeIf { it.isNotBlank() } ?: ""
 
+  val eosOffsetLabelAutoConstraint
+    get(): Boolean = getString(EOS_OFFSET_AUTO_CONSTRAINT).toBoolean()
+
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
 
@@ -132,6 +135,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val BATCH_SIZE = "neo4j.batch-size"
     const val BATCH_TIMEOUT = "neo4j.batch-timeout"
     const val EOS_OFFSET_LABEL = "neo4j.eos-offset-label"
+    const val EOS_OFFSET_AUTO_CONSTRAINT = "neo4j.eos-offset-auto-constraint"
 
     const val CYPHER_TOPIC_PREFIX = "neo4j.cypher.topic."
     const val CYPHER_BIND_TIMESTAMP_AS = "neo4j.cypher.bind-timestamp-as"
@@ -155,6 +159,7 @@ class SinkConfiguration : Neo4jConfiguration {
 
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_BATCH_TIMEOUT = 0.seconds
+    private const val DEFAULT_EOS_OFFSET_AUTO_CONSTRAINT = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
     const val DEFAULT_BIND_TIMESTAMP_ALIAS = "__timestamp"
@@ -252,6 +257,15 @@ class SinkConfiguration : Neo4jConfiguration {
                   importance = ConfigDef.Importance.HIGH
                   defaultValue = ""
                   group = Groups.CONNECTOR_ADVANCED.title
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(EOS_OFFSET_AUTO_CONSTRAINT, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.HIGH
+                  defaultValue = DEFAULT_EOS_OFFSET_AUTO_CONSTRAINT.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender = Recommenders.bool()
                 }
             )
             .define(
