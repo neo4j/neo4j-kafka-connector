@@ -110,7 +110,10 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
 
   override fun stop() {
     log.info("stopping")
-    config.close()
+    // SourceConfiguration could have thrown, leaving config uninitialized
+    if (this::config.isInitialized) {
+      config.close()
+    }
     if (this::dbTransactionMetricsData.isInitialized) {
       dbTransactionMetricsData.close()
     }
