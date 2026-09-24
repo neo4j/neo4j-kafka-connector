@@ -265,7 +265,7 @@ class SinkConfiguration : Neo4jConfiguration {
                   defaultValue = DEFAULT_EOS_OFFSET_AUTO_CONSTRAINT.toString()
                   group = Groups.CONNECTOR_ADVANCED.title
                   validator = Validators.bool()
-                  recommender = Recommenders.bool()
+                  recommender = Recommenders.visibleIfNotEmpty(Predicate.isEqual(EOS_OFFSET_LABEL))
                 }
             )
             .define(

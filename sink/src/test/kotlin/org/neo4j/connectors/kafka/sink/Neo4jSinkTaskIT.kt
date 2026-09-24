@@ -50,7 +50,6 @@ class Neo4jSinkTaskIT {
   fun setUp() {
     db = "test-${UUID.randomUUID()}"
     driver.createDatabase(db)
-
     task = Neo4jSinkTask()
     task.initialize(mock<SinkTaskContext>())
   }
