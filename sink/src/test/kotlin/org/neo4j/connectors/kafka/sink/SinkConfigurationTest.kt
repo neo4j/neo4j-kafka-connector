@@ -178,6 +178,20 @@ class SinkConfigurationTest {
   }
 
   @Test
+  fun `should default to false for exactly once offset automatic constraint creation`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.CDC_SOURCE_ID_TOPICS to "bar,foo",
+        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
+
+    config.eosOffsetLabelAutoConstraint shouldBe false
+  }
+
+  @Test
   fun `should return configured exactly once offset label`() {
     val originals =
         mapOf(
@@ -190,6 +204,21 @@ class SinkConfigurationTest {
     val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
 
     config.eosOffsetLabel shouldBe "__MyKafkaOffset"
+  }
+
+  @Test
+  fun `should return configured exactly once offset automatic constraint creation`() {
+    val originals =
+        mapOf(
+            Neo4jConfiguration.URI to "bolt://neo4j:7687",
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+            SinkConnector.TOPICS_CONFIG to "bar,foo",
+            SinkConfiguration.EOS_OFFSET_AUTO_CONSTRAINT to "true",
+            SinkConfiguration.CDC_SCHEMA_TOPICS to "bar,foo",
+        )
+    val config = SinkConfiguration(originals, apocCypherDoItAvailable = false, neo4j = neo4j5_26)
+
+    config.eosOffsetLabelAutoConstraint shouldBe true
   }
 
   @Test

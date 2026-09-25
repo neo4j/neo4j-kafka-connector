@@ -11,5 +11,5 @@
   "scripts": {
     "prepare": "husky"
   },
-  "packageManager": "pnpm@12.3.4"
+  "packageManager": "pnpm@12.5.1"
 }

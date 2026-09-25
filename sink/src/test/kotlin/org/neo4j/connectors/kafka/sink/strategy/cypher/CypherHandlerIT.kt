@@ -75,17 +75,6 @@ abstract class CypherHandlerIT(
   }
 
   private fun startTask(query: String) {
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.createNodeKeyConstraint(
-          neo4j(),
-          "eos_offset_key",
-          eosOffsetLabel,
-          "strategy",
-          "topic",
-          "partition",
-      )
-    }
-
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
@@ -97,6 +86,7 @@ abstract class CypherHandlerIT(
           this["neo4j.cypher.topic.my-topic"] = query
           if (eosOffsetLabel.isNotEmpty()) {
             this["neo4j.eos-offset-label"] = eosOffsetLabel
+            this["neo4j.eos-offset-auto-constraint"] = "true"
           }
         }
     )

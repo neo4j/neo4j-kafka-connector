@@ -66,18 +66,6 @@ abstract class CudHandlerIT(
     db = "test-${UUID.randomUUID()}"
     driver().createDatabase(db)
     session = driver().session(SessionConfig.forDatabase(db))
-
-    if (eosOffsetLabel.isNotEmpty()) {
-      session.createNodeKeyConstraint(
-          neo4j(),
-          "eos_offset_key",
-          eosOffsetLabel,
-          "strategy",
-          "topic",
-          "partition",
-      )
-    }
-
     task = Neo4jSinkTask()
     task.initialize(newTaskContext())
     task.start(
@@ -89,6 +77,7 @@ abstract class CudHandlerIT(
           this["neo4j.cud.topics"] = "my-topic"
           if (eosOffsetLabel.isNotEmpty()) {
             this["neo4j.eos-offset-label"] = eosOffsetLabel
+            this["neo4j.eos-offset-auto-constraint"] = "true"
           }
         }
     )
