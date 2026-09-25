@@ -83,7 +83,7 @@ class Neo4jSinkTaskIT {
   }
 
   @Test
-  fun `should successfully create constraitns for EOS when auto mode`() {
+  fun `should successfully create constraints for EOS when auto mode`() {
     val props =
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
