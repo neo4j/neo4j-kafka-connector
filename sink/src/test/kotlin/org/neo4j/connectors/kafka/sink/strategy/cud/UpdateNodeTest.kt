@@ -94,4 +94,17 @@ class UpdateNodeTest {
     shouldThrow<InvalidDataException> { operation.toAction() } shouldHaveMessage
         "Node must contain at least one ID property."
   }
+
+  @Test
+  fun `should parse null property value`() {
+    val operation =
+        UpdateNode.from(
+            mapOf(
+                Keys.LABELS to listOf("Person"),
+                Keys.IDS to mapOf("id" to 1),
+                Keys.PROPERTIES to mapOf("name" to null),
+            )
+        )
+    operation shouldBe UpdateNode(setOf("Person"), mapOf("id" to 1), mapOf("name" to null))
+  }
 }
