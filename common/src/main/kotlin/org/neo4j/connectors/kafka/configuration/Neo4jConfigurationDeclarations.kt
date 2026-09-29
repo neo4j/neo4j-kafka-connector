@@ -51,10 +51,10 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.AUTHENTICATION_TYPE, ConfigDef.Type.STRING) {
               importance = Importance.HIGH
-              defaultValue = AuthenticationType.BASIC.toString()
+              defaultValue = "basic"
               group = Groups.CONNECTION.title
-              validator = Validators.enum(AuthenticationType::class.java)
-              recommender = Recommenders.enum(AuthenticationType::class.java)
+              validator = Validators.authType()
+              recommender = Recommenders.authType()
             }
         )
         .define(
@@ -68,7 +68,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -83,7 +83,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -98,7 +98,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -113,7 +113,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.KERBEROS.toString()),
+                      authTypeIs("kerberos"),
                   )
             }
         )
@@ -128,7 +128,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BEARER.toString()),
+                      authTypeIs("bearer"),
                   )
             }
         )
@@ -143,7 +143,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -158,7 +158,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -173,7 +173,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -188,10 +188,14 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
+
+private fun authTypeIs(name: String): Predicate<Any?> = Predicate {
+  it is String && it.equals(name, ignoreCase = true)
+}
 
 fun ConfigDef.defineEncryptionSettings(): ConfigDef =
     this.define(

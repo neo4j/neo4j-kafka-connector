@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.configuration.helpers
 import java.util.function.Predicate
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 
 interface DependentRecommender {
   val dependsOn: Set<String>
@@ -53,6 +54,22 @@ object Recommenders {
           parsedConfig: MutableMap<String, Any>?,
       ): MutableList<Any> {
         return values.toMutableList()
+      }
+
+      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
+        return true
+      }
+    }
+  }
+
+  /** Recommends the names of the registered authentication providers. */
+  fun authType(): ConfigDef.Recommender {
+    return object : ConfigDef.Recommender {
+      override fun validValues(
+          name: String?,
+          parsedConfig: MutableMap<String, Any>?,
+      ): MutableList<Any> {
+        return Neo4jConfiguration.authRegistry.names().toMutableList()
       }
 
       override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
