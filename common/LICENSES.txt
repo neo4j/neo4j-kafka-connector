@@ -6,11 +6,14 @@ libraries. For an overview of the licenses see the NOTICE.txt file.
 Apache Software License, Version 2.0
   Apache Commons Collections
   Apache Commons Lang
+  ASM based accessors helper used by json-smart
   Jackson-annotations
   Jackson-core
   jackson-databind
   jackson-module-kotlin
+  JCIP Annotations under Apache License
   JetBrains Java Annotations
+  JSON Small and Fast Parser
   JSpecify annotations
   Kotlin Reflect
   Kotlin Stdlib
@@ -27,7 +30,11 @@ Apache Software License, Version 2.0
   Netty/TomcatNative [OpenSSL - Classes]
   Netty/Transport
   Netty/Transport/Native/Unix/Common
+  Nimbus Content Type
+  Nimbus JOSE+JWT
+  Nimbus LangTag
   Non-Blocking Reactive Foundation for the JVM
+  OAuth 2.0 SDK with OpenID Connect extensions
   org.apiguardian:apiguardian-api
 ------------------------------------------------------------------------------
 
@@ -238,6 +245,7 @@ Apache Software License, Version 2.0
 ------------------------------------------------------------------------------
 BSD License
   ANTLR 4 Runtime
+  asm
 ------------------------------------------------------------------------------
 
 Copyright (c) <year>, <copyright holder>
