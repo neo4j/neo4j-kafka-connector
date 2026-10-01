@@ -9,6 +9,13 @@
 
     <includeBaseDirectory>false</includeBaseDirectory>
 
+    <!-- several dependencies register implementations of the same service interface, concatenate them instead of keeping only one -->
+    <containerDescriptorHandlers>
+        <containerDescriptorHandler>
+            <handlerName>metaInf-services</handlerName>
+        </containerDescriptorHandler>
+    </containerDescriptorHandlers>
+
     <fileSets>
         <fileSet>
             <directory>src/main/distributions/text/doc</directory>

@@ -21,13 +21,16 @@ Third-party licenses
 Apache Software License, Version 2.0
   Apache Commons Collections
   Apache Commons Lang
+  ASM based accessors helper used by json-smart
   Internet Time Utility
   Jackson-annotations
   Jackson-core
   jackson-databind
   Jackson-dataformat-YAML
   jackson-module-kotlin
+  JCIP Annotations under Apache License
   JetBrains Java Annotations
+  JSON Small and Fast Parser
   JsonSchemaValidator
   JSpecify annotations
   Kotlin Reflect
@@ -47,12 +50,17 @@ Apache Software License, Version 2.0
   Netty/TomcatNative [OpenSSL - Classes]
   Netty/Transport
   Netty/Transport/Native/Unix/Common
+  Nimbus Content Type
+  Nimbus JOSE+JWT
+  Nimbus LangTag
   Non-Blocking Reactive Foundation for the JVM
+  OAuth 2.0 SDK with OpenID Connect and Federation extensions
   org.apiguardian:apiguardian-api
   SnakeYAML Engine
 
 BSD License
   ANTLR 4 Runtime
+  asm
 
 MIT License
   SLF4J API Module

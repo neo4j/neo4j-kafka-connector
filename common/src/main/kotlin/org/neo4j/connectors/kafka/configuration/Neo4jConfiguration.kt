@@ -24,16 +24,22 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
+import org.apache.kafka.common.config.Config as KafkaConfig
 import org.apache.kafka.common.config.ConfigDef
+import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigValue
+import org.apache.kafka.common.config.types.Password
 import org.apache.kafka.connect.errors.ConnectException
+import org.neo4j.connectors.driver.auth.AuthConfig
+import org.neo4j.connectors.driver.auth.AuthConfigException
+import org.neo4j.connectors.driver.auth.AuthTokenManagerRegistry
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 import org.neo4j.connectors.kafka.configuration.helpers.parseSimpleString
 import org.neo4j.connectors.kafka.utils.Telemetry.connectorInformation
 import org.neo4j.connectors.kafka.utils.Telemetry.userAgent
 import org.neo4j.driver.AccessMode
-import org.neo4j.driver.AuthToken
-import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.AuthTokenManager
 import org.neo4j.driver.Bookmark
 import org.neo4j.driver.Config
 import org.neo4j.driver.Config.TrustStrategy
@@ -49,14 +55,6 @@ import org.slf4j.LoggerFactory
 enum class ConnectorType(val description: String) {
   SINK("sink"),
   SOURCE("source"),
-}
-
-enum class AuthenticationType {
-  NONE,
-  BASIC,
-  KERBEROS,
-  BEARER,
-  CUSTOM,
 }
 
 open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val type: ConnectorType) :
@@ -99,30 +97,6 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
   internal val certFiles
     get(): List<File> = getList(SECURITY_CERT_FILES).map { File(it) }
-
-  internal val authenticationToken
-    get(): AuthToken =
-        when (ConfigUtils.getEnum<AuthenticationType>(this, AUTHENTICATION_TYPE)) {
-          null -> throw ConnectException("Configuration '$AUTHENTICATION_TYPE' is not provided")
-          AuthenticationType.NONE -> AuthTokens.none()
-          AuthenticationType.BASIC ->
-              AuthTokens.basic(
-                  getString(AUTHENTICATION_BASIC_USERNAME),
-                  getPassword(AUTHENTICATION_BASIC_PASSWORD).value(),
-                  getString(AUTHENTICATION_BASIC_REALM),
-              )
-          AuthenticationType.KERBEROS ->
-              AuthTokens.kerberos(getPassword(AUTHENTICATION_KERBEROS_TICKET).value())
-          AuthenticationType.BEARER ->
-              AuthTokens.bearer(getPassword(AUTHENTICATION_BEARER_TOKEN).value())
-          AuthenticationType.CUSTOM ->
-              AuthTokens.custom(
-                  getString(AUTHENTICATION_CUSTOM_PRINCIPAL),
-                  getPassword(AUTHENTICATION_CUSTOM_CREDENTIALS).value(),
-                  getString(AUTHENTICATION_CUSTOM_REALM),
-                  getString(AUTHENTICATION_CUSTOM_SCHEME),
-              )
-        }
 
   internal val trustStrategy
     get(): TrustStrategy {
@@ -179,7 +153,16 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       }
     }
 
-    GraphDatabase.driver(mainUri, authenticationToken, config.build())
+    GraphDatabase.driver(mainUri, createAuthTokenManager(), config.build())
+  }
+
+  internal fun createAuthTokenManager(): AuthTokenManager {
+    val type = resolveAuthType(getString(AUTHENTICATION_TYPE))
+    return try {
+      authRegistry.create(type, authConfig(originals(), type))
+    } catch (e: IllegalArgumentException) {
+      throw ConnectException("Invalid authentication configuration for '$type': ${e.message}", e)
+    }
   }
 
   open fun sessionConfig(vararg bookmarks: Bookmark): SessionConfig {
@@ -246,16 +229,48 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
 
     const val DATABASE = "neo4j.database"
 
-    const val AUTHENTICATION_TYPE = "neo4j.authentication.type"
-    const val AUTHENTICATION_BASIC_USERNAME = "neo4j.authentication.basic.username"
-    const val AUTHENTICATION_BASIC_PASSWORD = "neo4j.authentication.basic.password"
-    const val AUTHENTICATION_BASIC_REALM = "neo4j.authentication.basic.realm"
-    const val AUTHENTICATION_KERBEROS_TICKET = "neo4j.authentication.kerberos.ticket"
-    const val AUTHENTICATION_BEARER_TOKEN = "neo4j.authentication.bearer.token"
-    const val AUTHENTICATION_CUSTOM_SCHEME = "neo4j.authentication.custom.scheme"
-    const val AUTHENTICATION_CUSTOM_PRINCIPAL = "neo4j.authentication.custom.principal"
-    const val AUTHENTICATION_CUSTOM_CREDENTIALS = "neo4j.authentication.custom.credentials"
-    const val AUTHENTICATION_CUSTOM_REALM = "neo4j.authentication.custom.realm"
+    const val AUTHENTICATION_PREFIX = "neo4j.authentication"
+    const val AUTHENTICATION_TYPE = "$AUTHENTICATION_PREFIX.type"
+    const val AUTHENTICATION_BASIC_USERNAME = "$AUTHENTICATION_PREFIX.basic.username"
+    const val AUTHENTICATION_BASIC_PASSWORD = "$AUTHENTICATION_PREFIX.basic.password"
+    const val AUTHENTICATION_BASIC_REALM = "$AUTHENTICATION_PREFIX.basic.realm"
+    const val AUTHENTICATION_KERBEROS_TICKET = "$AUTHENTICATION_PREFIX.kerberos.ticket"
+    const val AUTHENTICATION_BEARER_TOKEN = "$AUTHENTICATION_PREFIX.bearer.token"
+    const val AUTHENTICATION_CUSTOM_SCHEME = "$AUTHENTICATION_PREFIX.custom.scheme"
+    const val AUTHENTICATION_CUSTOM_PRINCIPAL = "$AUTHENTICATION_PREFIX.custom.principal"
+    const val AUTHENTICATION_CUSTOM_CREDENTIALS = "$AUTHENTICATION_PREFIX.custom.credentials"
+    const val AUTHENTICATION_CUSTOM_REALM = "$AUTHENTICATION_PREFIX.custom.realm"
+    const val AUTHENTICATION_OIDC_ISSUER = "$AUTHENTICATION_PREFIX.oidc.issuer"
+    const val AUTHENTICATION_OIDC_DISCOVERY_URL = "$AUTHENTICATION_PREFIX.oidc.discoveryUrl"
+    const val AUTHENTICATION_OIDC_TOKEN_ENDPOINT = "$AUTHENTICATION_PREFIX.oidc.tokenEndpoint"
+    const val AUTHENTICATION_OIDC_CLIENT_ID = "$AUTHENTICATION_PREFIX.oidc.clientId"
+    const val AUTHENTICATION_OIDC_CLIENT_SECRET = "$AUTHENTICATION_PREFIX.oidc.clientSecret"
+    const val AUTHENTICATION_OIDC_CLIENT_SECRET_FILE =
+        "$AUTHENTICATION_PREFIX.oidc.clientSecretFile"
+    const val AUTHENTICATION_OIDC_CLIENT_AUTH_METHOD =
+        "$AUTHENTICATION_PREFIX.oidc.clientAuthMethod"
+    const val AUTHENTICATION_OIDC_GRANT_TYPE = "$AUTHENTICATION_PREFIX.oidc.grantType"
+    const val AUTHENTICATION_OIDC_SCOPE = "$AUTHENTICATION_PREFIX.oidc.scope"
+    const val AUTHENTICATION_OIDC_AUDIENCE = "$AUTHENTICATION_PREFIX.oidc.audience"
+    const val AUTHENTICATION_OIDC_PROFILE = "$AUTHENTICATION_PREFIX.oidc.profile"
+    const val AUTHENTICATION_OIDC_PRIVATE_KEY_FILE = "$AUTHENTICATION_PREFIX.oidc.privateKeyFile"
+    const val AUTHENTICATION_OIDC_PRIVATE_KEY_ID = "$AUTHENTICATION_PREFIX.oidc.privateKeyId"
+    const val AUTHENTICATION_OIDC_USERNAME = "$AUTHENTICATION_PREFIX.oidc.username"
+    const val AUTHENTICATION_OIDC_PASSWORD = "$AUTHENTICATION_PREFIX.oidc.password"
+    const val AUTHENTICATION_OIDC_REFRESH_TOKEN = "$AUTHENTICATION_PREFIX.oidc.refreshToken"
+    const val AUTHENTICATION_OIDC_TRUST_STORE_PASSWORD =
+        "$AUTHENTICATION_PREFIX.oidc.trustStorePassword"
+
+    /** Values of the `oidc` provider's `grantType` parameter. */
+    internal val OIDC_GRANT_TYPES =
+        listOf("client_credentials", "password", "refresh_token", "jwt_bearer", "token_exchange")
+
+    /** Values of the `oidc` provider's `clientAuthMethod` parameter. */
+    internal val OIDC_CLIENT_AUTH_METHODS =
+        listOf("client_secret_basic", "client_secret_post", "private_key_jwt", "none")
+
+    /** Defaults bundles shipped with the `oidc` provider. */
+    internal val OIDC_PROFILES = listOf("google", "okta", "entra")
 
     const val MAX_TRANSACTION_RETRY_TIMEOUT = "neo4j.max-retry-time"
 
@@ -275,8 +290,73 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     const val CONNECTOR_NAME = "name"
     const val TASK_ID = "neo4j.task.id"
 
-    /** Perform validation on dependent configuration items */
-    fun validate(config: org.apache.kafka.common.config.Config) {
+    /**
+     * Authentication providers visible to the connector plugin. The plugin class loader is used
+     * rather than the thread context class loader, so that discovery is predictable under Kafka
+     * Connect's plugin isolation.
+     */
+    internal val authRegistry: AuthTokenManagerRegistry by lazy {
+      AuthTokenManagerRegistry.using(Neo4jConfiguration::class.java.classLoader)
+    }
+
+    /**
+     * Returns the registered provider name matching [type]. An exact match wins, otherwise the
+     * match is case-insensitive.
+     *
+     * @throws ConfigException if no provider, or more than one, matches
+     */
+    internal fun resolveAuthType(type: String, names: Set<String> = authRegistry.names()): String {
+      if (names.contains(type)) {
+        return type
+      }
+
+      val matches = names.filter { it.equals(type, ignoreCase = true) }
+      return when (matches.size) {
+        1 -> matches.single()
+        0 ->
+            throw ConfigException(
+                AUTHENTICATION_TYPE,
+                type,
+                "No authentication provider is registered under this name, available names are ${names.joinToString { "'$it'" }}.",
+            )
+        else ->
+            throw ConfigException(
+                AUTHENTICATION_TYPE,
+                type,
+                "Name matches more than one authentication provider: ${matches.joinToString { "'$it'" }}.",
+            )
+      }
+    }
+
+    /**
+     * Builds the provider configuration for [type] from the raw connector configuration. Every key
+     * under `neo4j.authentication.<type>.` becomes a parameter with that prefix removed, except
+     * `username` and `password`, which are passed separately. Blank values are dropped, as they are
+     * what Control Center sends for untouched fields and what unset declared keys default to.
+     */
+    internal fun authConfig(originals: Map<String, *>, type: String): AuthConfig {
+      val prefix = "${AUTHENTICATION_PREFIX}.$type."
+      val params =
+          originals
+              .filterKeys { it.startsWith(prefix) }
+              .mapKeys { it.key.removePrefix(prefix) }
+              .mapValues {
+                when (val value = it.value) {
+                  is Password -> value.value()
+                  else -> value?.toString()
+                }
+              }
+              .filterValues { !it.isNullOrBlank() }
+              .mapValues { it.value!! }
+              .toMutableMap()
+      return AuthConfig.of(params.remove("username"), params.remove("password"), params)
+    }
+
+    /**
+     * Perform validation on dependent configuration items. [originals] are the raw connector
+     * settings, which also hold the authentication parameters that are not declared.
+     */
+    fun validate(config: KafkaConfig, originals: Map<String, String>) {
       // authentication configuration
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_USERNAME)
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_PASSWORD)
@@ -291,6 +371,61 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       config.validateNonEmptyIfVisible(SECURITY_HOST_NAME_VERIFICATION_ENABLED)
       config.validateNonEmptyIfVisible(SECURITY_TRUST_STRATEGY)
       config.validateNonEmptyIfVisible(SECURITY_CERT_FILES)
+
+      validateAuthentication(config, originals)
+    }
+
+    /**
+     * Validates the authentication parameters with the provider, without creating a token manager.
+     * A provider that does not implement validation accepts anything, its errors then surface when
+     * the task starts.
+     */
+    private fun validateAuthentication(config: KafkaConfig, originals: Map<String, String>) {
+      val values = config.configValues().associateBy { it.name() }
+      val typeValue = values[AUTHENTICATION_TYPE] ?: return
+      if (typeValue.errorMessages().isNotEmpty()) {
+        // an unknown type is already reported by the validator
+        return
+      }
+
+      val type =
+          try {
+            resolveAuthType(typeValue.value() as String)
+          } catch (e: ConfigException) {
+            typeValue.addErrorMessage(e.message)
+            return
+          }
+
+      // declared parameters are already checked, do not report the same problem twice
+      val prefix = "$AUTHENTICATION_PREFIX.$type."
+      if (values.values.any { it.name().startsWith(prefix) && it.errorMessages().isNotEmpty() }) {
+        return
+      }
+
+      try {
+        authRegistry.validate(type, authConfig(originals, type))
+      } catch (e: AuthConfigException) {
+        addAuthenticationError(values, type, e.message ?: e.toString(), e.keys())
+      } catch (e: IllegalArgumentException) {
+        addAuthenticationError(values, type, e.message ?: e.toString(), emptyList())
+      }
+    }
+
+    /**
+     * Adds [message] to `neo4j.authentication.type`, and to the declared parameters of [type] that
+     * are among [keys], so that those fields are highlighted too.
+     */
+    internal fun addAuthenticationError(
+        values: Map<String, ConfigValue>,
+        type: String,
+        message: String,
+        keys: List<String>,
+    ) {
+      values[AUTHENTICATION_TYPE]?.addErrorMessage("$type: $message")
+      keys
+          .distinct()
+          .mapNotNull { values["$AUTHENTICATION_PREFIX.$type.$it"] }
+          .forEach { it.addErrorMessage(message) }
     }
 
     fun config(): ConfigDef =
