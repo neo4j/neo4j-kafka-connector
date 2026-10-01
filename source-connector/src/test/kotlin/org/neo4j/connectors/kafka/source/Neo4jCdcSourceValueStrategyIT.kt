@@ -115,7 +115,7 @@ abstract class Neo4jCdcSourceValueStrategyIT {
                   "eventType" to EventType.NODE.name,
                   "operation" to EntityOperation.CREATE.name,
                   "labels" to listOf("TestSource"),
-                  "keys" to emptyMap<Any, Any>(),
+                  "keys" to emptyList<Any>(),
                   "state" to
                       mapOf(
                           "after" to
