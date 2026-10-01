@@ -24,13 +24,16 @@ import io.kotest.matchers.throwable.shouldHaveMessage
 import java.io.File
 import java.net.URI
 import java.util.Optional
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigValue
 import org.apache.kafka.common.config.types.Password
 import org.apache.kafka.connect.errors.ConnectException
 import org.junit.jupiter.api.Test
@@ -512,6 +515,162 @@ class Neo4jConfigurationTest {
   }
 
   @Test
+  fun `validate should not duplicate errors of declared parameters`() {
+    val values =
+        validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "BASIC",
+            Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD to "password",
+        )
+
+    values.errors(Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME) shouldBe
+        listOf(
+            "Invalid value for configuration neo4j.authentication.basic.username: Must not be blank."
+        )
+    values.errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe emptyList()
+  }
+
+  @Test
+  fun `validate should report unknown auth type without adding errors`() {
+    // Kafka repeats a parse error once for every key that lists this one as a dependent
+    validate(Neo4jConfiguration.AUTHENTICATION_TYPE to "saml")
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE)
+        .toSet() shouldBe
+        setOf(
+            "Invalid value saml for configuration neo4j.authentication.type: No authentication provider is registered under this name, available names are 'basic', 'bearer', 'custom', 'fake', 'kerberos', 'none', 'oidc'."
+        )
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["NONE", "basic"])
+  fun `validate should accept valid built-in configuration`(authType: String) {
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to authType,
+            Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME to "neo4j",
+            Neo4jConfiguration.AUTHENTICATION_BASIC_PASSWORD to "password",
+        )
+        .values
+        .flatMap { it.errorMessages() } shouldBe emptyList()
+  }
+
+  // The messages below come from the provider and are shown to the user as they are.
+
+  @Test
+  fun `validate should report missing oidc endpoint`() {
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+            "neo4j.authentication.oidc.clientId" to "client",
+            "neo4j.authentication.oidc.clientSecret" to "secret",
+        )
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+        listOf(
+            "oidc: One of the authentication parameters 'issuer', 'discoveryUrl' or 'tokenEndpoint' is required, but none was configured"
+        )
+  }
+
+  @Test
+  fun `validate should report missing oidc client id`() {
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+            "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
+            "neo4j.authentication.oidc.clientSecret" to "secret",
+        )
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+        listOf("oidc: Authentication parameter 'clientId' is required but was not configured")
+  }
+
+  @Test
+  fun `validate should report invalid oidc grant type`() {
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+            "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
+            "neo4j.authentication.oidc.clientId" to "client",
+            "neo4j.authentication.oidc.clientSecret" to "secret",
+            "neo4j.authentication.oidc.grantType" to "magic",
+        )
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+        listOf(
+            "oidc: Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
+        )
+  }
+
+  @Test
+  fun `validate should not read oidc files or start http clients`() {
+    val missing = File(System.getProperty("java.io.tmpdir"), "missing-${UUID.randomUUID()}")
+    val httpClientThreads = {
+      Thread.getAllStackTraces().keys.count { it.name.startsWith("HttpClient") }
+    }
+    val threadsBefore = httpClientThreads()
+
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+            "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
+            "neo4j.authentication.oidc.clientId" to "client",
+            "neo4j.authentication.oidc.clientAuthMethod" to "private_key_jwt",
+            "neo4j.authentication.oidc.privateKeyFile" to "${missing.absolutePath}.pem",
+            "neo4j.authentication.oidc.trustStoreFile" to "${missing.absolutePath}.p12",
+        )
+        .values
+        .flatMap { it.errorMessages() } shouldBe emptyList()
+
+    httpClientThreads() shouldBe threadsBefore
+  }
+
+  @Test
+  fun `validate should validate third-party providers without creating token managers`() {
+    FakeAuthTokenManagerFactory.lastConfig = null
+
+    validate(Neo4jConfiguration.AUTHENTICATION_TYPE to "fake")
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+        listOf("fake: Authentication parameter 'principal' is required but was not configured")
+
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "fake",
+            "neo4j.authentication.fake.principal" to "someone",
+        )
+        .values
+        .flatMap { it.errorMessages() } shouldBe emptyList()
+
+    FakeAuthTokenManagerFactory.lastConfig shouldBe null
+  }
+
+  @Test
+  fun `validate should report plain provider errors on auth type only`() {
+    validate(
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "fake",
+            "neo4j.authentication.fake.plainError" to "something is wrong",
+        )
+        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe listOf("fake: something is wrong")
+  }
+
+  @Test
+  fun `should add authentication error to type and to declared parameters among keys`() {
+    val values =
+        listOf(
+                Neo4jConfiguration.AUTHENTICATION_TYPE,
+                "neo4j.authentication.oidc.clientId",
+                "neo4j.authentication.oidc.clientSecret",
+                "neo4j.authentication.oidc.grantType",
+                "neo4j.authentication.basic.clientId",
+            )
+            .associateWith { ConfigValue(it) }
+    val message = "Something is wrong with 'grantType'"
+
+    Neo4jConfiguration.addAuthenticationError(
+        values,
+        "oidc",
+        message,
+        listOf("clientId", "clientSecret", "clientId", "undeclared.key"),
+    )
+
+    values.errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe listOf("oidc: $message")
+    values.errors("neo4j.authentication.oidc.clientId") shouldBe listOf(message)
+    values.errors("neo4j.authentication.oidc.clientSecret") shouldBe listOf(message)
+    // only keys count, not words quoted in the message
+    values.errors("neo4j.authentication.oidc.grantType") shouldBe emptyList()
+    values.errors("neo4j.authentication.basic.clientId") shouldBe emptyList()
+  }
+
+  @Test
   fun `internal variables`() {
     Neo4jConfiguration(
             Neo4jConfiguration.config(),
@@ -527,6 +686,16 @@ class Neo4jConfigurationTest {
           assertEquals("neo4j-connector", this.connectorName)
         }
   }
+
+  private fun validate(vararg settings: Pair<String, String>): Map<String, ConfigValue> {
+    val originals = mapOf(Neo4jConfiguration.URI to "bolt://localhost", *settings)
+    val config = Config(Neo4jConfiguration.config().validate(originals))
+    Neo4jConfiguration.validate(config, originals)
+    return config.configValues().associateBy { it.name() }
+  }
+
+  private fun Map<String, ConfigValue>.errors(name: String): List<String> =
+      this.getValue(name).errorMessages()
 
   private fun configuration(vararg settings: Pair<String, Any>): Neo4jConfiguration =
       Neo4jConfiguration(

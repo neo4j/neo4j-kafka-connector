@@ -25,10 +25,17 @@ import org.neo4j.driver.AuthTokens
 
 /**
  * Stands in for a third-party provider, registered through `META-INF/services` in the test
- * resources. It records the configuration it was created with.
+ * resources. It records the configuration it was created with. Setting `plainError` makes
+ * validation fail with a plain [IllegalArgumentException], like a provider that predates
+ * [org.neo4j.connectors.driver.auth.AuthConfigException].
  */
 class FakeAuthTokenManagerFactory : AuthTokenManagerFactory {
   override fun getName(): String = NAME
+
+  override fun validate(config: AuthConfig, context: AuthContext) {
+    config.get("plainError").ifPresent { throw IllegalArgumentException(it) }
+    config.require("principal")
+  }
 
   override fun create(config: AuthConfig, context: AuthContext): AuthTokenManager {
     lastConfig = config

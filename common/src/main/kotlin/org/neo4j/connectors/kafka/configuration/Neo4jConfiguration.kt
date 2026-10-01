@@ -24,11 +24,14 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.AbstractConfig
+import org.apache.kafka.common.config.Config as KafkaConfig
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
+import org.apache.kafka.common.config.ConfigValue
 import org.apache.kafka.common.config.types.Password
 import org.apache.kafka.connect.errors.ConnectException
 import org.neo4j.connectors.driver.auth.AuthConfig
+import org.neo4j.connectors.driver.auth.AuthConfigException
 import org.neo4j.connectors.driver.auth.AuthTokenManagerRegistry
 import org.neo4j.connectors.kafka.configuration.helpers.ConfigUtils
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
@@ -318,8 +321,11 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       return AuthConfig.of(params.remove("username"), params.remove("password"), params)
     }
 
-    /** Perform validation on dependent configuration items */
-    fun validate(config: org.apache.kafka.common.config.Config) {
+    /**
+     * Perform validation on dependent configuration items. [originals] are the raw connector
+     * settings, which also hold the authentication parameters that are not declared.
+     */
+    fun validate(config: KafkaConfig, originals: Map<String, String>) {
       // authentication configuration
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_USERNAME)
       config.validateNonEmptyIfVisible(AUTHENTICATION_BASIC_PASSWORD)
@@ -334,6 +340,61 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
       config.validateNonEmptyIfVisible(SECURITY_HOST_NAME_VERIFICATION_ENABLED)
       config.validateNonEmptyIfVisible(SECURITY_TRUST_STRATEGY)
       config.validateNonEmptyIfVisible(SECURITY_CERT_FILES)
+
+      validateAuthentication(config, originals)
+    }
+
+    /**
+     * Validates the authentication parameters with the provider, without creating a token manager.
+     * A provider that does not implement validation accepts anything, its errors then surface when
+     * the task starts.
+     */
+    private fun validateAuthentication(config: KafkaConfig, originals: Map<String, String>) {
+      val values = config.configValues().associateBy { it.name() }
+      val typeValue = values[AUTHENTICATION_TYPE] ?: return
+      if (typeValue.errorMessages().isNotEmpty()) {
+        // an unknown type is already reported by the validator
+        return
+      }
+
+      val type =
+          try {
+            resolveAuthType(typeValue.value() as String)
+          } catch (e: ConfigException) {
+            typeValue.addErrorMessage(e.message)
+            return
+          }
+
+      // declared parameters are already checked, do not report the same problem twice
+      val prefix = "$AUTHENTICATION_PREFIX.$type."
+      if (values.values.any { it.name().startsWith(prefix) && it.errorMessages().isNotEmpty() }) {
+        return
+      }
+
+      try {
+        authRegistry.validate(type, authConfig(originals, type))
+      } catch (e: AuthConfigException) {
+        addAuthenticationError(values, type, e.message ?: e.toString(), e.keys())
+      } catch (e: IllegalArgumentException) {
+        addAuthenticationError(values, type, e.message ?: e.toString(), emptyList())
+      }
+    }
+
+    /**
+     * Adds [message] to `neo4j.authentication.type`, and to the declared parameters of [type] that
+     * are among [keys], so that those fields are highlighted too.
+     */
+    internal fun addAuthenticationError(
+        values: Map<String, ConfigValue>,
+        type: String,
+        message: String,
+        keys: List<String>,
+    ) {
+      values[AUTHENTICATION_TYPE]?.addErrorMessage("$type: $message")
+      keys
+          .distinct()
+          .mapNotNull { values["$AUTHENTICATION_PREFIX.$type.$it"] }
+          .forEach { it.addErrorMessage(message) }
     }
 
     fun config(): ConfigDef =

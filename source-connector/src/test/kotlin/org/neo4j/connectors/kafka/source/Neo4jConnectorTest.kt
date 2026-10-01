@@ -73,6 +73,48 @@ class Neo4jConnectorTest {
   }
 
   @Test
+  fun `should validate oidc auth details`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+                "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
+                "neo4j.authentication.oidc.clientSecret" to "secret",
+            )
+        )
+
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_TYPE }
+        .errorMessages() shouldContain
+        "oidc: Authentication parameter 'clientId' is required but was not configured"
+  }
+
+  @Test
+  fun `should validate oidc grant type`() {
+    val connector = Neo4jConnector()
+    val config =
+        connector.validate(
+            mutableMapOf(
+                Neo4jConfiguration.URI to "neo4j://localhost",
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "OIDC",
+                "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
+                "neo4j.authentication.oidc.clientId" to "client",
+                "neo4j.authentication.oidc.clientSecret" to "secret",
+                "neo4j.authentication.oidc.grantType" to "magic",
+            )
+        )
+
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_TYPE }
+        .errorMessages() shouldContain
+        "oidc: Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
+  }
+
+  @Test
   fun `should validate custom auth details`() {
     val connector = Neo4jConnector()
     val config =
