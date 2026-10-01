@@ -265,7 +265,8 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .assertMessageKey { key ->
           assertThat(key)
               .isNotNull()
-              .isEqualTo(mapOf("keys" to listOf(mapOf("name" to "somewhere"))))
+              // relationship keys are stored under the relationship type, as node keys are by label
+              .isEqualTo(mapOf("keys" to mapOf("TO" to listOf(mapOf("name" to "somewhere")))))
         }
         .verifyWithin(Duration.ofSeconds(30))
   }

@@ -51,6 +51,12 @@ enum class Neo4jCdcKeyStrategy {
     @Suppress("IMPLICIT_CAST_TO_ANY")
     override fun value(message: SchemaAndValue): Any? =
         when (val keys = message.extractEventValue().get("keys")) {
+          // unified events leave keys null when there are none
+          null -> null
+          // this is a keys value for a unified node or relationship event, where a relationship
+          // without keys is a single empty entry
+          is Map<*, *> ->
+              keys.takeIf { it.values.any { rows -> (rows as? List<*>)?.isNotEmpty() == true } }
           // this is a keys value for a relationship
           is List<*> -> keys.ifEmpty { null }
           // this is a keys value for a node

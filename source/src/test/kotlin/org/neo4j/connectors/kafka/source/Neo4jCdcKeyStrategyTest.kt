@@ -19,10 +19,13 @@ package org.neo4j.connectors.kafka.source
 import java.time.ZonedDateTime
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.data.SchemaAndValue
 import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -72,6 +75,20 @@ class Neo4jCdcKeyStrategyTest {
 
     assertEquals(expectedKeyValue, actualKeyValue)
   }
+
+  @Test
+  fun `key schema is identical for node and relationship events`() {
+    val nodeKeySchema = ENTITY_KEYS.schema(TestData.nodeChange)
+    val relKeySchema = ENTITY_KEYS.schema(TestData.relChange)
+
+    assertNotNull(nodeKeySchema)
+    assertEquals(nodeKeySchema, relKeySchema)
+  }
+
+  @Test
+  fun `events without keys have no key value`() {
+    assertNull(ENTITY_KEYS.value(TestData.relChangeWithoutKeys))
+  }
 }
 
 class KeySchemaSerializationArgument : ArgumentsProvider {
@@ -83,11 +100,11 @@ class KeySchemaSerializationArgument : ArgumentsProvider {
         Arguments.of(TestData.nodeChange, SKIP, null),
         Arguments.of(TestData.nodeChange, WHOLE_VALUE, TestData.nodeChange.schema()),
         Arguments.of(TestData.nodeChange, ELEMENT_ID, TestData.elementIdSchema),
-        Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.nodeKeysSchema),
+        Arguments.of(TestData.nodeChange, ENTITY_KEYS, TestData.keysSchema),
         Arguments.of(TestData.relChange, SKIP, null),
         Arguments.of(TestData.relChange, WHOLE_VALUE, TestData.relChange.schema()),
         Arguments.of(TestData.relChange, ELEMENT_ID, TestData.elementIdSchema),
-        Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.relKeysSchema),
+        Arguments.of(TestData.relChange, ENTITY_KEYS, TestData.keysSchema),
     )
   }
 }
@@ -120,56 +137,29 @@ object TestData {
 
   val elementIdSchema: Schema = Schema.STRING_SCHEMA
 
-  private val propertySchema: Schema =
-      SchemaBuilder.struct()
-          .field("foo", PropertyType.schema)
-          .field("bar", PropertyType.schema)
-          .optional()
-          .build()
-
-  val nodeKeysSchema: Schema =
-      SchemaBuilder.struct()
-          .field(
-              "keys",
-              SchemaBuilder.struct()
-                  .field(LABEL, SchemaBuilder.array(propertySchema).optional().build())
-                  .optional()
+  private val entityKeysSchema: Schema =
+      SchemaBuilder.map(
+              Schema.STRING_SCHEMA,
+              SchemaBuilder.array(
+                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+                  )
                   .build(),
           )
           .optional()
           .build()
 
-  val nodeKeys: Struct =
-      Struct(nodeKeysSchema)
-          .put(
-              "keys",
-              Struct(nodeKeysSchema.field("keys").schema())
-                  .put(
-                      LABEL,
-                      listOf(
-                          Struct(propertySchema)
-                              .put("foo", PropertyType.toConnectValue("fighters"))
-                              .put("bar", PropertyType.toConnectValue(42L))
-                      ),
-                  ),
-          )
+  private val keyRow: Map<String, Struct?> =
+      mapOf(
+          "foo" to PropertyType.toConnectValue("fighters"),
+          "bar" to PropertyType.toConnectValue(42L),
+      )
 
-  val relKeysSchema: Schema =
-      SchemaBuilder.struct()
-          .field("keys", SchemaBuilder.array(propertySchema).optional().build())
-          .optional()
-          .build()
+  // node and relationship events share one key schema
+  val keysSchema: Schema = SchemaBuilder.struct().field("keys", entityKeysSchema).optional().build()
 
-  val relKeys: Struct =
-      Struct(relKeysSchema)
-          .put(
-              "keys",
-              listOf(
-                  Struct(propertySchema)
-                      .put("foo", PropertyType.toConnectValue("fighters"))
-                      .put("bar", PropertyType.toConnectValue(42L))
-              ),
-          )
+  val nodeKeys: Struct = Struct(keysSchema).put("keys", mapOf(LABEL to listOf(keyRow)))
+
+  val relKeys: Struct = Struct(keysSchema).put("keys", mapOf("A_RELATION_TO" to listOf(keyRow)))
 
   val nodeChange =
       ChangeEventConverter(PayloadMode.EXTENDED)
@@ -210,6 +200,29 @@ object TestData {
                   ),
               )
           )
+
+  private fun relChange(keys: List<Map<String, Any>>) =
+      ChangeEventConverter(PayloadMode.EXTENDED)
+          .toConnectValue(
+              ChangeEvent(
+                  ChangeIdentifier("a-rel-change-id"),
+                  aTransactionId(),
+                  aSequenceNumber(),
+                  someMetadata(),
+                  RelationshipEvent(
+                      REL_ELEMENT_ID,
+                      aRelationshipType(),
+                      aStartNode(),
+                      anEndNode(),
+                      keys,
+                      EntityOperation.CREATE,
+                      RelationshipState(mapOf()),
+                      RelationshipState(mapOf("foo" to "fighters", "bar" to 42L)),
+                  ),
+              )
+          )
+
+  val relChangeWithoutKeys = relChange(emptyList())
 
   private fun aTransactionId(): Long {
     return 42
