@@ -240,6 +240,37 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
     const val AUTHENTICATION_CUSTOM_PRINCIPAL = "$AUTHENTICATION_PREFIX.custom.principal"
     const val AUTHENTICATION_CUSTOM_CREDENTIALS = "$AUTHENTICATION_PREFIX.custom.credentials"
     const val AUTHENTICATION_CUSTOM_REALM = "$AUTHENTICATION_PREFIX.custom.realm"
+    const val AUTHENTICATION_OIDC_ISSUER = "$AUTHENTICATION_PREFIX.oidc.issuer"
+    const val AUTHENTICATION_OIDC_DISCOVERY_URL = "$AUTHENTICATION_PREFIX.oidc.discoveryUrl"
+    const val AUTHENTICATION_OIDC_TOKEN_ENDPOINT = "$AUTHENTICATION_PREFIX.oidc.tokenEndpoint"
+    const val AUTHENTICATION_OIDC_CLIENT_ID = "$AUTHENTICATION_PREFIX.oidc.clientId"
+    const val AUTHENTICATION_OIDC_CLIENT_SECRET = "$AUTHENTICATION_PREFIX.oidc.clientSecret"
+    const val AUTHENTICATION_OIDC_CLIENT_SECRET_FILE =
+        "$AUTHENTICATION_PREFIX.oidc.clientSecretFile"
+    const val AUTHENTICATION_OIDC_CLIENT_AUTH_METHOD =
+        "$AUTHENTICATION_PREFIX.oidc.clientAuthMethod"
+    const val AUTHENTICATION_OIDC_GRANT_TYPE = "$AUTHENTICATION_PREFIX.oidc.grantType"
+    const val AUTHENTICATION_OIDC_SCOPE = "$AUTHENTICATION_PREFIX.oidc.scope"
+    const val AUTHENTICATION_OIDC_AUDIENCE = "$AUTHENTICATION_PREFIX.oidc.audience"
+    const val AUTHENTICATION_OIDC_PROFILE = "$AUTHENTICATION_PREFIX.oidc.profile"
+    const val AUTHENTICATION_OIDC_PRIVATE_KEY_FILE = "$AUTHENTICATION_PREFIX.oidc.privateKeyFile"
+    const val AUTHENTICATION_OIDC_PRIVATE_KEY_ID = "$AUTHENTICATION_PREFIX.oidc.privateKeyId"
+    const val AUTHENTICATION_OIDC_USERNAME = "$AUTHENTICATION_PREFIX.oidc.username"
+    const val AUTHENTICATION_OIDC_PASSWORD = "$AUTHENTICATION_PREFIX.oidc.password"
+    const val AUTHENTICATION_OIDC_REFRESH_TOKEN = "$AUTHENTICATION_PREFIX.oidc.refreshToken"
+    const val AUTHENTICATION_OIDC_TRUST_STORE_PASSWORD =
+        "$AUTHENTICATION_PREFIX.oidc.trustStorePassword"
+
+    /** Values of the `oidc` provider's `grantType` parameter. */
+    internal val OIDC_GRANT_TYPES =
+        listOf("client_credentials", "password", "refresh_token", "jwt_bearer", "token_exchange")
+
+    /** Values of the `oidc` provider's `clientAuthMethod` parameter. */
+    internal val OIDC_CLIENT_AUTH_METHODS =
+        listOf("client_secret_basic", "client_secret_post", "private_key_jwt", "none")
+
+    /** Defaults bundles shipped with the `oidc` provider. */
+    internal val OIDC_PROFILES = listOf("google", "okta", "entra")
 
     const val MAX_TRANSACTION_RETRY_TIMEOUT = "neo4j.max-retry-time"
 

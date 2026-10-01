@@ -66,6 +66,33 @@ class Neo4jSinkRegistrationTest {
   }
 
   @Test
+  fun `creates payload with authentication settings`() {
+    val registration =
+        Neo4jSinkRegistration(
+            neo4jUri = "neo4j://example.com",
+            neo4jUser = "user",
+            neo4jPassword = "password",
+            neo4jDatabase = "database",
+            authentication =
+                mapOf(
+                    "neo4j.authentication.type" to "oidc",
+                    "neo4j.authentication.oidc.clientId" to "client",
+                ),
+            schemaControlRegistryUri = "http://example.com",
+            keyConverter = KafkaConverter.AVRO,
+            valueConverter = KafkaConverter.AVRO,
+            topics = listOf("my-topic"),
+            strategies = mapOf("neo4j.cypher.topic.my-topic" to "MERGE ()"),
+        )
+
+    @Suppress("UNCHECKED_CAST") val config = registration.getPayload()["config"] as Map<String, Any>
+
+    assertEquals("oidc", config["neo4j.authentication.type"])
+    assertEquals("client", config["neo4j.authentication.oidc.clientId"])
+    assertFalse(config.keys.any { it.startsWith("neo4j.authentication.basic.") })
+  }
+
+  @Test
   fun `creates payload with dlq topic`() {
     val expectedConfig =
         mapOf(

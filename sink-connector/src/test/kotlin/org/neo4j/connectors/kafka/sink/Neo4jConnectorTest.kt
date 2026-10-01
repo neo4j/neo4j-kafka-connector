@@ -90,6 +90,11 @@ class Neo4jConnectorTest {
         .first { it.name() == Neo4jConfiguration.AUTHENTICATION_TYPE }
         .errorMessages() shouldContain
         "oidc: Authentication parameter 'clientId' is required but was not configured"
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_ID }
+        .errorMessages() shouldContain
+        "Authentication parameter 'clientId' is required but was not configured"
   }
 
   @Test
@@ -112,6 +117,11 @@ class Neo4jConnectorTest {
         .first { it.name() == Neo4jConfiguration.AUTHENTICATION_TYPE }
         .errorMessages() shouldContain
         "oidc: Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
+    config
+        .configValues()
+        .first { it.name() == Neo4jConfiguration.AUTHENTICATION_OIDC_GRANT_TYPE }
+        .errorMessages() shouldContain
+        "Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
   }
 
   @Test

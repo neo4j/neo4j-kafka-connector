@@ -78,6 +78,21 @@ object Recommenders {
     }
   }
 
+  fun string(vararg values: String): ConfigDef.Recommender {
+    return object : ConfigDef.Recommender {
+      override fun validValues(
+          name: String?,
+          parsedConfig: MutableMap<String, Any>?,
+      ): MutableList<Any> {
+        return values.toMutableList()
+      }
+
+      override fun visible(name: String?, parsedConfig: MutableMap<String, Any>?): Boolean {
+        return true
+      }
+    }
+  }
+
   fun bool(): ConfigDef.Recommender {
     val values = listOf("true", "false")
 

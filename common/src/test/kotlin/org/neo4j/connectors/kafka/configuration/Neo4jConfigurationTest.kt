@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.configuration
 
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
@@ -32,6 +33,7 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.apache.kafka.common.config.Config
+import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.common.config.ConfigValue
 import org.apache.kafka.common.config.types.Password
@@ -40,6 +42,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
+import org.neo4j.connectors.driver.auth.oidc.clientauth.ClientAuthMethod
+import org.neo4j.connectors.driver.auth.oidc.grant.GrantType
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Config.TrustStrategy.Strategy
@@ -464,6 +468,109 @@ class Neo4jConfigurationTest {
   }
 
   @ParameterizedTest
+  @ValueSource(strings = ["OIDC", "oidc"])
+  fun `should show oidc fields only for oidc`(authType: String) {
+    val oidcFields =
+        Neo4jConfiguration.config().configKeys().keys.filter {
+          it.startsWith("neo4j.authentication.oidc.")
+        }
+    oidcFields shouldHaveSize 17
+
+    val shown =
+        Neo4jConfiguration.config()
+            .validate(
+                mapOf(
+                    Neo4jConfiguration.URI to "neo4j://localhost",
+                    Neo4jConfiguration.AUTHENTICATION_TYPE to authType,
+                )
+            )
+            .associateBy { it.name() }
+    oidcFields.forEach { shown.getValue(it).visible() shouldBe true }
+    shown.getValue(Neo4jConfiguration.AUTHENTICATION_BASIC_USERNAME).visible() shouldBe false
+
+    val hidden =
+        Neo4jConfiguration.config()
+            .validate(mapOf(Neo4jConfiguration.URI to "neo4j://localhost"))
+            .associateBy { it.name() }
+    oidcFields.forEach { hidden.getValue(it).visible() shouldBe false }
+  }
+
+  @Test
+  fun `should declare oidc secrets as passwords`() {
+    Neo4jConfiguration.config()
+        .configKeys()
+        .values
+        .filter { it.name.startsWith("neo4j.authentication.oidc.") }
+        .filter { it.type == ConfigDef.Type.PASSWORD }
+        .map { it.name } shouldBe
+        listOf(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_SECRET,
+            Neo4jConfiguration.AUTHENTICATION_OIDC_PASSWORD,
+            Neo4jConfiguration.AUTHENTICATION_OIDC_REFRESH_TOKEN,
+            Neo4jConfiguration.AUTHENTICATION_OIDC_TRUST_STORE_PASSWORD,
+        )
+  }
+
+  @Test
+  fun `should recommend the values the oidc provider accepts`() {
+    // the lists are kept here so that the provider stays a runtime dependency, check them for drift
+    Neo4jConfiguration.OIDC_GRANT_TYPES shouldBe GrantType.entries.map { it.settingValue() }
+    Neo4jConfiguration.OIDC_CLIENT_AUTH_METHODS shouldBe
+        ClientAuthMethod.entries.map { it.settingValue() }
+    Neo4jConfiguration.OIDC_PROFILES.forEach {
+      javaClass.classLoader.getResource("profiles/$it.properties").shouldNotBeNull()
+    }
+
+    val values =
+        Neo4jConfiguration.config()
+            .validate(
+                mapOf(
+                    Neo4jConfiguration.URI to "neo4j://localhost",
+                    Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+                )
+            )
+            .associateBy { it.name() }
+    values.getValue(Neo4jConfiguration.AUTHENTICATION_OIDC_GRANT_TYPE).recommendedValues() shouldBe
+        Neo4jConfiguration.OIDC_GRANT_TYPES
+    values
+        .getValue(Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_AUTH_METHOD)
+        .recommendedValues() shouldBe Neo4jConfiguration.OIDC_CLIENT_AUTH_METHODS
+    values.getValue(Neo4jConfiguration.AUTHENTICATION_OIDC_PROFILE).recommendedValues() shouldBe
+        Neo4jConfiguration.OIDC_PROFILES
+  }
+
+  @Test
+  fun `should document every setting`() {
+    Neo4jConfiguration.config()
+        .configKeys()
+        .values
+        .filter { it.documentation.isNullOrBlank() }
+        .map { it.name } shouldBe emptyList()
+  }
+
+  @Test
+  fun `should pass declared and undeclared oidc settings to the provider`() {
+    val authConfig =
+        Neo4jConfiguration.authConfig(
+            configuration(
+                    Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
+                    Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_ID to "client",
+                    Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_SECRET to "secret",
+                    Neo4jConfiguration.AUTHENTICATION_OIDC_USERNAME to "user",
+                    Neo4jConfiguration.AUTHENTICATION_OIDC_PASSWORD to "pass",
+                    "neo4j.authentication.oidc.extraParam.foo" to "bar",
+                )
+                .originals(),
+            "oidc",
+        )
+
+    authConfig.username() shouldBe Optional.of("user")
+    authConfig.password() shouldBe Optional.of("pass")
+    authConfig.asMap() shouldBe
+        mapOf("clientId" to "client", "clientSecret" to "secret", "extraParam.foo" to "bar")
+  }
+
+  @ParameterizedTest
   @ValueSource(strings = ["BASIC", "basic", "Basic"])
   fun `should show auth type fields case-insensitively`(authType: String) {
     val values =
@@ -556,40 +663,63 @@ class Neo4jConfigurationTest {
 
   @Test
   fun `validate should report missing oidc endpoint`() {
-    validate(
+    val values =
+        validate(
             Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
             "neo4j.authentication.oidc.clientId" to "client",
             "neo4j.authentication.oidc.clientSecret" to "secret",
         )
-        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+
+    values.errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
         listOf(
             "oidc: One of the authentication parameters 'issuer', 'discoveryUrl' or 'tokenEndpoint' is required, but none was configured"
         )
+    listOf(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_ISSUER,
+            Neo4jConfiguration.AUTHENTICATION_OIDC_DISCOVERY_URL,
+            Neo4jConfiguration.AUTHENTICATION_OIDC_TOKEN_ENDPOINT,
+        )
+        .forEach {
+          values.errors(it) shouldBe
+              listOf(
+                  "One of the authentication parameters 'issuer', 'discoveryUrl' or 'tokenEndpoint' is required, but none was configured"
+              )
+        }
   }
 
   @Test
   fun `validate should report missing oidc client id`() {
-    validate(
+    val values =
+        validate(
             Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
             "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
             "neo4j.authentication.oidc.clientSecret" to "secret",
         )
-        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+
+    values.errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
         listOf("oidc: Authentication parameter 'clientId' is required but was not configured")
+    values.errors(Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_ID) shouldBe
+        listOf("Authentication parameter 'clientId' is required but was not configured")
   }
 
   @Test
   fun `validate should report invalid oidc grant type`() {
-    validate(
+    val values =
+        validate(
             Neo4jConfiguration.AUTHENTICATION_TYPE to "oidc",
             "neo4j.authentication.oidc.tokenEndpoint" to "https://idp.example.com/token",
             "neo4j.authentication.oidc.clientId" to "client",
             "neo4j.authentication.oidc.clientSecret" to "secret",
             "neo4j.authentication.oidc.grantType" to "magic",
         )
-        .errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
+
+    values.errors(Neo4jConfiguration.AUTHENTICATION_TYPE) shouldBe
         listOf(
             "oidc: Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
+        )
+    values.errors(Neo4jConfiguration.AUTHENTICATION_OIDC_GRANT_TYPE) shouldBe
+        listOf(
+            "Authentication parameter 'grantType' has invalid value 'magic'; expected one of client_credentials, password, refresh_token, jwt_bearer, token_exchange"
         )
   }
 
