@@ -169,7 +169,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
             it.put("elementId", event.elementId)
             it.put("operation", event.operation.name)
             it.put("labels", event.labels)
-            it.put("keys", entityKeysValue(event.keys))
+            it.put("keys", entityKeysValue(schema.field("keys").schema(), event.keys))
             it.put(
                 "state",
                 entityStateValue(
@@ -187,7 +187,15 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
             it.put("type", event.type)
             it.put("start", unifiedNodeToConnectValue(event.start, schema.field("start").schema()))
             it.put("end", unifiedNodeToConnectValue(event.end, schema.field("end").schema()))
-            it.put("keys", entityKeysValue(mapOf(event.type to (event.keys ?: emptyList()))))
+            it.put(
+                "keys",
+                entityKeysValue(
+                    schema.field("keys").schema(),
+                    // relationship keys are listed under the relationship type, as node keys are
+                    // by label
+                    if (event.keys.isNullOrEmpty()) emptyMap() else mapOf(event.type to event.keys),
+                ),
+            )
             it.put(
                 "state",
                 entityStateValue(
@@ -216,26 +224,52 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
       Struct(schema).also {
         it.put("elementId", node.elementId)
         it.put("labels", node.labels)
-        it.put("keys", entityKeysValue(node.keys))
+        it.put("keys", entityKeysValue(schema.field("keys").schema(), node.keys))
       }
 
+  // EntityKeys is an array of {name, rows}, where name is a label (or a relationship type) and each
+  // row holds the properties of one key.
   private fun entityKeysSchema(): Schema =
-      SchemaBuilder.map(
-              Schema.STRING_SCHEMA,
-              SchemaBuilder.array(
-                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+      SchemaBuilder.array(
+              SchemaBuilder.struct()
+                  .field("name", Schema.STRING_SCHEMA)
+                  .field(
+                      "rows",
+                      SchemaBuilder.array(
+                              SchemaBuilder.struct()
+                                  .field(
+                                      "properties",
+                                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
+                                          .build(),
+                                  )
+                                  .build()
+                          )
+                          .build(),
                   )
-                  .build(),
+                  .build()
           )
           .optional()
           .build()
 
   private fun entityKeysValue(
-      keysByLabel: Map<String, List<Map<String, Any>>>?
-  ): Map<String, List<Map<String, Any?>>>? =
-      keysByLabel?.mapValues { (_, rows) ->
-        rows.map { row -> row.mapValues { (_, v) -> PropertyType.toConnectValue(v) } }
-      }
+      schema: Schema,
+      keysByName: Map<String, List<Map<String, Any>>>?,
+  ): List<Struct>? {
+    val entrySchema = schema.valueSchema()
+    val rowSchema = entrySchema.field("rows").schema().valueSchema()
+
+    return keysByName?.map { (name, rows) ->
+      Struct(entrySchema)
+          .put("name", name)
+          .put(
+              "rows",
+              rows.map { row ->
+                Struct(rowSchema)
+                    .put("properties", row.mapValues { (_, v) -> PropertyType.toConnectValue(v) })
+              },
+          )
+    }
+  }
 
   private fun entityStateSchema(
       beforeProperties: Map<String, Any>?,
@@ -352,8 +386,9 @@ private fun Struct.toEvent(): Event =
 
       EventType.RELATIONSHIP.name,
       EventType.RELATIONSHIP.shorthand -> {
-        // legacy relationship events carry their keys as an array, unified ones as a map
-        if (schema().field("keys").schema().type() == Schema.Type.MAP) toUnifiedRelationshipEvent()
+        // only unified events carry labels, as they share one schema between nodes and
+        // relationships
+        if (schema().field("labels") != null) toUnifiedRelationshipEvent()
         else toRelationshipEvent()
       }
 
@@ -367,11 +402,7 @@ internal fun Struct.toNodeEvent(): NodeEvent =
           getString("elementId"),
           EntityOperation.valueOf(getString("operation")),
           getArray("labels"),
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(),
-              get("keys"),
-              skipNullValuesInMaps = true,
-          ) as Map<String, List<MutableMap<String, Any>>>?,
+          decodeEntityKeys() as Map<String, List<MutableMap<String, Any>>>?,
           before,
           after,
       )
@@ -402,12 +433,7 @@ internal fun Struct.toRelationshipEvent(): RelationshipEvent =
 @Suppress("UNCHECKED_CAST")
 internal fun Struct.toUnifiedRelationshipEvent(): RelationshipEvent =
     getStruct("state").toRelationshipState().let { (before, after) ->
-      val keysByLabel =
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(),
-              get("keys"),
-              skipNullValuesInMaps = true,
-          ) as Map<String, List<Map<String, Any>>>?
+      val keysByName = decodeEntityKeys()
 
       RelationshipEvent(
           getString("elementId"),
@@ -415,7 +441,7 @@ internal fun Struct.toUnifiedRelationshipEvent(): RelationshipEvent =
           getStruct("start").toNode(),
           getStruct("end").toNode(),
           // relationship keys are stored under the relationship type, as node keys are by label
-          keysByLabel?.get(getString("type")) ?: emptyList(),
+          keysByName?.get(getString("type")) ?: emptyList(),
           EntityOperation.valueOf(getString("operation")),
           before,
           after,
@@ -490,12 +516,27 @@ internal fun Struct.toRelationshipState(): Pair<RelationshipState?, Relationship
 
 @Suppress("UNCHECKED_CAST")
 internal fun Struct.toNode(): Node =
-    Node(
-        this.getString("elementId"),
-        this.getArray("labels"),
-        DynamicTypes.fromConnectValue(
-            schema().field("keys").schema(),
-            this.get("keys"),
-            skipNullValuesInMaps = true,
-        ) as Map<String, List<Map<String, Any>>>,
-    )
+    Node(this.getString("elementId"), this.getArray("labels"), decodeEntityKeys() ?: emptyMap())
+
+// Keys of nodes are a struct of label to rows in legacy events, and a list of {name, rows} in
+// unified ones. Both give a map of label to rows.
+@Suppress("UNCHECKED_CAST")
+private fun Struct.decodeEntityKeys(): Map<String, List<Map<String, Any>>>? {
+  val keysSchema = schema().field("keys").schema()
+
+  return if (keysSchema.type() == Schema.Type.ARRAY) {
+    getArray<Struct>("keys")?.associate { entry ->
+      entry.getString("name") to
+          entry.getArray<Struct>("rows").map { row ->
+            DynamicTypes.fromConnectValue(
+                row.schema().field("properties").schema(),
+                row.get("properties"),
+                skipNullValuesInMaps = true,
+            ) as Map<String, Any>
+          }
+    }
+  } else {
+    DynamicTypes.fromConnectValue(keysSchema, get("keys"), skipNullValuesInMaps = true)
+        as Map<String, List<Map<String, Any>>>?
+  }
+}

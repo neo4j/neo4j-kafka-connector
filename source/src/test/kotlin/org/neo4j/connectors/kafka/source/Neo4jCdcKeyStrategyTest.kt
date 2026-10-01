@@ -137,29 +137,44 @@ object TestData {
 
   val elementIdSchema: Schema = Schema.STRING_SCHEMA
 
-  private val entityKeysSchema: Schema =
-      SchemaBuilder.map(
-              Schema.STRING_SCHEMA,
-              SchemaBuilder.array(
-                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
-                  )
-                  .build(),
-          )
+  private val keyRowSchema: Schema =
+      SchemaBuilder.struct()
+          .field("properties", SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build())
+          .build()
+
+  private val keyEntrySchema: Schema =
+      SchemaBuilder.struct()
+          .field("name", Schema.STRING_SCHEMA)
+          .field("rows", SchemaBuilder.array(keyRowSchema).build())
+          .build()
+
+  // node and relationship events share one key schema
+  val keysSchema: Schema =
+      SchemaBuilder.struct()
+          .field("keys", SchemaBuilder.array(keyEntrySchema).optional().build())
           .optional()
           .build()
 
-  private val keyRow: Map<String, Struct?> =
-      mapOf(
-          "foo" to PropertyType.toConnectValue("fighters"),
-          "bar" to PropertyType.toConnectValue(42L),
-      )
+  private fun keyEntry(name: String): Struct =
+      Struct(keyEntrySchema)
+          .put("name", name)
+          .put(
+              "rows",
+              listOf(
+                  Struct(keyRowSchema)
+                      .put(
+                          "properties",
+                          mapOf(
+                              "foo" to PropertyType.toConnectValue("fighters"),
+                              "bar" to PropertyType.toConnectValue(42L),
+                          ),
+                      )
+              ),
+          )
 
-  // node and relationship events share one key schema
-  val keysSchema: Schema = SchemaBuilder.struct().field("keys", entityKeysSchema).optional().build()
+  val nodeKeys: Struct = Struct(keysSchema).put("keys", listOf(keyEntry(LABEL)))
 
-  val nodeKeys: Struct = Struct(keysSchema).put("keys", mapOf(LABEL to listOf(keyRow)))
-
-  val relKeys: Struct = Struct(keysSchema).put("keys", mapOf("A_RELATION_TO" to listOf(keyRow)))
+  val relKeys: Struct = Struct(keysSchema).put("keys", listOf(keyEntry("A_RELATION_TO")))
 
   val nodeChange =
       ChangeEventConverter(PayloadMode.EXTENDED)

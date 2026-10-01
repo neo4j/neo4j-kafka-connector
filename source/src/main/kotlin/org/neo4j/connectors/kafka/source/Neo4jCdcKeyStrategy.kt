@@ -48,24 +48,13 @@ enum class Neo4jCdcKeyStrategy {
       return SchemaBuilder.struct().field("keys", keysSchema).optional().build()
     }
 
-    @Suppress("IMPLICIT_CAST_TO_ANY")
     override fun value(message: SchemaAndValue): Any? =
-        when (val keys = message.extractEventValue().get("keys")) {
-          // unified events leave keys null when there are none
-          null -> null
-          // this is a keys value for a unified node or relationship event, where a relationship
-          // without keys is a single empty entry
-          is Map<*, *> ->
-              keys.takeIf { it.values.any { rows -> (rows as? List<*>)?.isNotEmpty() == true } }
-          // this is a keys value for a relationship
-          is List<*> -> keys.ifEmpty { null }
-          // this is a keys value for a node
-          is Struct -> keys.let { if (it.schema().fields().isEmpty()) null else keys }
-          else -> throw IllegalArgumentException("unexpected key value type ${keys.javaClass.name}")
-        }?.let {
-          val schema = schema(message)
-          Struct(schema).put("keys", it)
-        }
+        message
+            .extractEventValue()
+            .getArray<Struct>("keys")
+            // an entity without keys is either null, empty, or a name without any rows
+            ?.takeIf { entries -> entries.any { it.getArray<Struct>("rows").isNotEmpty() } }
+            ?.let { Struct(schema(message)).put("keys", it) }
   },
   WHOLE_VALUE {
     override fun schema(message: SchemaAndValue): Schema? {

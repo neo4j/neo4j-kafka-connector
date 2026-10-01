@@ -366,7 +366,7 @@ class ChangeEventExtensionsTest {
           .put("type", "WORKS_FOR")
           .put("start", nodeRefValue(schema.nestedSchema("event.start"), personNode))
           .put("end", nodeRefValue(schema.nestedSchema("event.end"), companyNode))
-          .put("keys", keysValue(mapOf("WORKS_FOR" to keys)))
+          .put("keys", keysValue(if (keys.isEmpty()) mapOf() else mapOf("WORKS_FOR" to keys)))
           .put("state", state)
 
   @ParameterizedTest(name = "{0}")
@@ -519,7 +519,7 @@ class ChangeEventExtensionsTest {
         )
 
     schema.nestedSchema("event.keys") shouldBe keysSchema()
-    value.nestedValue("event.keys") shouldBe emptyMap<String, Any>()
+    value.nestedValue("event.keys") shouldBe emptyList<Any>()
   }
 
   @ParameterizedTest(name = "{0}")
@@ -544,7 +544,7 @@ class ChangeEventExtensionsTest {
         )
 
     schema.nestedSchema("event.keys") shouldBe keysSchema()
-    value.nestedValue("event.keys") shouldBe mapOf("WORKS_FOR" to emptyList<Any>())
+    value.nestedValue("event.keys") shouldBe emptyList<Any>()
   }
 
   @Test
@@ -575,14 +575,25 @@ class ChangeEventExtensionsTest {
   }
 
   // expected-shape helpers for the unified event schema
-
+  // array of {name, rows}, where each row has the properties of one key
   private fun keysSchema(): Schema =
-      SchemaBuilder.map(
-              Schema.STRING_SCHEMA,
-              SchemaBuilder.array(
-                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+      SchemaBuilder.array(
+              SchemaBuilder.struct()
+                  .field("name", Schema.STRING_SCHEMA)
+                  .field(
+                      "rows",
+                      SchemaBuilder.array(
+                              SchemaBuilder.struct()
+                                  .field(
+                                      "properties",
+                                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
+                                          .build(),
+                                  )
+                                  .build()
+                          )
+                          .build(),
                   )
-                  .build(),
+                  .build()
           )
           .optional()
           .build()
@@ -640,12 +651,22 @@ class ChangeEventExtensionsTest {
         .build()
   }
 
-  private fun keysValue(
-      keys: Map<String, List<Map<String, Any>>>
-  ): Map<String, List<Map<String, Any?>>> =
-      keys.mapValues { (_, rows) ->
-        rows.map { row -> row.mapValues { (_, v) -> PropertyType.toConnectValue(v) } }
-      }
+  private fun keysValue(keys: Map<String, List<Map<String, Any>>>): List<Struct> {
+    val entrySchema = keysSchema().valueSchema()
+    val rowSchema = entrySchema.field("rows").schema().valueSchema()
+
+    return keys.map { (name, rows) ->
+      Struct(entrySchema)
+          .put("name", name)
+          .put(
+              "rows",
+              rows.map { row ->
+                Struct(rowSchema)
+                    .put("properties", row.mapValues { (_, v) -> PropertyType.toConnectValue(v) })
+              },
+          )
+    }
+  }
 
   private fun nodeRefValue(schema: Schema, node: Node): Struct =
       Struct(schema)
