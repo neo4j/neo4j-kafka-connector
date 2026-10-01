@@ -217,7 +217,7 @@ object TestData {
                       keys,
                       EntityOperation.CREATE,
                       RelationshipState(mapOf()),
-                      RelationshipState(mapOf("foo" to "fighters", "bar" to 42L)),
+                      RelationshipState(mapOf("since" to 2020L, "role" to "friend")),
                   ),
               )
           )
