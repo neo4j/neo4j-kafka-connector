@@ -20,6 +20,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.CreateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
@@ -129,6 +130,23 @@ class CdcSchemaEventTransformer(val topic: String, val strict: Boolean = false) 
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
+    // Strict mode uses a key for the relationship, so duplicates fail with a constraint
+    // violation instead of being merged. Without a key, the relationship continues to use MERGE.
+    if (strict && event.keys.isNotEmpty()) {
+      return CreateRelationshipSinkAction(
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+              LookupMode.MATCH,
+          ),
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+              LookupMode.MATCH,
+          ),
+          event.type,
+          event.after.properties,
+      )
+    }
+
     return MergeRelationshipSinkAction(
         SinkActionNodeReference(
             NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
@@ -165,8 +183,9 @@ class CdcSchemaEventTransformer(val topic: String, val strict: Boolean = false) 
 
     // If there are no keys to match the relationship start and end nodes, then we should not use
     // merge on the relationship as it may lead to unintended creation of relationships. Instead,
-    // we use an Update operation.
-    if (startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
+    // we use an Update operation. Strict mode always does: an update for a missing relationship
+    // must not invent one.
+    if (strict || startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
       return UpdateRelationshipSinkAction(
           SinkActionNodeReference(
               NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),

@@ -31,8 +31,11 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Event
+import org.neo4j.cdc.client.model.Node
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.NodeState
+import org.neo4j.cdc.client.model.RelationshipEvent
+import org.neo4j.cdc.client.model.RelationshipState
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.sink.strategy.SinkBatchStrategy
 import org.neo4j.connectors.kafka.sink.strategy.SinkHandler
@@ -68,7 +71,14 @@ abstract class Neo4jSinkStrictModeIT(
   fun before() {
     execute("MATCH (n) DETACH DELETE n")
     execute("DROP CONSTRAINT person_id IF EXISTS")
+    execute("DROP CONSTRAINT knows_id IF EXISTS")
+    execute("DROP CONSTRAINT knows_source_id IF EXISTS")
 
+    startTask("neo4j.cdc.schema.topics")
+  }
+
+  /** Starts the task under test with strict mode on, for the CDC strategy [topicsKey] names. */
+  private fun startTask(topicsKey: String) {
     task = Neo4jSinkTask()
     task.initialize(
         mock<SinkTaskContext> {
@@ -80,7 +90,7 @@ abstract class Neo4jSinkStrictModeIT(
             "topics" to TOPIC,
             "neo4j.uri" to container().boltUrl,
             "neo4j.authentication.type" to "NONE",
-            "neo4j.cdc.schema.topics" to TOPIC,
+            topicsKey to TOPIC,
             "neo4j.cdc.strict-mode" to "true",
             "neo4j.eos-offset-label" to EOS_LABEL,
             "neo4j.eos-offset-auto-constraint" to "true",
@@ -91,6 +101,12 @@ abstract class Neo4jSinkStrictModeIT(
     withClue("the batching strategy under test") {
       (handler as SinkHandler).batchStrategy shouldBe instanceOf(expectedBatchStrategy)
     }
+  }
+
+  /** The tests below the schema ones run the source-id strategy instead. */
+  private fun useSourceIdStrategy() {
+    task.stop()
+    startTask("neo4j.cdc.source-id.topics")
   }
 
   @AfterEach
@@ -253,6 +269,265 @@ abstract class Neo4jSinkStrictModeIT(
     }
   }
 
+  // ---- schema strategy: relationships ----
+
+  @Test
+  fun `should apply a relationship create and update that find their targets`() {
+    execute("CREATE (:Person {id: 1}), (:Person {id: 2})")
+
+    task.put(
+        listOf(
+            message(knowsEvent(EntityOperation.CREATE, 100, after = mapOf("since" to 2019)), 20),
+            message(
+                knowsEvent(
+                    EntityOperation.UPDATE,
+                    100,
+                    before = mapOf("since" to 2019),
+                    after = mapOf("since" to 2020),
+                ),
+                21,
+            ),
+        )
+    )
+
+    assertSoftly {
+      withClue("the relationship was created and then updated") {
+        single("MATCH ()-[r:KNOWS {id: 100}]->() RETURN r.since AS value") { it.asLong() } shouldBe
+            2020L
+      }
+      relationshipCount() shouldBe 1L
+    }
+  }
+
+  @Test
+  fun `should fail when a relationship update targets a relationship that does not exist`() {
+    execute("CREATE (:Person {id: 1}), (:Person {id: 2})")
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      knowsEvent(
+                          EntityOperation.UPDATE,
+                          100,
+                          before = mapOf("since" to 2019),
+                          after = mapOf("since" to 2020),
+                      ),
+                      30,
+                  )
+              )
+          )
+        }
+
+    assertSoftly {
+      failure.offsets shouldBe listOf(30L)
+      withClue("an update must not invent a relationship") { relationshipCount() shouldBe 0L }
+    }
+  }
+
+  @Test
+  fun `should fail when a relationship delete targets a relationship that does not exist`() {
+    execute("CREATE (:Person {id: 1}), (:Person {id: 2})")
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      knowsEvent(EntityOperation.DELETE, 100, before = mapOf("since" to 2019)),
+                      31,
+                  )
+              )
+          )
+        }
+
+    failure.offsets shouldBe listOf(31L)
+  }
+
+  @Test
+  fun `should fail a duplicate relationship create when a uniqueness constraint exists`() {
+    execute("CREATE CONSTRAINT knows_id IF NOT EXISTS FOR ()-[r:KNOWS]-() REQUIRE r.id IS UNIQUE")
+    execute("CREATE (:Person {id: 1})-[:KNOWS {id: 100, since: 2019}]->(:Person {id: 2})")
+
+    shouldThrow<Throwable> {
+      task.put(
+          listOf(
+              message(knowsEvent(EntityOperation.CREATE, 100, after = mapOf("since" to 2021)), 32)
+          )
+      )
+    }
+
+    assertSoftly {
+      withClue("the existing relationship is untouched") {
+        single("MATCH ()-[r:KNOWS {id: 100}]->() RETURN r.since AS value") { it.asLong() } shouldBe
+            2019L
+      }
+      withClue("no duplicate was created") { relationshipCount() shouldBe 1L }
+    }
+  }
+
+  // ---- source-id strategy ----
+
+  @Test
+  fun `source-id should apply node and relationship events that find their targets`() {
+    useSourceIdStrategy()
+
+    task.put(
+        listOf(
+            message(personEvent(EntityOperation.CREATE, 1, after = mapOf("name" to "Ann")), 40),
+            message(personEvent(EntityOperation.CREATE, 2, after = mapOf("name" to "Bob")), 41),
+            message(sourceKnowsEvent(EntityOperation.CREATE, after = mapOf("since" to 2019)), 42),
+            message(
+                sourceKnowsEvent(
+                    EntityOperation.UPDATE,
+                    before = mapOf("since" to 2019),
+                    after = mapOf("since" to 2020),
+                ),
+                43,
+            ),
+        )
+    )
+
+    assertSoftly {
+      personCount() shouldBe 2L
+      relationshipCount() shouldBe 1L
+      withClue("the relationship carries its source id, and the update was applied") {
+        single("MATCH ()-[r:KNOWS {sourceId: '5:cafe:100'}]->() RETURN r.since AS value") {
+          it.asLong()
+        } shouldBe 2020L
+      }
+    }
+  }
+
+  @Test
+  fun `source-id should fail when a relationship create is missing an end node`() {
+    useSourceIdStrategy()
+    execute("CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'})")
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      sourceKnowsEvent(EntityOperation.CREATE, endId = 9, after = emptyMap()),
+                      50,
+                  )
+              )
+          )
+        }
+
+    assertSoftly {
+      failure.offsets shouldBe listOf(50L)
+      withClue("the missing endpoint was not invented") { personCount() shouldBe 1L }
+      relationshipCount() shouldBe 0L
+    }
+  }
+
+  @Test
+  fun `source-id should fail when a relationship update targets a relationship that does not exist`() {
+    useSourceIdStrategy()
+    execute(
+        "CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'}), (:Person:SourceEvent {sourceId: '4:cafe:2'})"
+    )
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      sourceKnowsEvent(
+                          EntityOperation.UPDATE,
+                          before = mapOf("since" to 2019),
+                          after = mapOf("since" to 2020),
+                      ),
+                      51,
+                  )
+              )
+          )
+        }
+
+    assertSoftly {
+      failure.offsets shouldBe listOf(51L)
+      withClue("an update must not invent a relationship") { relationshipCount() shouldBe 0L }
+    }
+  }
+
+  @Test
+  fun `source-id should fail when a relationship delete targets a relationship that does not exist`() {
+    useSourceIdStrategy()
+    execute(
+        "CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'}), (:Person:SourceEvent {sourceId: '4:cafe:2'})"
+    )
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      sourceKnowsEvent(EntityOperation.DELETE, before = mapOf("since" to 2019)),
+                      52,
+                  )
+              )
+          )
+        }
+
+    failure.offsets shouldBe listOf(52L)
+  }
+
+  @Test
+  fun `source-id should delete a node that exists`() {
+    useSourceIdStrategy()
+    execute("CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'})")
+
+    task.put(
+        listOf(message(personEvent(EntityOperation.DELETE, 1, before = mapOf("name" to "Ann")), 60))
+    )
+
+    personCount() shouldBe 0L
+  }
+
+  @Test
+  fun `source-id should fail when a delete targets a node that does not exist`() {
+    useSourceIdStrategy()
+    execute("CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'})")
+
+    val failure =
+        shouldThrow<StrictModeViolationException> {
+          task.put(
+              listOf(
+                  message(
+                      personEvent(EntityOperation.DELETE, 9, before = mapOf("name" to "Zed")),
+                      61,
+                  )
+              )
+          )
+        }
+
+    assertSoftly {
+      failure.offsets shouldBe listOf(61L)
+      withClue("the unrelated node is untouched") { personCount() shouldBe 1L }
+      withClue("nothing was committed, so there is no tracker") { trackerOffset() shouldBe null }
+    }
+  }
+
+  @Test
+  fun `source-id should fail a duplicate relationship create when a uniqueness constraint exists`() {
+    useSourceIdStrategy()
+    execute(
+        "CREATE CONSTRAINT knows_source_id IF NOT EXISTS FOR ()-[r:KNOWS]-() REQUIRE r.sourceId IS UNIQUE"
+    )
+    execute(
+        "CREATE (:Person:SourceEvent {sourceId: '4:cafe:1'})-[:KNOWS {sourceId: '5:cafe:100'}]->(:Person:SourceEvent {sourceId: '4:cafe:2'})"
+    )
+
+    shouldThrow<Throwable> {
+      task.put(listOf(message(sourceKnowsEvent(EntityOperation.CREATE, after = emptyMap()), 53)))
+    }
+
+    withClue("no duplicate was created") { relationshipCount() shouldBe 1L }
+  }
+
   private fun message(event: Event, offset: Long) =
       newChangeEventMessage(event, offset, 0, offset).record
 
@@ -269,6 +544,44 @@ abstract class Neo4jSinkStrictModeIT(
           mapOf("Person" to listOf(mapOf("id" to id))),
           before?.let { NodeState(listOf("Person"), it) },
           after?.let { NodeState(listOf("Person"), it) },
+      )
+
+  /**
+   * `(:Person {id: 1})-[:KNOWS {id: relId}]->(:Person {id: 2})`, keyed by the relationship's id.
+   */
+  private fun knowsEvent(
+      operation: EntityOperation,
+      relId: Int,
+      before: Map<String, Any>? = null,
+      after: Map<String, Any>? = null,
+  ) =
+      RelationshipEvent(
+          "5:cafe:$relId",
+          "KNOWS",
+          Node("4:cafe:1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1)))),
+          Node("4:cafe:2", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2)))),
+          listOf(mapOf("id" to relId)),
+          operation,
+          before?.let { RelationshipState(it + ("id" to relId)) },
+          after?.let { RelationshipState(it + ("id" to relId)) },
+      )
+
+  /** The same relationship as the source-id strategy sees it: by element ids only, no keys. */
+  private fun sourceKnowsEvent(
+      operation: EntityOperation,
+      endId: Int = 2,
+      before: Map<String, Any>? = null,
+      after: Map<String, Any>? = null,
+  ) =
+      RelationshipEvent(
+          "5:cafe:100",
+          "KNOWS",
+          Node("4:cafe:1", listOf("Person"), emptyMap()),
+          Node("4:cafe:$endId", listOf("Person"), emptyMap()),
+          emptyList(),
+          operation,
+          before?.let { RelationshipState(it) },
+          after?.let { RelationshipState(it) },
       )
 
   private fun personName(id: Int): String? =
