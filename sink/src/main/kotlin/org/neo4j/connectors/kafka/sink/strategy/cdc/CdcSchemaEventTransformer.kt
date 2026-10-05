@@ -19,6 +19,7 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
@@ -28,12 +29,14 @@ import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.UpdateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 
-class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
+class CdcSchemaEventTransformer(val topic: String, val strict: Boolean = false) :
+    CdcEventTransformer {
 
   override fun transformCreate(event: NodeEvent): SinkAction {
     if (event.before != null) {
@@ -44,6 +47,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object.")
+    }
+
+    if (strict) {
+      // strict mode creates outright: a duplicate surfaces as a constraint violation rather than
+      // being absorbed by a MERGE
+      return CreateNodeSinkAction(event.after.labels.toSet(), event.after.properties)
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
@@ -66,9 +75,21 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
+    val matcher = NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties)
+
+    // strict mode only matches: an update for a missing node must not invent a partial one
+    if (strict) {
+      return UpdateNodeSinkAction(
+          matcher,
+          null,
+          event.mutatedProperties(),
+          event.addedLabels().toSet(),
+          event.removedLabels().toSet(),
+      )
+    }
 
     return MergeNodeSinkAction(
-        NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
+        matcher,
         null,
         event.mutatedProperties(),
         event.addedLabels().toSet(),

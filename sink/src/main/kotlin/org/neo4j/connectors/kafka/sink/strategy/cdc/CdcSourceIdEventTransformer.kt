@@ -20,6 +20,7 @@ import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.sink.SinkConfiguration
+import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
@@ -29,6 +30,7 @@ import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
@@ -37,6 +39,7 @@ class CdcSourceIdEventTransformer(
     val topic: String,
     val labelName: String = SinkConfiguration.DEFAULT_SOURCE_ID_LABEL_NAME,
     val propertyName: String = SinkConfiguration.DEFAULT_SOURCE_ID_PROPERTY_NAME,
+    val strict: Boolean = false,
 ) : CdcEventTransformer {
 
   override fun transformCreate(event: NodeEvent): SinkAction {
@@ -48,6 +51,13 @@ class CdcSourceIdEventTransformer(
 
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object.")
+    }
+
+    if (strict) {
+      return CreateNodeSinkAction(
+          event.after.labels.toSet() + labelName,
+          event.after.properties + (propertyName to event.elementId),
+      )
     }
 
     return MergeNodeSinkAction(
@@ -65,6 +75,19 @@ class CdcSourceIdEventTransformer(
     }
     if (event.after == null) {
       throw InvalidDataException("update operation requires 'after' field in the event object.")
+    }
+
+    if (strict) {
+      return UpdateNodeSinkAction(
+          NodeMatcher.ByLabelsAndProperties(
+              setOf(labelName),
+              mapOf(propertyName to event.elementId),
+          ),
+          null,
+          event.mutatedProperties(),
+          event.addedLabels().toSet(),
+          event.removedLabels().toSet(),
+      )
     }
 
     return MergeNodeSinkAction(

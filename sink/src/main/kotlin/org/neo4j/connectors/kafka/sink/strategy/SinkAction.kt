@@ -20,6 +20,9 @@ import com.fasterxml.jackson.annotation.JsonCreator
 
 const val EVENT = "e"
 
+/** The column a strict-mode statement reports its matched row count in. */
+const val APPLIED = "applied"
+
 sealed class SinkAction
 
 sealed class Matcher

@@ -269,8 +269,14 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SOURCE_ID,
+                  config.cdcStrictMode,
               )
             } else {
+              if (config.cdcStrictMode) {
+                throw ConfigException(
+                    "'${SinkConfiguration.CDC_STRICT_MODE}' is not yet supported without APOC's apoc.cypher.doIt"
+                )
+              }
               NativeBatchStrategy(
                   config.neo4j(),
                   config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
@@ -284,7 +290,7 @@ interface SinkStrategyHandler {
             CdcSinkHandler(
                 SinkStrategy.CDC_SOURCE_ID,
                 batchStrategy,
-                CdcSourceIdEventTransformer(topic, labelName, propertyName),
+                CdcSourceIdEventTransformer(topic, labelName, propertyName, config.cdcStrictMode),
                 metrics,
             )
       }
@@ -302,8 +308,14 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SCHEMA,
+                  config.cdcStrictMode,
               )
             } else {
+              if (config.cdcStrictMode) {
+                throw ConfigException(
+                    "'${SinkConfiguration.CDC_STRICT_MODE}' is not yet supported without APOC's apoc.cypher.doIt"
+                )
+              }
               NativeBatchStrategy(
                   config.neo4j(),
                   config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
@@ -317,7 +329,7 @@ interface SinkStrategyHandler {
             CdcSinkHandler(
                 SinkStrategy.CDC_SCHEMA,
                 batchStrategy,
-                CdcSchemaEventTransformer(topic),
+                CdcSchemaEventTransformer(topic, config.cdcStrictMode),
                 metrics,
             )
       }
