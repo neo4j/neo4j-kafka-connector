@@ -49,7 +49,7 @@
         <cdc.version>2.0.2</cdc.version>
         <commons-collections4.version>4.6.0</commons-collections4.version>
         <commons-lang3.version>3.20.0</commons-lang3.version>
-        <connectors-commons.version>1.0.0-SNAPSHOT</connectors-commons.version>
+        <connectors-commons.version>1.0.0-rc5</connectors-commons.version>
         <hamcrest.version>3.0</hamcrest.version>
         <jackson.version>2.22.2</jackson.version>
         <java.version>17</java.version>
