@@ -333,6 +333,9 @@ open class Neo4jConfiguration(configDef: ConfigDef, originals: Map<*, *>, val ty
      * under `neo4j.authentication.<type>.` becomes a parameter with that prefix removed, except
      * `username` and `password`, which are passed separately. Blank values are dropped, as they are
      * what Control Center sends for untouched fields and what unset declared keys default to.
+     *
+     * Unlike `neo4j.authentication.type`, the prefix is matched case-sensitively, so [type] must be
+     * the registered provider name returned by [resolveAuthType].
      */
     internal fun authConfig(originals: Map<String, *>, type: String): AuthConfig {
       val prefix = "${AUTHENTICATION_PREFIX}.$type."
