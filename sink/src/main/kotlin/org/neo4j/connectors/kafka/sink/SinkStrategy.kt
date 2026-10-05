@@ -272,17 +272,13 @@ interface SinkStrategyHandler {
                   config.cdcStrictMode,
               )
             } else {
-              if (config.cdcStrictMode) {
-                throw ConfigException(
-                    "'${SinkConfiguration.CDC_STRICT_MODE}' is not yet supported without APOC's apoc.cypher.doIt"
-                )
-              }
               NativeBatchStrategy(
                   config.neo4j(),
                   config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SOURCE_ID,
+                  config.cdcStrictMode,
               )
             }
 
@@ -311,17 +307,13 @@ interface SinkStrategyHandler {
                   config.cdcStrictMode,
               )
             } else {
-              if (config.cdcStrictMode) {
-                throw ConfigException(
-                    "'${SinkConfiguration.CDC_STRICT_MODE}' is not yet supported without APOC's apoc.cypher.doIt"
-                )
-              }
               NativeBatchStrategy(
                   config.neo4j(),
                   config.getInt(SinkConfiguration.MAX_BATCHED_QUERIES),
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SCHEMA,
+                  config.cdcStrictMode,
               )
             }
 

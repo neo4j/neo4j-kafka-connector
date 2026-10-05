@@ -18,7 +18,7 @@ package org.neo4j.connectors.kafka.sink
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.neo4j.connectors.kafka.sink.strategy.ApocBatchStrategy
+import org.neo4j.connectors.kafka.sink.strategy.NativeBatchStrategy
 import org.neo4j.connectors.kafka.testing.createNeo4jContainer
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -27,11 +27,11 @@ import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 
-/** Strict mode through `apoc.cypher.doIt`. */
+/** Strict mode on the native batching path, with APOC absent from the server. */
 @Testcontainers
-class Neo4jSinkStrictModeApocIT : Neo4jSinkStrictModeIT(ApocBatchStrategy::class) {
+class Neo4jSinkStrictModeWithoutApocIT : Neo4jSinkStrictModeIT(NativeBatchStrategy::class) {
   companion object {
-    @Container val container: Neo4jContainer<*> = createNeo4jContainer().withPlugins("apoc")
+    @Container val container: Neo4jContainer<*> = createNeo4jContainer()
 
     private lateinit var driver: Driver
 
