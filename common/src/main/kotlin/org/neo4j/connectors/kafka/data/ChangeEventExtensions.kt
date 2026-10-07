@@ -382,10 +382,7 @@ private fun Struct.toEvent(): Event =
 
       EventType.RELATIONSHIP.name,
       EventType.RELATIONSHIP.shorthand -> {
-        // only unified events carry labels, as they share one schema between nodes and
-        // relationships
-        if (schema().field("labels") != null) toUnifiedRelationshipEvent()
-        else toRelationshipEvent()
+        toRelationshipEvent()
       }
 
       else -> throw IllegalArgumentException("unsupported event type $eventType")
@@ -406,28 +403,6 @@ internal fun Struct.toNodeEvent(): NodeEvent =
 
 @Suppress("UNCHECKED_CAST")
 internal fun Struct.toRelationshipEvent(): RelationshipEvent =
-    getStruct("state").toRelationshipState().let { (before, after) ->
-      RelationshipEvent(
-          getString("elementId"),
-          getString("type"),
-          getStruct("start").toNode(),
-          getStruct("end").toNode(),
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(),
-              get("keys"),
-              skipNullValuesInMaps = true,
-          ) as List<Map<String, Any>>?,
-          EntityOperation.valueOf(getString("operation")),
-          before,
-          after,
-      )
-    }
-
-// Node events need no unified counterpart: their keys decode to the same map of label to key rows
-// whether they were written as a struct (legacy) or as a map (unified), and the unified state
-// shares the layout toNodeState reads.
-@Suppress("UNCHECKED_CAST")
-internal fun Struct.toUnifiedRelationshipEvent(): RelationshipEvent =
     getStruct("state").toRelationshipState().let { (before, after) ->
       val keysByName = decodeEntityKeys()
 
@@ -514,13 +489,10 @@ internal fun Struct.toRelationshipState(): Pair<RelationshipState?, Relationship
 internal fun Struct.toNode(): Node =
     Node(this.getString("elementId"), this.getArray("labels"), decodeEntityKeys() ?: emptyMap())
 
-// Keys of nodes are a struct of label to rows in legacy events, and a list of {name, rows} in
-// unified ones. Both give a map of label to rows.
+// Keys are a list of {name, rows}, where name is a label (or a relationship type). They decode to
+// a map of name to rows.
 @Suppress("UNCHECKED_CAST")
-private fun Struct.decodeEntityKeys(): Map<String, List<Map<String, Any>>>? {
-  val keysSchema = schema().field("keys").schema()
-
-  return if (keysSchema.type() == Schema.Type.ARRAY) {
+private fun Struct.decodeEntityKeys(): Map<String, List<Map<String, Any>>>? =
     getArray<Struct>("keys")?.associate { entry ->
       entry.getString("name") to
           entry.getArray<Struct>("rows").map { row ->
@@ -531,8 +503,3 @@ private fun Struct.decodeEntityKeys(): Map<String, List<Map<String, Any>>>? {
             ) as Map<String, Any>
           }
     }
-  } else {
-    DynamicTypes.fromConnectValue(keysSchema, get("keys"), skipNullValuesInMaps = true)
-        as Map<String, List<Map<String, Any>>>?
-  }
-}

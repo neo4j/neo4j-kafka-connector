@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.data
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -1072,7 +1073,7 @@ class ChangeEventExtensionsTest {
         .forEach { event ->
           val schema = changeEventConverter.eventToConnectSchema(event)
           val converted = changeEventConverter.eventToConnectValue(event, schema)
-          val reverted = converted.toUnifiedRelationshipEvent()
+          val reverted = converted.toRelationshipEvent()
 
           // unified events always carry the key rows as a list, so absent keys come back empty
           reverted shouldBe
@@ -1142,13 +1143,115 @@ class ChangeEventExtensionsTest {
     }
   }
 
-  @Test
-  fun `legacy events are still converted back correctly when unified events are supported`() {
-    listOf(unifiedNodeEvent, unifiedRelationshipEvent).forEach { event ->
-      val (_, change, _, value) = newChangeEvent(PayloadMode.EXTENDED, event)
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `update events with before and after states are converted back correctly`(
+      payloadMode: PayloadMode
+  ) {
+    listOf(
+            NodeEvent(
+                "element-0",
+                EntityOperation.UPDATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("id" to 1L))),
+                NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "john")),
+                NodeState(listOf("Person", "Employee"), mapOf("id" to 1L, "name" to "jane")),
+            ),
+            RelationshipEvent(
+                "element-1",
+                "KNOWS",
+                Node("node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("node-1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                listOf(mapOf("since" to 2020L)),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to 2020L, "role" to "friend")),
+                RelationshipState(mapOf("since" to 2021L, "role" to "colleague")),
+            ),
+        )
+        .forEach { event ->
+          val (_, change, _, value) = newChangeEvent(payloadMode, event)
 
-      value.toChangeEvent() shouldBe change
-    }
+          value.toChangeEvent() shouldBe change
+        }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `node events with absent keys are converted back correctly`(payloadMode: PayloadMode) {
+    val event =
+        NodeEvent(
+            "element-0",
+            EntityOperation.CREATE,
+            listOf("Person"),
+            null,
+            null,
+            NodeState(listOf("Person"), mapOf("name" to "john")),
+        )
+    val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+    value.nestedValue("event.keys") shouldBe null
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `relationship keys are encoded as null when absent and as empty when empty`(
+      payloadMode: PayloadMode
+  ) {
+    fun relationship(keys: List<Map<String, Any>>?) =
+        RelationshipEvent(
+            "element-1",
+            "KNOWS",
+            Node("node-0", listOf("Person"), emptyMap()),
+            Node("node-1", listOf("Person"), emptyMap()),
+            keys,
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("since" to 2020L)),
+        )
+
+    val absent = newChangeEvent(payloadMode, relationship(null)).converted
+    val empty = newChangeEvent(payloadMode, relationship(emptyList())).converted
+
+    absent.nestedValue("event.keys") shouldBe null
+    empty.nestedValue("event.keys") shouldBe emptyList<Any>()
+
+    // the key rows are always decoded as a list, so absent keys come back empty
+    (absent.toChangeEvent().event as RelationshipEvent).keys shouldBe emptyList()
+    (empty.toChangeEvent().event as RelationshipEvent).keys shouldBe emptyList()
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `relationship keys are decoded from the entry named after the relationship type`(
+      payloadMode: PayloadMode
+  ) {
+    val event =
+        RelationshipEvent(
+            "element-1",
+            "KNOWS",
+            Node("node-0", listOf("Person"), emptyMap()),
+            Node("node-1", listOf("Person"), emptyMap()),
+            listOf(mapOf("a" to 1L), mapOf("b" to "another")),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("a" to 1L, "b" to "another")),
+        )
+    val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+    val keys = value.getStruct("event").getArray<Struct>("keys")
+    keys.map { it.getString("name") } shouldBe listOf("KNOWS")
+    (value.toChangeEvent().event as RelationshipEvent).keys shouldBe event.keys
+    value.toChangeEvent() shouldBe change
+  }
+
+  @Test
+  fun `unsupported event types are rejected when converted back`() {
+    val (_, _, _, value) = newChangeEvent(PayloadMode.EXTENDED, unifiedNodeEvent)
+    value.getStruct("event").put("eventType", "UNKNOWN")
+
+    shouldThrow<IllegalArgumentException> { value.toChangeEvent() }.message shouldBe
+        "unsupported event type UNKNOWN"
   }
 
   private fun <T : Event> newChangeEvent(payloadMode: PayloadMode, event: T): ChangeEventResult<T> {
