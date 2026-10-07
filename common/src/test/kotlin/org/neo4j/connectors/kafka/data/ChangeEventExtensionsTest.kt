@@ -910,8 +910,8 @@ class ChangeEventExtensionsTest {
             ),
         )
         .forEach { event ->
-          val schema = changeEventConverter.unifiedEventToConnectSchema(event)
-          val converted = changeEventConverter.unifiedEventToConnectValue(event, schema)
+          val schema = changeEventConverter.eventToConnectSchema(event)
+          val converted = changeEventConverter.eventToConnectValue(event, schema)
           val reverted = converted.toNodeEvent()
 
           reverted shouldBe event
@@ -1070,8 +1070,8 @@ class ChangeEventExtensionsTest {
             ),
         )
         .forEach { event ->
-          val schema = changeEventConverter.unifiedEventToConnectSchema(event)
-          val converted = changeEventConverter.unifiedEventToConnectValue(event, schema)
+          val schema = changeEventConverter.eventToConnectSchema(event)
+          val converted = changeEventConverter.eventToConnectValue(event, schema)
           val reverted = converted.toUnifiedRelationshipEvent()
 
           // unified events always carry the key rows as a list, so absent keys come back empty

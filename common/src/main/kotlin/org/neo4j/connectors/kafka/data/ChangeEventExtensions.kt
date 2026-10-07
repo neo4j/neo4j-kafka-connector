@@ -22,6 +22,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.model.EntityEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Event
 import org.neo4j.cdc.client.model.EventType
@@ -121,22 +122,13 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         }
       }
 
-  private fun eventToConnectSchema(event: Event): Schema = unifiedEventToConnectSchema(event)
-
-  private fun eventToConnectValue(event: Event, schema: Schema): Struct =
-      unifiedEventToConnectValue(event, schema)
-
   // org.neo4j.connectors.kafka.cdc.Event: shared by node and relationship events, so that both
   // can live under a single schema registry subject.
-  internal fun unifiedEventToConnectSchema(event: Event): Schema {
+  internal fun eventToConnectSchema(event: Event): Schema {
     val beforeProperties: Map<String, Any>?
     val afterProperties: Map<String, Any>?
     when (event) {
-      is NodeEvent -> {
-        beforeProperties = event.before?.properties
-        afterProperties = event.after?.properties
-      }
-      is RelationshipEvent -> {
+      is EntityEvent<*> -> {
         beforeProperties = event.before?.properties
         afterProperties = event.after?.properties
       }
@@ -160,7 +152,7 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         .build()
   }
 
-  internal fun unifiedEventToConnectValue(event: Event, schema: Schema): Struct =
+  internal fun eventToConnectValue(event: Event, schema: Schema): Struct =
       Struct(schema).also {
         it.put("eventType", event.eventType.name)
 
@@ -193,7 +185,11 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
                     schema.field("keys").schema(),
                     // relationship keys are listed under the relationship type, as node keys are
                     // by label
-                    if (event.keys.isNullOrEmpty()) emptyMap() else mapOf(event.type to event.keys),
+                    when {
+                      event.keys == null -> null
+                      event.keys.isEmpty() -> emptyMap()
+                      else -> mapOf(event.type to event.keys)
+                    },
                 ),
             )
             it.put(
