@@ -32,11 +32,12 @@ class ApocBatchStrategy(
     private val batchSize: Int,
     eosOffsetLabel: String,
     private val strategy: SinkStrategy,
+    private val strict: Boolean = false,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j, strict) }
   private val renderer = CypherRenderer(neo4j)
-  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel, strict)
 
   override fun handle(
       messages: Iterable<SinkMessage>,
@@ -95,10 +96,13 @@ class ApocBatchStrategy(
    * The batch's per-event body: the record's own statement, which travels as a `stmt`/`params` pair
    * on the event rather than as code, handed to `apoc.cypher.doIt` to run.
    */
-  private fun applyRecordStatement(): Statement =
-      Cypher.call("apoc.cypher.doIt")
-          .withArgs(envelope.event.property("stmt"), envelope.event.property("params"))
-          .yield("value")
-          .returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total"))
-          .build()
+  private fun applyRecordStatement(): Statement {
+    val call =
+        Cypher.call("apoc.cypher.doIt")
+            .withArgs(envelope.event.property("stmt"), envelope.event.property("params"))
+            .yield("value")
+    // In strict mode each record's statement reports how many rows it acted on.
+    return if (strict) call.returning(Cypher.name("value").property(APPLIED).`as`(APPLIED)).build()
+    else call.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
+  }
 }

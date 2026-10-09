@@ -35,11 +35,12 @@ class NativeBatchStrategy(
     private val batchSize: Int,
     private val eosOffsetLabel: String,
     private val strategy: SinkStrategy,
+    private val strict: Boolean = false,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j, strict) }
   private val renderer = CypherRenderer(neo4j)
-  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel, strict)
   private val cypher25 = CanIUse.canIUse(CanIUseCypher.explicitCypher25Selection()).withNeo4j(neo4j)
   private val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
   private val withVariableScope =
@@ -154,7 +155,7 @@ class NativeBatchStrategy(
     val branches = sorted.map { it.value.clauses }
 
     val query =
-        if (cypher25 || branches.any { it == null }) {
+        if (cypher25 || strict || branches.any { it == null }) {
           textEnvelope(sorted.map { it.key })
         } else {
           renderer.render(
@@ -211,6 +212,9 @@ class NativeBatchStrategy(
 
   /** The envelope hand-written around already-rendered statements, for the two shapes above. */
   private fun textEnvelope(statements: List<String>): String {
+    require(!strict || eosOffsetLabel.isNotBlank()) {
+      "strict mode requires exactly-once semantics"
+    }
     val termination = if (hasFinish) "FINISH" else "RETURN count(1) AS total"
 
     return buildString {
@@ -242,11 +246,31 @@ class NativeBatchStrategy(
           }
 
           appendLine("  WITH $EVENT WHERE $EVENT.q = \$q$index")
-          appendLine("  $stmt")
-          appendLine("  RETURN $index AS x")
+          if (strict) {
+            // count(*) returns a row even when there is nothing to count. Running it in
+            // a separate subquery means this branch produces no row when the event is
+            // filtered out, instead of returning 0.
+            appendLine(if (withVariableScope) "  CALL ($EVENT) {" else "  CALL {")
+            if (!withVariableScope) appendLine("    WITH $EVENT")
+            appendLine("    $stmt")
+            appendLine("  }")
+            appendLine("  RETURN $APPLIED")
+          } else {
+            appendLine("  $stmt")
+            appendLine("  RETURN $index AS x")
+          }
         }
       }
       appendLine("}")
+      if (strict) {
+        appendLine(
+            "WITH k, max($EVENT.offset) AS newOffset, " +
+                "collect(CASE WHEN $APPLIED = 0 THEN $EVENT.offset END) AS $FAILED"
+        )
+        appendLine("SET k.offset = newOffset")
+        append("RETURN $FAILED")
+        return@buildString
+      }
       if (eosOffsetLabel.isNotBlank()) {
         appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
       }

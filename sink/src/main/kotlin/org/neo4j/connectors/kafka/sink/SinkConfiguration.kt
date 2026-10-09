@@ -57,6 +57,12 @@ class SinkConfiguration : Neo4jConfiguration {
   val eosOffsetLabelAutoConstraint
     get(): Boolean = getString(EOS_OFFSET_AUTO_CONSTRAINT).toBoolean()
 
+  val cdcStrictMode
+    get(): Boolean = getString(CDC_STRICT_MODE).toBoolean()
+
+  val strictMode
+    get(): Boolean = getString(CDC_STRICT_MODE).toBoolean()
+
   val cypherBindTimestampAs
     get(): String = getString(CYPHER_BIND_TIMESTAMP_AS)
 
@@ -148,6 +154,7 @@ class SinkConfiguration : Neo4jConfiguration {
     const val CDC_SOURCE_ID_LABEL_NAME = "neo4j.cdc.source-id.label-name"
     const val CDC_SOURCE_ID_PROPERTY_NAME = "neo4j.cdc.source-id.property-name"
     const val CDC_SCHEMA_TOPICS = "neo4j.cdc.schema.topics"
+    const val CDC_STRICT_MODE = "neo4j.cdc.strict-mode"
     const val PATTERN_BIND_TIMESTAMP_AS = "neo4j.pattern.bind-timestamp-as"
     const val PATTERN_BIND_HEADER_AS = "neo4j.pattern.bind-header-as"
     const val PATTERN_BIND_KEY_AS = "neo4j.pattern.bind-key-as"
@@ -160,6 +167,7 @@ class SinkConfiguration : Neo4jConfiguration {
     private const val DEFAULT_BATCH_SIZE = 1000
     private val DEFAULT_BATCH_TIMEOUT = 0.seconds
     private const val DEFAULT_EOS_OFFSET_AUTO_CONSTRAINT = false
+    private const val DEFAULT_CDC_STRICT_MODE = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_NODE_PROPERTIES = false
     private const val DEFAULT_TOPIC_PATTERN_MERGE_RELATIONSHIP_PROPERTIES = false
     const val DEFAULT_BIND_TIMESTAMP_ALIAS = "__timestamp"
@@ -173,6 +181,19 @@ class SinkConfiguration : Neo4jConfiguration {
 
     fun validate(config: Config) {
       Neo4jConfiguration.validate(config)
+
+      // CDC strict mode relies on the EOS offset tracker
+      val strictMode = config.value<String>(CDC_STRICT_MODE)?.toBoolean() ?: false
+      if (strictMode && config.value<String>(EOS_OFFSET_LABEL).isNullOrBlank()) {
+        config
+            .configValues()
+            .filter { it.name() == CDC_STRICT_MODE || it.name() == EOS_OFFSET_LABEL }
+            .forEach {
+              it.addErrorMessage(
+                  "'$CDC_STRICT_MODE' requires exactly-once semantics, so '$EOS_OFFSET_LABEL' must be set."
+              )
+            }
+      }
 
       // Cypher bind variables
       val cypherAliasForTimestamp = config.value<String>(CYPHER_BIND_TIMESTAMP_AS).isNullOrEmpty()
@@ -227,6 +248,18 @@ class SinkConfiguration : Neo4jConfiguration {
                   importance = ConfigDef.Importance.MEDIUM
                   defaultValue = ""
                   group = Groups.CONNECTOR.title
+                }
+            )
+            .define(
+                ConfigKeyBuilder.of(CDC_STRICT_MODE, ConfigDef.Type.STRING) {
+                  importance = ConfigDef.Importance.MEDIUM
+                  defaultValue = DEFAULT_CDC_STRICT_MODE.toString()
+                  group = Groups.CONNECTOR_ADVANCED.title
+                  validator = Validators.bool()
+                  recommender =
+                      Recommenders.visibleIfNotEmpty {
+                        it == CDC_SOURCE_ID_TOPICS || it == CDC_SCHEMA_TOPICS
+                      }
                 }
             )
             .define(

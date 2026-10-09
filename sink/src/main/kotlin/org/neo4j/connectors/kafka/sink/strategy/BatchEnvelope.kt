@@ -35,7 +35,11 @@ import org.neo4j.cypherdsl.core.SymbolicName
  * `apoc.cypher.doIt` for [ApocBatchStrategy], a `UNION ALL` over the batch's distinct statements
  * for [NativeBatchStrategy].
  */
-internal class BatchEnvelope(neo4j: Neo4j, private val eosOffsetLabel: String) {
+internal class BatchEnvelope(
+    neo4j: Neo4j,
+    private val eosOffsetLabel: String,
+    private val strict: Boolean = false,
+) {
 
   /** The unwound event. The body passed to [around] reads its own inputs off this. */
   val event: SymbolicName = Cypher.name(EVENT)
@@ -67,6 +71,31 @@ internal class BatchEnvelope(neo4j: Neo4j, private val eosOffsetLabel: String) {
     }
 
     val tracker = offsetTrackerNode()
+    if (strict) {
+      return unwound
+          .merge(tracker)
+          .onCreate()
+          .set(tracker.property("offset"), Cypher.literalOf<Any>(-1))
+          .with(tracker, event)
+          .where(event.property("offset").gt(tracker.property("offset")))
+          .with(tracker, event)
+          .orderBy(event.property("offset"))
+          .ascending()
+          .callBody(body, importEvent)
+          .with(
+              tracker,
+              Cypher.max(event.property("offset")).`as`("newOffset"),
+              Cypher.collect(
+                      Cypher.caseExpression()
+                          .`when`(Cypher.name(APPLIED).eq(Cypher.literalOf<Any>(0)))
+                          .then(event.property("offset"))
+                  )
+                  .`as`(FAILED),
+          )
+          .set(tracker.property("offset"), Cypher.name("newOffset"))
+          .returning(Cypher.name(FAILED))
+          .build()
+    }
     return terminate(
         unwound
             .merge(tracker)
@@ -115,3 +144,6 @@ internal class BatchEnvelope(neo4j: Neo4j, private val eosOffsetLabel: String) {
       if (hasFinish) ongoing.finish().build()
       else ongoing.returning(Cypher.count(Cypher.literalOf<Any>(1)).`as`("total")).build()
 }
+
+/** The column of a strict-mode batch's result row listing the offsets that applied nothing. */
+const val FAILED = "failed"

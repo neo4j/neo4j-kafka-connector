@@ -21,6 +21,7 @@ import io.kotest.matchers.maps.shouldHaveKey
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.throwable.shouldHaveMessage
 import io.kotest.matchers.types.instanceOf
+import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.connect.sink.SinkConnector
 import org.junit.jupiter.api.Test
@@ -63,6 +64,53 @@ class SinkConfigurationTest {
       val topicHandlers = SinkStrategyHandler.createFrom(config, metricsMock)
       config.validateAllTopics(topicHandlers)
     } shouldHaveMessage "Topic 'bar' is not assigned a sink strategy"
+  }
+
+  private val strictModeBase =
+      mapOf(
+          Neo4jConfiguration.URI to "bolt://neo4j:7687",
+          Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
+          SinkConnector.TOPICS_CONFIG to "foo",
+          SinkConfiguration.CDC_SCHEMA_TOPICS to "foo",
+      )
+
+  @Test
+  fun `strict mode should be disabled by default`() {
+    SinkConfiguration(strictModeBase).cdcStrictMode shouldBe false
+  }
+
+  @Test
+  fun `strict mode should be rejected without an eos offset label`() {
+    val errors = validatedErrors(strictModeBase + (SinkConfiguration.CDC_STRICT_MODE to "true"))
+
+    errors shouldBe setOf(SinkConfiguration.EOS_OFFSET_LABEL, SinkConfiguration.CDC_STRICT_MODE)
+  }
+
+  @Test
+  fun `strict mode should be accepted with an eos offset label`() {
+    val originals =
+        strictModeBase +
+            mapOf(
+                SinkConfiguration.CDC_STRICT_MODE to "true",
+                SinkConfiguration.EOS_OFFSET_LABEL to "__KafkaOffset",
+            )
+
+    validatedErrors(originals) shouldBe emptySet()
+    SinkConfiguration(originals).cdcStrictMode shouldBe true
+  }
+
+  private fun validatedErrors(originals: Map<String, String>): Set<String> {
+    val config = Config(SinkConfiguration.config().validate(originals))
+    SinkConfiguration.validate(config)
+    return config
+        .configValues()
+        .filter {
+          it.errorMessages().isNotEmpty() &&
+              (it.name() == SinkConfiguration.CDC_STRICT_MODE ||
+                  it.name() == SinkConfiguration.EOS_OFFSET_LABEL)
+        }
+        .map { it.name() }
+        .toSet()
   }
 
   @Test

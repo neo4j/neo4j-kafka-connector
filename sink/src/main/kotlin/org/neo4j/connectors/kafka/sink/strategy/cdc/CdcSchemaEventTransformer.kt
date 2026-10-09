@@ -19,6 +19,8 @@ package org.neo4j.connectors.kafka.sink.strategy.cdc
 import org.neo4j.cdc.client.model.NodeEvent
 import org.neo4j.cdc.client.model.RelationshipEvent
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
+import org.neo4j.connectors.kafka.sink.strategy.CreateNodeSinkAction
+import org.neo4j.connectors.kafka.sink.strategy.CreateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.DeleteRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.LookupMode
@@ -28,12 +30,14 @@ import org.neo4j.connectors.kafka.sink.strategy.NodeMatcher
 import org.neo4j.connectors.kafka.sink.strategy.RelationshipMatcher
 import org.neo4j.connectors.kafka.sink.strategy.SinkAction
 import org.neo4j.connectors.kafka.sink.strategy.SinkActionNodeReference
+import org.neo4j.connectors.kafka.sink.strategy.UpdateNodeSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.UpdateRelationshipSinkAction
 import org.neo4j.connectors.kafka.sink.strategy.addedLabels
 import org.neo4j.connectors.kafka.sink.strategy.mutatedProperties
 import org.neo4j.connectors.kafka.sink.strategy.removedLabels
 
-class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
+class CdcSchemaEventTransformer(val topic: String, val strict: Boolean = false) :
+    CdcEventTransformer {
 
   override fun transformCreate(event: NodeEvent): SinkAction {
     if (event.before != null) {
@@ -44,6 +48,12 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     if (event.after == null) {
       throw InvalidDataException("create operation requires 'after' field in the event object.")
+    }
+
+    if (strict) {
+      // strict mode creates outright: a duplicate surfaces as a constraint violation rather than
+      // being absorbed by a MERGE
+      return CreateNodeSinkAction(event.after.labels.toSet(), event.after.properties)
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
@@ -66,9 +76,21 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     }
 
     val (matchLabels, matchProperties) = buildMatchLabelsAndProperties(event.keys)
+    val matcher = NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties)
+
+    // strict mode only matches: an update for a missing node must not invent a partial one
+    if (strict) {
+      return UpdateNodeSinkAction(
+          matcher,
+          null,
+          event.mutatedProperties(),
+          event.addedLabels().toSet(),
+          event.removedLabels().toSet(),
+      )
+    }
 
     return MergeNodeSinkAction(
-        NodeMatcher.ByLabelsAndProperties(matchLabels, matchProperties),
+        matcher,
         null,
         event.mutatedProperties(),
         event.addedLabels().toSet(),
@@ -108,6 +130,23 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
     val (relMatchType, relMatchProperties) =
         buildMatchLabelsAndProperties(event.type, event.keys, event.after.properties)
 
+    // Strict mode uses a key for the relationship, so duplicates fail with a constraint
+    // violation instead of being merged. Without a key, the relationship continues to use MERGE.
+    if (strict && event.keys.isNotEmpty()) {
+      return CreateRelationshipSinkAction(
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
+              LookupMode.MATCH,
+          ),
+          SinkActionNodeReference(
+              NodeMatcher.ByLabelsAndProperties(endMatchLabels, endMatchProperties),
+              LookupMode.MATCH,
+          ),
+          event.type,
+          event.after.properties,
+      )
+    }
+
     return MergeRelationshipSinkAction(
         SinkActionNodeReference(
             NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
@@ -144,8 +183,9 @@ class CdcSchemaEventTransformer(val topic: String) : CdcEventTransformer {
 
     // If there are no keys to match the relationship start and end nodes, then we should not use
     // merge on the relationship as it may lead to unintended creation of relationships. Instead,
-    // we use an Update operation.
-    if (startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
+    // we use an Update operation. Strict mode always does: an update for a missing relationship
+    // must not invent one.
+    if (strict || startMatchProperties.isEmpty() || endMatchProperties.isEmpty()) {
       return UpdateRelationshipSinkAction(
           SinkActionNodeReference(
               NodeMatcher.ByLabelsAndProperties(startMatchLabels, startMatchProperties),
