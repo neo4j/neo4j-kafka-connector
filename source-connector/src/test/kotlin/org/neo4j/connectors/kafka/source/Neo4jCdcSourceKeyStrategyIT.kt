@@ -199,7 +199,17 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .assertMessageKey {
           assertThat(it)
               .isNotNull
-              .isEqualTo(mapOf("keys" to mapOf("TestSource" to listOf(mapOf("name" to "Jane")))))
+              .isEqualTo(
+                  mapOf(
+                      "keys" to
+                          listOf(
+                              mapOf(
+                                  "name" to "TestSource",
+                                  "rows" to listOf(mapOf("properties" to mapOf("name" to "Jane"))),
+                              )
+                          )
+                  )
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
@@ -265,7 +275,19 @@ abstract class Neo4jCdcSourceKeyStrategyIT {
         .assertMessageKey { key ->
           assertThat(key)
               .isNotNull()
-              .isEqualTo(mapOf("keys" to listOf(mapOf("name" to "somewhere"))))
+              // relationship keys are listed under the relationship type, as node keys are by label
+              .isEqualTo(
+                  mapOf(
+                      "keys" to
+                          listOf(
+                              mapOf(
+                                  "name" to "TO",
+                                  "rows" to
+                                      listOf(mapOf("properties" to mapOf("name" to "somewhere"))),
+                              )
+                          )
+                  )
+              )
         }
         .verifyWithin(Duration.ofSeconds(30))
   }
