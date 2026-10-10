@@ -18,6 +18,7 @@ package org.neo4j.connectors.kafka.testing.source
 
 import org.junit.jupiter.api.extension.ExtendWith
 import org.neo4j.connectors.kafka.configuration.MapEncoding
+import org.neo4j.connectors.kafka.testing.AuthenticationSetting
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
@@ -33,6 +34,7 @@ annotation class Neo4jSource(
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val neo4jDatabase: String = "",
+    val authentication: Array<AuthenticationSetting> = [],
     val startFrom: String = "NOW",
     val startFromValue: String = "",
     val strategy: SourceStrategy = SourceStrategy.QUERY,

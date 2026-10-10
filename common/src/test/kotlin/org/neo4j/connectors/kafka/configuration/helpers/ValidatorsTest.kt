@@ -29,8 +29,8 @@ import org.apache.kafka.common.config.ConfigValue
 import org.apache.kafka.common.config.types.Password
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.Groups
 import org.neo4j.connectors.kafka.configuration.helpers.Validators.validateNonEmptyIfVisible
 
 class ValidatorsTest {
@@ -169,9 +169,7 @@ class ValidatorsTest {
   fun `enum should validate against valid entries`() {
     listOf(null, 1, true, ConnectorType.SINK).forEach { v ->
       assertFailsWith(ConfigException::class) {
-            Validators.enum(AuthenticationType::class.java).apply {
-              this.ensureValid("my.property", v)
-            }
+            Validators.enum(Groups::class.java).apply { this.ensureValid("my.property", v) }
           }
           .also {
             assertEquals(
@@ -181,26 +179,24 @@ class ValidatorsTest {
           }
     }
 
-    listOf("SAML", listOf("NONE", "SAML")).forEach { v ->
+    listOf("SAML", listOf("CONNECTION", "SAML")).forEach { v ->
       assertFailsWith(ConfigException::class) {
-            Validators.enum(AuthenticationType::class.java).apply {
-              this.ensureValid("my.property", v)
-            }
+            Validators.enum(Groups::class.java).apply { this.ensureValid("my.property", v) }
           }
           .also {
             assertEquals(
-                "Invalid value SAML for configuration my.property: Must be one of: 'NONE', 'BASIC', 'KERBEROS', 'BEARER', 'CUSTOM'.",
+                "Invalid value SAML for configuration my.property: Must be one of: 'CONNECTION', 'CONNECTION_TLS', 'CONNECTION_ADVANCED', 'CONNECTOR', 'CONNECTOR_ADVANCED'.",
                 it.message,
             )
           }
     }
 
     assertDoesNotThrow {
-      Validators.enum(AuthenticationType::class.java).ensureValid("my.property", "NONE")
-      Validators.enum(AuthenticationType::class.java).ensureValid("my.property", "CUSTOM")
-      Validators.enum(AuthenticationType::class.java).ensureValid("my.property", listOf("CUSTOM"))
-      Validators.enum(AuthenticationType::class.java)
-          .ensureValid("my.property", listOf("CUSTOM", "BEARER"))
+      Validators.enum(Groups::class.java).ensureValid("my.property", "CONNECTION")
+      Validators.enum(Groups::class.java).ensureValid("my.property", "CONNECTOR_ADVANCED")
+      Validators.enum(Groups::class.java).ensureValid("my.property", listOf("CONNECTOR_ADVANCED"))
+      Validators.enum(Groups::class.java)
+          .ensureValid("my.property", listOf("CONNECTOR_ADVANCED", "CONNECTOR"))
     }
   }
 

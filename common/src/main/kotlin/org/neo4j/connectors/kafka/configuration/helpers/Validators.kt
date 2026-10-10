@@ -24,6 +24,7 @@ import org.apache.kafka.common.config.Config
 import org.apache.kafka.common.config.ConfigDef
 import org.apache.kafka.common.config.ConfigException
 import org.apache.kafka.common.config.types.Password
+import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 
 object Validators {
 
@@ -110,6 +111,16 @@ object Validators {
 
   fun bool(): ConfigDef.Validator {
     return string("true", "false")
+  }
+
+  /** Accepts the name of any registered authentication provider, case-insensitively. */
+  fun authType(): ConfigDef.Validator {
+    return ConfigDef.Validator { name, value ->
+      if (value !is String) {
+        throw ConfigException(name, value, "Must be a String.")
+      }
+      Neo4jConfiguration.resolveAuthType(value)
+    }
   }
 
   fun pattern(pattern: String): ConfigDef.Validator {
