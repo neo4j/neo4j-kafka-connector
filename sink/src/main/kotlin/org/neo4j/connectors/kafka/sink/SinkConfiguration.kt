@@ -171,8 +171,8 @@ class SinkConfiguration : Neo4jConfiguration {
     const val DEFAULT_SOURCE_ID_LABEL_NAME = "SourceEvent"
     const val DEFAULT_SOURCE_ID_PROPERTY_NAME = "sourceId"
 
-    fun validate(config: Config) {
-      Neo4jConfiguration.validate(config)
+    fun validate(config: Config, originals: Map<String, String>) {
+      Neo4jConfiguration.validate(config, originals)
 
       // Cypher bind variables
       val cypherAliasForTimestamp = config.value<String>(CYPHER_BIND_TIMESTAMP_AS).isNullOrEmpty()

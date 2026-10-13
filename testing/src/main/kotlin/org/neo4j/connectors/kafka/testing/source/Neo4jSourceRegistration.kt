@@ -33,6 +33,7 @@ internal class Neo4jSourceRegistration(
     neo4jUser: String = "neo4j",
     neo4jPassword: String,
     neo4jDatabase: String,
+    authentication: Map<String, String> = emptyMap(),
     pollInterval: Duration = Duration.ofMillis(1000),
     pollDuration: Duration = Duration.ofMillis(5000),
     streamingProperty: String,
@@ -69,9 +70,13 @@ internal class Neo4jSourceRegistration(
         put("value.converter.schemas.enable", true)
       }
       put("neo4j.uri", neo4jUri)
-      put("neo4j.authentication.type", "BASIC")
-      put("neo4j.authentication.basic.username", neo4jUser)
-      put("neo4j.authentication.basic.password", neo4jPassword)
+      if (authentication.isEmpty()) {
+        put("neo4j.authentication.type", "BASIC")
+        put("neo4j.authentication.basic.username", neo4jUser)
+        put("neo4j.authentication.basic.password", neo4jPassword)
+      } else {
+        putAll(authentication)
+      }
       put("neo4j.database", neo4jDatabase)
       put("neo4j.start-from", startFrom)
       if (startFromValue.isNotBlank()) {

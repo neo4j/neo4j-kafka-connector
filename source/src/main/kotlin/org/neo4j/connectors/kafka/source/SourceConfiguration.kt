@@ -548,7 +548,7 @@ class SourceConfiguration(originals: Map<*, *>) :
     }
 
     fun validate(config: Config, originals: Map<String, String>) {
-      validate(config)
+      Neo4jConfiguration.validate(config, originals)
 
       // START_FROM user defined validation
       config.validateNonEmptyIfVisible(START_FROM_VALUE)

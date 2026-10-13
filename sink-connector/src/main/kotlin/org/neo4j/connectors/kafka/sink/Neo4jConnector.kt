@@ -50,7 +50,7 @@ class Neo4jConnector : SinkConnector() {
     val originals = connectorConfigs ?: emptyMap()
     val result = super.validate(originals)
 
-    SinkConfiguration.validate(result)
+    SinkConfiguration.validate(result, originals)
 
     return result
   }

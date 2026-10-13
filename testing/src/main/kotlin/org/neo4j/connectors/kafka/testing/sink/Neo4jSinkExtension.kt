@@ -42,6 +42,7 @@ import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaProducer
 import org.neo4j.connectors.kafka.testing.kafka.ProducerResolver
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
+import org.neo4j.connectors.kafka.testing.toSettings
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Config
@@ -327,6 +328,7 @@ internal class Neo4jSinkExtension(
             neo4jUser = annotationResolvers.neo4jUser.resolve(state.sinkAnnotation),
             neo4jPassword = annotationResolvers.neo4jPassword.resolve(state.sinkAnnotation),
             neo4jDatabase = state.neo4jDatabase,
+            authentication = state.sinkAnnotation.authentication.toSettings(),
             schemaControlRegistryUri =
                 annotationResolvers.schemaControlRegistryUri.resolve(state.sinkAnnotation),
             keyConverter =

@@ -48,7 +48,6 @@ import org.neo4j.caniuse.CanIUse.canIUse
 import org.neo4j.caniuse.Dbms
 import org.neo4j.caniuse.Neo4j
 import org.neo4j.caniuse.Neo4jDetector
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.createDatabase
 import org.neo4j.connectors.kafka.testing.DatabaseSupport.dropDatabase
@@ -119,7 +118,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -144,7 +143,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
@@ -178,7 +177,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
@@ -211,7 +210,7 @@ class Neo4jCdcTaskTest {
     task.start(
         buildMap {
           put(Neo4jConfiguration.URI, container.boltUrl)
-          put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
+          put(Neo4jConfiguration.AUTHENTICATION_TYPE, "NONE")
           put(Neo4jConfiguration.DATABASE, db)
           put(SourceConfiguration.STRATEGY, SourceType.CDC.toString())
           put(SourceConfiguration.START_FROM, startFrom.toString())
@@ -245,7 +244,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -274,7 +273,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
@@ -306,7 +305,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
@@ -354,7 +353,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -392,7 +391,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -422,7 +421,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -453,7 +452,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             SourceConfiguration.STRATEGY to SourceType.CDC.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
@@ -627,7 +626,7 @@ class Neo4jCdcTaskTest {
     task.start(
         mapOf(
             Neo4jConfiguration.URI to container.boltUrl,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             Neo4jConfiguration.DATABASE to db,
             Neo4jConfiguration.CONNECTOR_NAME to "my-connector",
             Neo4jConfiguration.TASK_ID to "0",

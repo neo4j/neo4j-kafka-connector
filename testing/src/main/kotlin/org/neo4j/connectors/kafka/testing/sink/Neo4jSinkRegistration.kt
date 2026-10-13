@@ -33,6 +33,7 @@ class Neo4jSinkRegistration(
     neo4jUser: String,
     neo4jPassword: String,
     neo4jDatabase: String,
+    authentication: Map<String, String> = emptyMap(),
     excludeErrorHandling: Boolean = false,
     retryTimeout: Duration = (-1).milliseconds,
     retryMaxDelay: Duration = 1000.milliseconds,
@@ -81,9 +82,13 @@ class Neo4jSinkRegistration(
                         put("errors.log.include.messages", includeMessagesInErrorLog)
                       }
                       put("neo4j.uri", neo4jUri)
-                      put("neo4j.authentication.type", "BASIC")
-                      put("neo4j.authentication.basic.username", neo4jUser)
-                      put("neo4j.authentication.basic.password", neo4jPassword)
+                      if (authentication.isEmpty()) {
+                        put("neo4j.authentication.type", "BASIC")
+                        put("neo4j.authentication.basic.username", neo4jUser)
+                        put("neo4j.authentication.basic.password", neo4jPassword)
+                      } else {
+                        putAll(authentication)
+                      }
                       put("neo4j.database", neo4jDatabase)
 
                       if (keyConverter.supportsSchemaRegistry) {

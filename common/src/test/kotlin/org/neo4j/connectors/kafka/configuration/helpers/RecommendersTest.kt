@@ -21,8 +21,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.ConnectorType
+import org.neo4j.connectors.kafka.configuration.Groups
 
 class RecommendersTest {
 
@@ -45,26 +45,27 @@ class RecommendersTest {
 
   @Test
   fun `should return enum entries`() {
-    Recommenders.enum(AuthenticationType::class.java).apply {
+    Recommenders.enum(Groups::class.java).apply {
       assertTrue(this.visible("my.property", emptyMap()))
       assertEquals(
-          listOf("NONE", "BASIC", "KERBEROS", "BEARER", "CUSTOM"),
+          listOf(
+              "CONNECTION",
+              "CONNECTION_TLS",
+              "CONNECTION_ADVANCED",
+              "CONNECTOR",
+              "CONNECTOR_ADVANCED",
+          ),
           this.validValues("my.property", mapOf()),
       )
     }
 
-    Recommenders.enum(
-            AuthenticationType::class.java,
-            AuthenticationType.NONE,
-            AuthenticationType.CUSTOM,
-        )
-        .apply {
-          assertTrue(this.visible("my.property", emptyMap()))
-          assertEquals(
-              listOf("BASIC", "KERBEROS", "BEARER"),
-              this.validValues("my.property", mapOf()),
-          )
-        }
+    Recommenders.enum(Groups::class.java, Groups.CONNECTION, Groups.CONNECTOR_ADVANCED).apply {
+      assertTrue(this.visible("my.property", emptyMap()))
+      assertEquals(
+          listOf("CONNECTION_TLS", "CONNECTION_ADVANCED", "CONNECTOR"),
+          this.validValues("my.property", mapOf()),
+      )
+    }
   }
 
   @Test

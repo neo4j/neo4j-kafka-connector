@@ -51,10 +51,10 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
         .define(
             ConfigKeyBuilder.of(Neo4jConfiguration.AUTHENTICATION_TYPE, ConfigDef.Type.STRING) {
               importance = Importance.HIGH
-              defaultValue = AuthenticationType.BASIC.toString()
+              defaultValue = "basic"
               group = Groups.CONNECTION.title
-              validator = Validators.enum(AuthenticationType::class.java)
-              recommender = Recommenders.enum(AuthenticationType::class.java)
+              validator = Validators.authType()
+              recommender = Recommenders.authType()
             }
         )
         .define(
@@ -68,7 +68,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -83,7 +83,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -98,7 +98,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BASIC.toString()),
+                      authTypeIs("basic"),
                   )
             }
         )
@@ -113,7 +113,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.KERBEROS.toString()),
+                      authTypeIs("kerberos"),
                   )
             }
         )
@@ -128,7 +128,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.BEARER.toString()),
+                      authTypeIs("bearer"),
                   )
             }
         )
@@ -143,7 +143,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -158,7 +158,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -173,7 +173,7 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
@@ -188,10 +188,137 @@ fun ConfigDef.defineConnectionSettings(): ConfigDef =
               recommender =
                   Recommenders.visibleIf(
                       Neo4jConfiguration.AUTHENTICATION_TYPE,
-                      Predicate.isEqual(AuthenticationType.CUSTOM.toString()),
+                      authTypeIs("custom"),
                   )
             }
         )
+        .defineOidcAuthenticationSettings()
+
+/**
+ * Declares the common and the secret-bearing parameters of the `oidc` provider. Any other
+ * `neo4j.authentication.oidc.*` parameter is passed to the provider without being declared. No
+ * defaults are declared, the provider owns them.
+ */
+private fun ConfigDef.defineOidcAuthenticationSettings(): ConfigDef =
+    this.defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_ISSUER,
+            ConfigDef.Type.STRING,
+            Importance.HIGH,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_DISCOVERY_URL,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_TOKEN_ENDPOINT,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_ID,
+            ConfigDef.Type.STRING,
+            Importance.HIGH,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_SECRET,
+            ConfigDef.Type.PASSWORD,
+            Importance.HIGH,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_SECRET_FILE,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_CLIENT_AUTH_METHOD,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+            Neo4jConfiguration.OIDC_CLIENT_AUTH_METHODS,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_GRANT_TYPE,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+            Neo4jConfiguration.OIDC_GRANT_TYPES,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_SCOPE,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_AUDIENCE,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_PROFILE,
+            ConfigDef.Type.STRING,
+            Importance.MEDIUM,
+            Neo4jConfiguration.OIDC_PROFILES,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_PRIVATE_KEY_FILE,
+            ConfigDef.Type.STRING,
+            Importance.LOW,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_PRIVATE_KEY_ID,
+            ConfigDef.Type.STRING,
+            Importance.LOW,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_USERNAME,
+            ConfigDef.Type.STRING,
+            Importance.LOW,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_PASSWORD,
+            ConfigDef.Type.PASSWORD,
+            Importance.LOW,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_REFRESH_TOKEN,
+            ConfigDef.Type.PASSWORD,
+            Importance.LOW,
+        )
+        .defineOidc(
+            Neo4jConfiguration.AUTHENTICATION_OIDC_TRUST_STORE_PASSWORD,
+            ConfigDef.Type.PASSWORD,
+            Importance.LOW,
+        )
+
+/**
+ * Defines an `oidc` parameter, visible when the authentication type is `oidc`. The default is
+ * blank, which is not passed to the provider, so the provider's own default applies.
+ */
+private fun ConfigDef.defineOidc(
+    name: String,
+    type: ConfigDef.Type,
+    importance: Importance,
+    recommendedValues: List<String> = emptyList(),
+): ConfigDef =
+    this.define(
+        ConfigKeyBuilder.of(name, type) {
+          this.importance = importance
+          defaultValue = ""
+          group = Groups.CONNECTION.title
+          val visibility =
+              Recommenders.visibleIf(Neo4jConfiguration.AUTHENTICATION_TYPE, authTypeIs("oidc"))
+          recommender =
+              if (recommendedValues.isEmpty()) visibility
+              else
+                  Recommenders.and(
+                      Recommenders.string(*recommendedValues.toTypedArray()),
+                      visibility,
+                  )
+        }
+    )
+
+private fun authTypeIs(name: String): Predicate<Any?> = Predicate {
+  it is String && it.equals(name, ignoreCase = true)
+}
 
 fun ConfigDef.defineEncryptionSettings(): ConfigDef =
     this.define(

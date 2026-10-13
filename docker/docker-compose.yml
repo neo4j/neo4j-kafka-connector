@@ -7,8 +7,12 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
+    depends_on:
+      keycloak:
+        condition: service_healthy
     volumes:
       - ./conf:/tmp/conf:Z
+      - ./keycloak:/tmp/keycloak:ro,Z
     environment:
       NEO4J_PLUGINS: "[ \"apoc\" ]"
       NEO4J_AUTH: neo4j/password
@@ -17,6 +21,20 @@ services:
       NEO4J_server_logs_config: "/tmp/conf/cdc-debug.xml"
       NEO4J_db_tx__log_preallocate: "false"
       NEO4J_db_tx__log_rotation_size: "1.00MiB"
+      # OIDC through Keycloak, next to native users so that basic authentication keeps working
+      NEO4J_server_jvm_additional: "-Djavax.net.ssl.trustStore=/tmp/keycloak/keycloak.jks -Djavax.net.ssl.trustStorePassword=testpwd"
+      NEO4J_dbms_security_authentication__providers: "oidc-keycloak,native"
+      NEO4J_dbms_security_authorization__providers: "oidc-keycloak,native"
+      NEO4J_dbms_security_auth__cache__ttl: "1s"
+      NEO4J_dbms_security_oidc_keycloak_display__name: "Keycloak"
+      NEO4J_dbms_security_oidc_keycloak_auth__flow: "pkce"
+      NEO4J_dbms_security_oidc_keycloak_well__known__discovery__uri: "https://keycloak:8443/realms/neo4j-sso-test/.well-known/openid-configuration"
+      NEO4J_dbms_security_oidc_keycloak_params: "client_id=neo4j-commons-client;response_type=code;scope=openid email roles"
+      NEO4J_dbms_security_oidc_keycloak_audience: "account"
+      NEO4J_dbms_security_oidc_keycloak_issuer: "https://keycloak:8443/realms/neo4j-sso-test"
+      NEO4J_dbms_security_oidc_keycloak_client__id: "neo4j-commons-client"
+      NEO4J_dbms_security_oidc_keycloak_claims_username: "preferred_username"
+      NEO4J_dbms_security_oidc_keycloak_claims_groups: "groups"
     healthcheck:
       test: [ "CMD", "cypher-shell", "-u", "neo4j", "-p", "password", "RETURN 1" ]
       start_period: 2m
@@ -25,6 +43,33 @@ services:
       timeout: 10s
       retries: 5
 
+
+  keycloak:
+    # identity provider for the OIDC tests, its test realm caps access tokens at three seconds
+    image: quay.io/keycloak/keycloak:26.2.5
+    hostname: keycloak
+    container_name: keycloak
+    command: [ "start-dev", "--import-realm" ]
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro,Z
+      - ./keycloak/keycloak.jks:/opt/keycloak/conf/keycloak.jks:ro,Z
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: "https://keycloak:8443"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTPS_KEY_STORE_FILE: /opt/keycloak/conf/keycloak.jks
+      KC_HTTPS_KEY_STORE_PASSWORD: testpwd
+    healthcheck:
+      # the realm's discovery document, over plain HTTP since the management port uses TLS here
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/neo4j-sso-test/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q token_endpoint <&3" ]
+      start_period: 2m
+      start_interval: 5s
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   broker:
     image: confluentinc/cp-server:${CONFLUENT_PLATFORM_VERSION}
@@ -98,6 +143,7 @@ services:
       - "5005:5005"
     volumes:
       - ./plugins:/tmp/connect-plugins:Z
+      - ./keycloak:/tmp/keycloak:ro,Z
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
       CONNECT_REST_ADVERTISED_HOST_NAME: connect

@@ -49,6 +49,7 @@
         <cdc.version>2.0.2</cdc.version>
         <commons-collections4.version>4.6.0</commons-collections4.version>
         <commons-lang3.version>3.21.0</commons-lang3.version>
+        <connectors-commons.version>1.0.0-rc5</connectors-commons.version>
         <hamcrest.version>3.0</hamcrest.version>
         <jackson.version>2.22.3</jackson.version>
         <java.version>17</java.version>
@@ -58,9 +59,6 @@
         <!-- as well as versions in the docker-compose.yml file -->
         <!-- refer to https://www.confluent.io/previous-versions/ for previous versions of Confluent Platform -->
         <kafka-schema-registry.version>8.3.1</kafka-schema-registry.version>
-        <!-- although our baseline version is 3.1, kafka connect below 3.4 is vulnerable to https://nvd.nist.gov/vuln/detail/CVE-2023-25194 -->
-        <!-- although our baseline version is 3.1, kafka connect below 3.8 is vulnerable to https://www.cve.org/CVERecord?id=CVE-2023-43642 -->
-        <!-- so we set the version to the first version that the vulnerability is resolved -->
         <kafka.version>4.3.1</kafka.version>
         <kotest-assertions-core-jvm.version>6.2.5</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
@@ -308,6 +306,21 @@
                         <artifactId>neo4j-java-driver</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.neo4j.connectors</groupId>
+                <artifactId>commons-driver-auth-oidc</artifactId>
+                <version>${connectors-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.neo4j.connectors</groupId>
+                <artifactId>commons-driver-auth-provided</artifactId>
+                <version>${connectors-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.neo4j.connectors</groupId>
+                <artifactId>commons-driver-auth-spi</artifactId>
+                <version>${connectors-commons.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.neo4j.driver</groupId>

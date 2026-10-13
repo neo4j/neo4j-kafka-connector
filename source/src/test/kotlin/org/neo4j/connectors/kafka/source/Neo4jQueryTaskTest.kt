@@ -36,7 +36,6 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.ArgumentMatchers
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
 import org.neo4j.connectors.kafka.data.DynamicTypes
@@ -136,7 +135,7 @@ class Neo4jQueryTaskTest {
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
             Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
@@ -168,7 +167,7 @@ class Neo4jQueryTaskTest {
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
             Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
@@ -206,7 +205,7 @@ class Neo4jQueryTaskTest {
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
             Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
             SourceConfiguration.START_FROM_VALUE to
@@ -253,7 +252,7 @@ class Neo4jQueryTaskTest {
         buildMap {
           put(Neo4jConfiguration.URI, neo4j.boltUrl)
           put(Neo4jConfiguration.DATABASE, db)
-          put(Neo4jConfiguration.AUTHENTICATION_TYPE, AuthenticationType.NONE.toString())
+          put(Neo4jConfiguration.AUTHENTICATION_TYPE, "NONE")
           put(SourceConfiguration.STRATEGY, SourceType.QUERY.toString())
           put(SourceConfiguration.QUERY_TOPIC, UUID.randomUUID().toString())
           put(SourceConfiguration.QUERY, sourceQuery)
@@ -289,7 +288,7 @@ class Neo4jQueryTaskTest {
             mapOf(
                 Neo4jConfiguration.URI to neo4j.boltUrl,
                 Neo4jConfiguration.DATABASE to db,
-                Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
                 SourceConfiguration.START_FROM to StartFrom.EARLIEST.toString(),
                 SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
@@ -323,7 +322,7 @@ class Neo4jQueryTaskTest {
         mapOf(
             Neo4jConfiguration.URI to neo4j.boltUrl,
             Neo4jConfiguration.DATABASE to db,
-            Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+            Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
             SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
             SourceConfiguration.START_FROM to StartFrom.NOW.toString(),
             SourceConfiguration.QUERY_TOPIC to UUID.randomUUID().toString(),
@@ -364,7 +363,7 @@ class Neo4jQueryTaskTest {
             mapOf(
                 Neo4jConfiguration.URI to neo4j.boltUrl,
                 Neo4jConfiguration.DATABASE to db,
-                Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.toString(),
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to SourceType.QUERY.toString(),
                 SourceConfiguration.START_FROM to StartFrom.USER_PROVIDED.toString(),
                 SourceConfiguration.START_FROM_VALUE to
@@ -400,7 +399,7 @@ class Neo4jQueryTaskTest {
         |   prop7: [null]
         |} AS data, 1717773205 AS timestamp"""
             .trimMargin()
-    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = "NONE"
 
     task.start(props)
 
@@ -447,7 +446,7 @@ class Neo4jQueryTaskTest {
         |} AS data
         |RETURN data, data.id AS id, 123456789 as timestamp"""
             .trimMargin()
-    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = "NONE"
 
     task.start(props)
     val totalRecords = 10
@@ -497,7 +496,7 @@ class Neo4jQueryTaskTest {
         |]} AS data 
         |RETURN data, data.id AS guid, 123456789 AS timestamp"""
             .trimMargin()
-    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+    props[Neo4jConfiguration.AUTHENTICATION_TYPE] = "NONE"
 
     task.start(props)
 
@@ -541,7 +540,7 @@ class Neo4jQueryTaskTest {
       props[SourceConfiguration.QUERY_TOPIC] = UUID.randomUUID().toString()
       props[SourceConfiguration.QUERY_POLL_INTERVAL] = "10ms"
       props[SourceConfiguration.QUERY] = "WRONG QUERY".trimMargin()
-      props[Neo4jConfiguration.AUTHENTICATION_TYPE] = AuthenticationType.NONE.toString()
+      props[Neo4jConfiguration.AUTHENTICATION_TYPE] = "NONE"
 
       task.start(props)
       val totalRecords = 10
