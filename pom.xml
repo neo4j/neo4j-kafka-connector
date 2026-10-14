@@ -59,7 +59,7 @@
         <!-- as well as versions in the docker-compose.yml file -->
         <!-- refer to https://www.confluent.io/previous-versions/ for previous versions of Confluent Platform -->
         <kafka-schema-registry.version>8.3.1</kafka-schema-registry.version>
-        <kafka.version>4.3.1</kafka.version>
+        <kafka.version>4.4.0</kafka.version>
         <kotest-assertions-core-jvm.version>6.2.5</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
         <kotlin.version>2.4.21</kotlin.version>
