@@ -60,7 +60,7 @@
         <!-- refer to https://www.confluent.io/previous-versions/ for previous versions of Confluent Platform -->
         <kafka-schema-registry.version>8.3.1</kafka-schema-registry.version>
         <kafka.version>4.3.1</kafka.version>
-        <kotest-assertions-core-jvm.version>6.2.5</kotest-assertions-core-jvm.version>
+        <kotest-assertions-core-jvm.version>6.2.6</kotest-assertions-core-jvm.version>
         <kotlin.coroutines.version>1.11.0</kotlin.coroutines.version>
         <kotlin.version>2.4.21</kotlin.version>
         <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
