@@ -119,7 +119,8 @@ interface SinkActionStatementGenerator {
  * where `MATCH` is also the only meaningful reading: a relationship cannot be created with a
  * caller-chosen internal id, so there is nothing for a `MERGE` to create.
  */
-class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGenerator {
+class DefaultSinkActionStatementGenerator(neo4j: Neo4j, private val strict: Boolean = false) :
+    SinkActionStatementGenerator {
   private val setDynamicLabels = canIUse(CanIUseCypher.setDynamicLabels()).withNeo4j(neo4j)
   private val removeDynamicLabels = canIUse(CanIUseCypher.removeDynamicLabels()).withNeo4j(neo4j)
   private val renderer = CypherRenderer(neo4j)
@@ -650,12 +651,18 @@ class DefaultSinkActionStatementGenerator(neo4j: Neo4j) : SinkActionStatementGen
       clauses: OpenStatement,
   ): GeneratedStatement =
       GeneratedStatement(
-          Query(
-              renderer.render(clauses.appendTo(OWN_STATEMENT).build()),
-              wrapParams(eventVariable, params),
-          ),
+          Query(renderer.render(ownStatement(clauses)), wrapParams(eventVariable, params)),
           clauses,
       )
+
+  /**
+   * [clauses] as a statement of its own. In strict mode it ends in `RETURN count(*) AS applied`, so
+   * that a statement which found nothing to act on reports `0` instead of silently succeeding.
+   */
+  private fun ownStatement(clauses: OpenStatement): Statement {
+    val end = clauses.appendTo(OWN_STATEMENT)
+    return if (strict) end.returning(Cypher.count(Cypher.asterisk()).`as`(APPLIED)) else end.build()
+  }
 
   private fun wrapParams(eventVariable: String, params: Map<String, Any?>): Map<String, Any?> =
       if (eventVariable == "\$$EVENT") mapOf(EVENT to params) else params
