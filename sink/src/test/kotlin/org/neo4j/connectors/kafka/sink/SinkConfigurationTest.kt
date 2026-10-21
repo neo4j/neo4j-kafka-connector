@@ -101,7 +101,7 @@ class SinkConfigurationTest {
 
   private fun validatedErrors(originals: Map<String, String>): Set<String> {
     val config = Config(SinkConfiguration.config().validate(originals))
-    SinkConfiguration.validate(config)
+    SinkConfiguration.validate(config, emptyMap())
     return config
         .configValues()
         .filter {
