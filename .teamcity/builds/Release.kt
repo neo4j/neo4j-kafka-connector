@@ -86,6 +86,47 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
               dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
             }
 
+            script {
+              this.name = "Upload artifacts to S3"
+              scriptContent =
+                  """
+                  #!/bin/bash
+
+                  # The release is already published at this point, so a problem here must not
+                  # fail the build. We print a TeamCity warning instead and exit successfully.
+                  set -u
+
+                  warn() {
+                    echo "##teamcity[message text='${'$'}1' status='WARNING']"
+                  }
+
+                  MANUAL="Run ./scripts/upload-release-to-s3.sh %releaseVersion% manually"
+
+                  for tool in curl aws; do
+                    if ! command -v ${'$'}tool >/dev/null 2>&1; then
+                      warn "S3 upload skipped, ${'$'}tool is not available in this image. ${'$'}MANUAL"
+                      exit 0
+                    fi
+                  done
+
+                  if [ "%dry-run%" = "true" ]; then
+                    echo "dry run: only downloads and verifies, nothing is uploaded"
+                    export AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy AWS_DEFAULT_REGION=us-east-1
+                    export AWS_EXTRA_ARGS=--dryrun
+                  fi
+
+                  if ! bash ./scripts/upload-release-to-s3.sh "%releaseVersion%"; then
+                    warn "S3 upload FAILED, the release itself is fine. ${'$'}MANUAL"
+                  fi
+
+                  exit 0
+                  """
+                      .trimIndent()
+
+              dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
+              dockerImage = javaVersion.dockerImage
+            }
+
             setVersion("Set next snapshot version", "%nextSnapshotVersion%", javaVersion)
 
             commitAndPush(
