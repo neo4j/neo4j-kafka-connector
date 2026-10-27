@@ -52,7 +52,7 @@ class NativeBatchStrategy(
             .onEach { logger.trace("received message: {}", it) }
             .map { MessageToEvent(it, eventTransformer(it)) }
 
-    return listOf(splitEventsIntoBatches(events, maxBatchedStatements, topic, partition)).onEach {
+    return splitEventsIntoBatches(events, maxBatchedStatements, topic, partition).onEach {
       logger.trace("messages: {} ", it)
     }
   }
@@ -62,16 +62,21 @@ class NativeBatchStrategy(
       maxBatchedStatements: Int,
       topic: String,
       partition: Int,
-  ): List<ChangeQuery> {
-    val result = mutableListOf<ChangeQuery>()
+  ): List<List<ChangeQuery>> {
+    val result = mutableListOf<List<ChangeQuery>>()
+
+    val currentTransaction = mutableListOf<ChangeQuery>()
+    var currentTransactionSize = 0
 
     var currentGroupId = 0
     val queries = mutableMapOf<String, Int>()
     val currentEvents = mutableListOf<Map<String, Any>>()
     val currentMessages = mutableListOf<SinkMessage>()
 
-    fun flush() {
-      result.add(
+    fun flushQuery() {
+      if (currentEvents.isEmpty()) return
+
+      currentTransaction.add(
           ChangeQuery(
               null,
               null,
@@ -79,16 +84,26 @@ class NativeBatchStrategy(
               batchedStatement(queries, currentEvents, topic, partition),
           )
       )
+      currentGroupId = 0
       queries.clear()
       currentEvents.clear()
       currentMessages.clear()
+    }
+
+    fun flushTransaction() {
+      flushQuery()
+      if (currentTransaction.isEmpty()) return
+
+      result.add(currentTransaction.toList())
+      currentTransaction.clear()
+      currentTransactionSize = 0
     }
 
     events.forEach { event ->
       val query = statementGenerator.buildStatement(event.sinkAction, "${EVENT}.params")
 
       if (!queries.containsKey(query.text()) && (queries.size >= maxBatchedStatements)) {
-        flush()
+        flushQuery()
       }
 
       val queryId = queries.getOrPut(query.text()) { currentGroupId++ }
@@ -100,15 +115,13 @@ class NativeBatchStrategy(
           )
       )
       currentMessages.add(event.message)
-      if (currentEvents.size >= batchSize) {
-        flush()
+      if (++currentTransactionSize >= batchSize) {
+        flushTransaction()
       }
     }
 
     // handle final batch, if any
-    if (queries.isNotEmpty() && currentEvents.isNotEmpty()) {
-      flush()
-    }
+    flushTransaction()
 
     return result
   }

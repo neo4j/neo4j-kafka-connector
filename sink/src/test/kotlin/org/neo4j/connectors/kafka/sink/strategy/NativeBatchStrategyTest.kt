@@ -22,7 +22,6 @@ import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe
 import java.util.stream.Stream
-import kotlin.text.get
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -42,7 +41,7 @@ class NativeBatchStrategyTest {
   @ParameterizedTest
   @ArgumentsSource(CypherProvider::class)
   fun `should generate correct statement`(neo4j: Neo4j, expectedQuery: String) {
-    val strategy = NativeBatchStrategy(neo4j, 2, 1000, "", SinkStrategy.CDC_SCHEMA)
+    val strategy = NativeBatchStrategy(neo4j, 2, 2, "", SinkStrategy.CDC_SCHEMA)
     val transformer = CdcSchemaEventTransformer("my-topic")
 
     val result =
@@ -55,32 +54,42 @@ class NativeBatchStrategyTest {
                     1,
                     1,
                 ),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 2), 1, 0, 2),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createKnowsRelationshipEvent(4, 5, 6),
+                    1,
+                    0,
+                    3,
+                ),
             )
         ) {
           transformer.transform(it)
         }
 
-    result.shouldHaveSize(1)
-    val batch = result.first()
-    batch.shouldHaveSize(1)
-    val changeQuery = batch.first()
-    changeQuery.messages shouldHaveSize 2
-    changeQuery.query.text() shouldBe expectedQuery
+    result.shouldHaveSize(2)
 
-    val params = changeQuery.query.parameters().asMap()
-    params shouldContain ("q0" to 1L)
-    params shouldContain ("q1" to 0L)
-    params shouldContainKey "events"
+    result.forEachIndexed { index, batch ->
+      batch.shouldHaveSize(1)
 
-    val events = params["events"] as List<Map<String, Any>>
-    events shouldHaveSize 2
-    events[0] shouldContain ("offset" to 0L)
-    events[0] shouldContain ("q" to 0L)
-    events[0] shouldContainKey "params"
+      val changeQuery = batch.first()
+      changeQuery.messages shouldHaveSize 2
+      changeQuery.query.text() shouldBe expectedQuery
 
-    events[1] shouldContain ("offset" to 1L)
-    events[1] shouldContain ("q" to 1L)
-    events[1] shouldContainKey "params"
+      val params = changeQuery.query.parameters().asMap()
+      params shouldContain ("q0" to 1L)
+      params shouldContain ("q1" to 0L)
+      params shouldContainKey "events"
+
+      val events = params["events"] as List<Map<String, Any>>
+      events shouldHaveSize 2
+      events[0] shouldContain ("offset" to 2L * index)
+      events[0] shouldContain ("q" to 0L)
+      events[0] shouldContainKey "params"
+
+      events[1] shouldContain ("offset" to 2L * index + 1)
+      events[1] shouldContain ("q" to 1L)
+      events[1] shouldContainKey "params"
+    }
   }
 
   object CypherProvider : ArgumentsProvider {
@@ -305,15 +314,13 @@ class NativeBatchStrategyTest {
           transformer.transform(it)
         }
 
-    result.shouldHaveSize(1)
     result
-        .first()
         .shouldHaveSize(4)
         .shouldMatchInOrder(
-            { it.messages shouldHaveSize 2 },
-            { it.messages shouldHaveSize 2 },
-            { it.messages shouldHaveSize 2 },
-            { it.messages shouldHaveSize 1 },
+            { it.single().messages shouldHaveSize 2 },
+            { it.single().messages shouldHaveSize 2 },
+            { it.single().messages shouldHaveSize 2 },
+            { it.single().messages shouldHaveSize 1 },
         )
   }
 
@@ -357,6 +364,65 @@ class NativeBatchStrategyTest {
         .first()
         .shouldHaveSize(2)
         .shouldMatchInOrder({ it.messages shouldHaveSize 3 }, { it.messages shouldHaveSize 1 })
+  }
+
+  @ParameterizedTest
+  @ArgumentsSource(EosEnabledProvider::class)
+  fun `should split transactions over batch size and queries over max batched statement count`(
+      eosEnabled: Boolean
+  ) {
+    val strategy =
+        NativeBatchStrategy(
+            neo4j2026_1,
+            2,
+            4,
+            if (eosEnabled) "__KafkaOffset" else "",
+            SinkStrategy.CDC_SCHEMA,
+        )
+    val transformer = CdcSchemaEventTransformer("my-topic")
+
+    val result =
+        strategy.handle(
+            listOf(
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 1), 0, 0, 0),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createNodePersonEvent("name", "John"),
+                    0,
+                    1,
+                    1,
+                ),
+                TestUtils.newChangeEventMessage(
+                    TestUtils.createKnowsRelationshipEvent(1, 2, 3),
+                    1,
+                    0,
+                    2,
+                ),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 2), 2, 0, 3),
+                TestUtils.newChangeEventMessage(TestUtils.createNodePersonEvent("id", 3), 3, 0, 4),
+            )
+        ) {
+          transformer.transform(it)
+        }
+
+    result
+        .shouldHaveSize(2)
+        .shouldMatchInOrder(
+            {
+              it.shouldHaveSize(2)
+                  .shouldMatchInOrder(
+                      { q ->
+                        q.messages.map { m -> m.record.kafkaOffset() } shouldBe listOf(0L, 1L)
+                      },
+                      { q ->
+                        q.messages.map { m -> m.record.kafkaOffset() } shouldBe listOf(2L, 3L)
+                      },
+                  )
+            },
+            {
+              it.shouldHaveSize(1).single().messages.map { m -> m.record.kafkaOffset() } shouldBe
+                  listOf(4L)
+            },
+        )
   }
 
   object EosEnabledProvider : ArgumentsProvider {
