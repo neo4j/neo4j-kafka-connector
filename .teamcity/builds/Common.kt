@@ -33,7 +33,7 @@ val MAVEN_DEFAULT_ARGS = buildString {
   append(
       "-Dmaven.wagon.http.retryHandler.nonRetryableClasses=java.io.InterruptedIOException,java.net.UnknownHostException,java.net.ConnectException ")
 }
-const val DEFAULT_BRANCH = "main"
+const val DEFAULT_BRANCH = "5.0"
 
 const val FULL_GITHUB_REPOSITORY = "$GITHUB_OWNER/$GITHUB_REPOSITORY"
 const val GITHUB_URL = "https://github.com/$FULL_GITHUB_REPOSITORY"
