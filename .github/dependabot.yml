@@ -9,7 +9,7 @@ updates:
     cooldown:
       default-days: 3
     open-pull-requests-limit: 15
-    target-branch: "main"
+    target-branch: "5.0"
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
@@ -29,7 +29,7 @@ updates:
     cooldown:
       default-days: 3
     open-pull-requests-limit: 10
-    target-branch: "main"
+    target-branch: "5.0"
     commit-message:
       prefix: "build(repo)"
       prefix-development: "build(repo)"
@@ -62,7 +62,7 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 3
-    target-branch: "main"
+    target-branch: "5.0"
   - package-ecosystem: "bundler"
     directory: "/"
     schedule:
