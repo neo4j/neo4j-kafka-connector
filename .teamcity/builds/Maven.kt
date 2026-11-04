@@ -29,6 +29,10 @@ open class Maven(
           this.goals = goals
           this.runnerArgs =
               "$MAVEN_DEFAULT_ARGS -Djava.version=${javaVersion.version} ${args ?: ""}"
+
+          if (neo4jVersion != Neo4jVersion.V_NONE) {
+            dockerRunParameters = "$dockerRunParameters $TESTCONTAINERS_HOST_DOCKER_ARGS"
+          }
         }
       }
 
