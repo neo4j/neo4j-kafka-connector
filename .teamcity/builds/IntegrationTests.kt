@@ -70,7 +70,7 @@ class IntegrationTests(
               this.runnerArgs = "$MAVEN_DEFAULT_ARGS -DskipUnitTests"
 
               dockerRunParameters =
-                  "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default"
+                  "--volume /var/run/docker.sock:/var/run/docker.sock --network neo4j-kafka-connector_default $TESTCONTAINERS_HOST_DOCKER_ARGS"
             }
 
             script {

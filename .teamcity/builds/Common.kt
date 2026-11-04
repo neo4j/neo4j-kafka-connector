@@ -45,6 +45,13 @@ const val SEMGREP_DOCKER_IMAGE = "%ecr-registry-connectors%:semgrep-latest"
 val DEFAULT_JAVA_VERSION = JavaVersion.V_17
 const val DEFAULT_CONFLUENT_PLATFORM_VERSION = "7.2.9"
 
+// Docker run arguments for build steps that run Testcontainers inside the build container (Docker
+// socket mounted). Pins the Testcontainers Docker host to the agent's IPv4 bridge gateway: when the
+// bridge network has IPv6 enabled, Testcontainers may otherwise pick the IPv6 gateway and put it
+// into URLs without brackets (e.g. `bolt://fdfb:3ff6:...::1:32768`).
+const val TESTCONTAINERS_HOST_DOCKER_ARGS =
+    "--add-host=host.docker.internal:host-gateway -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal"
+
 // Look into Root Project's settings -> Connections
 const val SLACK_CONNECTION_ID = "PROJECT_EXT_83"
 const val SLACK_CHANNEL = "#team-connectors-feed"
