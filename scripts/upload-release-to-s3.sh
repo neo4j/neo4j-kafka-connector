@@ -42,5 +42,5 @@ done
 
 for f in "$WORKDIR/${NAME}".*; do
   echo "Uploading $(basename "$f") to ${BUCKET} (acl: ${ACL})"
-  aws s3 cp "$f" "$BUCKET" --acl "$ACL" $AWS_EXTRA_ARGS
+  aws s3 cp "$f" "$BUCKET" --acl "$ACL" "$AWS_EXTRA_ARGS"
 done
