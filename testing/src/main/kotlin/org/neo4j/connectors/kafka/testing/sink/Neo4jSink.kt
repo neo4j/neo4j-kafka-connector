@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.testing.sink
 
 import org.junit.jupiter.api.extension.ExtendWith
+import org.neo4j.connectors.kafka.testing.AuthenticationSetting
 import org.neo4j.connectors.kafka.testing.DEFAULT_TO_ENV
 
 @Target(AnnotationTarget.FUNCTION)
@@ -34,6 +35,7 @@ annotation class Neo4jSink(
     val neo4jUser: String = DEFAULT_TO_ENV,
     val neo4jPassword: String = DEFAULT_TO_ENV,
     val neo4jDatabase: String = "",
+    val authentication: Array<AuthenticationSetting> = [],
     val dropDatabase: Boolean = true,
     val cypher: Array<CypherStrategy> = [],
     val cdcSchema: Array<CdcSchemaStrategy> = [],

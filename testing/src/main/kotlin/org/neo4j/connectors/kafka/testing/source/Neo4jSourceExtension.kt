@@ -44,6 +44,7 @@ import org.neo4j.connectors.kafka.testing.format.KeyValueConverterResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConsumerResolver
 import org.neo4j.connectors.kafka.testing.kafka.ConvertingKafkaConsumer
 import org.neo4j.connectors.kafka.testing.kafka.TopicRegistry
+import org.neo4j.connectors.kafka.testing.toSettings
 import org.neo4j.driver.AuthToken
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Config
@@ -251,6 +252,7 @@ internal class Neo4jSourceExtension(
             neo4jUser = annotationResolvers.neo4jUser.resolve(state.sourceAnnotation),
             neo4jPassword = annotationResolvers.neo4jPassword.resolve(state.sourceAnnotation),
             neo4jDatabase = state.neo4jDatabase,
+            authentication = state.sourceAnnotation.authentication.toSettings(),
             topic = state.topicRegistry.resolveTopic(state.sourceAnnotation.topic),
             streamingProperty = state.sourceAnnotation.streamingProperty,
             startFrom = state.sourceAnnotation.startFrom,

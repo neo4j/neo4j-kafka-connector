@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.neo4j.connectors.kafka</groupId>
         <artifactId>parent</artifactId>
-        <version>6.0.0-SNAPSHOT</version>
+        <version>6.0.2-SNAPSHOT</version>
     </parent>
     <artifactId>common</artifactId>
     <packaging>jar</packaging>
@@ -45,6 +45,10 @@
             <artifactId>cdc</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.neo4j.connectors</groupId>
+            <artifactId>commons-driver-auth-spi</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
         </dependency>
@@ -62,6 +66,16 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.connectors</groupId>
+            <artifactId>commons-driver-auth-oidc</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.connectors</groupId>
+            <artifactId>commons-driver-auth-provided</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.kotest</groupId>

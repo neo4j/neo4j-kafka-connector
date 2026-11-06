@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.data
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -30,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.ArgumentsProvider
 import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.support.ParameterDeclarations
 import org.neo4j.cdc.client.model.CaptureMode
 import org.neo4j.cdc.client.model.ChangeEvent
@@ -189,11 +191,16 @@ class ChangeEventExtensionsTest {
             )
   }
 
-  @Test
-  fun `schema and value should be generated and converted back correctly for node create events with extended payload`() {
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `schema and value should be generated and converted back correctly for node create events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val props = mapOf("id" to 5L, "name" to "john", "surname" to "doe")
     val (_, change, schema, value) =
         newChangeEvent(
-            PayloadMode.EXTENDED,
+            payloadMode,
             NodeEvent(
                 "element-0",
                 EntityOperation.CREATE,
@@ -203,77 +210,12 @@ class ChangeEventExtensionsTest {
                     "Label2" to listOf(mapOf("id" to 5L)),
                 ),
                 null,
-                NodeState(
-                    listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
-                ),
+                NodeState(listOf("Label1", "Label2"), props),
             ),
         )
 
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", PropertyType.schema)
-                                    .field("surname", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
+    val propertiesSchema = propertiesSchema(payloadMode, props)
+    schema.nestedSchema("event") shouldBe unifiedEventSchema(propertiesSchema)
     value.get("event") shouldBe
         Struct(schema.nestedSchema("event"))
             .put("elementId", "element-0")
@@ -282,1914 +224,285 @@ class ChangeEventExtensionsTest {
             .put("labels", listOf("Label1", "Label2"))
             .put(
                 "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
-                                .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))
-                        ),
+                keysValue(
+                    mapOf(
+                        "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
+                        "Label2" to listOf(mapOf("id" to 5L)),
                     )
-                    .put(
-                        "Label2",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L))
-                        ),
-                    ),
+                ),
             )
             .put(
                 "state",
                 Struct(schema.nestedSchema("event.state"))
                     .put(
                         "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put("labels", listOf("Label1", "Label2"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe"),
-                                ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for node create events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            NodeEvent(
-                "element-0",
-                EntityOperation.CREATE,
-                listOf("Label1", "Label2"),
-                mapOf(
-                    "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L)),
-                ),
-                null,
-                NodeState(
-                    listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
-                ),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "element-0")
-            .put("eventType", "NODE")
-            .put("operation", "CREATE")
-            .put("labels", listOf("Label1", "Label2"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label1"))
-                                .put("name", "john")
-                                .put("surname", "doe")
-                        ),
-                    )
-                    .put(
-                        "Label2",
-                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
-                    ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put("labels", listOf("Label1", "Label2"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.after.properties"))
-                                    .put("id", 5L)
-                                    .put("name", "john")
-                                    .put("surname", "doe"),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for node update events with extended payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.EXTENDED,
-            NodeEvent(
-                "element-0",
-                EntityOperation.UPDATE,
-                listOf("Label1", "Label2"),
-                mapOf(
-                    "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L)),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
-                ),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", PropertyType.schema)
-                                    .field("surname", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "element-0")
-            .put("eventType", "NODE")
-            .put("operation", "UPDATE")
-            .put("labels", listOf("Label1", "Label2"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
-                                .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))
-                        ),
-                    )
-                    .put(
-                        "Label2",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L))
+                        entityState(
+                            schema.nestedSchema("event.state.after"),
+                            listOf("Label1", "Label2"),
+                            payloadMode,
+                            props,
                         ),
                     ),
             )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put("labels", listOf("Label1", "Label2"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe"),
-                                ),
-                            ),
-                    )
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put("labels", listOf("Label1", "Label2", "Label3"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe"),
-                                    "age" to PropertyType.toConnectValue(25L),
-                                ),
-                            ),
-                    ),
-            )
 
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for node update events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            NodeEvent(
-                "element-0",
-                EntityOperation.UPDATE,
-                listOf("Label1", "Label2"),
-                mapOf(
-                    "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L)),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe"),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
-                ),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "element-0")
-            .put("eventType", "NODE")
-            .put("operation", "UPDATE")
-            .put("labels", listOf("Label1", "Label2"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label1"))
-                                .put("name", "john")
-                                .put("surname", "doe")
-                        ),
-                    )
-                    .put(
-                        "Label2",
-                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
-                    ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put("labels", listOf("Label1", "Label2"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.before.properties"))
-                                    .put("id", 5L)
-                                    .put("name", "john")
-                                    .put("surname", "doe"),
-                            ),
-                    )
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put("labels", listOf("Label1", "Label2", "Label3"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.after.properties"))
-                                    .put("id", 5L)
-                                    .put("name", "john")
-                                    .put("surname", "doe")
-                                    .put("age", 25L),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for node delete events with extended payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.EXTENDED,
-            NodeEvent(
-                "element-0",
-                EntityOperation.DELETE,
-                listOf("Label1", "Label2", "Label3"),
-                mapOf(
-                    "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L)),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
-                ),
-                null,
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", PropertyType.schema)
-                                    .field("surname", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", PropertyType.schema)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "element-0")
-            .put("eventType", "NODE")
-            .put("operation", "DELETE")
-            .put("labels", listOf("Label1", "Label2", "Label3"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label1").valueSchema())
-                                .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe"))
-                        ),
-                    )
-                    .put(
-                        "Label2",
-                        listOf(
-                            Struct(schema.nestedSchema("event.keys.Label2").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L))
-                        ),
-                    ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put("labels", listOf("Label1", "Label2", "Label3"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "name" to PropertyType.toConnectValue("john"),
-                                    "surname" to PropertyType.toConnectValue("doe"),
-                                    "age" to PropertyType.toConnectValue(25L),
-                                ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for node delete events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            NodeEvent(
-                "element-0",
-                EntityOperation.DELETE,
-                listOf("Label1", "Label2", "Label3"),
-                mapOf(
-                    "Label1" to listOf(mapOf("name" to "john", "surname" to "doe")),
-                    "Label2" to listOf(mapOf("id" to 5L)),
-                ),
-                NodeState(
-                    listOf("Label1", "Label2", "Label3"),
-                    mapOf("id" to 5L, "name" to "john", "surname" to "doe", "age" to 25L),
-                ),
-                null,
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-            .field(
-                "keys",
-                SchemaBuilder.struct()
-                    .field(
-                        "Label1",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "Label2",
-                        SchemaBuilder.array(
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .optional()
-                                    .build()
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("age", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .field("surname", Schema.OPTIONAL_STRING_SCHEMA)
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "element-0")
-            .put("eventType", "NODE")
-            .put("operation", "DELETE")
-            .put("labels", listOf("Label1", "Label2", "Label3"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("event.keys"))
-                    .put(
-                        "Label1",
-                        listOf(
-                            Struct(schema.nestedValueSchema("event.keys.Label1"))
-                                .put("name", "john")
-                                .put("surname", "doe")
-                        ),
-                    )
-                    .put(
-                        "Label2",
-                        listOf(Struct(schema.nestedValueSchema("event.keys.Label2")).put("id", 5L)),
-                    ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put("labels", listOf("Label1", "Label2", "Label3"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.before.properties"))
-                                    .put("id", 5L)
-                                    .put("name", "john")
-                                    .put("surname", "doe")
-                                    .put("age", 25L),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship create events with extended payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.EXTENDED,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.CREATE,
-                null,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "CREATE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.start.keys.Person")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("john"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.end.keys.Company")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("acme corp"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "keys",
-                listOf(
-                    Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))
-                ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)),
-                                ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship create events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.CREATE,
-                null,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct()
-                            .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                            .optional()
-                            .build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "CREATE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")
-                                ),
-                            ),
-                    ),
-            )
-            .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.after.properties"))
-                                    .put("id", 5L)
-                                    .put(
-                                        "since",
-                                        DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(1999, 12, 31)
-                                        ),
-                                    ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship update events with extended payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.EXTENDED,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.UPDATE,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "UPDATE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.start.keys.Person")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("john"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.end.keys.Company")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("acme corp"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "keys",
-                listOf(
-                    Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))
-                ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "since" to
-                                        PropertyType.toConnectValue(LocalDate.of(1999, 12, 31)),
-                                ),
-                            ),
-                    )
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "since" to PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)),
-                                ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship update events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.UPDATE,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))),
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct()
-                            .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                            .optional()
-                            .build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "UPDATE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")
-                                ),
-                            ),
-                    ),
-            )
-            .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.before.properties"))
-                                    .put("id", 5L)
-                                    .put(
-                                        "since",
-                                        DateTimeFormatter.ISO_DATE.format(
-                                            LocalDate.of(1999, 12, 31)
-                                        ),
-                                    ),
-                            ),
-                    )
-                    .put(
-                        "after",
-                        Struct(schema.nestedSchema("event.state.after"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.after.properties"))
-                                    .put("id", 5L)
-                                    .put(
-                                        "since",
-                                        DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 1)),
-                                    ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship delete events with extended payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.EXTENDED,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.DELETE,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-                null,
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", PropertyType.schema)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct().field("id", PropertyType.schema).optional().build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "DELETE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.start.keys.Person")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("john"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(
-                                            schema
-                                                .nestedSchema("event.end.keys.Company")
-                                                .valueSchema()
-                                        )
-                                        .put("name", PropertyType.toConnectValue("acme corp"))
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "keys",
-                listOf(
-                    Struct(schema.nestedSchema("event.keys").valueSchema())
-                        .put("id", PropertyType.toConnectValue(5L))
-                ),
-            )
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put(
-                                "properties",
-                                mapOf(
-                                    "id" to PropertyType.toConnectValue(5L),
-                                    "since" to PropertyType.toConnectValue(LocalDate.of(2000, 1, 1)),
-                                ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
-  }
-
-  @Test
-  fun `schema and value should be generated and converted back correctly for relationship delete events with compact payload`() {
-    val (_, change, schema, value) =
-        newChangeEvent(
-            PayloadMode.COMPACT,
-            RelationshipEvent(
-                "rel-0",
-                "WORKS_FOR",
-                Node(
-                    "node-0",
-                    listOf("Person"),
-                    mapOf("Person" to listOf(mapOf("name" to "john"))),
-                ),
-                Node(
-                    "node-1",
-                    listOf("Company"),
-                    mapOf("Company" to listOf(mapOf("name" to "acme corp"))),
-                ),
-                listOf(mapOf("id" to 5L)),
-                EntityOperation.DELETE,
-                RelationshipState(mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))),
-                null,
-            ),
-        )
-
-    schema.nestedSchema("event") shouldBe
-        SchemaBuilder.struct()
-            .field("elementId", Schema.STRING_SCHEMA)
-            .field("eventType", Schema.STRING_SCHEMA)
-            .field("operation", Schema.STRING_SCHEMA)
-            .field("type", Schema.STRING_SCHEMA)
-            .field(
-                "start",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Person",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "end",
-                SchemaBuilder.struct()
-                    .field("elementId", Schema.STRING_SCHEMA)
-                    .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-                    .field(
-                        "keys",
-                        SchemaBuilder.struct()
-                            .field(
-                                "Company",
-                                SchemaBuilder.array(
-                                        SchemaBuilder.struct()
-                                            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
-                                            .optional()
-                                            .build()
-                                    )
-                                    .optional()
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .field(
-                "keys",
-                SchemaBuilder.array(
-                        SchemaBuilder.struct()
-                            .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                            .optional()
-                            .build()
-                    )
-                    .optional()
-                    .build(),
-            )
-            .field(
-                "state",
-                SchemaBuilder.struct()
-                    .field(
-                        "before",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .field(
-                        "after",
-                        SchemaBuilder.struct()
-                            .field(
-                                "properties",
-                                SchemaBuilder.struct()
-                                    .field("id", Schema.OPTIONAL_INT64_SCHEMA)
-                                    .field("since", SimpleTypes.LOCALDATE.schema(true))
-                                    .build(),
-                            )
-                            .optional()
-                            .build(),
-                    )
-                    .build(),
-            )
-            .build()
-
-    value.get("event") shouldBe
-        Struct(schema.nestedSchema("event"))
-            .put("elementId", "rel-0")
-            .put("eventType", "RELATIONSHIP")
-            .put("operation", "DELETE")
-            .put("type", "WORKS_FOR")
-            .put(
-                "start",
-                Struct(schema.nestedSchema("event.start"))
-                    .put("elementId", "node-0")
-                    .put("labels", listOf("Person"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.start.keys"))
-                            .put(
-                                "Person",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.start.keys.Person"))
-                                        .put("name", "john")
-                                ),
-                            ),
-                    ),
-            )
-            .put(
-                "end",
-                Struct(schema.nestedSchema("event.end"))
-                    .put("elementId", "node-1")
-                    .put("labels", listOf("Company"))
-                    .put(
-                        "keys",
-                        Struct(schema.nestedSchema("event.end.keys"))
-                            .put(
-                                "Company",
-                                listOf(
-                                    Struct(schema.nestedValueSchema("event.end.keys.Company"))
-                                        .put("name", "acme corp")
-                                ),
-                            ),
-                    ),
-            )
-            .put("keys", listOf(Struct(schema.nestedValueSchema("event.keys")).put("id", 5L)))
-            .put(
-                "state",
-                Struct(schema.nestedSchema("event.state"))
-                    .put(
-                        "before",
-                        Struct(schema.nestedSchema("event.state.before"))
-                            .put(
-                                "properties",
-                                Struct(schema.nestedSchema("event.state.before.properties"))
-                                    .put("id", 5L)
-                                    .put(
-                                        "since",
-                                        DateTimeFormatter.ISO_DATE.format(LocalDate.of(2000, 1, 1)),
-                                    ),
-                            ),
-                    ),
-            )
-
-    val reverted = value.toChangeEvent()
-    reverted shouldBe change
+    value.toChangeEvent() shouldBe change
   }
 
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(PayloadModeValues::class)
-  fun `node event keys should be nullified when node keys are not defined`(
+  fun `schema and value should be generated and converted back correctly for node update events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val before = mapOf("id" to 5L, "name" to "john")
+    val after = mapOf("id" to 5L, "name" to "johnny", "age" to 30L)
+    val (_, change, schema, value) =
+        newChangeEvent(
+            payloadMode,
+            NodeEvent(
+                "element-0",
+                EntityOperation.UPDATE,
+                listOf("Label1", "Label2"),
+                mapOf("Label1" to listOf(mapOf("id" to 5L))),
+                NodeState(listOf("Label1"), before),
+                NodeState(listOf("Label1", "Label2"), after),
+            ),
+        )
+
+    schema.nestedSchema("event") shouldBe
+        unifiedEventSchema(propertiesSchema(payloadMode, before + after))
+    value.get("event") shouldBe
+        Struct(schema.nestedSchema("event"))
+            .put("elementId", "element-0")
+            .put("eventType", "NODE")
+            .put("operation", "UPDATE")
+            .put("labels", listOf("Label1", "Label2"))
+            .put("keys", keysValue(mapOf("Label1" to listOf(mapOf("id" to 5L)))))
+            .put(
+                "state",
+                Struct(schema.nestedSchema("event.state"))
+                    .put(
+                        "before",
+                        entityState(
+                            schema.nestedSchema("event.state.before"),
+                            listOf("Label1"),
+                            payloadMode,
+                            before,
+                        ),
+                    )
+                    .put(
+                        "after",
+                        entityState(
+                            schema.nestedSchema("event.state.after"),
+                            listOf("Label1", "Label2"),
+                            payloadMode,
+                            after,
+                        ),
+                    ),
+            )
+
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `schema and value should be generated and converted back correctly for node delete events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val before = mapOf("id" to 5L, "dob" to LocalDate.of(2000, 1, 1))
+    val (_, change, schema, value) =
+        newChangeEvent(
+            payloadMode,
+            NodeEvent(
+                "element-0",
+                EntityOperation.DELETE,
+                listOf("Label1"),
+                mapOf("Label1" to listOf(mapOf("id" to 5L))),
+                NodeState(listOf("Label1"), before),
+                null,
+            ),
+        )
+
+    schema.nestedSchema("event") shouldBe unifiedEventSchema(propertiesSchema(payloadMode, before))
+    value.get("event") shouldBe
+        Struct(schema.nestedSchema("event"))
+            .put("elementId", "element-0")
+            .put("eventType", "NODE")
+            .put("operation", "DELETE")
+            .put("labels", listOf("Label1"))
+            .put("keys", keysValue(mapOf("Label1" to listOf(mapOf("id" to 5L)))))
+            .put(
+                "state",
+                Struct(schema.nestedSchema("event.state"))
+                    .put(
+                        "before",
+                        entityState(
+                            schema.nestedSchema("event.state.before"),
+                            listOf("Label1"),
+                            payloadMode,
+                            before,
+                        ),
+                    ),
+            )
+
+    value.toChangeEvent() shouldBe change
+  }
+
+  private val personNode =
+      Node("node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("name" to "john"))))
+  private val companyNode =
+      Node("node-1", listOf("Company"), mapOf("Company" to listOf(mapOf("name" to "acme corp"))))
+
+  private fun relationshipEventStruct(
+      schema: Schema,
+      operation: String,
+      keys: List<Map<String, Any>>,
+      state: Struct,
+  ): Struct =
+      Struct(schema.nestedSchema("event"))
+          .put("elementId", "rel-0")
+          .put("eventType", "RELATIONSHIP")
+          .put("operation", operation)
+          .put("type", "WORKS_FOR")
+          .put("start", nodeRefValue(schema.nestedSchema("event.start"), personNode))
+          .put("end", nodeRefValue(schema.nestedSchema("event.end"), companyNode))
+          .put("keys", keysValue(if (keys.isEmpty()) mapOf() else mapOf("WORKS_FOR" to keys)))
+          .put("state", state)
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `schema and value should be generated and converted back correctly for relationship create events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val after = mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1))
+    val (_, change, schema, value) =
+        newChangeEvent(
+            payloadMode,
+            RelationshipEvent(
+                "rel-0",
+                "WORKS_FOR",
+                personNode,
+                companyNode,
+                listOf(mapOf("id" to 5L)),
+                EntityOperation.CREATE,
+                null,
+                RelationshipState(after),
+            ),
+        )
+
+    schema.nestedSchema("event") shouldBe unifiedEventSchema(propertiesSchema(payloadMode, after))
+    value.get("event") shouldBe
+        relationshipEventStruct(
+            schema,
+            "CREATE",
+            listOf(mapOf("id" to 5L)),
+            Struct(schema.nestedSchema("event.state"))
+                .put(
+                    "after",
+                    entityState(schema.nestedSchema("event.state.after"), null, payloadMode, after),
+                ),
+        )
+
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `schema and value should be generated and converted back correctly for relationship update events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val before = mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))
+    val after = mapOf("id" to 5L, "since" to LocalDate.of(2000, 1, 1), "role" to "dev")
+    val (_, change, schema, value) =
+        newChangeEvent(
+            payloadMode,
+            RelationshipEvent(
+                "rel-0",
+                "WORKS_FOR",
+                personNode,
+                companyNode,
+                listOf(mapOf("id" to 5L)),
+                EntityOperation.UPDATE,
+                RelationshipState(before),
+                RelationshipState(after),
+            ),
+        )
+
+    schema.nestedSchema("event") shouldBe
+        unifiedEventSchema(propertiesSchema(payloadMode, before + after))
+    value.get("event") shouldBe
+        relationshipEventStruct(
+            schema,
+            "UPDATE",
+            listOf(mapOf("id" to 5L)),
+            Struct(schema.nestedSchema("event.state"))
+                .put(
+                    "before",
+                    entityState(
+                        schema.nestedSchema("event.state.before"),
+                        null,
+                        payloadMode,
+                        before,
+                    ),
+                )
+                .put(
+                    "after",
+                    entityState(schema.nestedSchema("event.state.after"), null, payloadMode, after),
+                ),
+        )
+
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `schema and value should be generated and converted back correctly for relationship delete events`(
+      name: String,
+      payloadMode: PayloadMode,
+  ) {
+    val before = mapOf("id" to 5L, "since" to LocalDate.of(1999, 12, 31))
+    val (_, change, schema, value) =
+        newChangeEvent(
+            payloadMode,
+            RelationshipEvent(
+                "rel-0",
+                "WORKS_FOR",
+                personNode,
+                companyNode,
+                listOf(mapOf("id" to 5L)),
+                EntityOperation.DELETE,
+                RelationshipState(before),
+                null,
+            ),
+        )
+
+    schema.nestedSchema("event") shouldBe unifiedEventSchema(propertiesSchema(payloadMode, before))
+    value.get("event") shouldBe
+        relationshipEventStruct(
+            schema,
+            "DELETE",
+            listOf(mapOf("id" to 5L)),
+            Struct(schema.nestedSchema("event.state"))
+                .put(
+                    "before",
+                    entityState(
+                        schema.nestedSchema("event.state.before"),
+                        null,
+                        payloadMode,
+                        before,
+                    ),
+                ),
+        )
+
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @ArgumentsSource(PayloadModeValues::class)
+  fun `node event keys should be empty when node keys are not defined`(
       name: String,
       payloadMode: PayloadMode,
   ) {
@@ -2206,14 +519,13 @@ class ChangeEventExtensionsTest {
             ),
         )
 
-    val expectedKeySchema = SchemaBuilder.struct().optional().build()
-    schema.nestedSchema("event.keys") shouldBe expectedKeySchema
-    value.nestedValue("event.keys") shouldBe Struct(expectedKeySchema)
+    schema.nestedSchema("event.keys") shouldBe keysSchema()
+    value.nestedValue("event.keys") shouldBe emptyList<Any>()
   }
 
   @ParameterizedTest(name = "{0}")
   @ArgumentsSource(PayloadModeValues::class)
-  fun `relationship event keys should be nullified when rel keys are not defined`(
+  fun `relationship event keys should be empty when rel keys are not defined`(
       name: String,
       payloadMode: PayloadMode,
   ) {
@@ -2232,12 +544,154 @@ class ChangeEventExtensionsTest {
             ),
         )
 
-    val expectedKeySchema =
-        SchemaBuilder.array(SchemaBuilder.struct().optional().build()).optional().build()
-
-    schema.nestedSchema("event.keys") shouldBe expectedKeySchema
+    schema.nestedSchema("event.keys") shouldBe keysSchema()
     value.nestedValue("event.keys") shouldBe emptyList<Any>()
   }
+
+  @Test
+  fun `event schema should be equal for node and relationship create events`() {
+    val (_, _, nodeSchema, _) = newChangeEvent(PayloadMode.EXTENDED, unifiedNodeEvent)
+    val (_, _, relSchema, _) = newChangeEvent(PayloadMode.EXTENDED, unifiedRelationshipEvent)
+
+    nodeSchema.nestedSchema("event") shouldBe relSchema.nestedSchema("event")
+  }
+
+  @Test
+  fun `event schema should be equal for node events with different labels and properties`() {
+    val (_, _, schema1, _) = newChangeEvent(PayloadMode.EXTENDED, unifiedNodeEvent)
+    val (_, _, schema2, _) =
+        newChangeEvent(
+            PayloadMode.EXTENDED,
+            NodeEvent(
+                "element-9",
+                EntityOperation.UPDATE,
+                listOf("Company", "Org"),
+                mapOf("Org" to listOf(mapOf("code" to "NEO", "region" to "EU"))),
+                NodeState(listOf("Company"), mapOf("code" to "NEO", "founded" to 2000L)),
+                NodeState(listOf("Company", "Org"), mapOf("code" to "NEO", "active" to true)),
+            ),
+        )
+
+    schema1.nestedSchema("event") shouldBe schema2.nestedSchema("event")
+  }
+
+  // expected-shape helpers for the unified event schema
+  // array of {name, rows}, where each row has the properties of one key
+  private fun keysSchema(): Schema =
+      SchemaBuilder.array(
+              SchemaBuilder.struct()
+                  .field("name", Schema.STRING_SCHEMA)
+                  .field(
+                      "rows",
+                      SchemaBuilder.array(
+                              SchemaBuilder.struct()
+                                  .field(
+                                      "properties",
+                                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
+                                          .build(),
+                                  )
+                                  .build()
+                          )
+                          .build(),
+                  )
+                  .build()
+          )
+          .optional()
+          .build()
+
+  private fun nodeRefSchema(): Schema =
+      SchemaBuilder.struct()
+          .field("elementId", Schema.STRING_SCHEMA)
+          .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+          .field("keys", keysSchema())
+          .optional()
+          .build()
+
+  private fun compactSchemaOf(value: Any): Schema =
+      when (value) {
+        is Long -> Schema.OPTIONAL_INT64_SCHEMA
+        is Boolean -> Schema.OPTIONAL_BOOLEAN_SCHEMA
+        is LocalDate -> SimpleTypes.LOCALDATE.schema(optional = true)
+        else -> Schema.OPTIONAL_STRING_SCHEMA
+      }
+
+  private fun compactValueOf(value: Any): Any =
+      if (value is LocalDate) DateTimeFormatter.ISO_DATE.format(value) else value
+
+  private fun propertiesSchema(payloadMode: PayloadMode, props: Map<String, Any>): Schema =
+      if (payloadMode == PayloadMode.EXTENDED)
+          SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+      else
+          SchemaBuilder.struct()
+              .also { b ->
+                props.toSortedMap().forEach { (k, v) -> b.field(k, compactSchemaOf(v)) }
+              }
+              .build()
+
+  private fun unifiedEventSchema(propertiesSchema: Schema): Schema {
+    val entity =
+        SchemaBuilder.struct()
+            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+            .field("properties", propertiesSchema)
+            .optional()
+            .build()
+    return SchemaBuilder.struct()
+        .name("org.neo4j.connectors.kafka.cdc.Event")
+        .field("elementId", Schema.STRING_SCHEMA)
+        .field("eventType", Schema.STRING_SCHEMA)
+        .field("operation", Schema.STRING_SCHEMA)
+        .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+        .field("type", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("start", nodeRefSchema())
+        .field("end", nodeRefSchema())
+        .field("keys", keysSchema())
+        .field(
+            "state",
+            SchemaBuilder.struct().field("before", entity).field("after", entity).build(),
+        )
+        .build()
+  }
+
+  private fun keysValue(keys: Map<String, List<Map<String, Any>>>): List<Struct> {
+    val entrySchema = keysSchema().valueSchema()
+    val rowSchema = entrySchema.field("rows").schema().valueSchema()
+
+    return keys.map { (name, rows) ->
+      Struct(entrySchema)
+          .put("name", name)
+          .put(
+              "rows",
+              rows.map { row ->
+                Struct(rowSchema)
+                    .put("properties", row.mapValues { (_, v) -> PropertyType.toConnectValue(v) })
+              },
+          )
+    }
+  }
+
+  private fun nodeRefValue(schema: Schema, node: Node): Struct =
+      Struct(schema)
+          .put("elementId", node.elementId)
+          .put("labels", node.labels)
+          .put("keys", keysValue(node.keys))
+
+  private fun entityState(
+      schema: Schema,
+      labels: List<String>?,
+      payloadMode: PayloadMode,
+      props: Map<String, Any>,
+  ): Struct =
+      Struct(schema)
+          .put("labels", labels)
+          .put(
+              "properties",
+              if (payloadMode == PayloadMode.EXTENDED)
+                  props.mapValues { (_, v) -> PropertyType.toConnectValue(v) }
+              else
+                  Struct(schema.field("properties").schema()).also { s ->
+                    props.forEach { (k, v) -> s.put(k, compactValueOf(v)) }
+                  },
+          )
 
   @Test
   fun `metadata should be converted to struct and back with extended payload`() {
@@ -2457,105 +911,12 @@ class ChangeEventExtensionsTest {
             ),
         )
         .forEach { event ->
-          val schema = changeEventConverter.nodeEventToConnectSchema(event)
-          val converted = changeEventConverter.nodeEventToConnectValue(event, schema)
+          val schema = changeEventConverter.eventToConnectSchema(event)
+          val converted = changeEventConverter.eventToConnectValue(event, schema)
           val reverted = converted.toNodeEvent()
 
           reverted shouldBe event
         }
-  }
-
-  @Test
-  fun `node should be converted to struct and back with extended payload`() {
-    val changeEventConverter = ChangeEventConverter(PayloadMode.EXTENDED)
-
-    val node =
-        Node(
-            "element-id-1",
-            listOf("Person", "Employee"),
-            mapOf(
-                "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L)),
-            ),
-        )
-    val schema = changeEventConverter.nodeToConnectSchema(node)
-    val converted = changeEventConverter.nodeToConnectValue(node, schema)
-
-    converted shouldBe
-        Struct(schema)
-            .put("elementId", "element-id-1")
-            .put("labels", listOf("Person", "Employee"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("keys"))
-                    .put(
-                        "Person",
-                        listOf(
-                            Struct(schema.nestedSchema("keys.Person").valueSchema())
-                                .put("id", PropertyType.toConnectValue(1L)),
-                            Struct(schema.nestedSchema("keys.Person").valueSchema())
-                                .put("name", PropertyType.toConnectValue("john"))
-                                .put("surname", PropertyType.toConnectValue("doe")),
-                        ),
-                    )
-                    .put(
-                        "Employee",
-                        listOf(
-                            Struct(schema.nestedSchema("keys.Employee").valueSchema())
-                                .put("id", PropertyType.toConnectValue(5L))
-                                .put("company_id", PropertyType.toConnectValue(7L))
-                        ),
-                    ),
-            )
-
-    val reverted = converted.toNode()
-    reverted shouldBe node
-  }
-
-  @Test
-  fun `node should be converted to struct and back with compact payload`() {
-    val changeEventConverter = ChangeEventConverter(PayloadMode.COMPACT)
-
-    val node =
-        Node(
-            "element-id-1",
-            listOf("Person", "Employee"),
-            mapOf(
-                "Person" to listOf(mapOf("id" to 1L), mapOf("name" to "john", "surname" to "doe")),
-                "Employee" to listOf(mapOf("id" to 5L, "company_id" to 7L)),
-            ),
-        )
-    val schema = changeEventConverter.nodeToConnectSchema(node)
-    val converted = changeEventConverter.nodeToConnectValue(node, schema)
-
-    converted shouldBe
-        Struct(schema)
-            .put("elementId", "element-id-1")
-            .put("labels", listOf("Person", "Employee"))
-            .put(
-                "keys",
-                Struct(schema.nestedSchema("keys"))
-                    .put(
-                        "Person",
-                        listOf(
-                            Struct(schema.nestedSchema("keys.Person").valueSchema()).put("id", 1L),
-                            Struct(schema.nestedSchema("keys.Person").valueSchema())
-                                .put("name", "john")
-                                .put("surname", "doe"),
-                        ),
-                    )
-                    .put(
-                        "Employee",
-                        listOf(
-                            Struct(schema.nestedSchema("keys.Employee").valueSchema())
-                                .put("id", 5L)
-                                .put("company_id", 7L)
-                        ),
-                    ),
-            )
-
-    val reverted = converted.toNode()
-    reverted shouldBe node
   }
 
   @ParameterizedTest(name = "{0}")
@@ -2710,11 +1071,22 @@ class ChangeEventExtensionsTest {
             ),
         )
         .forEach { event ->
-          val schema = changeEventConverter.relationshipEventToConnectSchema(event)
-          val converted = changeEventConverter.relationshipEventToConnectValue(event, schema)
+          val schema = changeEventConverter.eventToConnectSchema(event)
+          val converted = changeEventConverter.eventToConnectValue(event, schema)
           val reverted = converted.toRelationshipEvent()
 
-          reverted shouldBe event
+          // unified events always carry the key rows as a list, so absent keys come back empty
+          reverted shouldBe
+              RelationshipEvent(
+                  event.elementId,
+                  event.type,
+                  event.start,
+                  event.end,
+                  event.keys ?: emptyList(),
+                  event.operation,
+                  event.before,
+                  event.after,
+              )
         }
   }
 
@@ -2736,6 +1108,151 @@ class ChangeEventExtensionsTest {
       val schema: Schema,
       val converted: Struct,
   )
+
+  private val unifiedNodeEvent =
+      NodeEvent(
+          "element-0",
+          EntityOperation.CREATE,
+          listOf("Person"),
+          mapOf("Person" to listOf(mapOf("id" to 1L))),
+          null,
+          NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "john")),
+      )
+
+  private val unifiedRelationshipEvent =
+      RelationshipEvent(
+          "element-1",
+          "KNOWS",
+          Node("node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+          Node("node-1", listOf("Company"), mapOf("Company" to listOf(mapOf("code" to "NEO")))),
+          listOf(mapOf("since" to 2020L)),
+          EntityOperation.CREATE,
+          null,
+          RelationshipState(mapOf("since" to 2020L, "role" to "friend")),
+      )
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `unified node and relationship events are converted back correctly`(
+      payloadMode: PayloadMode
+  ) {
+    listOf(unifiedNodeEvent, unifiedRelationshipEvent).forEach { event ->
+      val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+      value.toChangeEvent() shouldBe change
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `update events with before and after states are converted back correctly`(
+      payloadMode: PayloadMode
+  ) {
+    listOf(
+            NodeEvent(
+                "element-0",
+                EntityOperation.UPDATE,
+                listOf("Person"),
+                mapOf("Person" to listOf(mapOf("id" to 1L))),
+                NodeState(listOf("Person"), mapOf("id" to 1L, "name" to "john")),
+                NodeState(listOf("Person", "Employee"), mapOf("id" to 1L, "name" to "jane")),
+            ),
+            RelationshipEvent(
+                "element-1",
+                "KNOWS",
+                Node("node-0", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 1L)))),
+                Node("node-1", listOf("Person"), mapOf("Person" to listOf(mapOf("id" to 2L)))),
+                listOf(mapOf("since" to 2020L)),
+                EntityOperation.UPDATE,
+                RelationshipState(mapOf("since" to 2020L, "role" to "friend")),
+                RelationshipState(mapOf("since" to 2021L, "role" to "colleague")),
+            ),
+        )
+        .forEach { event ->
+          val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+          value.toChangeEvent() shouldBe change
+        }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `node events with absent keys are converted back correctly`(payloadMode: PayloadMode) {
+    val event =
+        NodeEvent(
+            "element-0",
+            EntityOperation.CREATE,
+            listOf("Person"),
+            null,
+            null,
+            NodeState(listOf("Person"), mapOf("name" to "john")),
+        )
+    val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+    value.nestedValue("event.keys") shouldBe null
+    value.toChangeEvent() shouldBe change
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `relationship keys are encoded as null when absent and as empty when empty`(
+      payloadMode: PayloadMode
+  ) {
+    fun relationship(keys: List<Map<String, Any>>?) =
+        RelationshipEvent(
+            "element-1",
+            "KNOWS",
+            Node("node-0", listOf("Person"), emptyMap()),
+            Node("node-1", listOf("Person"), emptyMap()),
+            keys,
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("since" to 2020L)),
+        )
+
+    val absent = newChangeEvent(payloadMode, relationship(null)).converted
+    val empty = newChangeEvent(payloadMode, relationship(emptyList())).converted
+
+    absent.nestedValue("event.keys") shouldBe null
+    empty.nestedValue("event.keys") shouldBe emptyList<Any>()
+
+    // the key rows are always decoded as a list, so absent keys come back empty
+    (absent.toChangeEvent().event as RelationshipEvent).keys shouldBe emptyList()
+    (empty.toChangeEvent().event as RelationshipEvent).keys shouldBe emptyList()
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PayloadMode::class, names = ["EXTENDED", "COMPACT"])
+  fun `relationship keys are decoded from the entry named after the relationship type`(
+      payloadMode: PayloadMode
+  ) {
+    val event =
+        RelationshipEvent(
+            "element-1",
+            "KNOWS",
+            Node("node-0", listOf("Person"), emptyMap()),
+            Node("node-1", listOf("Person"), emptyMap()),
+            listOf(mapOf("a" to 1L), mapOf("b" to "another")),
+            EntityOperation.CREATE,
+            null,
+            RelationshipState(mapOf("a" to 1L, "b" to "another")),
+        )
+    val (_, change, _, value) = newChangeEvent(payloadMode, event)
+
+    val keys = value.getStruct("event").getArray<Struct>("keys")
+    keys.map { it.getString("name") } shouldBe listOf("KNOWS")
+    (value.toChangeEvent().event as RelationshipEvent).keys shouldBe event.keys
+    value.toChangeEvent() shouldBe change
+  }
+
+  @Test
+  fun `unsupported event types are rejected when converted back`() {
+    val (_, _, _, value) = newChangeEvent(PayloadMode.EXTENDED, unifiedNodeEvent)
+    value.getStruct("event").put("eventType", "UNKNOWN")
+
+    shouldThrow<IllegalArgumentException> { value.toChangeEvent() }.message shouldBe
+        "unsupported event type UNKNOWN"
+  }
 
   private fun <T : Event> newChangeEvent(payloadMode: PayloadMode, event: T): ChangeEventResult<T> {
     val changeEventConverter = ChangeEventConverter(payloadMode)

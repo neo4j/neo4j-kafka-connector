@@ -28,6 +28,7 @@ import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.connectors.kafka.exceptions.InvalidDataException
 import org.neo4j.connectors.kafka.metrics.Metrics
 import org.neo4j.connectors.kafka.metrics.MetricsFactory
+import org.neo4j.connectors.kafka.sink.strategy.FAILED
 import org.neo4j.cypherdsl.core.internal.SchemaNames
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -92,6 +93,8 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
           handlerDuration.inWholeMilliseconds,
       )
 
+      val strict = config.cdcStrictMode && handler.strategy() in CDC_STRATEGIES
+
       log.debug("writing to neo4j")
       val writeDuration = measureTime {
         txGroups.forEachIndexed { index, group ->
@@ -99,7 +102,25 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
           config.driver.session(config.sessionConfig()).use { session ->
             log.trace("before write transaction for group {}", index)
             session.executeWrite(
-                { tx -> group.forEach { tx.run(it.query).consume() } },
+                { tx ->
+                  group.forEach { change ->
+                    val result = tx.run(change.query)
+                    if (strict) {
+                      // throwing here rolls the batch back, offset tracker included
+                      val failed = result.list().flatMap { it[FAILED].asList { v -> v.asLong() } }
+                      if (failed.isNotEmpty()) {
+                        val first = change.messages.first().record
+                        throw StrictModeViolationException(
+                            first.topic(),
+                            first.kafkaPartition(),
+                            failed,
+                        )
+                      }
+                    } else {
+                      result.consume()
+                    }
+                  }
+                },
                 config.txConfig { this["batch-size"] = group.flatMap { it.messages }.size },
             )
             log.trace("after write transaction for group {}", index)
@@ -153,6 +174,8 @@ class Neo4jSinkTask(private val metricsFactory: MetricsFactory = MetricsFactory(
 
   companion object {
     private const val LABEL = "parameterized_label"
+
+    private val CDC_STRATEGIES = setOf(SinkStrategy.CDC_SCHEMA, SinkStrategy.CDC_SOURCE_ID)
 
     private const val CHECK_EOS_QUERY =
         $$"""

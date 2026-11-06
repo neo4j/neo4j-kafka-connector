@@ -22,6 +22,7 @@ import org.apache.kafka.connect.data.SchemaBuilder
 import org.apache.kafka.connect.data.Struct
 import org.neo4j.cdc.client.model.ChangeEvent
 import org.neo4j.cdc.client.model.ChangeIdentifier
+import org.neo4j.cdc.client.model.EntityEvent
 import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.model.Event
 import org.neo4j.cdc.client.model.EventType
@@ -121,268 +122,224 @@ class ChangeEventConverter(private val payloadMode: PayloadMode = PayloadMode.EX
         }
       }
 
-  private fun eventToConnectSchema(event: Event): Schema =
-      when (event) {
-        is NodeEvent -> nodeEventToConnectSchema(event)
-        is RelationshipEvent -> relationshipEventToConnectSchema(event)
-        else ->
-            throw IllegalArgumentException(
-                "unsupported event type in change data: ${event.javaClass.name}"
-            )
+  // org.neo4j.connectors.kafka.cdc.Event: shared by node and relationship events, so that both
+  // can live under a single schema registry subject.
+  internal fun eventToConnectSchema(event: Event): Schema {
+    val beforeProperties: Map<String, Any>?
+    val afterProperties: Map<String, Any>?
+    when (event) {
+      is EntityEvent<*> -> {
+        beforeProperties = event.before?.properties
+        afterProperties = event.after?.properties
       }
-
-  private fun eventToConnectValue(event: Event, schema: Schema): Struct =
-      when (event) {
-        is NodeEvent -> nodeEventToConnectValue(event, schema)
-        is RelationshipEvent -> relationshipEventToConnectValue(event, schema)
-        else -> throw IllegalArgumentException("unsupported event type ${event.javaClass.name}")
-      }
-
-  internal fun nodeEventToConnectSchema(nodeEvent: NodeEvent): Schema =
-      SchemaBuilder.struct()
-          .field("elementId", Schema.STRING_SCHEMA)
-          .field("eventType", Schema.STRING_SCHEMA)
-          .field("operation", Schema.STRING_SCHEMA)
-          .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-          .field("keys", schemaForKeysByLabel(nodeEvent.keys))
-          .field("state", nodeStateSchema(nodeEvent.before, nodeEvent.after))
-          .build()
-
-  internal fun nodeEventToConnectValue(nodeEvent: NodeEvent, schema: Schema): Struct =
-      Struct(schema).also {
-        val keys = converter.value(schema.field("keys").schema(), nodeEvent.keys)
-
-        it.put("elementId", nodeEvent.elementId)
-        it.put("eventType", nodeEvent.eventType.name)
-        it.put("operation", nodeEvent.operation.name)
-        it.put("labels", nodeEvent.labels)
-        it.put("keys", keys)
-        it.put(
-            "state",
-            nodeStateValue(schema.field("state").schema(), nodeEvent.before, nodeEvent.after),
-        )
-      }
-
-  internal fun relationshipEventToConnectSchema(relationshipEvent: RelationshipEvent): Schema =
-      SchemaBuilder.struct()
-          .field("elementId", Schema.STRING_SCHEMA)
-          .field("eventType", Schema.STRING_SCHEMA)
-          .field("operation", Schema.STRING_SCHEMA)
-          .field("type", Schema.STRING_SCHEMA)
-          .field("start", nodeToConnectSchema(relationshipEvent.start))
-          .field("end", nodeToConnectSchema(relationshipEvent.end))
-          .field("keys", schemaForKeys(relationshipEvent.keys))
-          .field(
-              "state",
-              relationshipStateSchema(relationshipEvent.before, relationshipEvent.after),
+      else ->
+          throw IllegalArgumentException(
+              "unsupported event type in change data: ${event.javaClass.name}"
           )
-          .build()
+    }
 
-  internal fun relationshipEventToConnectValue(
-      relationshipEvent: RelationshipEvent,
-      schema: Schema,
-  ): Struct =
-      Struct(schema).also {
-        val keys = converter.value(schema.field("keys").schema(), relationshipEvent.keys)
-
-        it.put("elementId", relationshipEvent.elementId)
-        it.put("eventType", relationshipEvent.eventType.name)
-        it.put("operation", relationshipEvent.operation.name)
-        it.put("type", relationshipEvent.type)
-        it.put("start", nodeToConnectValue(relationshipEvent.start, schema.field("start").schema()))
-        it.put("end", nodeToConnectValue(relationshipEvent.end, schema.field("end").schema()))
-        it.put("keys", keys)
-        it.put(
-            "state",
-            relationshipStateValue(
-                schema.field("state").schema(),
-                relationshipEvent.before,
-                relationshipEvent.after,
-            ),
-        )
-      }
-
-  internal fun nodeToConnectSchema(node: Node): Schema {
     return SchemaBuilder.struct()
+        .name("org.neo4j.connectors.kafka.cdc.Event")
         .field("elementId", Schema.STRING_SCHEMA)
-        .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-        .field("keys", schemaForKeysByLabel(node.keys))
+        .field("eventType", Schema.STRING_SCHEMA)
+        .field("operation", Schema.STRING_SCHEMA)
+        .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+        .field("type", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("start", unifiedNodeToConnectSchema())
+        .field("end", unifiedNodeToConnectSchema())
+        .field("keys", entityKeysSchema())
+        .field("state", entityStateSchema(beforeProperties, afterProperties))
         .build()
   }
 
-  internal fun nodeToConnectValue(node: Node, schema: Schema): Struct =
+  internal fun eventToConnectValue(event: Event, schema: Schema): Struct =
+      Struct(schema).also {
+        it.put("eventType", event.eventType.name)
+
+        when (event) {
+          is NodeEvent -> {
+            it.put("elementId", event.elementId)
+            it.put("operation", event.operation.name)
+            it.put("labels", event.labels)
+            it.put("keys", entityKeysValue(schema.field("keys").schema(), event.keys))
+            it.put(
+                "state",
+                entityStateValue(
+                    schema.field("state").schema(),
+                    event.before?.labels,
+                    event.before?.properties,
+                    event.after?.labels,
+                    event.after?.properties,
+                ),
+            )
+          }
+          is RelationshipEvent -> {
+            it.put("elementId", event.elementId)
+            it.put("operation", event.operation.name)
+            it.put("type", event.type)
+            it.put("start", unifiedNodeToConnectValue(event.start, schema.field("start").schema()))
+            it.put("end", unifiedNodeToConnectValue(event.end, schema.field("end").schema()))
+            it.put(
+                "keys",
+                entityKeysValue(
+                    schema.field("keys").schema(),
+                    // relationship keys are listed under the relationship type, as node keys are
+                    // by label
+                    when {
+                      event.keys == null -> null
+                      event.keys.isEmpty() -> emptyMap()
+                      else -> mapOf(event.type to event.keys)
+                    },
+                ),
+            )
+            it.put(
+                "state",
+                entityStateValue(
+                    schema.field("state").schema(),
+                    null,
+                    event.before?.properties,
+                    null,
+                    event.after?.properties,
+                ),
+            )
+          }
+          else -> throw IllegalArgumentException("unsupported event type ${event.javaClass.name}")
+        }
+      }
+
+  // start and end nodes of a relationship; optional, as they are null on node events
+  private fun unifiedNodeToConnectSchema(): Schema =
+      SchemaBuilder.struct()
+          .field("elementId", Schema.STRING_SCHEMA)
+          .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+          .field("keys", entityKeysSchema())
+          .optional()
+          .build()
+
+  private fun unifiedNodeToConnectValue(node: Node, schema: Schema): Struct =
       Struct(schema).also {
         it.put("elementId", node.elementId)
         it.put("labels", node.labels)
-        it.put("keys", converter.value(schema.field("keys").schema(), node.keys))
+        it.put("keys", entityKeysValue(schema.field("keys").schema(), node.keys))
       }
 
-  private fun schemaForKeysByLabel(keys: Map<String, List<Map<String, Any>>>?): Schema {
-    return SchemaBuilder.struct()
-        .apply { keys?.forEach { field(it.key, schemaForKeys(it.value)) } }
-        .optional()
-        .build()
+  // EntityKeys is an array of {name, rows}, where name is a label (or a relationship type) and each
+  // row holds the properties of one key.
+  private fun entityKeysSchema(): Schema =
+      SchemaBuilder.array(
+              SchemaBuilder.struct()
+                  .field("name", Schema.STRING_SCHEMA)
+                  .field(
+                      "rows",
+                      SchemaBuilder.array(
+                              SchemaBuilder.struct()
+                                  .field(
+                                      "properties",
+                                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema)
+                                          .build(),
+                                  )
+                                  .build()
+                          )
+                          .build(),
+                  )
+                  .build()
+          )
+          .optional()
+          .build()
+
+  private fun entityKeysValue(
+      schema: Schema,
+      keysByName: Map<String, List<Map<String, Any>>>?,
+  ): List<Struct>? {
+    val entrySchema = schema.valueSchema()
+    val rowSchema = entrySchema.field("rows").schema().valueSchema()
+
+    return keysByName?.map { (name, rows) ->
+      Struct(entrySchema)
+          .put("name", name)
+          .put(
+              "rows",
+              rows.map { row ->
+                Struct(rowSchema)
+                    .put("properties", row.mapValues { (_, v) -> PropertyType.toConnectValue(v) })
+              },
+          )
+    }
   }
 
-  private fun schemaForKeys(keys: List<Map<String, Any>>?): Schema {
-    val addedFields = mutableSetOf<String>()
+  private fun entityStateSchema(
+      beforeProperties: Map<String, Any>?,
+      afterProperties: Map<String, Any>?,
+  ): Schema {
+    val entitySchema =
+        SchemaBuilder.struct()
+            .field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+            .field("properties", entityPropertiesSchema(beforeProperties, afterProperties))
+            .optional()
+            .build()
 
-    return SchemaBuilder.array(
-            // We need to define a uniform structure of key array elements. Because all elements
-            // must have identical structure, we list all available keys as optional fields.
-            SchemaBuilder.struct()
-                .apply {
-                  keys?.forEach { key ->
-                    key.forEach {
-                      if (addedFields.add(it.key)) {
-                        field(it.key, converter.schema(it.value, optional = true))
-                      }
-                    }
+    return SchemaBuilder.struct().field("before", entitySchema).field("after", entitySchema).build()
+  }
+
+  private fun entityPropertiesSchema(
+      beforeProperties: Map<String, Any>?,
+      afterProperties: Map<String, Any>?,
+  ): Schema =
+      if (payloadMode == PayloadMode.EXTENDED)
+          SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
+      else
+          SchemaBuilder.struct()
+              .also {
+                val combinedProperties =
+                    (beforeProperties ?: mapOf()) + (afterProperties ?: mapOf())
+                combinedProperties.toSortedMap().forEach { entry ->
+                  if (it.field(entry.key) == null) {
+                    it.field(entry.key, converter.schema(entry.value, optional = true))
                   }
                 }
-                .optional()
-                .build()
-        )
-        .optional()
-        .build()
-  }
+              }
+              .build()
 
-  private fun nodeStateSchema(before: NodeState?, after: NodeState?): Schema {
-    val stateSchema =
-        SchemaBuilder.struct()
-            .apply {
-              this.field("labels", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
-              this.field(
-                  "properties",
-                  if (payloadMode == PayloadMode.EXTENDED)
-                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
-                  else
-                      SchemaBuilder.struct()
-                          .also {
-                            val combinedProperties =
-                                (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
-                            combinedProperties.toSortedMap().forEach { entry ->
-                              if (it.field(entry.key) == null) {
-                                it.field(entry.key, converter.schema(entry.value, optional = true))
-                              }
-                            }
-                          }
-                          .build(),
-              )
-            }
-            .optional()
-            .build()
-
-    return SchemaBuilder.struct().field("before", stateSchema).field("after", stateSchema).build()
-  }
-
-  private fun nodeStateValue(schema: Schema, before: NodeState?, after: NodeState?): Struct =
+  private fun entityStateValue(
+      schema: Schema,
+      beforeLabels: List<String>?,
+      beforeProperties: Map<String, Any>?,
+      afterLabels: List<String>?,
+      afterProperties: Map<String, Any>?,
+  ): Struct =
       Struct(schema).apply {
-        if (before != null) {
-          this.put(
+        if (beforeProperties != null) {
+          put(
               "before",
-              Struct(this.schema().field("before").schema()).also {
-                it.put("labels", before.labels)
-                it.put(
-                    "properties",
-                    if (payloadMode == PayloadMode.EXTENDED)
-                        before.properties.mapValues { e ->
-                          converter.value(PropertyType.schema, e.value)
-                        }
-                    else
-                        converter.value(it.schema().field("properties").schema(), before.properties),
-                )
-              },
+              entitySingleStateValue(
+                  schema.field("before").schema(),
+                  beforeLabels,
+                  beforeProperties,
+              ),
           )
         }
 
-        if (after != null) {
-          this.put(
+        if (afterProperties != null) {
+          put(
               "after",
-              Struct(this.schema().field("after").schema()).also {
-                it.put("labels", after.labels)
-                it.put(
-                    "properties",
-                    if (payloadMode == PayloadMode.EXTENDED)
-                        after.properties.mapValues { e ->
-                          converter.value(PropertyType.schema, e.value)
-                        }
-                    else converter.value(it.schema().field("properties").schema(), after.properties),
-                )
-              },
+              entitySingleStateValue(schema.field("after").schema(), afterLabels, afterProperties),
           )
         }
       }
 
-  private fun relationshipStateSchema(
-      before: RelationshipState?,
-      after: RelationshipState?,
-  ): Schema {
-    val stateSchema =
-        SchemaBuilder.struct()
-            .apply {
-              this.field(
-                  "properties",
-                  if (payloadMode == PayloadMode.EXTENDED)
-                      SchemaBuilder.map(Schema.STRING_SCHEMA, PropertyType.schema).build()
-                  else
-                      SchemaBuilder.struct()
-                          .also {
-                            val combinedProperties =
-                                (before?.properties ?: mapOf()) + (after?.properties ?: mapOf())
-                            combinedProperties.toSortedMap().forEach { entry ->
-                              if (it.field(entry.key) == null) {
-                                it.field(entry.key, converter.schema(entry.value, optional = true))
-                              }
-                            }
-                          }
-                          .build(),
-              )
-            }
-            .optional()
-            .build()
-
-    return SchemaBuilder.struct().field("before", stateSchema).field("after", stateSchema).build()
-  }
-
-  private fun relationshipStateValue(
+  private fun entitySingleStateValue(
       schema: Schema,
-      before: RelationshipState?,
-      after: RelationshipState?,
+      labels: List<String>?,
+      properties: Map<String, Any>,
   ): Struct =
-      Struct(schema).apply {
-        if (before != null) {
-          this.put(
-              "before",
-              Struct(this.schema().field("before").schema()).also {
-                it.put(
-                    "properties",
-                    if (payloadMode == PayloadMode.EXTENDED)
-                        before.properties.mapValues { e ->
-                          converter.value(PropertyType.schema, e.value)
-                        }
-                    else
-                        converter.value(it.schema().field("properties").schema(), before.properties),
-                )
-              },
-          )
-        }
-
-        if (after != null) {
-          this.put(
-              "after",
-              Struct(this.schema().field("after").schema()).also {
-                it.put(
-                    "properties",
-                    if (payloadMode == PayloadMode.EXTENDED)
-                        after.properties.mapValues { e ->
-                          converter.value(PropertyType.schema, e.value)
-                        }
-                    else converter.value(it.schema().field("properties").schema(), after.properties),
-                )
-              },
-          )
-        }
+      Struct(schema).also {
+        it.put("labels", labels)
+        it.put(
+            "properties",
+            if (payloadMode == PayloadMode.EXTENDED)
+                properties.mapValues { e -> converter.value(PropertyType.schema, e.value) }
+            else converter.value(schema.field("properties").schema(), properties),
+        )
       }
 }
 
@@ -438,11 +395,7 @@ internal fun Struct.toNodeEvent(): NodeEvent =
           getString("elementId"),
           EntityOperation.valueOf(getString("operation")),
           getArray("labels"),
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(),
-              get("keys"),
-              skipNullValuesInMaps = true,
-          ) as Map<String, List<MutableMap<String, Any>>>?,
+          decodeEntityKeys() as Map<String, List<MutableMap<String, Any>>>?,
           before,
           after,
       )
@@ -451,16 +404,15 @@ internal fun Struct.toNodeEvent(): NodeEvent =
 @Suppress("UNCHECKED_CAST")
 internal fun Struct.toRelationshipEvent(): RelationshipEvent =
     getStruct("state").toRelationshipState().let { (before, after) ->
+      val keysByName = decodeEntityKeys()
+
       RelationshipEvent(
           getString("elementId"),
           getString("type"),
           getStruct("start").toNode(),
           getStruct("end").toNode(),
-          DynamicTypes.fromConnectValue(
-              schema().field("keys").schema(),
-              get("keys"),
-              skipNullValuesInMaps = true,
-          ) as List<Map<String, Any>>?,
+          // relationship keys are stored under the relationship type, as node keys are by label
+          keysByName?.get(getString("type")) ?: emptyList(),
           EntityOperation.valueOf(getString("operation")),
           before,
           after,
@@ -535,12 +487,19 @@ internal fun Struct.toRelationshipState(): Pair<RelationshipState?, Relationship
 
 @Suppress("UNCHECKED_CAST")
 internal fun Struct.toNode(): Node =
-    Node(
-        this.getString("elementId"),
-        this.getArray("labels"),
-        DynamicTypes.fromConnectValue(
-            schema().field("keys").schema(),
-            this.get("keys"),
-            skipNullValuesInMaps = true,
-        ) as Map<String, List<Map<String, Any>>>,
-    )
+    Node(this.getString("elementId"), this.getArray("labels"), decodeEntityKeys() ?: emptyMap())
+
+// Keys are a list of {name, rows}, where name is a label (or a relationship type). They decode to
+// a map of name to rows.
+@Suppress("UNCHECKED_CAST")
+private fun Struct.decodeEntityKeys(): Map<String, List<Map<String, Any>>>? =
+    getArray<Struct>("keys")?.associate { entry ->
+      entry.getString("name") to
+          entry.getArray<Struct>("rows").map { row ->
+            DynamicTypes.fromConnectValue(
+                row.schema().field("properties").schema(),
+                row.get("properties"),
+                skipNullValuesInMaps = true,
+            ) as Map<String, Any>
+          }
+    }

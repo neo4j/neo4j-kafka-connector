@@ -47,17 +47,21 @@ class ApocBatchStrategyTest {
             listOf(
                 TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 0, 0),
                 TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 1, 1),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 0, 2, 2),
+                TestUtils.newChangeEventMessage(TestUtils.randomChangeEvent(), 1, 0, 3),
             )
         ) {
           transformer.transform(it)
         }
 
-    result.shouldHaveSize(1)
-    val batch = result.first()
-    batch.shouldHaveSize(1)
-    val changeQuery = batch.first()
-    changeQuery.messages shouldHaveSize 2
-    changeQuery.query.text() shouldBe expectedQuery
+    result.shouldHaveSize(2)
+
+    result.forEach { batch ->
+      batch.shouldHaveSize(1)
+      val changeQuery = batch.first()
+      changeQuery.messages shouldHaveSize 2
+      changeQuery.query.text() shouldBe expectedQuery
+    }
   }
 
   object CypherProvider : ArgumentsProvider {

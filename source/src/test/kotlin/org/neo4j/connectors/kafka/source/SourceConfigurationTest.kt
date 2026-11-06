@@ -34,7 +34,6 @@ import org.neo4j.cdc.client.model.EntityOperation
 import org.neo4j.cdc.client.selector.NodeSelector
 import org.neo4j.cdc.client.selector.RelationshipNodeSelector
 import org.neo4j.cdc.client.selector.RelationshipSelector
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
 import org.neo4j.connectors.kafka.configuration.MapEncoding
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.PayloadMode
@@ -672,7 +671,7 @@ class SourceConfigurationTest {
           SourceConfiguration(
                   mapOf(
                       Neo4jConfiguration.URI to "neo4j://localhost",
-                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
@@ -695,7 +694,7 @@ class SourceConfigurationTest {
           SourceConfiguration(
                   mapOf(
                       Neo4jConfiguration.URI to "neo4j://localhost",
-                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
@@ -740,7 +739,7 @@ class SourceConfigurationTest {
           SourceConfiguration(
                   mapOf(
                       Neo4jConfiguration.URI to "neo4j://localhost",
-                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                       SourceConfiguration.STRATEGY to "CDC",
                       SourceConfiguration.START_FROM to "EARLIEST",
                       SourceConfiguration.BATCH_SIZE to "10000",
@@ -762,7 +761,7 @@ class SourceConfigurationTest {
     SourceConfiguration(
             mapOf(
                 Neo4jConfiguration.URI to "neo4j://localhost",
-                Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                 SourceConfiguration.STRATEGY to "QUERY",
                 SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                 SourceConfiguration.QUERY_TOPIC to "my-topic",
@@ -778,7 +777,7 @@ class SourceConfigurationTest {
           SourceConfiguration(
                   mapOf(
                       Neo4jConfiguration.URI to "neo4j://localhost",
-                      Neo4jConfiguration.AUTHENTICATION_TYPE to AuthenticationType.NONE.name,
+                      Neo4jConfiguration.AUTHENTICATION_TYPE to "NONE",
                       SourceConfiguration.STRATEGY to "QUERY",
                       SourceConfiguration.QUERY to "MATCH (n) RETURN n",
                       SourceConfiguration.QUERY_TOPIC to "my-topic",

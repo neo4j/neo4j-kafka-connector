@@ -35,11 +35,12 @@ class NativeBatchStrategy(
     private val batchSize: Int,
     private val eosOffsetLabel: String,
     private val strategy: SinkStrategy,
+    private val strict: Boolean = false,
 ) : SinkBatchStrategy {
   private val logger: Logger = LoggerFactory.getLogger(javaClass)
-  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j) }
+  private val statementGenerator by lazy { DefaultSinkActionStatementGenerator(neo4j, strict) }
   private val renderer = CypherRenderer(neo4j)
-  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel)
+  private val envelope = BatchEnvelope(neo4j, eosOffsetLabel, strict)
   private val cypher25 = CanIUse.canIUse(CanIUseCypher.explicitCypher25Selection()).withNeo4j(neo4j)
   private val hasFinish = CanIUse.canIUse(CanIUseCypher.finishClause()).withNeo4j(neo4j)
   private val withVariableScope =
@@ -67,7 +68,7 @@ class NativeBatchStrategy(
             .onEach { logger.trace("received message: {}", it) }
             .map { MessageToEvent(it, eventTransformer(it)) }
 
-    return listOf(splitEventsIntoBatches(events, maxBatchedStatements, topic, partition)).onEach {
+    return splitEventsIntoBatches(events, maxBatchedStatements, topic, partition).onEach {
       logger.trace("messages: {} ", it)
     }
   }
@@ -77,16 +78,21 @@ class NativeBatchStrategy(
       maxBatchedStatements: Int,
       topic: String,
       partition: Int,
-  ): List<ChangeQuery> {
-    val result = mutableListOf<ChangeQuery>()
+  ): List<List<ChangeQuery>> {
+    val result = mutableListOf<List<ChangeQuery>>()
+
+    val currentTransaction = mutableListOf<ChangeQuery>()
+    var currentTransactionSize = 0
 
     var currentGroupId = 0
     val queries = mutableMapOf<String, DistinctStatement>()
     val currentEvents = mutableListOf<Map<String, Any>>()
     val currentMessages = mutableListOf<SinkMessage>()
 
-    fun flush() {
-      result.add(
+    fun flushQuery() {
+      if (currentEvents.isEmpty()) return
+
+      currentTransaction.add(
           ChangeQuery(
               null,
               null,
@@ -94,9 +100,19 @@ class NativeBatchStrategy(
               batchedStatement(queries, currentEvents, topic, partition),
           )
       )
+      currentGroupId = 0
       queries.clear()
       currentEvents.clear()
       currentMessages.clear()
+    }
+
+    fun flushTransaction() {
+      flushQuery()
+      if (currentTransaction.isEmpty()) return
+
+      result.add(currentTransaction.toList())
+      currentTransaction.clear()
+      currentTransactionSize = 0
     }
 
     events.forEach { event ->
@@ -107,7 +123,7 @@ class NativeBatchStrategy(
       val statement = generated.query.text()
 
       if (!queries.containsKey(statement) && (queries.size >= maxBatchedStatements)) {
-        flush()
+        flushQuery()
       }
 
       val queryId =
@@ -120,15 +136,13 @@ class NativeBatchStrategy(
           )
       )
       currentMessages.add(event.message)
-      if (currentEvents.size >= batchSize) {
-        flush()
+      if (++currentTransactionSize >= batchSize) {
+        flushTransaction()
       }
     }
 
     // handle final batch, if any
-    if (queries.isNotEmpty() && currentEvents.isNotEmpty()) {
-      flush()
-    }
+    flushTransaction()
 
     return result
   }
@@ -154,7 +168,7 @@ class NativeBatchStrategy(
     val branches = sorted.map { it.value.clauses }
 
     val query =
-        if (cypher25 || branches.any { it == null }) {
+        if (cypher25 || strict || branches.any { it == null }) {
           textEnvelope(sorted.map { it.key })
         } else {
           renderer.render(
@@ -211,6 +225,9 @@ class NativeBatchStrategy(
 
   /** The envelope hand-written around already-rendered statements, for the two shapes above. */
   private fun textEnvelope(statements: List<String>): String {
+    require(!strict || eosOffsetLabel.isNotBlank()) {
+      "strict mode requires exactly-once semantics"
+    }
     val termination = if (hasFinish) "FINISH" else "RETURN count(1) AS total"
 
     return buildString {
@@ -242,11 +259,31 @@ class NativeBatchStrategy(
           }
 
           appendLine("  WITH $EVENT WHERE $EVENT.q = \$q$index")
-          appendLine("  $stmt")
-          appendLine("  RETURN $index AS x")
+          if (strict) {
+            // count(*) returns a row even when there is nothing to count. Running it in
+            // a separate subquery means this branch produces no row when the event is
+            // filtered out, instead of returning 0.
+            appendLine(if (withVariableScope) "  CALL ($EVENT) {" else "  CALL {")
+            if (!withVariableScope) appendLine("    WITH $EVENT")
+            appendLine("    $stmt")
+            appendLine("  }")
+            appendLine("  RETURN $APPLIED")
+          } else {
+            appendLine("  $stmt")
+            appendLine("  RETURN $index AS x")
+          }
         }
       }
       appendLine("}")
+      if (strict) {
+        appendLine(
+            "WITH k, max($EVENT.offset) AS newOffset, " +
+                "collect(CASE WHEN $APPLIED = 0 THEN $EVENT.offset END) AS $FAILED"
+        )
+        appendLine("SET k.offset = newOffset")
+        append("RETURN $FAILED")
+        return@buildString
+      }
       if (eosOffsetLabel.isNotBlank()) {
         appendLine("WITH k, max($EVENT.offset) AS newOffset SET k.offset = newOffset")
       }

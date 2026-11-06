@@ -20,7 +20,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldNotBe
 import org.apache.kafka.common.config.ConfigDef
 import org.junit.jupiter.api.Test
-import org.neo4j.connectors.kafka.configuration.AuthenticationType
+import org.neo4j.connectors.kafka.configuration.Groups
 
 class ConfigKeyBuilderTest {
 
@@ -41,7 +41,7 @@ class ConfigKeyBuilderTest {
               Recommenders.and(
                   Recommenders.visibleIf("neo4j.other") { true },
                   Recommenders.visibleIf("neo4j.another") { true },
-                  Recommenders.enum(AuthenticationType::class.java),
+                  Recommenders.enum(Groups::class.java),
               )
         }
         .dependents shouldContainExactly listOf("neo4j.other", "neo4j.another")

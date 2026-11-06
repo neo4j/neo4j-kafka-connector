@@ -269,6 +269,7 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SOURCE_ID,
+                  config.cdcStrictMode,
               )
             } else {
               NativeBatchStrategy(
@@ -277,6 +278,7 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SOURCE_ID,
+                  config.cdcStrictMode,
               )
             }
 
@@ -284,7 +286,7 @@ interface SinkStrategyHandler {
             CdcSinkHandler(
                 SinkStrategy.CDC_SOURCE_ID,
                 batchStrategy,
-                CdcSourceIdEventTransformer(topic, labelName, propertyName),
+                CdcSourceIdEventTransformer(topic, labelName, propertyName, config.cdcStrictMode),
                 metrics,
             )
       }
@@ -302,6 +304,7 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SCHEMA,
+                  config.cdcStrictMode,
               )
             } else {
               NativeBatchStrategy(
@@ -310,6 +313,7 @@ interface SinkStrategyHandler {
                   config.batchSize,
                   config.eosOffsetLabel,
                   SinkStrategy.CDC_SCHEMA,
+                  config.cdcStrictMode,
               )
             }
 
@@ -317,7 +321,7 @@ interface SinkStrategyHandler {
             CdcSinkHandler(
                 SinkStrategy.CDC_SCHEMA,
                 batchStrategy,
-                CdcSchemaEventTransformer(topic),
+                CdcSchemaEventTransformer(topic, config.cdcStrictMode),
                 metrics,
             )
       }
