@@ -44,7 +44,7 @@
         <avro.version>1.12.2</avro.version>
         <awaitility.version>4.3.0</awaitility.version>
         <build-resources.version>2026.07.1</build-resources.version>
-        <byte-buddy.version>1.18.16</byte-buddy.version>
+        <byte-buddy.version>1.18.17</byte-buddy.version>
         <caniuse-neo4j-detection.version>1.4.2</caniuse-neo4j-detection.version>
         <cdc.version>2.0.3</cdc.version>
         <commons-collections4.version>4.6.0</commons-collections4.version>
@@ -89,7 +89,7 @@
         <reactor.version>2025.0.7</reactor.version>
         <slf4j.version>1.7.36</slf4j.version>
         <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
-        <spotless-maven-plugin.version>3.10.4</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.11.0</spotless-maven-plugin.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencyManagement>
