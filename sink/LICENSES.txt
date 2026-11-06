@@ -19,7 +19,7 @@ Apache Software License, Version 2.0
   Kotlin Stdlib
   kotlinx-coroutines-core
   Netty/Buffer
-  Netty/Codec
+  Netty/Codec/Base
   Netty/Common
   Netty/Handler
   Netty/Resolver
