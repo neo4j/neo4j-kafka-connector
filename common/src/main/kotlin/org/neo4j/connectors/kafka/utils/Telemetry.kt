@@ -16,7 +16,7 @@
  */
 package org.neo4j.connectors.kafka.utils
 
-import org.apache.kafka.common.utils.AppInfoParser
+import org.apache.kafka.common.utils.internals.AppInfoParser
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.driver.Config
