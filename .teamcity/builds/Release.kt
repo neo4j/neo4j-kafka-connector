@@ -83,7 +83,8 @@ class Release(id: String, name: String, javaVersion: JavaVersion) :
 
               dockerImagePlatform = ScriptBuildStep.ImagePlatform.Linux
               dockerImage = javaVersion.dockerImage
-              dockerRunParameters = "--volume /var/run/docker.sock:/var/run/docker.sock"
+              dockerRunParameters =
+                  "--volume /var/run/docker.sock:/var/run/docker.sock $TESTCONTAINERS_HOST_DOCKER_ARGS"
             }
 
             setVersion("Set next snapshot version", "%nextSnapshotVersion%", javaVersion)
