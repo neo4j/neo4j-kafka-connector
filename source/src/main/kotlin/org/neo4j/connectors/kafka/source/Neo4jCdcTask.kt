@@ -137,8 +137,8 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
       while (limit.hasNotPassedNow()) {
         cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
             .take(config.batchSize.toLong(), true)
-            .asFlow() // requests 64 events at a time...
-            .buffer(config.batchSize) // ... but still buffer up to the whole batchSize
+            .asFlow()
+            .buffer(config.batchSize)
             .onEach { lastChangeEvent = it }
             .flatMapConcat { build(it) }
             .toList(list)
