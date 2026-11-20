@@ -17,6 +17,7 @@
 package org.neo4j.connectors.kafka.utils
 
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldStartWith
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledOnJre
@@ -29,6 +30,7 @@ import org.neo4j.connectors.kafka.utils.Telemetry.CONFLUENT_ENV
 import org.neo4j.connectors.kafka.utils.Telemetry.CONFLUENT_ENV_VALUE
 import org.neo4j.connectors.kafka.utils.Telemetry.connectorInformation
 import org.neo4j.connectors.kafka.utils.Telemetry.jreInformation
+import org.neo4j.connectors.kafka.utils.Telemetry.kafkaConnectInformation
 import org.neo4j.connectors.kafka.utils.Telemetry.neo4jDriverVersion
 import org.neo4j.connectors.kafka.utils.Telemetry.platform
 
@@ -61,6 +63,11 @@ class TelemetryTest {
   @EnabledOnOs(OS.MAC)
   fun `should return platform`() {
     platform() shouldStartWith "Mac OS X"
+  }
+
+  @Test
+  fun `should return kafka connect information`() {
+    kafkaConnectInformation() shouldMatch Regex("kafka-connect/\\d+\\.\\d+\\.\\d+.*")
   }
 
   @Test

@@ -16,10 +16,12 @@
  */
 package org.neo4j.connectors.kafka.utils
 
-import org.apache.kafka.common.utils.internals.AppInfoParser
+import java.util.Properties
+import org.apache.kafka.common.KafkaException
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.driver.Config
+import org.slf4j.LoggerFactory
 
 interface EnvironmentProvider {
   fun get(env: String): String?
@@ -28,6 +30,24 @@ interface EnvironmentProvider {
 object Telemetry {
   internal const val CONFLUENT_ENV: String = "CONFLUENT_ENV"
   internal const val CONFLUENT_ENV_VALUE: String = "CCLOUD_CUSTOM_CONNECTOR"
+
+  private val log = LoggerFactory.getLogger(Telemetry::class.java)
+  private const val KAFKA_VERSION_RESOURCE = "/kafka/kafka-version.properties"
+  private const val FALLBACK_VERSION = "unknown"
+
+  // mirrors Kafka's internal AppInfoParser, which reads the same resource bundled in kafka-clients.
+  // resolved through a public kafka-clients class so that we read the worker's own kafka-clients
+  // jar.
+  private val kafkaVersion: String by lazy {
+    val props = Properties()
+    try {
+      KafkaException::class.java.getResourceAsStream(KAFKA_VERSION_RESOURCE)?.use { props.load(it) }
+          ?: log.warn("Could not find {} on the classpath", KAFKA_VERSION_RESOURCE)
+    } catch (e: Exception) {
+      log.warn("Error while loading {}: {}", KAFKA_VERSION_RESOURCE, e.message)
+    }
+    props.getProperty("version", FALLBACK_VERSION).trim()
+  }
 
   private object SystemEnvironmentProvider : EnvironmentProvider {
     override fun get(env: String): String? {
@@ -81,7 +101,7 @@ object Telemetry {
   }
 
   internal fun kafkaConnectInformation(): String {
-    return String.format("kafka-connect/%s", AppInfoParser.getVersion())
+    return String.format("kafka-connect/%s", kafkaVersion)
   }
 
   internal fun platform(): String {
