@@ -33,20 +33,20 @@ object Telemetry {
 
   private val log = LoggerFactory.getLogger(Telemetry::class.java)
   private const val KAFKA_VERSION_RESOURCE = "/kafka/kafka-version.properties"
-  private const val FALLBACK_VERSION = "unknown"
 
-  // mirrors Kafka's internal AppInfoParser, which reads the same resource bundled in kafka-clients.
-  // resolved through a public kafka-clients class so that we read the worker's own kafka-clients
-  // jar.
   private val kafkaVersion: String by lazy {
     val props = Properties()
     try {
       KafkaException::class.java.getResourceAsStream(KAFKA_VERSION_RESOURCE)?.use { props.load(it) }
-          ?: log.warn("Could not find {} on the classpath", KAFKA_VERSION_RESOURCE)
+          ?: {
+            log.warn("Could not find {} on the classpath", KAFKA_VERSION_RESOURCE)
+            props.setProperty("version", "not_in_classpath")
+          }
     } catch (e: Exception) {
       log.warn("Error while loading {}: {}", KAFKA_VERSION_RESOURCE, e.message)
+      props.setProperty("version", "error_reading")
     }
-    props.getProperty("version", FALLBACK_VERSION).trim()
+    props.getProperty("version", "unknown").trim()
   }
 
   private object SystemEnvironmentProvider : EnvironmentProvider {
