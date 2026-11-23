@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.utils
 
+import java.io.IOException
 import java.util.Properties
 import org.apache.kafka.common.KafkaException
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
@@ -30,24 +31,9 @@ interface EnvironmentProvider {
 object Telemetry {
   internal const val CONFLUENT_ENV: String = "CONFLUENT_ENV"
   internal const val CONFLUENT_ENV_VALUE: String = "CCLOUD_CUSTOM_CONNECTOR"
+  internal const val KAFKA_VERSION_RESOURCE = "/kafka/kafka-version.properties"
 
   private val log = LoggerFactory.getLogger(Telemetry::class.java)
-  private const val KAFKA_VERSION_RESOURCE = "/kafka/kafka-version.properties"
-
-  private val kafkaVersion: String by lazy {
-    val props = Properties()
-    try {
-      KafkaException::class.java.getResourceAsStream(KAFKA_VERSION_RESOURCE)?.use { props.load(it) }
-          ?: {
-            log.warn("Could not find {} on the classpath", KAFKA_VERSION_RESOURCE)
-            props.setProperty("version", "not_in_classpath")
-          }
-    } catch (e: Exception) {
-      log.warn("Error while loading {}: {}", KAFKA_VERSION_RESOURCE, e.message)
-      props.setProperty("version", "error_reading")
-    }
-    props.getProperty("version", "unknown").trim()
-  }
 
   private object SystemEnvironmentProvider : EnvironmentProvider {
     override fun get(env: String): String? {
@@ -100,8 +86,31 @@ object Telemetry {
     )
   }
 
-  internal fun kafkaConnectInformation(): String {
-    return String.format("kafka-connect/%s", kafkaVersion)
+  internal fun kafkaConnectInformation(resource: String = KAFKA_VERSION_RESOURCE): String {
+    val versionStream =
+        try {
+          KafkaException::class.java.getResourceAsStream(resource)
+        } catch (e: Exception) {
+          log.warn("Error opening {}: {}", resource, e.message)
+          null
+        }
+
+    if (versionStream == null) {
+      return "kafka-connect/error_opening"
+    }
+
+    val props = Properties()
+    versionStream.use {
+      try {
+        props.load(it)
+      } catch (e: IOException) {
+        log.warn("Error reading {}: {}", resource, e.message)
+        return "kafka-connect/error_reading"
+      }
+    }
+
+    val version = props.getProperty("version", "unknown").trim()
+    return String.format("kafka-connect/%s", version)
   }
 
   internal fun platform(): String {

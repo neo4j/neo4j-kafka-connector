@@ -16,6 +16,7 @@
  */
 package org.neo4j.connectors.kafka.utils
 
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldStartWith
@@ -68,6 +69,12 @@ class TelemetryTest {
   @Test
   fun `should return kafka connect information`() {
     kafkaConnectInformation() shouldMatch Regex("kafka-connect/\\d+\\.\\d+\\.\\d+.*")
+  }
+
+  @Test
+  fun `should recover when kafka version resource is missing`() {
+    kafkaConnectInformation("/missing-kafka-version.properties") shouldBeEqual
+        "kafka-connect/error_opening"
   }
 
   @Test
