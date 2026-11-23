@@ -23,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
@@ -137,6 +138,7 @@ class Neo4jCdcTask(private val metricsFactory: MetricsFactory = MetricsFactory()
         cdc.query(ChangeIdentifier(offset.get()), { lastKnownId -> offset.set(lastKnownId.id) })
             .take(config.batchSize.toLong(), true)
             .asFlow()
+            .buffer(config.batchSize)
             .onEach { lastChangeEvent = it }
             .flatMapConcat { build(it) }
             .toList(list)
