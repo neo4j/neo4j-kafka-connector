@@ -134,18 +134,24 @@ class CompactValueConverter : ValueConverter {
             // union of their keys, so the collection stays an array rather than
             // collapsing into the indexed-struct {e0, e1, ...} form below.
             //
-            // Only Maps and Nodes/Relationships may merge. nonEmptyElementTypes leaves out
-            // elements that notNullOrEmpty() calls empty,
+            // Only Maps, Collections and Nodes/Relationships may merge. nonEmptyElementTypes
+            // leaves out elements that notNullOrEmpty() calls empty,
             // but value() converts every element. So merging a type that can be left out
             // would convert it against a schema inferred without it. Nodes and
-            // Relationships are never left out. Maps can be, which is why
-            // mergeMapElementSchemas re-reads them from value.
+            // Relationships are never left out. Maps and Collections can be, which is why
+            // mergeMapElementSchemas and mergeCollectionSchemas re-read them from value.
             val nonNullElements = value.filterNotNull()
             val mergedSchema =
                 when {
                   nonNullElements.all { it is Map<*, *> } ->
                       mergeMapElementSchemas(
                           nonNullElements.filterIsInstance<Map<*, *>>(),
+                          forceMapsAsStruct,
+                      )
+
+                  nonNullElements.all { it is Collection<*> } ->
+                      mergeCollectionSchemas(
+                          nonNullElements.filterIsInstance<Collection<*>>(),
                           forceMapsAsStruct,
                       )
 
@@ -378,9 +384,9 @@ class CompactValueConverter : ValueConverter {
 
   /**
    * Merges Map elements into a single STRUCT schema covering the union of their keys, recursing
-   * into nested Maps. Every field is optional, so later messages may omit any of them. Returns
-   * `null` when a key holds incompatible non-null types, leaving the caller on the indexed-struct
-   * fallback.
+   * into nested Maps and Collections. Every field is optional, so later messages may omit any of
+   * them. Returns `null` when a key holds incompatible non-null types, leaving the caller on the
+   * indexed-struct fallback.
    *
    * Keys are sorted, so element order cannot change the resulting [Schema] and spawn redundant
    * schema versions downstream.
@@ -423,6 +429,12 @@ class CompactValueConverter : ValueConverter {
                       forceMapsAsStruct,
                   ) ?: return null
 
+              fieldValues.all { it is Collection<*> } ->
+                  mergeCollectionSchemas(
+                      fieldValues.filterIsInstance<Collection<*>>(),
+                      forceMapsAsStruct,
+                  ) ?: return null
+
               else -> return null
             }
           }
@@ -431,6 +443,23 @@ class CompactValueConverter : ValueConverter {
     }
     return builder.build()
   }
+
+  /**
+   * Merges Collections into a single ARRAY schema inferred from all of their elements at once, so
+   * elements merge across Collections exactly as they do within one. Returns `null` when that
+   * inference falls back to the indexed struct, which describes the positions of one combined
+   * Collection rather than the elements of each, leaving the caller on its own fallback.
+   *
+   * Empty Collections contribute no elements. That is safe here, unlike for Map values: [value]
+   * converts an empty Collection to an empty list against any ARRAY schema.
+   */
+  private fun mergeCollectionSchemas(
+      collections: List<Collection<*>>,
+      forceMapsAsStruct: Boolean,
+  ): Schema? =
+      schema(collections.flatten(), true, forceMapsAsStruct).takeIf {
+        it.type() == Schema.Type.ARRAY
+      }
 
   private fun makeOptional(schema: Schema): Schema {
     if (schema.isOptional) return schema

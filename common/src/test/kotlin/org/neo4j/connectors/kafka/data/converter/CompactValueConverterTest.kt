@@ -1155,6 +1155,112 @@ class DynamicTypesCompactTest {
   }
 
   @Test
+  fun `collection of maps holding an empty and a non-empty list at the same key should merge into array of struct`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "roles" to emptyList<String>()),
+            mapOf("name" to "jane", "roles" to listOf("designer")),
+        )
+    val schema = converter.schema(coll, false)
+    val converted = converter.value(schema, coll)
+
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("roles", SchemaBuilder.array(Schema.OPTIONAL_STRING_SCHEMA).optional().build())
+            .optional()
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema).put("name", "john").put("roles", emptyList<String>()),
+            Struct(elementSchema).put("name", "jane").put("roles", listOf("designer")),
+        )
+  }
+
+  @Test
+  fun `collection of maps holding lists of maps with differing key sets should merge recursively`() {
+    val coll =
+        listOf(
+            mapOf("name" to "john", "addresses" to listOf(mapOf("city" to "london"))),
+            mapOf(
+                "name" to "jane",
+                "addresses" to listOf(mapOf("city" to "paris", "zip" to "75001")),
+            ),
+        )
+    val schema = converter.schema(coll, false, forceMapsAsStruct = true)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema =
+        SchemaBuilder.struct()
+            .field("city", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("zip", Schema.OPTIONAL_STRING_SCHEMA)
+            .optional()
+            .build()
+    val elementSchema =
+        SchemaBuilder.struct()
+            .field("addresses", SchemaBuilder.array(addressSchema).optional().build())
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .optional()
+            .build()
+    schema shouldBe SchemaBuilder.array(elementSchema).build()
+
+    converted shouldBe
+        listOf(
+            Struct(elementSchema)
+                .put(
+                    "addresses",
+                    listOf(Struct(addressSchema).put("city", "london").put("zip", null)),
+                )
+                .put("name", "john"),
+            Struct(elementSchema)
+                .put(
+                    "addresses",
+                    listOf(Struct(addressSchema).put("city", "paris").put("zip", "75001")),
+                )
+                .put("name", "jane"),
+        )
+  }
+
+  @Test
+  fun `collection of lists of maps with differing key sets should merge into array of array`() {
+    val coll =
+        listOf(
+            listOf(mapOf("city" to "london")),
+            listOf(mapOf("city" to "paris", "zip" to "75001")),
+        )
+    val schema = converter.schema(coll, false, forceMapsAsStruct = true)
+    val converted = converter.value(schema, coll)
+
+    val addressSchema =
+        SchemaBuilder.struct()
+            .field("city", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("zip", Schema.OPTIONAL_STRING_SCHEMA)
+            .optional()
+            .build()
+    schema shouldBe
+        SchemaBuilder.array(SchemaBuilder.array(addressSchema).optional().build()).build()
+
+    converted shouldBe
+        listOf(
+            listOf(Struct(addressSchema).put("city", "london").put("zip", null)),
+            listOf(Struct(addressSchema).put("city", "paris").put("zip", "75001")),
+        )
+  }
+
+  @Test
+  fun `collection of maps holding lists with conflicting element types should fall back to indexed struct`() {
+    // the combined elements cannot merge, so neither can the lists holding them
+    val coll = listOf(mapOf("tags" to listOf("a")), mapOf("tags" to listOf(1L)))
+    val schema = converter.schema(coll, false, forceMapsAsStruct = true)
+
+    schema.type() shouldBe Schema.Type.STRUCT
+    schema.fields().map { it.name() } shouldBe listOf("e0", "e1")
+    converter.value(schema, coll).shouldBeInstanceOf<Struct>()
+  }
+
+  @Test
   fun `collection element whose values are all null should still contribute its keys`() {
     // {"a": null} is invisible to notNullOrEmpty(), so the key union comes from the raw elements
     val coll = listOf(mapOf("a" to null), mapOf("b" to 2L), mapOf("c" to 3L))
