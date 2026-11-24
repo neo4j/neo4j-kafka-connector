@@ -16,7 +16,9 @@
  */
 package org.neo4j.connectors.kafka.utils
 
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldStartWith
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledOnJre
@@ -29,6 +31,7 @@ import org.neo4j.connectors.kafka.utils.Telemetry.CONFLUENT_ENV
 import org.neo4j.connectors.kafka.utils.Telemetry.CONFLUENT_ENV_VALUE
 import org.neo4j.connectors.kafka.utils.Telemetry.connectorInformation
 import org.neo4j.connectors.kafka.utils.Telemetry.jreInformation
+import org.neo4j.connectors.kafka.utils.Telemetry.kafkaConnectInformation
 import org.neo4j.connectors.kafka.utils.Telemetry.neo4jDriverVersion
 import org.neo4j.connectors.kafka.utils.Telemetry.platform
 
@@ -61,6 +64,24 @@ class TelemetryTest {
   @EnabledOnOs(OS.MAC)
   fun `should return platform`() {
     platform() shouldStartWith "Mac OS X"
+  }
+
+  @Test
+  fun `should return kafka connect information`() {
+    kafkaConnectInformation() shouldMatch Regex("kafka-connect/\\d+\\.\\d+\\.\\d+.*")
+  }
+
+  @Test
+  fun `should recover when kafka version resource is missing`() {
+    kafkaConnectInformation("/kafka/missing-kafka-version.properties") shouldBeEqual
+        "kafka-connect/error_opening"
+  }
+
+  @Test
+  fun `should recover when kafka resource does not have version`() {
+    // uses resources/kafka/unknown-version.properties static properties file
+    kafkaConnectInformation("/kafka/unknown-version.properties") shouldBeEqual
+        "kafka-connect/unknown"
   }
 
   @Test
