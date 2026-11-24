@@ -18,7 +18,6 @@ package org.neo4j.connectors.kafka.utils
 
 import java.io.IOException
 import java.util.Properties
-import org.apache.kafka.common.KafkaException
 import org.neo4j.connectors.kafka.configuration.Neo4jConfiguration
 import org.neo4j.connectors.kafka.configuration.helpers.VersionUtil
 import org.neo4j.driver.Config
@@ -89,7 +88,7 @@ object Telemetry {
   internal fun kafkaConnectInformation(resource: String = KAFKA_VERSION_RESOURCE): String {
     val versionStream =
         try {
-          KafkaException::class.java.getResourceAsStream(resource)
+          this::class.java.getResourceAsStream(resource)
         } catch (e: Exception) {
           log.warn("Error opening {}: {}", resource, e.message)
           null
