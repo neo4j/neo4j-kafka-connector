@@ -57,6 +57,8 @@ fun neo4jImage(): DockerImageName =
         }
         .run { DockerImageName.parse(this).asCompatibleSubstituteFor("neo4j") }
 
+fun neo4jDbFormat(): String = System.getenv().getOrDefault("NEO4J_DB_FORMAT", "block")
+
 fun Session.createNodeKeyConstraint(
     neo4j: Neo4j,
     name: String,
@@ -134,6 +136,7 @@ fun createNeo4jContainer(): Neo4jContainer<*> =
         // extensions
         .withNeo4jConfig("db.tx_log.preallocate", "false")
         .withNeo4jConfig("db.tx_log.rotation.size", "1.00MiB")
+        .withNeo4jConfig("db.format", neo4jDbFormat())
         .withExposedPorts(7687)
         .withoutAuthentication()
         .waitingFor(neo4jDatabase())
